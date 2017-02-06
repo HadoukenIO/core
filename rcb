@@ -1,0 +1,1 @@
+global.fin = require('remote').require('./src/renderer/main.js');

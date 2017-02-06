@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Authentication Required</title>
+
+  <style>
+    body, form {
+      margin: 0;
+    }
+
+    body {
+      padding: 18px 20px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border: 1px solid lightgrey;
+      border-radius: 3px;
+      box-sizing: border-box;
+      font-family: "Helvetica Neue Light", "HelveticaNeue-Light", "Helvetica Neue", Calibri, Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      background-color: #FBFBFB ;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    a.close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 20px;
+      font-weight: bold;
+      line-height: 18px;
+      color: #737373 ;
+      text-decoration: none;
+    }
+
+    a.close:hover {
+      text-decoration: none;
+      opacity: 0.8;
+      cursor: pointer;
+    }
+
+    .title {
+      font-size: 16px;
+    }
+
+    #message, form {
+      margin-top: 20px;
+    }
+
+    #message {
+      flex: 1;
+    }
+
+    form > div {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    form > div:last-child {
+      text-align: right;
+      margin-top: 44px;
+      margin-bottom: 0;
+    }
+
+    label {
+      width: 70px;
+      text-align: left;
+      display: inline-block;
+    }
+
+    input, button {
+      font-family: inherit;
+      font-size: inherit;
+    }
+
+    input {
+      height: 24px;
+      width: 190px;
+      padding: 5px;
+      border: 1px solid #E0E0E0 ;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 6px 16px;
+      margin-left: 8px;
+      background-color: #F9F9F9 ;
+      border: 1px solid #BABABA ;
+      border-radius: 2px;
+    }
+
+    button:hover {
+      cursor: pointer;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+
+<body>
+  <a class="close" onclick="cancel()">&times;</a>
+
+  <div class="title">Authentication Required</div>
+
+  <div id="message"></div>
+
+  <div>
+    <form>
+
+      <div>
+        <label for="username">Username:</label>
+        <input type="text" id="username">
+      </div>
+
+      <div>
+        <label for="password">Password:</label>
+        <input type="password" id="password">
+      </div>
+
+      <div>
+        <button type="button" onclick="login()">Log In</button>
+        <button type="button" onclick="cancel()">Cancel</button>
+      </div>
+
+    </form>
+  </div>
+</body>
+
+<script>
+
+    function getParameterByName(name) {
+        let url = window.location.href;
+        let andName = name.replace(/[\[\]]/g, "\\$&");
+        let regex = new RegExp("[?&]" + andName + "(=([^&#]*)|&|#|$)");
+        let results = regex.exec(url);
+
+        if (!results) {
+            return null;
+        }
+        if (!results[2]) {
+            return '';
+        }
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
+    function login() {
+        let userName = document.getElementById('username').value;
+        let password = document.getElementById('password').value;
+        let targetWindow = getTargetWindow();
+
+        targetWindow.authenticate(userName, password, ()=> fin.desktop.Application.getCurrent().close());
+    }
+
+    function cancel() {
+        let targetWindow = getTargetWindow();
+
+        targetWindow.authenticate('', '', ()=> fin.desktop.Application.getCurrent().close());
+    }
+
+    function getTargetWindow() {
+        let uuid = getParameterByName('uuid');
+        let name = getParameterByName('name');
+        return fin.desktop.Window.wrap(uuid, name);
+    }
+
+    function loginKeyHandler(event) {
+        if (event.keyCode == 13) {
+            login();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=> {
+        document.getElementById('username').onkeydown = loginKeyHandler;
+        document.getElementById('password').onkeydown = loginKeyHandler;
+    });
+
+
+</script>
+
+</html>
