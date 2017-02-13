@@ -71,7 +71,7 @@ function WindowApiHandler() {
     };
     apiProtocolBase.registerActionMap(windowExternalApiMap);
 
-    function windowAuthenticate(identity, message, ack, errAck) {
+    function windowAuthenticate(identity, message, ack, nack) {
         let {
             userName,
             password,
@@ -88,7 +88,7 @@ function WindowApiHandler() {
             if (!err) {
                 ack(successAck);
             } else {
-                errAck(err);
+                nack(err);
             }
         });
 
@@ -461,7 +461,7 @@ function WindowApiHandler() {
         ack(dataAck);
     }
 
-    function getCachedBounds(identity, message, ack, errAck) {
+    function getCachedBounds(identity, message, ack, nack) {
         let payload = message.payload;
         let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
         let dataAck = _.clone(successAck);
@@ -469,9 +469,7 @@ function WindowApiHandler() {
         Window.getBoundsFromDisk(windowIdentity, data => {
             dataAck.data = data;
             ack(dataAck);
-        }, (err) => {
-            errAck(err);
-        });
+        }, nack);
     }
 
     function getZoomLevel(identity, message, ack) {
