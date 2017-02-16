@@ -954,6 +954,18 @@ Window.getGroup = function(identity) {
 };
 
 
+// returns an object reminiscent of DOM's window.location object
+Window.getWindowInfo = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'get info for');
+    let webContents = browserWindow.webContents;
+
+    return {
+        url: webContents.getURL(),
+        title: webContents.getTitle()
+    };
+};
+
+
 Window.getNativeId = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
 

@@ -37,6 +37,7 @@ function WindowApiHandler() {
         'get-current-window-options': getCurrentWindowOptions,
         'get-window-bounds': getWindowBounds,
         'get-window-group': getWindowGroup,
+        'get-window-info': getWindowInfo,
         'get-window-native-id': getWindowNativeId,
         'get-window-options': getWindowOptions,
         'get-window-snapshot': getWindowSnapshot,
@@ -305,6 +306,15 @@ function WindowApiHandler() {
         let dataAck = _.clone(successAck);
 
         dataAck.data = Window.getOptions(identity);
+        ack(dataAck);
+    }
+
+    function getWindowInfo(identity, message, ack) {
+        var payload = message.payload,
+            dataAck = _.clone(successAck),
+            windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+        dataAck.data = Window.getWindowInfo(windowIdentity);
         ack(dataAck);
     }
 
