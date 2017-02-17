@@ -56,6 +56,8 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
         const requestingConnection = externalApplication.getExternalConnectionById(id);
         const identity = requestingConnection ? { uuid: requestingConnection.uuid, name: requestingConnection.uuid } : null;
 
+        system.debugLog(1, `received external-adapter <= ${id} ${JSON.stringify(data)}`);
+ 
         this.requestHandler.handle({
             data, ack, nack,
             identity: identity || id

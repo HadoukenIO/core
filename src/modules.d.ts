@@ -45,6 +45,7 @@ declare module 'electron' {
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
         hookWindowMessage(n: number, listener: (message: any) => void): void;
         subscribeSessionNotifications(b: boolean): void;
+        isDestroyed(): boolean;
     }
 
     export class ipcMain {

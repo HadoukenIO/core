@@ -13,6 +13,10 @@ class WMCopyDataTransport extends BaseTransport {
     constructor(pipeName: string) {
         super(pipeName);
 
+        this.initMessageWindow();
+    }
+
+    private initMessageWindow() {
         // create hidden browser window
         this._win = new BrowserWindow({
             width: 10,
@@ -23,11 +27,14 @@ class WMCopyDataTransport extends BaseTransport {
         this._win.on('message/wm-copydata', (a: any, wnd: any, msg: any) => { // todo: define types
             this.eventEmitter.emit('message', wnd, msg);
         });
-    }
+    };
 
     public publish(data: any, timeout: number = 1000): boolean {
         // on windows x64 platform still returns win32
-        if (process.platform.indexOf('win32') !== -1) {
+        if (!this._win.isDestroyed()) {
+            this.initMessageWindow();
+        }
+        if (process.platform.indexOf('win32') !== -1 && !this._win.isDestroyed() ) {
             const windowList = this._win.getWindowsByClassName(this.pipeName);
 
             if (!windowList.length) {
@@ -43,6 +50,7 @@ class WMCopyDataTransport extends BaseTransport {
 
         return false;
     };
+
 }
 
 export default WMCopyDataTransport;
