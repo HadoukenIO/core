@@ -397,7 +397,7 @@ module.exports.System = {
     },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
-        let sourceUrl = (appObject || {})._configUrl;
+        let sourceUrl = (appObject || {})._configUrl || '';
 
         // TODO: Move this require to the top of file during future 'dependency injection refactor'
         // Must require here otherwise runtime error Cannot create browser window before app is ready
