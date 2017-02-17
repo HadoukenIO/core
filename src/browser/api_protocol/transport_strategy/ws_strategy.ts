@@ -5,7 +5,8 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import { AckTemplate,  AckFunc } from './ack';
-import { ApiTransportBase, ActionMap } from './api_transport_base';
+import { ApiTransportBase, ActionMap, MessagePackage } from './api_transport_base';
+import {default as RequestHandler} from './base_handler';
 
 declare var require: any;
 
@@ -13,10 +14,27 @@ const externalApplication = require('../external_application');
 const socketServer = require('../../transports/socket_server').server;
 const system = require('../../api/system').System;
 
-export class WebSocketStrategy extends ApiTransportBase {
+export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
 
-    public registerMessageHandlers(actionMap: ActionMap): void {
-        this.actionMap = actionMap;
+    constructor(actionMap: ActionMap, requestHandler: RequestHandler<MessagePackage>) {
+        super(actionMap, requestHandler);
+
+        this.requestHandler.addHandler((mp: MessagePackage, next) => {
+
+            const {identity, data, ack, nack} = mp;
+            const action = this.actionMap[data.action];
+
+            if (typeof (action) === 'function') {
+                try {
+                    action(identity, data, ack, nack);
+                } catch (err) {
+                    nack(err);
+                }
+            }
+        });
+    }
+
+    public registerMessageHandlers(): void {
         socketServer.on('connection/message', this.onMessage.bind(this));
     }
 
@@ -33,20 +51,15 @@ export class WebSocketStrategy extends ApiTransportBase {
     }
 
     protected onMessage(id: number, data: any): void {
+        const ack = this.ackDecorator(id, data.messageId);
+        const nack = this.nackDecorator(ack);
         const requestingConnection = externalApplication.getExternalConnectionById(id);
-        const action = this.actionMap[data.action];
         const identity = requestingConnection ? { uuid: requestingConnection.uuid, name: requestingConnection.uuid } : null;
 
-        if (typeof(action) === 'function') {
-            //decorate and call.
-            const ackCallback = this.ackDecorator(id, data.messageId);
-            const nackCallback = this.nackDecorator(ackCallback);
-            try {
-                action(identity || id, data, ackCallback, nackCallback);
-            } catch (err) {
-                nackCallback(err);
-            }
-        }
+        this.requestHandler.handle({
+            data, ack, nack,
+            identity: identity || id
+        });
     }
 
     protected ackDecorator(id: number, messageId: number): AckFunc {
