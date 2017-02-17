@@ -164,14 +164,17 @@ module.exports.System = {
         */
         var settings = options || {};
 
-        var availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'local storage', 'shadercache', 'websql', 'serviceworkers'];
+        var availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
         var storages = [];
 
         if (typeof settings.localStorage === 'boolean') {
-            settings['local storage'] = settings.localStorage;
+            settings['localstorage'] = settings.localStorage;
         }
 
         // 5.0 defaults cache true if not specified
+        if (Object.keys(settings).length === 0) {
+            settings.cache = true;
+        }
         if (typeof settings.cache === 'boolean') {
             settings.filesystem = settings.filesystem || settings.cache;
             settings.indexdb = settings.indexdb || settings.cache;
@@ -192,7 +195,10 @@ module.exports.System = {
             quotas: ['temporary', 'persistent', 'syncable']
         };
 
+        electronApp.vlog(1, `clearCache ${JSON.stringify(storages)}`);
+
         defaultSession.clearCache(() => {
+
             defaultSession.clearStorageData(cacheOptions, () => {
                 resolve();
             });
