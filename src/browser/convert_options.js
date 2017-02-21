@@ -89,7 +89,8 @@ function five0BaseOptions() {
         'transparent': false,
         'url': 'about:blank',
         'uuid': '',
-        'waitForPageLoad': true
+        'waitForPageLoad': true,
+        'backgroundColor': '#000'
     };
 }
 
@@ -224,7 +225,6 @@ module.exports = {
         }
 
         // Electron BrowserWindow options
-        newOptions['backgroundColor'] = '#FFF';
         newOptions['enableLargerThanScreen'] = true;
         newOptions['enable-plugins'] = true;
         newOptions['webPreferences'] = {
@@ -244,6 +244,7 @@ module.exports = {
             newOptions.customData = options.customData;
         }
 
+        app.vlog(1, JSON.stringify(newOptions));
         if (returnAsString) {
             return JSON.stringify(newOptions);
         } else {
