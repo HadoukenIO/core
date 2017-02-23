@@ -28,7 +28,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     constructor(actionMap: ActionMap, requestHandler: RequestHandler<MessagePackage>) {
         super(actionMap, requestHandler);
 
-        this.requestHandler.addHandler((mp: MessagePackage, next) => {
+        this.requestHandler.addHandler((mp: MessagePackage, next: Function) => {
             const {identity, data, ack, nack, e} = mp;
             const action = this.actionMap[data.action];
 
