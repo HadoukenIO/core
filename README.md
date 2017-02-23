@@ -1,40 +1,76 @@
-# runtime-core
+# OpenFin Core
 
 #### Requirements
 _The following setup is known to be working well. You can try other versions at your 
-own risk of losing a lot of time_
-* [Visual Studio 2013](https://www.microsoft.com/en-us/download/details.aspx?id=44914)
+own risk of losing a lot of time._
+* [Visual Studio 2013](https://www.microsoft.com/en-us/download/details.aspx?id=44914) *
 * Node 6.9.0
 * Grunt (grunt-cli 1.2.0)
 * node-inspector 0.12.3 _(problems with 0.12.4 - 0.12.8)_
-* Python 2.7.12
+* Python 2.7.12 
 
+\_______________
 
+\* Only needed on Windows
 
 ### Building the project
-To ensure that Visual Studio 2013 is used add the "-msvs_version=2013" flag to `npm install/update`
+
+#### Mac/Linux
 ```bash
-npm update -msvs_version=2013
-grunt build-dev
+npm install
 ```
 
-
+#### Windows
+You need to ensure that Visual Studio 2013 is used to build the project.
+```bash
+npm update -msvs_version=2013
+npm install
+```
 
 ### Testing
 
-**Initial setup**
-* Launch an OpenFin app and target a v6 version (i.e.: "6.49.12.68") so that RVM can install 
-that runtime version on your machine
-* Close the app
-
-**Continuous**
-* Keep `node-inspector` running. Use it to debug browser process in Chrome
-* Deploy runtime-core locally using grunt task. Example:
-    
+* Install the OpenFin cli tool
 ```bash
-    grunt deploy --target=C:\Users\username\AppData\Local\OpenFin\runtime\6.49.12.68\OpenFin\resources
+npm install -g openfin-cli
 ```
-* Launch the app
+
+* Create a manifest file [Manifest file docs](http://docsgohere), targeting a valid version [Runtime versions](https://developer.openfin.co/versions/?product=Runtime&version=stabe)
+
+app.json
+```javascript
+{
+    "startup_app": {
+        "name": "OpenfinPOC",
+        "description": "OpenFin POC",
+        "url": "http://www.openfin.co",
+        "uuid": "OpenfinPOC-hla8ix6e0y2iwwjlxkojkbj4i",
+        "autoShow": true
+    },
+    "runtime": {
+        "arguments": "",
+        "version": "[replace this with a version]"
+    }
+}
+```
+
+* Launch OpenFin once
+```bash
+openfin --config app.json --launch 
+```
+
+* Replace the OpenFin core with a built core
+```bash
+grunt deploy --target=C:\Users\[username]\AppData\Local\OpenFin\runtime\[replace this with a version]\OpenFin\resources
+```
+
+* Now you can re-launch the OpenFin app with the modified OpenFin core.
+```bash
+openfin --config app.json --launch 
+```
+
+### Using node-inspector
+
+
 * Set breakpoints and debug using Chrome (check node-inspector's documentation on how do it)
 
 
