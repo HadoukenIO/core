@@ -106,10 +106,15 @@ var Application = {};
 Application.create = function(opts, configUrl = '', parentIdentify = {}) {
     //Hide Window until run is called
 
-    let appUrl = opts.url || (opts.mainWindowOptions && opts.mainWindowOptions.url);
-    let isValidUrl = !appUrl || typeof appUrl === 'string'; // falsy acceptable here (handled by createAppObj)
+    let appUrl = opts.url;
+    if (appUrl === undefined && opts.mainWindowOptions) {
+        appUrl = opts.mainWindowOptions.url;
+    }
+
+    // undefined or '' acceptable here (gets default in createAppObj); or non-empty string
+    let isValidUrl = appUrl === undefined || typeof appUrl === 'string';
     if (!isValidUrl) {
-        throw new Error(`Invalid application URL: ${opts.appUrl}`);
+        throw new Error(`Invalid application URL: ${appUrl}`);
     }
 
     let isValidUuid = isNonEmptyString(opts.uuid) && opts.uuid !== '*';
