@@ -21,7 +21,7 @@ class BaseTransport {
         this.eventEmitter = new MyEmitter();
     }
 
-    public on(eventName: string, listener: () => void): void {
+    public on(eventName: string, listener: (sender: any, data: string) => void): void {
         this.eventEmitter.on.call(this.eventEmitter, eventName, listener);
     }
 
