@@ -213,7 +213,7 @@ limitations under the License.
             });
 
             // Notify WebContent that frame routing can now be counted
-            rqr('electron').remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+            rqr('electron').webFrame.createForRenderFrame(renderFrameId).emit('openfin-api-ready', renderFrameId);
         };
 
         if (currWindowOpts.saveWindowState && !currWindowOpts.hasLoaded) {
