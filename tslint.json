@@ -153,7 +153,7 @@
         "one-variable-per-declaration": true,
         "only-arrow-functions": false,
         "ordered-imports": false,
-        "prefer-array-literal": true,
+        "prefer-array-literal": false,
         "prefer-const": true,
         "prefer-type-cast": true,
         "promise-must-complete": true,

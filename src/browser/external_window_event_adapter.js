@@ -4,7 +4,7 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-let ofEvents = require('./of_events.js');
+let ofEvents = require('./of_events.js').default;
 let electronApp = require('electron').app;
 
 let MonitorInfo;
@@ -140,6 +140,7 @@ class ExternalWindowEventAdapter {
 
         ofEvents.on(`external-window/close/${uuidname}`, () => {
             browserWindow.emit('close');
+            browserWindow.close();
             browserWindow.emit('closed');
         });
     }

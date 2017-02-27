@@ -15,7 +15,7 @@ const moduleTimeToLive_ = 5;
  *  Confirms arguments passed to fetchRvmInfo are as we expect
  */
 let validateFetchArguments = function(sourceUrl, successCB, failureCB) {
-    if (!sourceUrl) {
+    if (typeof sourceUrl !== 'string') {
         console.log('sourceUrl is required!');
         return false;
     } else if (!successCB) {
@@ -126,6 +126,7 @@ let RvmInfoFetcher = function() {
         let isFirstRequester = _.isEmpty(pendingRequests_); // 1st requesters initiate outbound request to RVM
 
         if (!areArgumentsValid) {
+            failureCB(new Error('Invalid arguments'));
             return;
         }
 

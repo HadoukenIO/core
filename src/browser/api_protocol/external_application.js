@@ -10,14 +10,14 @@ let authenticatedConnections = [];
 const connectedEvent = 'externalapplication/connected';
 const disconnectedEvent = 'externalapplication/disconnected';
 
-function addExternalConnection(id, uuid) {
-    var authedUuid = {
-        id,
+function addExternalConnection(externalConnObj) {
+    const {
         uuid
-    };
+    } = externalConnObj;
+
     //TODO: compare perf from this and a map.
-    authenticatedConnections.push(authedUuid);
-    ofEvents.emit(connectedEvent + `/${authedUuid.uuid}`, {
+    authenticatedConnections.push(externalConnObj);
+    ofEvents.emit(connectedEvent + `/${externalConnObj.uuid}`, {
         uuid
     });
     ofEvents.emit(connectedEvent, {

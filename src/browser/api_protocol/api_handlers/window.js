@@ -37,6 +37,7 @@ function WindowApiHandler() {
         'get-current-window-options': getCurrentWindowOptions,
         'get-window-bounds': getWindowBounds,
         'get-window-group': getWindowGroup,
+        'get-window-info': getWindowInfo,
         'get-window-native-id': getWindowNativeId,
         'get-window-options': getWindowOptions,
         'get-window-snapshot': getWindowSnapshot,
@@ -71,7 +72,7 @@ function WindowApiHandler() {
     };
     apiProtocolBase.registerActionMap(windowExternalApiMap);
 
-    function windowAuthenticate(identity, message, ack, errAck) {
+    function windowAuthenticate(identity, message, ack, nack) {
         let {
             userName,
             password,
@@ -88,7 +89,7 @@ function WindowApiHandler() {
             if (!err) {
                 ack(successAck);
             } else {
-                errAck(err);
+                nack(err);
             }
         });
 
@@ -308,6 +309,15 @@ function WindowApiHandler() {
         ack(dataAck);
     }
 
+    function getWindowInfo(identity, message, ack) {
+        var payload = message.payload,
+            dataAck = _.clone(successAck),
+            windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+        dataAck.data = Window.getWindowInfo(windowIdentity);
+        ack(dataAck);
+    }
+
     function getWindowNativeId(identity, message, ack) {
         var payload = message.payload,
             dataAck = _.clone(successAck),
@@ -461,7 +471,7 @@ function WindowApiHandler() {
         ack(dataAck);
     }
 
-    function getCachedBounds(identity, message, ack, errAck) {
+    function getCachedBounds(identity, message, ack, nack) {
         let payload = message.payload;
         let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
         let dataAck = _.clone(successAck);
@@ -469,9 +479,7 @@ function WindowApiHandler() {
         Window.getBoundsFromDisk(windowIdentity, data => {
             dataAck.data = data;
             ack(dataAck);
-        }, (err) => {
-            errAck(err);
-        });
+        }, nack);
     }
 
     function getZoomLevel(identity, message, ack) {
