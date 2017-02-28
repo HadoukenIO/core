@@ -47,7 +47,7 @@
     "mockery": "^2.0.0",
     "@types/mocha": "^2.2.39",
     "@types/mockery": "^1.4.29",
-    "grunt-mocha-test": "^0.13.2",
+    "grunt-mocha-test": "^0.13.2"
   },
   "dependencies": {
     "minimist": "^1.2.0",
