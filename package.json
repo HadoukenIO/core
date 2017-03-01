@@ -41,7 +41,7 @@
     "sinon": "^1.17.5",
     "tslint": "4.0.0-dev.0",
     "tslint-microsoft-contrib": "^2.0.13",
-    "typescript": "~2.0.10",
+    "typescript": "~2.2.0",
     "wrench": "^1.5.9",
     "mockery": "^2.0.0",
     "@types/mocha": "^2.2.39",

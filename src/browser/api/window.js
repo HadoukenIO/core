@@ -972,7 +972,6 @@ Window.getWindowInfo = function(identity) {
     };
 };
 
-
 Window.getNativeId = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
 
