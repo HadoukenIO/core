@@ -22,6 +22,8 @@ let eApp = require('electron').app;
 let ExternalProcess = require('electron').externalProcess;
 let ProcessMonitor = require('electron').processMonitor;
 
+import ofEvents from './of_events';
+
 const isWin32 = (process.platform === 'win32');
 
 function ProcessTracker() {
@@ -31,6 +33,8 @@ function ProcessTracker() {
     this._processes = {};
     // map of uuids to pids
     this._uuidToPid = {};
+    // map of windows to process uuids
+    this._windowToUuids = {};
     // NOTE: The ProcessMonitor module lives for the entirety of the runtime, so
     // there's no need to unhook this listener
     this._processMonitor = new ProcessMonitor();
@@ -45,6 +49,15 @@ function ProcessTracker() {
         });
 
         this._cleanup(pid, uuid);
+    });
+
+    ofEvents.on('window/synth-close/*', payload => {
+        if (this._windowToUuids[payload.source]) {
+            let processes = this._windowToUuids[payload.source].slice(0);
+            processes.forEach(uuid => {
+                this.terminate(uuid, 500, true);
+            });
+        }
     });
 }
 
@@ -120,14 +133,25 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
             args = expandEnvironmentVars(args);
             cwd = expandEnvironmentVars(cwd);
 
-            procObj = eProcess.launch(fpath, cwd, args);
+            let parentWindowUuidName = getParentWindowUuidName(winIdentity, config.lifetime);
+
+            procObj = eProcess.launch(fpath, cwd, args, !!parentWindowUuidName);
+
+            if (parentWindowUuidName) {
+                let processes = this._windowToUuids[parentWindowUuidName] || [];
+                processes.push(uuid);
+                this._windowToUuids[parentWindowUuidName] = processes;
+            }
+
             this._processMonitor.add(procObj);
 
             this._processes[procObj.id] = {
                 process: procObj,
                 window: winIdentity,
+                lifetime: config.lifetime,
                 uuid
             };
+
             this._uuidToPid[uuid] = procObj.id;
 
             this.emit(`synth-process-started/${winIdentity.uuid}-${winIdentity.name}`, {
@@ -210,21 +234,34 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
     }
 };
 
-ProcessTracker.prototype.monitor = function(winIdentity, pid) {
-    var eProcess = new ExternalProcess();
-    var procObj = eProcess.attach(pid);
-    var uuid = null;
+ProcessTracker.prototype.monitor = function(winIdentity, pid, lifetime) {
+    if (this._processes[pid]) {
+        throw new Error(`Error monitoring external process, already monitoring pid: '${pid}'`);
+    }
+
+    let eProcess = new ExternalProcess();
+    let parentWindowUuidName = getParentWindowUuidName(winIdentity, lifetime);
+    let procObj = eProcess.attach(pid);
+    let uuid = null;
 
     if (procObj.handle) {
         uuid = generateUuid();
+
+        if (parentWindowUuidName) {
+            let processes = this._windowToUuids[parentWindowUuidName] || [];
+            processes.push(uuid);
+            this._windowToUuids[parentWindowUuidName] = processes;
+        }
 
         this._processMonitor.add(procObj);
 
         this._processes[pid] = {
             process: procObj,
             window: winIdentity,
+            lifetime,
             uuid
         };
+
         this._uuidToPid[uuid] = pid;
     }
 
@@ -234,10 +271,14 @@ ProcessTracker.prototype.monitor = function(winIdentity, pid) {
 };
 
 ProcessTracker.prototype.release = function(uuid) {
-    var pid = this._uuidToPid[uuid];
+    let pid = this._uuidToPid[uuid];
 
     if (!pid) {
         throw new Error(`Error releasing external process, no match for UUID '${uuid}'`);
+    }
+
+    if (this._processes[pid].lifetime && this._processes[pid].lifetime !== 'persist') {
+        throw new Error(`Error releasing external process, cannot release nonpersistent processes`);
     }
 
     this._processMonitor.remove(this._processes[pid].process);
@@ -255,6 +296,21 @@ ProcessTracker.prototype.terminate = function(uuid, timeout, child) {
 };
 
 ProcessTracker.prototype._cleanup = function(pid, uuid) {
+    let winIdentity = this._processes[pid].window;
+    let lifetime = this._processes[pid].lifetime;
+    let parentWindowUuidName = getParentWindowUuidName(winIdentity, lifetime);
+
+    if (parentWindowUuidName && this._windowToUuids[parentWindowUuidName]) {
+        let index = this._windowToUuids[parentWindowUuidName].indexOf(uuid);
+        if (index !== -1) {
+            this._windowToUuids[parentWindowUuidName].splice(index, 1);
+        }
+
+        if (this._windowToUuids[parentWindowUuidName].length === 0) {
+            delete this._windowToUuids[parentWindowUuidName];
+        }
+    }
+
     delete this._processes[pid];
     delete this._uuidToPid[uuid];
 };
@@ -277,6 +333,26 @@ function expandEnvironmentVars(str) {
         // $ENV, ${ENV}
         return str.replace(/\$([\w]+)/g, replacementFn).replace(/\$\{(.+)\}/g, replacementFn);
     }
+}
+
+function getParentWindowUuidName(winIdentity, lifetime) {
+    let result;
+
+    switch (lifetime) {
+        case 'application':
+            result = `${winIdentity.uuid}-${winIdentity.uuid}`;
+            break;
+        case 'window':
+            result = `${winIdentity.uuid}-${winIdentity.name}`;
+            break;
+        case 'persist':
+            /* falls through */
+        default:
+            result = null;
+            break;
+    }
+
+    return result;
 }
 
 module.exports = new ProcessTracker();
