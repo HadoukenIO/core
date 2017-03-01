@@ -7,7 +7,6 @@
         "sourceMap": false,
         "target": "es6",
         "outDir": "./staging/core/",
-        "rootDir": "./",
         "moduleResolution": "node"
     },
     "exclude": [
