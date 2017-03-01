@@ -297,6 +297,11 @@ let optionSetters = {
         if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
         }
+    },
+    showTaskbarIcon: function(newVal, browserWin) {
+        let showTaskbarIconBool = !!newVal;
+        setOptOnBrowserWin('showTaskbarIcon', showTaskbarIconBool, browserWin);
+        browserWin.setSkipTaskbar(!showTaskbarIconBool);
     }
 };
 

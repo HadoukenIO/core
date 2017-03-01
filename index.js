@@ -172,6 +172,11 @@ app.on('ready', function() {
         return;
     }
 
+    if (process.platform === 'win32') {
+        let integrityLevel = app.getIntegrityLevel();
+        System.log('info', `Runtime integrity level of the app: ${integrityLevel}`);
+    }
+
     rotateLogs(argv);
 
     //Once we determine we are the first instance running we setup the API's
