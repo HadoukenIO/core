@@ -414,7 +414,7 @@ module.exports.System = {
         var pid = parseInt(options.pid);
 
         if (!isNaN(pid)) {
-            var payload = ProcessTracker.monitor(identity, pid);
+            var payload = ProcessTracker.monitor(identity, pid, options.lifetime);
             if (payload.uuid) {
                 callback(payload);
             } else {

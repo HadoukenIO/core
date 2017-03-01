@@ -413,6 +413,13 @@ Window.create = function(id, opts) {
                 }
             }
 
+            ofEvents.emit(`window/synth-close/${uuidname}`, {
+                name,
+                uuid,
+                topic: 'window',
+                type: 'synth-close'
+            });
+
             // can't unhook when the 'closed' event fires; browserWindow is already destroyed then
             browserWindow.webContents.removeAllListeners('page-favicon-updated');
 
