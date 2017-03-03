@@ -13,7 +13,10 @@ class WMCopyDataTransport extends BaseTransport {
 
     constructor(pipeName: string) {
         super(pipeName);
-        this.initMessageWindow();
+        // on windows x64 platform still returns win32
+        if (process.platform.indexOf('win32') !== -1) {
+            this.initMessageWindow();
+        }
     }
 
     private initMessageWindow() {
