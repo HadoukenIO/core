@@ -28,11 +28,12 @@ export interface ActionMap {
  * nack functions that get created at the strategy (elipc, ws, etc)
  */
 export interface MessagePackage {
-    identity: any;
+    identity: any; // of the caller
     data: any;
     ack: any;
     nack: any;
     e?: any;
+    strategyName: any; // ws / elipc 
 }
 
 export abstract class ApiTransportBase<T> {
