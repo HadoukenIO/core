@@ -51,7 +51,7 @@ const userCache = electronApp.getPath('userCache');
 
 let Window = {};
 
-let electronToOfEvent = {
+let browserWindowEventMap = {
     'blur': {
         topic: 'blurred'
     },
@@ -108,6 +108,16 @@ let electronToOfEvent = {
     // }
 };
 
+let webContentsEventMap = {
+    'did-get-response-details': {
+        topic: 'resource-response-received',
+        decorator: responseReceivedDecorator
+    },
+    'did-fail-load': {
+        topic: 'resource-load-failed',
+        decorator: loadFailedDecorator
+    }
+};
 
 /*
     For the bounds stuff, looks like 5.0 does not take actions until the
@@ -451,48 +461,53 @@ Window.create = function(id, opts) {
             }
         });
 
-        // todo this should be on demand, for now just blast them all
-        Object.keys(electronToOfEvent).forEach(evnt => {
-            var mappedMeta = electronToOfEvent[evnt];
-            var mappedTopic = mappedMeta.topic || '';
+        let mapEvents = function(eventMap, eventEmitter) {
+            // todo this should be on demand, for now just blast them all
+            Object.keys(eventMap).forEach(evnt => {
+                var mappedMeta = eventMap[evnt];
+                var mappedTopic = mappedMeta.topic || '';
 
-            var electronEventListener = function( /*event , arg1, ... */ ) {
+                var electronEventListener = function( /*event , arg1, ... */ ) {
 
-                // if the window has already been removed from core_state,
-                // don't propogate anymore events
-                if (!Window.wrap(uuid, name)) {
-                    return;
-                }
+                    // if the window has already been removed from core_state,
+                    // don't propogate anymore events
+                    if (!Window.wrap(uuid, name)) {
+                        return;
+                    }
 
-                // Bare minimum shape of an OpenFin window event payload
-                let payload = {
+                    // Bare minimum shape of an OpenFin window event payload
+                    let payload = {
 
-                    // todo: remove this hard-code
-                    //reason: 'self',
-                    name,
-                    uuid,
-                    topic: 'window',
-                    type: mappedTopic /* May be overridden by decorator */
+                        // todo: remove this hard-code
+                        //reason: 'self',
+                        name,
+                        uuid,
+                        topic: 'window',
+                        type: mappedTopic /* May be overridden by decorator */
+                    };
+
+                    let eventString = `window/${payload.type}/${uuidname}`;
+                    let decoratorFn = mappedMeta.decorator || noOpDecorator;
+
+                    // Payload is modified by the decorator and returns true on success
+                    if (decoratorFn(payload, arguments)) {
+                        // Let the decorator apply changes to the type
+                        eventString = `window/${payload.type}/${uuidname}`;
+                        ofEvents.emit(eventString, payload);
+                    }
                 };
 
-                let eventString = `window/${payload.type}/${uuidname}`;
-                let decoratorFn = mappedMeta.decorator || noOpDecorator;
+                eventEmitter.on(evnt, electronEventListener);
 
-                // Payload is modified by the decorator and returns true on success
-                if (decoratorFn(payload, arguments)) {
-                    // Let the decorator apply changes to the type
-                    eventString = `window/${payload.type}/${uuidname}`;
-                    ofEvents.emit(eventString, payload);
-                }
-            };
-
-            browserWindow.on(evnt, electronEventListener);
-
-            // push the unhooking functions in to the queue
-            _openListeners.push(() => {
-                browserWindow.removeListener(evnt, electronEventListener);
+                // push the unhooking functions in to the queue
+                _openListeners.push(() => {
+                    eventEmitter.removeListener(evnt, electronEventListener);
+                });
             });
-        });
+        };
+
+        mapEvents(browserWindowEventMap, browserWindow);
+        mapEvents(webContentsEventMap, webContents);
 
         // hideOnClose is deprecated; treat it as if it's just another
         // listener on the 'close-requested' event
@@ -629,7 +644,6 @@ Window.create = function(id, opts) {
         let constructorCallbackMessage = {
             success: true
         };
-        let didFailLoadHandler;
 
         let emitErrMessage = (errCode) => {
             let chromeErrLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
@@ -643,30 +657,37 @@ Window.create = function(id, opts) {
             ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
         };
 
-        let didGetResponseDetailsHandler = (event, status, newURL, originalURL, httpResponseCode) => {
-            browserWindow.httpResponseCode = httpResponseCode;
-            webContents.removeListener('did-fail-load', didFailLoadHandler);
+        let resourceResponseReceivedHandler, resourceLoadFailedHandler;
+
+        let resourceResponseReceivedEventString = `window/resource-response-received/${uuidname}`;
+        let resourceLoadFailedEventString = `window/resource-load-failed/${uuidname}`;
+
+        let httpResponseCode = null;
+
+        resourceResponseReceivedHandler = (details) => {
+            httpResponseCode = details.httpResponseCode;
+            ofEvents.removeListener(resourceLoadFailedEventString, resourceLoadFailedHandler);
         };
 
-        didFailLoadHandler = (event, errCode) => {
-            emitErrMessage(errCode);
-            webContents.removeListener('did-get-response-details', didGetResponseDetailsHandler);
+        resourceLoadFailedHandler = (failure) => {
+            emitErrMessage(failure.errCode);
+            ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
         };
 
         if (opts.url === 'about:blank') {
             webContents.once('did-finish-load', () => {
                 constructorCallbackMessage.data = {
-                    httpResponseCode: null
+                    httpResponseCode
                 };
                 ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
             });
 
         } else {
-            webContents.once('did-get-response-details', didGetResponseDetailsHandler);
-            webContents.once('did-fail-load', didFailLoadHandler);
-            ofEvents.once(`window/connected/${uuid}-${name}`, () => {
+            ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+            ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
+            ofEvents.once(`window/connected/${uuidname}`, () => {
                 constructorCallbackMessage.data = {
-                    httpResponseCode: browserWindow.httpResponseCode
+                    httpResponseCode
                 };
                 ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
             });
@@ -1731,6 +1752,53 @@ function visibilityChangedDecorator(payload, args) {
     return propogate;
 }
 
+function responseReceivedDecorator(payload, args) {
+    var [
+        /*event*/
+        ,
+        status,
+        newUrl,
+        originalUrl,
+        httpResponseCode,
+        requestMethod,
+        referrer,
+        headers,
+        resourceType
+    ] = args;
+
+    Object.assign(payload, {
+        status,
+        newUrl,
+        originalUrl,
+        httpResponseCode,
+        requestMethod,
+        referrer,
+        headers,
+        resourceType
+    });
+
+    return true;
+}
+
+function loadFailedDecorator(payload, args) {
+    var [
+        /*event*/
+        ,
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame
+    ] = args;
+
+    Object.assign(payload, {
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame
+    });
+
+    return true;
+}
 
 function noOpDecorator( /*payload*/ ) {
 
