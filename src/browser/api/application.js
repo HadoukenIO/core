@@ -388,12 +388,13 @@ Application.removeTrayIcon = function(identity /*callback, errorCallback*/ ) {
 
 Application.restart = function(identity /*, callback, errorCallback*/ ) {
     let uuid = identity.uuid;
+    const appObj = coreState.getAppObjByUuid(uuid);
 
     coreState.setAppRestartingState(uuid, true);
 
     try {
         Application.close(identity, true, () => {
-            Application.run(identity);
+            Application.run(identity, appObj._configUrl);
             ofEvents.once(`application/initialized/${uuid}`, function() {
                 coreState.setAppRestartingState(uuid, false);
             });
@@ -412,20 +413,20 @@ Application.revokeWindowAccess = function( /*action, windowName, callback, error
     console.warn('Deprecated');
 };
 
-
-Application.run = function(identity /*callback , errorCallback*/ ) {
+Application.run = function(identity, configUrl = '' /*callback , errorCallback*/ ) {
     if (!identity) {
         return;
     }
 
-    createAppObj(identity.uuid);
+    createAppObj(identity.uuid, null, configUrl);
 
-    let app = Application.wrap(identity.uuid),
-        uuid = identity.uuid,
+    let uuid = identity.uuid,
+        app = Application.wrap(uuid),
+        appState = coreState.appByUuid(uuid),
         mainWindowOpts = _.clone(app._options),
         hideSplashTopic = `application/hide-splashscreen/${uuid}`,
         eventListenerStrings = [],
-        sourceUrl = coreState.appByUuid(uuid).appObj._configUrl,
+        sourceUrl = appState.appObj._configUrl,
         hideSplashListener = () => {
             let rvmPayload = {
                 action: 'hide-splashscreen',
@@ -450,6 +451,14 @@ Application.run = function(identity /*callback , errorCallback*/ ) {
             if (type === 'ready' || type === 'run-requested') {
                 rvmPayload.hideSplashScreenSupported = true;
             } else if (type === 'closed') {
+
+                // Don't send 'closed' event to RVM when app is restarting.
+                // This solves the problem of apps not being able to make API
+                // calls that rely on RVM and manifest URL
+                if (appState.isRestarting) {
+                    return;
+                }
+
                 rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
             }
 
