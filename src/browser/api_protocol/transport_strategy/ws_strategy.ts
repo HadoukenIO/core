@@ -19,12 +19,15 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     constructor(actionMap: ActionMap, requestHandler: RequestHandler<MessagePackage>) {
         super(actionMap, requestHandler);
 
-        this.requestHandler.addHandler((mp: MessagePackage, next: Function) => {
+        this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
 
-            const {identity, data, ack, nack} = mp;
+            const {identity, data, ack, nack, strategyName} = mp;
             const action = this.actionMap[data.action];
 
-            if (typeof (action) === 'function') {
+            if (strategyName !== this.constructor.name) {
+                next();
+            } else if (typeof (action) === 'function') {
+
                 try {
                     action(identity, data, ack, nack);
                 } catch (err) {
@@ -60,7 +63,8 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
 
         this.requestHandler.handle({
             data, ack, nack,
-            identity: identity || id
+            identity: identity || id,
+            strategyName: this.constructor.name
         });
     }
 

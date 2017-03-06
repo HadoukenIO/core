@@ -49,6 +49,19 @@ import {
     portDiscovery
 } from './src/browser/port_discovery';
 
+let meshEnabled = false;
+let connectionManager;
+
+// Uncomment this to enable the mesh (if runtime p2p is available)
+// try {
+//     connectionManager = require('runtime-p2p').connectionManager;
+//     meshEnabled = true;
+// } catch (e) {
+//     log.writeToLog('info', 'mesh not enabled');
+// }
+
+import * as log from './src/browser/log';
+
 const USER_DATA = app.getPath('userData');
 
 app.on('child-window-created', function(parentId, childId, childOptions) {
@@ -110,6 +123,24 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
 
     let params = '?url=' + encodeURIComponent(url) + '&uuid=' + encodeURIComponent(ipcUuid) + '&certs=' + encodeURIComponent(_.pluck(list, 'issuerName'));
     clientCertDialog.loadURL(path.resolve(__dirname, 'src', 'certificate', 'index.html') + params);
+});
+
+portDiscovery.on('runtime/launched', (portInfo) => {
+    //check if the ports match:
+    const myPortInfo = coreState.getSocketServerState();
+    log.writeToLog('info', `Port discovery message received ${JSON.stringify(portInfo)}`);
+
+    //TODO: Include REALM in the determination.
+    if (meshEnabled && portInfo.port !== myPortInfo.port) {
+
+        connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
+            //one connected we broadcast our port discovery message.
+            portDiscovery.broadcast(myPortInfo);
+            log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
+        }).catch(err => {
+            log.writeToLog('info', `Failed to connecto to runtime ${JSON.stringify(portInfo)}, ${JSON.stringify(errors.errorToPOJO(err))}`);
+        });
+    }
 });
 
 includeFlashPlugin();

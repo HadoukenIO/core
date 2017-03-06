@@ -21,8 +21,60 @@ const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrat
 import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { ActionMap, MessagePackage } from '../transport_strategy/api_transport_base';
 
+import * as log from '../../log';
+
+/* tslint:disable */
+let meshEnabled = false;
+let connectionManager: any;
+/* tslint:enable */
+
+// Uncomment this to enable the mesh (if runtime p2p is available)
+// try {
+//     connectionManager = require('runtime-p2p').connectionManager;
+//     meshEnabled = true;
+// } catch (e) {
+//     log.writeToLog('info', 'mesh not enabled');
+// }
+
+const coreState = require('../../core_state');
 const actionMap: ActionMap = {};
 const requestHandler = new RequestHandler<MessagePackage>();
+
+if (meshEnabled) {
+    requestHandler.addPreProcessor((msg: MessagePackage, next: () => void) => {
+        const {identity, data, ack, nack } = msg;
+        const payload = data && data.payload;
+        const uuid = payload && payload.uuid;
+        const isSync = data && data.isSync;  //TODO handle the sync case?
+        const islocalWindow = !!coreState.getWindowByUuidName(uuid, uuid);
+        const hasIdentityObj = typeof (identity) === 'object';
+
+        // have to check if this is a "local" external connection ...
+        if (hasIdentityObj && !isSync && !islocalWindow) {
+            try {
+                connectionManager.resolveIdentity({uuid})
+                    .then((id: any) => {
+                        id.runtime.fin.System.executeOnRemote(data, ack, nack);
+                    })
+                    .catch((e: Error) => {
+
+                        // the target was not local or remote
+                        next();
+                    });
+
+            } catch (e) {
+
+                // something failed asking for the remote
+                log.writeToLog('info', 'error requesting non local window');
+                next();
+            }
+        } else {
+
+            // handle local
+            next();
+        }
+    });
+}
 
 // add the handler + create with action map
 const webSocketStrategy = new WebSocketStrategy(actionMap, requestHandler);

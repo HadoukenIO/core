@@ -28,11 +28,14 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     constructor(actionMap: ActionMap, requestHandler: RequestHandler<MessagePackage>) {
         super(actionMap, requestHandler);
 
-        this.requestHandler.addHandler((mp: MessagePackage, next: Function) => {
-            const {identity, data, ack, nack, e} = mp;
+        this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
+            const {identity, data, ack, nack, e, strategyName} = mp;
             const action = this.actionMap[data.action];
 
-            if (typeof (action) === 'function') {
+            if (strategyName !== this.constructor.name) {
+                next();
+            } else if (typeof (action) === 'function') {
+
                 try {
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
                     if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
@@ -84,7 +87,8 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             };
 
             this.requestHandler.handle({
-                identity, data, ack, nack, e
+                identity, data, ack, nack, e,
+                strategyName: this.constructor.name
             });
 
         } catch (err) {

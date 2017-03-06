@@ -545,6 +545,24 @@ module.exports.System = {
                 uuid: eApp.uuid
             };
         });
+    },
+    resolveUuid: function(identity, uuid, cb) {
+        const externalConn = externalApplication.getAllExternalConnctions().filter(c => c.uuid === uuid)[0];
+        const app = coreState.getAppObjByUuid(uuid);
+
+        if (externalConn) {
+            cb(null, {
+                type: 'external-app',
+                uuid: externalConn.uuid
+            });
+        } else if (app) {
+            cb(null, {
+                type: 'application',
+                uuid: app.uuid
+            });
+        } else {
+            cb(new Error('uuid not found.'));
+        }
     }
 
 };

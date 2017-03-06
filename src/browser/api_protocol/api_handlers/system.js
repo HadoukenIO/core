@@ -59,7 +59,8 @@ function SystemApiHandler() {
         'get-nearest-display-root': getNearestDisplayRoot,
         'raise-event': raiseEvent,
         'download-asset': downloadAsset,
-        'get-all-external-applications': getAllExternalApplications
+        'get-all-external-applications': getAllExternalApplications,
+        'resolve-uuid': resolveUuid
     };
 
     apiProtocolBase.registerActionMap(SystemApiHandlerMap);
@@ -342,6 +343,20 @@ function SystemApiHandler() {
         let dataAck = _.clone(successAck);
         dataAck.data = System.getHostSpecs();
         ack(dataAck);
+    }
+
+    function resolveUuid(idenity, message, ack, nack) {
+        let dataAck = _.clone(successAck);
+
+        System.resolveUuid(idenity, message.payload.entityKey, (err, entity) => {
+            if (err) {
+                nack(err);
+            } else {
+                dataAck.data = entity;
+                ack(dataAck);
+            }
+        });
+
     }
 }
 
