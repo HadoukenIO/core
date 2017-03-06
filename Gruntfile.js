@@ -180,9 +180,7 @@ module.exports = function(grunt) {
 
     grunt.registerTask('build-dev', ['jshint', 'jsbeautifier:default', 'clean', 'babel', 'tslint', 'ts', 'test',  'copy:lib', 'copy:etc', 'copy:login', 'copy:certificate']);
 
-    grunt.registerTask('build-pac', ['jshint', 'jsbeautifier', 'clean', 'babel', 'tslint', 'ts', 'copy', 'build-deploy-modules',
-        'package'
-    ]);
+    grunt.registerTask('build-pac', ['jshint', 'jsbeautifier', 'clean', 'babel', 'tslint', 'ts', 'test', 'copy', 'build-deploy-modules', 'package']);
 
     grunt.registerTask('clean', 'clean the out house', function() {
         wrench.rmdirSyncRecursive('staging', true);
