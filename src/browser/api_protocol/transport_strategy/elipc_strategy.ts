@@ -35,7 +35,6 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             if (strategyName !== this.constructor.name) {
                 next();
             } else if (typeof (action) === 'function') {
-
                 try {
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
                     if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
@@ -47,6 +46,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                     nack(err);
                 }
             }
+
         });
     }
 
@@ -85,6 +85,10 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                 name: opts.name,
                 uuid: opts.uuid
             };
+
+            /* tslint:disable: max-line-length */
+            system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data)}`);
+            /* tslint:enable: max-line-length */
 
             this.requestHandler.handle({
                 identity, data, ack, nack, e,
