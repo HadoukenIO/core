@@ -32,14 +32,11 @@ export class PortDiscovery extends EventEmitter {
     private _copyDataTransport: WMCopyData;
 
     private constructCopyDataTransport(): WMCopyData {
-            if (!this._copyDataTransport && process.platform.indexOf('win32') > -1) {
 
-            this._copyDataTransport = new WMCopyData(window_class_name);
-            this._copyDataTransport.on('message', (s: any, data: string) => {
-                this.emit('runtime/connected', JSON.parse(data));
-            });
-
-        }
+        this._copyDataTransport = new WMCopyData(window_class_name);
+        this._copyDataTransport.on('message', (s: any, data: string) => {
+            this.emit('runtime/connected', JSON.parse(data));
+        });
         return this._copyDataTransport;
     }
 

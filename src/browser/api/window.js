@@ -297,6 +297,11 @@ let optionSetters = {
         if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
         }
+    },
+    showTaskbarIcon: function(newVal, browserWin) {
+        let showTaskbarIconBool = !!newVal;
+        setOptOnBrowserWin('showTaskbarIcon', showTaskbarIconBool, browserWin);
+        browserWin.setSkipTaskbar(!showTaskbarIconBool);
     }
 };
 
@@ -412,6 +417,13 @@ Window.create = function(id, opts) {
                     return;
                 }
             }
+
+            ofEvents.emit(`window/synth-close/${uuidname}`, {
+                name,
+                uuid,
+                topic: 'window',
+                type: 'synth-close'
+            });
 
             // can't unhook when the 'closed' event fires; browserWindow is already destroyed then
             browserWindow.webContents.removeAllListeners('page-favicon-updated');
@@ -964,7 +976,6 @@ Window.getWindowInfo = function(identity) {
         title: webContents.getTitle()
     };
 };
-
 
 Window.getNativeId = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
