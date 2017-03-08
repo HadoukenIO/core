@@ -10,9 +10,14 @@ const MessageWindow = require('electron').MessageWindow;
 
 class WMCopyDataTransport extends BaseTransport {
     private _messageWindow: any;
+    private senderClass: string;
+    private targetClass: string;
 
-    constructor(pipeName: string) {
-        super(pipeName);
+    constructor(senderClass: string, targetClass: string) {
+        super();
+        this.senderClass = senderClass;
+        this.targetClass = targetClass;
+
         // on windows x64 platform still returns win32
         if (process.platform.indexOf('win32') !== -1) {
             this.initMessageWindow();
@@ -21,7 +26,7 @@ class WMCopyDataTransport extends BaseTransport {
 
     private initMessageWindow() {
         // create hidden browser window
-        this._messageWindow = new MessageWindow(this.pipeName, this.pipeName);
+        this._messageWindow = new MessageWindow(this.senderClass, '');
 
         this._messageWindow.on('data', (sender: any, data: any) => {
             this.eventEmitter.emit('message', data.sender,  data.message);
@@ -36,7 +41,7 @@ class WMCopyDataTransport extends BaseTransport {
                 this.initMessageWindow();
             }
 
-            this._messageWindow.sendbyname(this.pipeName, '', JSON.stringify(data));
+            this._messageWindow.sendbyname(this.targetClass, '', JSON.stringify(data));
 
             return true;
         }

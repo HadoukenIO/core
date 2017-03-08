@@ -29,7 +29,7 @@ var RVMMessageBus = function(configuration) {
 
     var messageIdToCallback = {}; // Tracks functions that we'll notify If a response is received
 
-    config.transport = config.transport || new Transport.WMCopyData('OpenFinRVM_Messaging');
+    config.transport = config.transport || new Transport.WMCopyData('RvmMessageBus', 'OpenFinRVM_Messaging');
     var transport_ = config.transport;
 
     transport_.on('message', function(hwnd, data) {
