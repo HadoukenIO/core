@@ -88,6 +88,10 @@ function SubscriptionManager() {
         removeAllSubscriptions(identity);
     });
 
+    ofEvents.on('window/unload', identity => {
+        removeAllSubscriptions(identity);
+    });
+
     ofEvents.on(`externalconn/closed`, identity => {
         removeAllSubscriptions(identity);
     });

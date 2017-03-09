@@ -52,6 +52,11 @@ function WindowApiHandler() {
         'minimize-window': minimizeWindow,
         'move-window': moveWindow,
         'move-window-by': moveWindowBy,
+
+        // Event fired when window is unloading its content and resources.
+        // Reloading a window or navigating away will fire this event
+        'on-window-unload': onWindowUnload,
+
         'redirect-window-to-url': redirectWindowToUrl,
         'resize-window': resizeWindow,
         'resize-window-by': resizeWindowBy,
@@ -499,6 +504,11 @@ function WindowApiHandler() {
         let level = payload.level;
 
         Window.setZoomLevel(windowIdentity, level);
+        ack(successAck);
+    }
+
+    function onWindowUnload(identity, message, ack) {
+        Window.onUnload(identity);
         ack(successAck);
     }
 

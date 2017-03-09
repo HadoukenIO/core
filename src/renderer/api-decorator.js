@@ -303,6 +303,10 @@ limitations under the License.
         //---------------------------------------------------------------
         let winOpts = getWindowOptionsSync();
 
+        window.addEventListener('unload', () => {
+            syncApiCall('on-window-unload');
+        });
+
         showOnReady(glbl, winOpts);
         wireUpMenu(glbl, winOpts);
         wireUpZoomEvents();

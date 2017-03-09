@@ -1446,6 +1446,11 @@ Window.setZoomLevel = function(identity, level) {
     browserWindow.webContents.setZoomLevel(level);
 };
 
+Window.onUnload = (identity) => {
+    ofEvents.emit('window/unload', identity);
+    ofEvents.emit('window/init-subscription-listeners', identity);
+};
+
 function emitCloseEvents(identity) {
     ofEvents.emit(`window/closed`, {
         name: identity.name,
