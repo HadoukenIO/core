@@ -138,7 +138,7 @@ portDiscovery.on('runtime/launched', (portInfo) => {
             portDiscovery.broadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
         }).catch(err => {
-            log.writeToLog('info', `Failed to connecto to runtime ${JSON.stringify(portInfo)}, ${JSON.stringify(errors.errorToPOJO(err))}`);
+            log.writeToLog('info', `Failed to connect to runtime ${JSON.stringify(portInfo)}, ${JSON.stringify(errors.errorToPOJO(err))}`);
         });
     }
 });

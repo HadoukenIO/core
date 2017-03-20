@@ -97,7 +97,7 @@ ofEvents.on('window/closed/*', (e: any) => {
                 }
             }
         } catch (e) {
-            writeToLog('info', e.message);
+            writeToLog('info', e);
         }
     }, 10);
 
@@ -153,12 +153,12 @@ ofEvents.on('application/window-end-load/*', (e: any) => {
                     name: 'queueCounter'
                 });
             } catch (e){
-                writeToLog('info', e.message)
+                writeToLog('info', e)
             }
         }
 
     } catch (e) {
-        writeToLog('info', e.message);
+        writeToLog('info', e);
     }
 });
 
@@ -214,7 +214,7 @@ seqs.removes.subscribe((removedOpts: Object) => {
 
         assignAndUpdateQCounter();
     } catch (e) {
-        writeToLog('info', e.message);
+        writeToLog('info', e);
     }
 });
 
@@ -590,7 +590,7 @@ function dispatchMessageToNote (msg: NotificationMessage): void {
             ofEvents.emit(noteTopicStr(uuid, name), msg);
         }
     } catch (e) {
-        writeToLog('info', e.message);
+        writeToLog('info', e);
     }
 }
 
@@ -696,7 +696,7 @@ function closeNotification(req: NotificationMessage): void {
         Window.close(id);
 
         // TODO removeFromExternalMaps(id);
-    }, (e: any) => { writeToLog('info', e.message); });
+    }, (e: any) => { writeToLog('info', e); });
 }
 
 function updateAnimationState(animationState: boolean): void {

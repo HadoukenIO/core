@@ -22,7 +22,7 @@ limitations under the License.
 declare module 'electron' {
     namespace app {
         export function log(level: string, message: any): any;
-        export function vlog(level: string, message: any): any;
+        export function vlog(level: number, message: any): any;
         export function getPath(str: string): string;
         export function getTickCount(): number;
         export function on(event: string, callback: () => void): void;
