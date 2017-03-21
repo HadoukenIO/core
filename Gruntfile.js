@@ -351,6 +351,7 @@ module.exports = (grunt) => {
             'src/browser/rvm/utils.ts',
             'src/browser/api/external_application.js',
             'src/browser/external_window_event_adapter.js',
+            'src/browser/connection_manager.ts',
             'src/browser/transport.ts',
             'src/browser/transports/socket_server.js',
             'src/browser/transports/wm_copydata.ts',
