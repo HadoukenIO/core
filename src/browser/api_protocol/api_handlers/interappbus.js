@@ -54,36 +54,27 @@ function InterApplicationBusApiHandler() {
         let sourceUuid = payload.sourceUuid;
         let sourceWindowName = payload.sourceWindowName || '';
         let {
-            messageKey: acceptedKey
+            messageKey: subscribedMessageKey
         } = payload;
 
-        let subscriptionCallback = function(msgObj) {
-
-            let payload = {
-                sourceUuid: msgObj.identity.uuid,
-                topic: topic,
-                destinationUuid: sourceUuid,
-                message: msgObj.message,
-                directMsg: msgObj.directMsg,
-                sourceWindowName: msgObj.identity.name
-            };
-
+        let subscriptionCallback = function(payload) {
             let {
-                messageKey
-            } = msgObj;
+                messageKey: sentMessageKey
+            } = payload;
 
-            var obj = {
+            var command = {
                 action: 'process-message',
-                payload: Object.assign(msgObj, payload)
+                payload
             };
 
             // old subscribing to new 
-            if (!acceptedKey && (messageKey === 'messageString')) {
-                obj.payload.message = JSON.parse(msgObj[messageKey]);
+            if (!subscribedMessageKey && (sentMessageKey === 'messageString')) {
+                command.payload.message = JSON.parse(payload[sentMessageKey]);
             }
 
-            apiProtocolBase.sendToIdentity(identity, obj);
+            apiProtocolBase.sendToIdentity(identity, command);
         };
+
         let subscriptionObj;
 
         if (apiProtocolBase.subscriptionExists(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE)) {
@@ -106,15 +97,13 @@ function InterApplicationBusApiHandler() {
     }
 
 
-    function sendMessage(identity, payloadFromAdapter, ack) {
-        InterApplicationBus.send(identity, payloadFromAdapter);
+    function sendMessage(identity, message, ack) {
+        InterApplicationBus.send(identity, message.payload);
         ack(successAck);
     }
 
     function publishMessage(identity, message, ack) {
-        var payload = message.payload;
-
-        InterApplicationBus.publish(identity, payload);
+        InterApplicationBus.publish(identity, message.payload);
         ack(successAck);
     }
 
