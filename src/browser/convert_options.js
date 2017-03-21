@@ -24,6 +24,7 @@ let app = require('electron').app;
 let ResourceFetcher = require('electron').resourceFetcher;
 
 let _ = require('underscore');
+let log = require('./log');
 let parseArgv = require('minimist');
 let regex = require('../common/regex');
 
@@ -100,17 +101,17 @@ function isInContainer(type) {
 }
 
 function readFile(filePath, done, onError) {
-    app.vlog(1, `Requested contents from ${filePath}`);
+    log.writeToLog(1, `Requested contents from ${filePath}`, true);
     let normalizedPath = path.resolve(filePath);
-    app.vlog(1, `Normalized path as ${normalizedPath}`);
+    log.writeToLog(1, `Normalized path as ${normalizedPath}`, true);
     fs.readFile(normalizedPath, 'utf8', (err, data) => {
         if (err) {
             onError(err);
             return;
         }
 
-        app.vlog(1, `Contents from ${normalizedPath}`);
-        app.vlog(1, data);
+        log.writeToLog(1, `Contents from ${normalizedPath}`, true);
+        log.writeToLog(1, data, true);
 
         let config;
         try {
@@ -132,8 +133,8 @@ function getURL(url, done, onError) {
             return;
         }
 
-        app.vlog(1, `Contents from ${url}`);
-        app.vlog(1, data);
+        log.writeToLog(1, `Contents from ${url}`, true);
+        log.writeToLog(1, data, true);
 
         let config;
         try {
@@ -145,7 +146,7 @@ function getURL(url, done, onError) {
         done(config);
     });
 
-    app.vlog(1, `Fetching ${url}`);
+    log.writeToLog(1, `Fetching ${url}`, true);
     fetcher.fetch(url);
 }
 
@@ -176,6 +177,16 @@ function validate(base, user) {
     });
 
     return options;
+}
+
+function fetchLocalConfig(configUrl, successCallback, errorCallback) {
+    log.writeToLog(1, `Falling back on local-startup-url path: ${configUrl}`, true);
+    readFile(configUrl, configObject => {
+        successCallback({
+            configObject,
+            configUrl
+        });
+    }, errorCallback);
 }
 
 module.exports = {
@@ -256,6 +267,30 @@ module.exports = {
         let argv = parseArgv(processArgs);
         // ensure removal of eclosing double-quotes when absolute path.
         let configUrl = (argv['startup-url'] || argv['config']);
+        let localConfigPath = argv['local-startup-url'];
+        let offlineAccess = false;
+        let errorCallback = err => {
+            if (offlineAccess) {
+                fetchLocalConfig(localConfigPath, onComplete, onError);
+            } else {
+                onError(err);
+            }
+        };
+
+        // if local-startup-url is defined and its config specifies offline mode, then
+        // allow fetching from the local-startup-url config
+        if (localConfigPath) {
+            try {
+                let localConfig = JSON.parse(fs.readFileSync(localConfigPath));
+
+                if (localConfig['offlineAccess']) {
+                    offlineAccess = true;
+                }
+            } catch (err) {
+                log.writeToLog(1, err, true);
+            }
+        }
+
         if (typeof configUrl !== 'string') {
             configUrl = '';
         }
@@ -275,7 +310,7 @@ module.exports = {
                     configObject,
                     configUrl
                 });
-            }, onError);
+            }, errorCallback);
         }
 
         let filepath = regex.isURI(configUrl) ? regex.uriToPath(configUrl) : configUrl;
@@ -285,7 +320,7 @@ module.exports = {
                 configObject,
                 configUrl
             });
-        }, onError);
+        }, errorCallback);
     }
 
 };

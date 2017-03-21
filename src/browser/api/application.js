@@ -36,6 +36,7 @@ let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 let Icon = require('../icon.js');
 import ofEvents from '../of_events';
+let parseArgv = require('minimist');
 let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
 import {
@@ -466,6 +467,13 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
                 rvmBus.send('application-event', JSON.stringify(rvmPayload));
             }
         };
+
+    // if the runtime is in offline mode, the RVM still expects the
+    // startup-url/config for communication
+    let argv = parseArgv(process.argv);
+    if (sourceUrl === argv['local-startup-url']) {
+        sourceUrl = argv['startup-url'] || argv['config'];
+    }
 
     if (coreState.getAppRunningState(uuid)) {
         if (coreState.sentFirstHideSplashScreen(uuid)) {

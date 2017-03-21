@@ -165,8 +165,6 @@ app.on('ready', function() {
 
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
 
-    let argv = app.getCommandLineArguments().split(' ');
-
     rvmBus = require('./src/browser/rvm/rvm_message_bus');
 
     let otherInstanceRunning = app.makeSingleInstance(function(commandLine) {
@@ -203,12 +201,12 @@ app.on('ready', function() {
         System.log('info', `Runtime integrity level of the app: ${integrityLevel}`);
     }
 
-    rotateLogs(argv);
+    rotateLogs(process.argv);
 
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
-    launchApp(argv, true);
+    launchApp(process.argv, true);
 
     registerShortcuts();
 
