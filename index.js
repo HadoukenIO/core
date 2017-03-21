@@ -50,16 +50,10 @@ import {
     portDiscovery
 } from './src/browser/port_discovery';
 
-let meshEnabled = false;
-let connectionManager;
-
-// Uncomment this to enable the mesh (if runtime p2p is available)
-// try {
-//     connectionManager = require('runtime-p2p').connectionManager;
-//     meshEnabled = true;
-// } catch (e) {
-//     log.writeToLog('info', 'mesh not enabled');
-// }
+import {
+    default as connectionManager,
+    meshEnabled
+} from './src/browser/connection_manager';
 
 import * as log from './src/browser/log';
 
