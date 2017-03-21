@@ -52,10 +52,19 @@ export function fetch(appUuid: string, iconUrl: string, callback: (error: null|E
                     download(iconUrl, iconFilePath, callback);
                 }
             });
+        } else if (remoteFileIsYoungerThanCachedFile(iconUrl, iconFilePath)) {
+            download(iconUrl, iconFilePath, callback);
         } else {
             callback(null, iconFilePath);
         }
     });
+}
+
+function remoteFileIsYoungerThanCachedFile(remoteUrl: string, cachedFilePath: string) {
+    //todo: make a RESTful HEAD request and if file at remoteUrl is missing, return false;
+    //todo: else if file at remoteUrl is younger than file at cachedFilePath, return true;
+    //todo: else return false
+    return true; //for now we ae always fetching
 }
 
 /**

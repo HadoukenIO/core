@@ -651,6 +651,12 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     // cleanup the old one so it can be replaced
     removeTrayIcon(app);
 
+    let mainWindowIdentity = {
+        uuid: identity.uuid,
+        name: identity.uuid
+    };
+    iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
+
     Icon.fetch(app.uuid, iconUrl, (error, iconFilepath) => {
         if (!error) {
             if (app && app.tray) {

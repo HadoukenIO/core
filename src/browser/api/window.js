@@ -17,15 +17,21 @@ limitations under the License.
     src/browser/api/window.js
  */
 
+// node API packages
 let fs = require('fs');
 let path = require('path');
+let url = require('url');
 
+// electron API packages
 let BrowserWindow = require('electron').BrowserWindow;
 let electronApp = require('electron').app;
 let Menu = require('electron').Menu;
 let nativeImage = require('electron').nativeImage;
 
+// misc npm packages
 let _ = require('underscore');
+
+// local packages
 let animations = require('../animations.js');
 let authenticationDelegate = require('../authentication_delegate.js');
 let BoundsChangedStateTracker = require('../bounds_changed_state_tracker.js');
@@ -38,7 +44,7 @@ let log = require('../log');
 import ofEvents from '../of_events';
 let ProcessTracker = require('../process_tracker.js');
 let regex = require('../../common/regex');
-let subScriptionManager = new require('../subscription_manager.js').SubscriptionManager();
+let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
 let WindowGroups = require('../window_groups.js');
 import {
     validateNavigation,
@@ -550,7 +556,7 @@ Window.create = function(id, opts) {
         };
 
         WindowGroups.on(groupChangedEventString, groupChangedListener);
-        subScriptionManager.registerSubscription(groupChangedUnsubscribe, identity, groupChangedEventString);
+        subscriptionManager.registerSubscription(groupChangedUnsubscribe, identity, groupChangedEventString);
 
         // Event listener for external process started
         let synthProcessStartedEventString = `synth-process-started/${uuidname}`;
@@ -569,7 +575,7 @@ Window.create = function(id, opts) {
         };
 
         ProcessTracker.on(synthProcessStartedEventString, synthProcessStartedListener);
-        subScriptionManager.registerSubscription(synthProcessStartedUnsubscribe, identity, synthProcessStartedEventString);
+        subscriptionManager.registerSubscription(synthProcessStartedUnsubscribe, identity, synthProcessStartedEventString);
 
         // Event listener for external process termination
         let synthProcessTerminatedEventString = `synth-process-terminated/${uuidname}`;
@@ -588,7 +594,7 @@ Window.create = function(id, opts) {
         };
 
         ProcessTracker.on(synthProcessTerminatedEventString, synthProcessTerminatedListener);
-        subScriptionManager.registerSubscription(synthProcessTerminatedUnsubscribe, identity, synthProcessTerminatedEventString);
+        subscriptionManager.registerSubscription(synthProcessTerminatedUnsubscribe, identity, synthProcessTerminatedEventString);
 
         // will-navigate URL for white/black listing
         const navValidator = navigationValidator(uuid, name, id);
@@ -606,7 +612,7 @@ Window.create = function(id, opts) {
         let startLoadingUnsubscribe = () => {
             webContents.removeListener(startLoadingString, startLoadingSubscribe);
         };
-        subScriptionManager.registerSubscription(startLoadingUnsubscribe, identity, startLoadingString);
+        subscriptionManager.registerSubscription(startLoadingUnsubscribe, identity, startLoadingString);
 
         let documentLoadedSubscribe = (event, isMain, documentName) => {
             if (isMain && uuid === name) { // main window
@@ -632,7 +638,7 @@ Window.create = function(id, opts) {
         let documentLoadedUnsubscribe = () => {
             webContents.removeListener(documentLoadedString, documentLoadedSubscribe);
         };
-        subScriptionManager.registerSubscription(documentLoadedUnsubscribe, identity, documentLoadedString);
+        subscriptionManager.registerSubscription(documentLoadedUnsubscribe, identity, documentLoadedString);
 
         // picked up in src/browser/external_connection/interappbus_external_api.js
         // hooks up (un)subscribe listeners
@@ -987,7 +993,6 @@ Window.getGroup = function(identity) {
 };
 
 
-// returns an object reminiscent of DOM's window.location object
 Window.getWindowInfo = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get info for');
     let webContents = browserWindow.webContents;
@@ -997,6 +1002,15 @@ Window.getWindowInfo = function(identity) {
         title: webContents.getTitle()
     };
 };
+
+
+Window.getAbsolutePath = function(identity, path) {
+    let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
+    let windowURL = browserWindow.webContents.getURL();
+
+    return url.resolve(windowURL, path);
+};
+
 
 Window.getNativeId = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
@@ -1946,7 +1960,7 @@ function handleCustomAlerts(id, opts) {
     }
 
     browserWindow.on(subTopic, subscription);
-    subScriptionManager.registerSubscription(unsubscribe, {
+    subscriptionManager.registerSubscription(unsubscribe, {
         uuid: opts.uuid,
         name: opts.name
     }, type, id);

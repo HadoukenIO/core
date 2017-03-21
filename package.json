@@ -34,7 +34,6 @@
     "grunt-tslint": "^3.3.0",
     "load-grunt-tasks": "^3.3.0",
     "mocha": "^3.0.2",
-    "npm": "^3.3.8",
     "rewire": "^2.5.2",
     "should": "^11.1.0",
     "should-sinon": "^0.0.5",
