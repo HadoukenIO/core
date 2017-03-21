@@ -315,7 +315,7 @@ function initializeCrashReporter(args) {
 }
 
 function rotateLogs(argv) {
-    // only keep the 20 most recent logfiles
+    // only keep the 7 most recent logfiles
     System.getLogList((err, files) => {
         if (err) {
             System.log('error', `logfile error: ${err}`);
@@ -324,7 +324,7 @@ function rotateLogs(argv) {
                 return !(file.name === 'debug.log' || file.name.indexOf('debugp') === 0);
             }).sort((a, b) => {
                 return (b.date - a.date);
-            }).slice(19).forEach(file => {
+            }).slice(6).forEach(file => {
                 let filepath = path.join(USER_DATA, file.name);
                 fs.unlink(filepath, err => {
                     if (err) {
