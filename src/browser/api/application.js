@@ -132,14 +132,14 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
         throw new Error(`Application with specified UUID already exists: ${opts.uuid}`);
     }
 
-    let existingApp = coreState.appByUuid(opts.uuid);
-    if (existingApp) {
-        coreState.removeApp(existingApp.id);
-    }
-
     let parentUuid = parentIdentify && parentIdentify.uuid;
     if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
+    }
+
+    let existingApp = coreState.appByUuid(opts.uuid);
+    if (existingApp) {
+        coreState.removeApp(existingApp.id);
     }
 
     let appObj = createAppObj(opts.uuid, opts, configUrl);
@@ -897,6 +897,16 @@ function createAppObj(uuid, opts, configUrl = '') {
         appObj.mainWindow = new BrowserWindow(eOpts);
         appObj.mainWindow.setFrameConnectStrategy(eOpts.frameConnect || 'last');
         appObj.id = appObj.mainWindow.id;
+
+        appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
+            if (isMainFrame) {
+                _.defer(() => {
+                    Application.close({
+                        uuid: opts.uuid
+                    }, true);
+                });
+            }
+        });
 
         // the name must match the uuid for apps to match 5.0
         opts.name = opts.uuid;

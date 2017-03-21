@@ -45,6 +45,7 @@ let parseArgv = require('minimist');
 let firstApp = null;
 let splitStartupArgs = parseArgv(process.argv);
 let crashReporterEnabled = false;
+let rvmBus;
 import {
     portDiscovery
 } from './src/browser/port_discovery';
@@ -172,7 +173,7 @@ app.on('ready', function() {
 
     let argv = app.getCommandLineArguments().split(' ');
 
-    let rvmBus = require('./src/browser/rvm/rvm_message_bus');
+    rvmBus = require('./src/browser/rvm/rvm_message_bus');
 
     let otherInstanceRunning = app.makeSingleInstance(function(commandLine) {
         let commandLineSwitches = parseArgv(commandLine);
@@ -477,6 +478,19 @@ function initFirstApp(options, configUrl) {
         });
     } catch (error) {
         console.log(`Error: ${error.message}`);
+
+        if (rvmBus) {
+            rvmBus.send('application', {
+                action: 'hide-splashscreen',
+                sourceUrl: configUrl
+            });
+        }
+
+        if (coreState.shouldCloseRuntime()) {
+            _.defer(() => {
+                app.quit();
+            });
+        }
     }
 }
 

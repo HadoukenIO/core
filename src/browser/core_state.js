@@ -492,14 +492,6 @@ function getOfWindowByUuidName(uuid, name) {
     return win;
 }
 
-function getNumRunningApps() {
-    return coreState.apps.map(app => {
-        return app.appObj;
-    }).filter(app => {
-        return app.isRunning;
-    }).length;
-}
-
 /**
  * returns a list of wrapped window objects
  * TODO flatten this one level
@@ -650,7 +642,6 @@ module.exports = {
     getChildrenByWinId,
     getMainWindowOptions,
     getManifestProxySettings,
-    getNumRunningApps,
     getOfWindowByUuidName,
     getStartManifest,
     getWinById,
