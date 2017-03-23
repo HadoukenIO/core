@@ -118,6 +118,10 @@ function removeSubscription(identity: any, ...args: any[]) {
     return subscriptionManager.removeSubscription(identity, ...args);
 }
 
+function getDefaultRequestHandler(): RequestHandler<MessagePackage> {
+    return requestHandler;
+}
+
 function getGroupingWindowIdentity(payload: any) {
     return {
         uuid: payload.groupingUuid,
@@ -164,6 +168,7 @@ module.exports = {
     removeSubscription,
     subscriptionExists,
     uppSubscriptionRefCount,
+    getDefaultRequestHandler,
     getGroupingWindowIdentity,
     getTargetWindowIdentity,
     getTargetApplicationIdentity,

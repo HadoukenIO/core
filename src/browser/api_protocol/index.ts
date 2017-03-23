@@ -38,4 +38,6 @@ export function initApiHandlers() {
     const windowApiHandler = new WindowApiHandler();
 
     apiProtocolBase.init();
+
+    const apiPolicyProcessor = require('./api_handlers/api_policy_processor');
 }

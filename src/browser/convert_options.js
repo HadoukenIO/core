@@ -255,6 +255,10 @@ module.exports = {
             newOptions.customData = options.customData;
         }
 
+        if (options.permissions !== undefined) { // API policy
+            newOptions.permissions = options.permissions;
+        }
+
         app.vlog(1, JSON.stringify(newOptions));
         if (returnAsString) {
             return JSON.stringify(newOptions);
