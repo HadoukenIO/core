@@ -1,5 +1,5 @@
 {
-  "name": "runtime-core",
+  "name": "openfin",
   "version": "0.0.1",
   "description": "The core app of the OpenFin Runtime 6.0",
   "main": "index.js",
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/openfin/runtime-core.git"
+    "url": "https://github.com/openfin/openfin.git"
   },
   "author": "OpenFin",
   "license": "",
   "bugs": {
-    "url": "https://github.com/openfin/runtime-core/issues"
+    "url": "https://github.com/openfin/openfin/issues"
   },
-  "homepage": "https://github.com/openfin/runtime-core",
+  "homepage": "https://github.com/openfin/openfin",
   "devDependencies": {
     "@types/node": "^6.0.49",
     "asar": "^0.12.1",
