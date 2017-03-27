@@ -1384,8 +1384,7 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
     }, {
         label: 'Inspect element',
         click: (menuItem, browserWindow) => {
-            var clickPosition = browserWindow.getClickPosition();
-            browserWindow.webContents.inspectElement(clickPosition.x, clickPosition.y);
+            browserWindow.webContents.inspectElement(x, y);
         },
         accelerator: 'CommandOrControl+Shift+I'
     });
