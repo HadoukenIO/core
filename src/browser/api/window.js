@@ -1851,9 +1851,11 @@ function setTaskbar(browserWindow) {
 
     setBlankTaskbarIcon(browserWindow);
 
-    // if we aren't loading the page via http, then
-    // the 'page-favicon-updated' event never fires
-    if (regex.isURI(options.url)) {
+    // If the window isn't loaded by a URL, or is "about:blank", then the
+    // page-favicon-updated event never fires (explained below). In this case
+    // we try the window options and if that fails we get the icon info
+    // from the main window.
+    if (!regex.isURL(options.url)) {
         let _url = getWinOptsIconUrl(options);
 
         // v6 needs to match v5's behavior: if the window url is a file uri,
@@ -1873,7 +1875,13 @@ function setTaskbar(browserWindow) {
         return;
     }
 
-    // this event will not be fired if the window url is 'about:blank'
+    // When a page loads, Electron fires the page-favicon-updated event
+    // which signals the core to fetch/set the taskbar icon. The core
+    // first tries to use the icon info provided by the window options.
+    // If that fails, then it tries to use the list of favicons provided by
+    // the page-favicon-updated event. Finally, if that fails, it'll grab
+    // the icon info from the main window and use that. By default, the
+    // taskbar icon is blank.
     browserWindow.webContents.on('page-favicon-updated', (event, urls) => {
         // try the window icon options first
         setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {

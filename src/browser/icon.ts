@@ -33,7 +33,13 @@ export function fetch(appUuid: string, iconUrl: string, callback: (error: null|E
         if (isURI(iconUrl)) {
             callback(null, uriToPath(iconUrl));
         } else {
-            callback(new Error(`Invalid icon url: '${iconUrl}'`));
+            stat(iconUrl, (err: null|Error) => {
+                if (err) {
+                    callback(new Error(`Invalid icon url: '${iconUrl}'`));
+                } else {
+                    callback(null, iconUrl);
+                }
+            });
         }
         return;
     }
