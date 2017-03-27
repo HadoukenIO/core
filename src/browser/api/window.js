@@ -1008,7 +1008,7 @@ Window.getAbsolutePath = function(identity, path) {
     let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
     let windowURL = browserWindow.webContents.getURL();
 
-    return url.resolve(windowURL, path);
+    return (path || path === 0) ? url.resolve(windowURL, path) : '';
 };
 
 
