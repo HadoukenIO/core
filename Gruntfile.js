@@ -31,6 +31,12 @@ const path = require('path');
 const os = require('os');
 const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
 
+try {
+    var openfinSign = require('openfin-sign');
+} catch (err) {
+    openfinSign = function() {};
+}
+
 /**
  * A list of files that have already moved to TypeScript. This list will
  * slowly increase as more and more files are moved to TypeScript
@@ -213,7 +219,8 @@ module.exports = (grunt) => {
         'copy:lib',
         'copy:etc',
         'copy:login',
-        'copy:certificate'
+        'copy:certificate',
+        'sign-files'
     ]);
 
     grunt.registerTask('build-pac', [
@@ -227,8 +234,24 @@ module.exports = (grunt) => {
         'test',
         'copy',
         'build-deploy-modules',
-        'package'
+        'sign-files',
+        'package',
+        'sign-asar'
     ]);
+
+    grunt.registerTask('sign-files', function() {
+        wrench.readdirSyncRecursive('staging/core').forEach(function(filename) {
+            let filepath = path.join('staging', 'core', filename);
+
+            if (!fs.statSync(filepath).isDirectory()) {
+                openfinSign(filepath);
+            }
+        });
+    });
+
+    grunt.registerTask('sign-asar', function() {
+        openfinSign('out/app.asar');
+    });
 
     grunt.registerTask('clean', 'clean the out house', function() {
         wrench.rmdirSyncRecursive('staging', true);
