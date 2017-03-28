@@ -34,7 +34,9 @@ let _ = require('underscore');
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
-let Icon = require('../icon.js');
+import {
+    cachedFetch
+} from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 let parseArgv = require('minimist');
 let regex = require('../../common/regex');
@@ -665,7 +667,7 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     };
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
-    Icon.fetch(app.uuid, iconUrl, (error, iconFilepath) => {
+    cachedFetch(app.uuid, iconUrl, (error, iconFilepath) => {
         if (!error) {
             if (app && app.tray) {
                 let icon = nativeImage.createFromPath(iconFilepath);

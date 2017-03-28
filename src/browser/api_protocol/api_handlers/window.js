@@ -40,6 +40,7 @@ function WindowApiHandler() {
         'get-window-info': getWindowInfo,
         'get-window-native-id': getWindowNativeId,
         'get-window-options': getWindowOptions,
+        'get-window-preload-script': getWindowPreloadScript,
         'get-window-snapshot': getWindowSnapshot,
         'get-window-state': getWindowState,
         'get-zoom-level': getZoomLevel,
@@ -76,6 +77,21 @@ function WindowApiHandler() {
         'window-authenticate': windowAuthenticate
     };
     apiProtocolBase.registerActionMap(windowExternalApiMap);
+
+    function getWindowPreloadScript(identity, message, ack, nack) {
+        const payload = message.payload;
+        const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
+
+        Window.getPreloadScript(windowIdentity, payload.preload, (error, preloadScript) => {
+            if (error) {
+                nack(error);
+            } else {
+                const dataAck = _.clone(successAck);
+                dataAck.data = preloadScript;
+                ack(dataAck);
+            }
+        });
+    }
 
     function windowAuthenticate(identity, message, ack, nack) {
         let {

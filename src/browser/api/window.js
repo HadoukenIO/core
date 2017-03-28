@@ -39,7 +39,9 @@ let clipBounds = require('../clip_bounds.js').default;
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
-let Icon = require('../icon');
+import {
+    cachedFetch
+} from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
 let ProcessTracker = require('../process_tracker.js');
@@ -1037,6 +1039,25 @@ Window.getParentApplication = function() {
 
 Window.getParentWindow = function() {};
 
+/**
+ * Fetches window's preload script and gets its content
+ */
+Window.getPreloadScript = function(identity, preloadUrl, callback) {
+    cachedFetch(identity.uuid, preloadUrl, (fetchError, scriptPath) => {
+        if (fetchError) {
+            return callback(new Error(`Failed to fetch preload script from ${preloadUrl}`));
+        }
+
+        fs.readFile(scriptPath, 'utf8', (readError, content) => {
+            if (readError) {
+                callback(new Error('Failed to read the content of the preload script'));
+            } else {
+                callback(null, content);
+            }
+        });
+    });
+};
+
 
 Window.getSnapshot = function(identity, callback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
@@ -1903,7 +1924,7 @@ function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
     let options = browserWindow._options;
     let uuid = options.uuid;
 
-    Icon.fetch(uuid, iconUrl, (error, iconFilepath) => {
+    cachedFetch(uuid, iconUrl, (error, iconFilepath) => {
         if (!error) {
             setIcon(browserWindow, iconFilepath, errorCallback);
         } else {

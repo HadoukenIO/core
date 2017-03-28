@@ -41,6 +41,7 @@ limitations under the License.
         return customData.openerSuccessCalled;
     };
 
+    const windowOptions = getWindowOptionsSync();
 
     // used by the notification service to emit the ready event
     function emitNoteProxyReady() {
@@ -464,5 +465,23 @@ limitations under the License.
             emitNoteProxyReady: emitNoteProxyReady
         }
     };
+
+    /**
+     * Preload script eval
+     */
+    ipc.once(`post-api-injection-${renderFrameId}`, () => {
+        const preload = windowOptions.preload;
+
+        if (preload) {
+            try {
+                const preloadScriptContent = syncApiCall('get-window-preload-script', {
+                    preload
+                });
+                window.eval(preloadScriptContent); /* jshint ignore:line */
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    });
 
 }());

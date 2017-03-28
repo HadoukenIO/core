@@ -21,23 +21,23 @@ import {createHash} from 'crypto';
 import {isURL, isURI, uriToPath} from '../common/regex';
 
 /**
- * Fetches icon file path. Downloads the icon if it doesn't exist yet.
+ * Downloads a file if it doesn't exist in cache yet.
  */
-export function fetch(appUuid: string, iconUrl: string, callback: (error: null|Error, path?: string) => any): void {
-    if (!iconUrl || typeof iconUrl !== 'string') {
-        callback(new Error(`Bad icon url: '${iconUrl}'`));
+export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): void {
+    if (!fileUrl || typeof fileUrl !== 'string') {
+        callback(new Error(`Bad file url: '${fileUrl}'`));
         return;
     }
 
-    if (!isURL(iconUrl)) {
-        if (isURI(iconUrl)) {
-            callback(null, uriToPath(iconUrl));
+    if (!isURL(fileUrl)) {
+        if (isURI(fileUrl)) {
+            callback(null, uriToPath(fileUrl));
         } else {
-            stat(iconUrl, (err: null|Error) => {
+            stat(fileUrl, (err: null|Error) => {
                 if (err) {
-                    callback(new Error(`Invalid icon url: '${iconUrl}'`));
+                    callback(new Error(`Invalid file url: '${fileUrl}'`));
                 } else {
-                    callback(null, iconUrl);
+                    callback(null, fileUrl);
                 }
             });
         }
@@ -45,23 +45,23 @@ export function fetch(appUuid: string, iconUrl: string, callback: (error: null|E
     }
 
     const appCacheDir = getAppCacheDir(appUuid);
-    const iconFilePath = getFilePath(appCacheDir, iconUrl);
+    const filePath = getFilePath(appCacheDir, fileUrl);
 
-    stat(iconFilePath, (err: null|Error) => {
+    stat(filePath, (err: null|Error) => {
         if (err) {
             stat(appCacheDir, (err: null|Error) => {
                 if (err) {
                     mkdir(appCacheDir, () => {
-                        download(iconUrl, iconFilePath, callback);
+                        download(fileUrl, filePath, callback);
                     });
                 } else {
-                    download(iconUrl, iconFilePath, callback);
+                    download(fileUrl, filePath, callback);
                 }
             });
-        } else if (remoteFileIsYoungerThanCachedFile(iconUrl, iconFilePath)) {
-            download(iconUrl, iconFilePath, callback);
+        } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
+            download(fileUrl, filePath, callback);
         } else {
-            callback(null, iconFilePath);
+            callback(null, filePath);
         }
     });
 }
@@ -70,11 +70,11 @@ function remoteFileIsYoungerThanCachedFile(remoteUrl: string, cachedFilePath: st
     //todo: make a RESTful HEAD request and if file at remoteUrl is missing, return false;
     //todo: else if file at remoteUrl is younger than file at cachedFilePath, return true;
     //todo: else return false
-    return true; //for now we ae always fetching
+    return true; //for now we are always fetching
 }
 
 /**
- * Generates a folder name for the app to store the icon in.
+ * Generates a folder name for the app to store the file in.
  */
 function getAppCacheDir(appUuid: string): string {
     const appUuidHash = generateHash(appUuid);
@@ -83,14 +83,14 @@ function getAppCacheDir(appUuid: string): string {
 }
 
 /**
- * Generates icon file name and returns a full path.
+ * Generates file name and returns a full path.
  */
-function getFilePath(appCacheDir: string, iconUrl: string): string {
-    const iconUrlHash = generateHash(iconUrl);
-    const iconUrlPathname = parseUrl(iconUrl).pathname;
-    const iconFileExt = parse(iconUrlPathname).ext;
-    const iconFilename = iconUrlHash + iconFileExt; // <HASH>.<EXT>
-    return join(appCacheDir, iconFilename); // path/to/<HASH>.<EXT>
+function getFilePath(appCacheDir: string, fileUrl: string): string {
+    const fileUrlHash = generateHash(fileUrl);
+    const fileUrlPathname = parseUrl(fileUrl).pathname;
+    const fileExt = parse(fileUrlPathname).ext;
+    const filename = fileUrlHash + fileExt; // <HASH>.<EXT>
+    return join(appCacheDir, filename); // path/to/<HASH>.<EXT>
 }
 
 /**
@@ -103,19 +103,19 @@ function generateHash(str: string): string {
 }
 
 /**
- * Downloads the icon from given url using Resource Fetcher and saves it into specified path
+ * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(iconUrl: string, iconFilePath: string, callback: (error: null|Error, filePath: string) => any): void {
+function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
     const fetcher = new resourceFetcher('file');
 
     fetcher.on('fetch-complete', (event: string, status: string) => {
         if (status === 'success') {
-            callback(null, iconFilePath);
+            callback(null, filePath);
         } else {
-            callback(new Error(`Failed to download icon from ${iconUrl}`), iconFilePath);
+            callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
         }
     });
 
-    fetcher.setFilePath(iconFilePath);
-    fetcher.fetch(iconUrl);
+    fetcher.setFilePath(filePath);
+    fetcher.fetch(fileUrl);
 }

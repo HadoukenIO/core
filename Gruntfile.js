@@ -48,7 +48,7 @@ const trans2TSFiles = [
     'src/browser/transports/wm_copydata.ts',
     'src/browser/clip_bounds.ts',
     'src/browser/deferred.ts',
-    'src/browser/icon.ts',
+    'src/browser/cached_resource_fetcher.ts',
     'src/browser/int_pool.ts',
     'src/browser/log.ts',
     'src/browser/of_events.ts',

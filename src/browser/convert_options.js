@@ -259,6 +259,10 @@ module.exports = {
             newOptions.permissions = options.permissions;
         }
 
+        if (options.hasOwnProperty('preload')) {
+            newOptions.preload = options.preload;
+        }
+
         app.vlog(1, JSON.stringify(newOptions));
         if (returnAsString) {
             return JSON.stringify(newOptions);
