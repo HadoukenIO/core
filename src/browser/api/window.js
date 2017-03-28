@@ -1392,7 +1392,10 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
                 const app = Application.wrap(identity.uuid);
 
                 Application.getChildWindows(identity).forEach(childWin => {
-                    childWin.browserWindow.close();
+                    Window.close({
+                        name: childWin.name,
+                        uuid: childWin.uuid
+                    }, true);
                 });
 
                 app.mainWindow.webContents.reloadIgnoringCache();
