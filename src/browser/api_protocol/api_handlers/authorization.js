@@ -12,6 +12,7 @@ import ofEvents from '../../of_events';
 let _ = require('underscore');
 let log = require('../../log');
 let socketServer = require('../../transports/socket_server').server;
+let ProcessTracker = require('../../process_tracker.js');
 
 const successAck = {
     success: true
@@ -48,9 +49,27 @@ function AuthorizationApiHandler() {
 
     function onRequestExternalAuth(id, message) {
         console.log('processing request-external-authorization', message);
-        var payload = message.payload,
-            uuid = payload.uuid,
-            file, token;
+
+        let {
+            uuid: uuidRequested,
+            pid
+        } = message.payload;
+
+        let process, file, token;
+
+        if (pid) {
+            process = ProcessTracker.monitor({
+                uuid: null,
+                name: null
+            }, {
+                pid,
+                uuid: uuidRequested,
+                monitor: false
+            });
+        }
+
+        // UUID assignment priority: mapped process, client-requested, then auto-generated
+        var uuid = (process || {}).uuid || uuidRequested || electronApp.generateGUID();
 
         if (pendingAuthentications.has(uuid)) {
             return;
@@ -65,7 +84,8 @@ function AuthorizationApiHandler() {
             action: 'external-authorization-response',
             payload: {
                 file,
-                token
+                token,
+                uuid
             }
         }));
     }

@@ -7,8 +7,8 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import ofEvents from '../of_events';
 
 let authenticatedConnections = [];
-const connectedEvent = 'externalapplication/connected';
-const disconnectedEvent = 'externalapplication/disconnected';
+const connectedEvent = 'external-application/connected';
+const disconnectedEvent = 'external-application/disconnected';
 
 function addExternalConnection(externalConnObj) {
     const {

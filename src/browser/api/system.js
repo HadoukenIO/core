@@ -126,7 +126,7 @@ ofEvents.on('application/crashed/*', (payload) => {
     });
 });
 
-ofEvents.on('externalapplication/connected', payload => {
+ofEvents.on('external-application/connected', payload => {
     ofEvents.emit('system/external-application-connected', {
         topic: 'system',
         type: 'external-application-connected',
@@ -134,7 +134,7 @@ ofEvents.on('externalapplication/connected', payload => {
     });
 });
 
-ofEvents.on('externalapplication/disconnected', payload => {
+ofEvents.on('external-application/disconnected', payload => {
     ofEvents.emit('system/external-application-disconnected', {
         topic: 'system',
         type: 'external-application-disconnected',
@@ -404,22 +404,19 @@ module.exports.System = {
         let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js');
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
     },
-    launchExternalProcess: function(identity, options, callback) {
+    launchExternalProcess: function(identity, options, errDataCallback) { // Node-style callback used here
         var appObject = coreState.getAppObjByUuid(identity.uuid);
         options.srcUrl = (appObject || {})._configUrl;
 
-        ProcessTracker.launch(identity, options, callback);
+        ProcessTracker.launch(identity, options, errDataCallback);
     },
     monitorExternalProcess: function(identity, options, callback, errorCallback) {
-        var pid = parseInt(options.pid);
+        var payload = ProcessTracker.monitor(identity, Object.assign({
+            monitor: true
+        }, options));
 
-        if (!isNaN(pid)) {
-            var payload = ProcessTracker.monitor(identity, pid, options.lifetime);
-            if (payload.uuid) {
-                callback(payload);
-            } else {
-                errorCallback('Error monitoring external process, pid: ' + options.pid);
-            }
+        if (payload) {
+            callback(payload);
         } else {
             errorCallback('Error monitoring external process, pid: ' + options.pid);
         }

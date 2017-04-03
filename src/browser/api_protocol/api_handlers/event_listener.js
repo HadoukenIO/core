@@ -169,8 +169,8 @@ function EventListenerApiHandler() {
                 return addNoteListener(identity, type, payload, cb);
             }
         },
-        'externalapplication': {
-            name: 'externalapplication',
+        'external-application': {
+            name: 'external-application',
             subscribe: function(identity, type, payload, cb) {
                 let externalAppIdentity = {
                     uuid: payload.uuid

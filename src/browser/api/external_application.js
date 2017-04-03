@@ -7,7 +7,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import ofEvents from '../of_events';
 
 function addEventListener(identity, type, listener) {
-    let evt = `externalapplication/${type}/${identity.uuid}`;
+    let evt = `external-application/${type}/${identity.uuid}`;
     ofEvents.on(evt, listener);
 
     return function() {
@@ -16,7 +16,7 @@ function addEventListener(identity, type, listener) {
 }
 
 function removeEventListener(identity, type, listener) {
-    ofEvents.removeListener(`externalapplication/${type}/${identity.uuid}`, listener);
+    ofEvents.removeListener(`external-application/${type}/${identity.uuid}`, listener);
 }
 
 module.exports.ExternalConnections = {
