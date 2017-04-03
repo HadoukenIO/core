@@ -45,6 +45,9 @@ let parseArgv = require('minimist');
 let firstApp = null;
 let splitStartupArgs = parseArgv(process.argv);
 let crashReporterEnabled = false;
+import {
+    portDiscovery
+} from './src/browser/port_discovery';
 
 const USER_DATA = app.getPath('userData');
 
@@ -139,18 +142,19 @@ app.on('ready', function() {
     let argv = app.getCommandLineArguments().split(' ');
 
     let rvmBus = require('./src/browser/rvm/rvm_message_bus');
-    let PortDiscovery = require('./src/browser/port_discovery').PortDiscovery;
-    let portDiscovery = new PortDiscovery();
 
     let otherInstanceRunning = app.makeSingleInstance(function(commandLine) {
         let commandLineSwitches = parseArgv(commandLine);
+        const socketServerState = coreState.getSocketServerState();
+        const portInfo = portDiscovery.getPortInfoByArgs(commandLineSwitches, socketServerState.port);
+
         initializeCrashReporter(commandLineSwitches);
 
         // delegated args from a second instance
         launchApp(commandLine, false);
 
         // Will queue if server is not ready.
-        portDiscovery.broadcast(commandLineSwitches, socketServer.getPort());
+        portDiscovery.broadcast(portInfo);
 
         // command line flag --delete-cache-on-exit
         rvmCleanup(commandLine);
@@ -168,11 +172,16 @@ app.on('ready', function() {
         return;
     }
 
+    if (process.platform === 'win32') {
+        let integrityLevel = app.getIntegrityLevel();
+        System.log('info', `Runtime integrity level of the app: ${integrityLevel}`);
+    }
+
     rotateLogs(argv);
 
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
-    initServer(portDiscovery.broadcast);
+    initServer();
     launchApp(argv, true);
 
     registerShortcuts();
@@ -342,7 +351,7 @@ function rvmCleanup(argv) {
     }
 }
 
-function initServer(broadcastPortDiscovery) {
+function initServer() {
     let attemptedHardcodedPort = false;
     let argv = app.getCommandLineArguments().split(' ');
     let commandLineSwitches = parseArgv(argv);
@@ -361,11 +370,7 @@ function initServer(broadcastPortDiscovery) {
 
     socketServer.on('server/open', function(port) {
         console.log('Opened on', port);
-        broadcastPortDiscovery(commandLineSwitches, port);
-        //TODO: This needs to go go away, pending socket server refactor.
-        coreState.setSocketServerState({
-            port
-        });
+        portDiscovery.broadcast(portDiscovery.getPortInfoByArgs(commandLineSwitches, port));
     });
 
     socketServer.on('connection/message', function(id, message) {

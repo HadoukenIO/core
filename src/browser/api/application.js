@@ -106,20 +106,25 @@ var Application = {};
 Application.create = function(opts, configUrl = '', parentIdentify = {}) {
     //Hide Window until run is called
 
-    let appUrl = opts.url || (opts.mainWindowOptions && opts.mainWindowOptions.url);
-    let isValidUrl = typeof appUrl === 'string' && appUrl.length > 0;
-    if (!isValidUrl) {
-        throw new Error(`No URL specified: ${opts.uuid}`);
+    let appUrl = opts.url;
+    if (appUrl === undefined && opts.mainWindowOptions) {
+        appUrl = opts.mainWindowOptions.url;
     }
 
-    let isValidUuid = typeof opts.uuid === 'string' && opts.uuid.length > 0 && opts.uuid !== '*';
+    // undefined or '' acceptable here (gets default in createAppObj); or non-empty string
+    let isValidUrl = appUrl === undefined || typeof appUrl === 'string';
+    if (!isValidUrl) {
+        throw new Error(`Invalid application URL: ${appUrl}`);
+    }
+
+    let isValidUuid = isNonEmptyString(opts.uuid) && opts.uuid !== '*';
     if (!isValidUuid) {
         throw new Error(`Invalid application UUID: ${opts.uuid}`);
     }
 
-    let isValidName = typeof opts.name === 'string' && opts.name.length > 0 && opts.name !== '*';
+    let isValidName = isNonEmptyString(opts.name) && opts.name !== '*';
     if (!isValidName) {
-        throw new Error(`Invalid application name: ${opts.uuid}`);
+        throw new Error(`Invalid application name: ${opts.name}`);
     }
 
     let isAppRunning = coreState.getAppRunningState(opts.uuid);
@@ -134,7 +139,7 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
 
     let parentUuid = parentIdentify && parentIdentify.uuid;
     if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
-        throw new Error(`Application with specified URL is not allowed: ${opts.uuid}`);
+        throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
 
     let appObj = createAppObj(opts.uuid, opts, configUrl);
@@ -851,21 +856,23 @@ function createAppObj(uuid, opts, configUrl = '') {
         };
 
         if (typeof mainWindowOptions === 'object') {
-            let optUrl = opts.url;
-
             Object.keys(mainWindowOptions).forEach(key => {
-                if (key !== 'name') {
-                    // only copy over mainWindowOptions 'url' if the opts 'url' is invalid
-                    if (key !== 'url' || typeof optUrl !== 'string' || !optUrl) {
+                switch (key) {
+                    case 'name':
+                        break;
+                    case 'url':
+                        // only copy over mainWindowOptions `url` if the opts `url` is invalid
+                        if (isNonEmptyString(opts[key])) {
+                            break;
+                        }
+                        /* falls through */
+                    default:
                         opts[key] = mainWindowOptions[key];
-                    }
                 }
             });
-
-            opts.url = opts.url || 'about:blank';
-
-            mainWindowOptions = null;
         }
+
+        opts.url = opts.url || 'about:blank';
 
         if (!regex.isURL(opts.url) && !isURI(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
@@ -933,6 +940,10 @@ function createAppObj(uuid, opts, configUrl = '') {
 
 function isURI(str) {
     return /^file:\/\/\/?/.test(str);
+}
+
+function isNonEmptyString(str) {
+    return typeof str === 'string' && str.length > 0;
 }
 
 module.exports.Application = Application;

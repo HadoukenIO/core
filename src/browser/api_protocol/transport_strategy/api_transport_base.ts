@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { NackPayloadTemplate, AckFunc } from './ack';
+import {default as RequestHandler} from './base_handler';
 declare var require: any;
 
 const errors = require('../../../common/errors');
@@ -22,7 +23,28 @@ export interface ActionMap {
     [key: string]: Function;
 }
 
-export abstract class ApiTransportBase {
+/**
+ * This represents the raw data that comes off the wire as well as the ack and
+ * nack functions that get created at the strategy (elipc, ws, etc)
+ */
+export interface MessagePackage {
+    identity: any; // of the caller
+    data: any;
+    ack: any;
+    nack: any;
+    e?: any;
+    strategyName: any; // ws / elipc 
+}
+
+export abstract class ApiTransportBase<T> {
+
+    protected requestHandler: RequestHandler<T>;
+    protected actionMap: ActionMap;
+
+    constructor (actionMap: ActionMap, requestHandler: RequestHandler<T>) {
+        this.actionMap  = actionMap;
+        this.requestHandler = requestHandler;
+    }
 
     public abstract registerMessageHandlers(actionMap: ActionMap): void;
 
@@ -31,8 +53,6 @@ export abstract class ApiTransportBase {
     public abstract onClientAuthenticated(cb: Function): void;
 
     public abstract onClientDisconnect(cb: Function): void;
-
-    protected actionMap: ActionMap;
 
     protected abstract onMessage(id: number, data: any): void;
 

@@ -594,7 +594,15 @@ function anyAppRestarting() {
 
 function shouldCloseRuntime(ignoreArray) {
     let ignoredApps = ignoreArray || [];
-    let connections = externalApplication.getAllExternalConnctions();
+    let extConnections = externalApplication.getAllExternalConnctions();
+    let connections = extConnections.filter((conn) => {
+        let {
+            nonPersistent
+        } = conn;
+        let nonPersistentUndefined = typeof nonPersistent === 'undefined';
+
+        return nonPersistentUndefined ? true : !nonPersistent;
+    });
 
     if (anyAppRestarting()) {
         console.log('not close Runtime during app restart');

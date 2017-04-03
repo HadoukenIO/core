@@ -8,12 +8,16 @@ import BaseTransport from './base';
 import {chromeIpcClient} from 'electron';
 
 class ChromiumIPCTransport extends BaseTransport {
-    private messageQueue: any[];
     public connected: boolean;
     public ipc: chromeIpcClient;
 
+    private messageQueue: any[];
+    private pipeName: string;
+
     constructor(pipeName: string) {
-        super(pipeName);
+        super();
+
+        this.pipeName = pipeName;
 
         this.messageQueue = [];
         this.connected = false;

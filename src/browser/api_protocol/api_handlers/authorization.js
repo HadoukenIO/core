@@ -73,6 +73,10 @@ function AuthorizationApiHandler() {
     function onRequestAuthorization(id, data) {
         let uuid = data.payload.uuid;
         let authObj = pendingAuthentications.get(uuid);
+        let externalConnObj = Object.assign({}, data.payload, {
+            id
+        });
+
         //Check if the file and token were written.
 
         authenticateUuid(authObj, data.payload, (success, error) => {
@@ -87,7 +91,7 @@ function AuthorizationApiHandler() {
             }
             socketServer.send(id, JSON.stringify(authorizationResponse));
 
-            externalApplication.addExternalConnection(id, uuid);
+            externalApplication.addExternalConnection(externalConnObj);
             socketServer.connectionAuthenticated(id, uuid);
             if (!success) {
                 socketServer.closeConnection(id);

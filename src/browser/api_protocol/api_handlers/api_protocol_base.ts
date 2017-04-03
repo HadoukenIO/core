@@ -18,12 +18,18 @@ const SubscriptionManager = require('../../subscription_manager.js').Subscriptio
 const WebSocketStrategy = require('../transport_strategy/ws_strategy').WebSocketStrategy;
 const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrategy;
 
-const actionMap = {};
-const webSocketStrategy = new WebSocketStrategy();
-const elipcStrategy = new ElipcStrategy();
+import { default as RequestHandler } from '../transport_strategy/base_handler';
+import { ActionMap, MessagePackage } from '../transport_strategy/api_transport_base';
+
+const actionMap: ActionMap = {};
+const requestHandler = new RequestHandler<MessagePackage>();
+
+// add the handler + create with action map
+const webSocketStrategy = new WebSocketStrategy(actionMap, requestHandler);
+const elipcStrategy = new ElipcStrategy(actionMap, requestHandler);
 const subscriptionManager = new SubscriptionManager();
 
-function registerActionMap(am) {
+function registerActionMap(am: ActionMap) {
     Object.getOwnPropertyNames(am).forEach(n => {
         if (actionMap[n] === undefined) {
             actionMap[n] = am[n];
@@ -33,7 +39,7 @@ function registerActionMap(am) {
     });
 }
 
-function sendToIdentity(identity, payload) {
+function sendToIdentity(identity: any, payload: any) {
     const externalConnection = externalAppplication.getExternalConnectionByUuid(identity.uuid);
 
     if (externalConnection) {
@@ -45,52 +51,52 @@ function sendToIdentity(identity, payload) {
     }
 }
 
-function subscriptionExists(identity, ...args) {
+function subscriptionExists(identity: any, ...args: any[]) {
     return subscriptionManager.subscriptionExists(identity, ...args);
 }
 
-function uppSubscriptionRefCount(identity, ...args) {
+function uppSubscriptionRefCount(identity: any, ...args: any[]) {
     return subscriptionManager.uppSubscriptionRefCount(identity, ...args);
 }
 
-function registerSubscription(fn, identity, ...args) {
+function registerSubscription(fn: any, identity: any, ...args: any[]) {
     return subscriptionManager.registerSubscription(fn, identity, ...args);
 }
 
-function removeSubscription(identity, ...args) {
+function removeSubscription(identity: any, ...args: any[]) {
     return subscriptionManager.removeSubscription(identity, ...args);
 }
 
-function getGroupingWindowIdentity(payload) {
+function getGroupingWindowIdentity(payload: any) {
     return {
         uuid: payload.groupingUuid,
         name: payload.groupingWindowName
     };
 }
 
-function getTargetWindowIdentity(payload) {
+function getTargetWindowIdentity(payload: any) {
     return {
         uuid: payload.uuid,
         name: payload.name
     };
 }
 
-function getTargetApplicationIdentity(payload) {
+function getTargetApplicationIdentity(payload: any) {
     return {
         uuid: payload.uuid
     };
 }
 
-function onClientAuthenticated(cb) {
+function onClientAuthenticated(cb: any) {
     webSocketStrategy.onClientAuthenticated(cb);
 }
 
-function onClientDisconnect(id, cb) {
+function onClientDisconnect(id: any, cb: any) {
     webSocketStrategy.onClientDisconnect(onDisconnect(id, cb));
 }
 
-function onDisconnect(id, cb) {
-    return (connId) => {
+function onDisconnect(id: any, cb: any) {
+    return (connId: any) => {
         if (id === connId) {
             cb(id);
         }
@@ -98,8 +104,8 @@ function onDisconnect(id, cb) {
 }
 
 function init() {
-    webSocketStrategy.registerMessageHandlers(actionMap);
-    elipcStrategy.registerMessageHandlers(actionMap);
+    webSocketStrategy.registerMessageHandlers();
+    elipcStrategy.registerMessageHandlers();
 }
 
 module.exports = {

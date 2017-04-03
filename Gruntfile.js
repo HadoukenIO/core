@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+'use strict';
+
 /**
  *
  * Build tasks to facilitate the creation of an asar file.
@@ -162,6 +165,11 @@ module.exports = function(grunt) {
                    mode:'VERIFY_ONLY'
                 }
             }
+        },
+        mochaTest: {
+            default: {
+                src: 'staging/core/test/**.js'
+            }
         }
     });
 
@@ -170,7 +178,7 @@ module.exports = function(grunt) {
       in ./out/
      */
 
-    grunt.registerTask('build-dev', ['jshint', 'jsbeautifier:default', 'clean', 'babel', 'tslint', 'ts', 'copy:lib', 'copy:etc', 'copy:login', 'copy:certificate']);
+    grunt.registerTask('build-dev', ['jshint', 'jsbeautifier:default', 'clean', 'babel', 'tslint', 'ts', 'test',  'copy:lib', 'copy:etc', 'copy:login', 'copy:certificate']);
 
     grunt.registerTask('build-pac', ['jshint', 'jsbeautifier', 'clean', 'babel', 'tslint', 'ts', 'copy', 'build-deploy-modules',
         'package'
@@ -274,6 +282,8 @@ module.exports = function(grunt) {
 
     grunt.registerTask('default', ['build-pac']);
     grunt.registerTask('deploy', ['build-dev', 'copy-local']);
+
+    grunt.registerTask('test', ['mochaTest']);
 
     loadGruntTasks(grunt);
 

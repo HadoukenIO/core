@@ -4,9 +4,8 @@
   "description": "The core app of the OpenFin Runtime 6.0",
   "main": "index.js",
   "scripts": {
-    "pretest": "npm run babel",
-    "test": "mocha --recursive",
-    "babel": "grunt babel",
+    "pretest": "grunt babel && grunt ts",
+    "test": "mocha staging/core/test --recursive",
     "install": "grunt"
   },
   "repository": {
@@ -42,8 +41,12 @@
     "sinon": "^1.17.5",
     "tslint": "4.0.0-dev.0",
     "tslint-microsoft-contrib": "^2.0.13",
-    "typescript": "^2.0.7",
-    "wrench": "^1.5.9"
+    "typescript": "~2.2.0",
+    "wrench": "^1.5.9",
+    "mockery": "^2.0.0",
+    "@types/mocha": "^2.2.39",
+    "@types/mockery": "^1.4.29",
+    "grunt-mocha-test": "^0.13.2"
   },
   "dependencies": {
     "minimist": "^1.2.0",

@@ -13,15 +13,13 @@ class MyEmitter extends EventEmitter {
 }
 
 class BaseTransport {
-    public pipeName: string;
     public eventEmitter: MyEmitter;
 
-    constructor(pipeName: string) {
-        this.pipeName = pipeName;
+    constructor() {
         this.eventEmitter = new MyEmitter();
     }
 
-    public on(eventName: string, listener: () => void): void {
+    public on(eventName: string, listener: (sender: any, data: string) => void): void {
         this.eventEmitter.on.call(this.eventEmitter, eventName, listener);
     }
 

@@ -297,6 +297,11 @@ let optionSetters = {
         if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
         }
+    },
+    showTaskbarIcon: function(newVal, browserWin) {
+        let showTaskbarIconBool = !!newVal;
+        setOptOnBrowserWin('showTaskbarIcon', showTaskbarIconBool, browserWin);
+        browserWin.setSkipTaskbar(!showTaskbarIconBool);
     }
 };
 
@@ -412,6 +417,13 @@ Window.create = function(id, opts) {
                     return;
                 }
             }
+
+            ofEvents.emit(`window/synth-close/${uuidname}`, {
+                name,
+                uuid,
+                topic: 'window',
+                type: 'synth-close'
+            });
 
             // can't unhook when the 'closed' event fires; browserWindow is already destroyed then
             browserWindow.webContents.removeAllListeners('page-favicon-updated');
@@ -760,8 +772,7 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
 };
 
 Window.animate = function(identity, transitions, options = {}, callback = () => {}, errorCallback = () => {}) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         callback();
@@ -775,12 +786,11 @@ Window.animate = function(identity, transitions, options = {}, callback = () => 
         animationMeta.interrupt = true;
     }
 
-    animations.getAnimationHandler().add(openfinWindow.browserWindow, animationMeta, animationTween, callback, errorCallback);
+    animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
 };
 
 Window.blur = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -790,8 +800,7 @@ Window.blur = function(identity) {
 };
 
 Window.bringToFront = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -804,8 +813,7 @@ Window.bringToFront = function(identity) {
 // TODO investigate the close sequence, there appears to be a case were you
 // try to wrap and close an already closed window
 Window.close = function(identity, force, callback = () => {}) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         callback();
@@ -818,6 +826,7 @@ Window.close = function(identity, force, callback = () => {}) {
 
     let defaultAction = () => {
         if (!browserWindow.isDestroyed()) {
+            let openfinWindow = Window.wrap(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
             browserWindow.close();
         }
@@ -832,8 +841,7 @@ Window.close = function(identity, force, callback = () => {}) {
 
 
 Window.disableFrame = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -843,8 +851,7 @@ Window.disableFrame = function(identity) {
 };
 
 Window.embed = function(identity, parentHwnd) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -866,8 +873,7 @@ Window.embed = function(identity, parentHwnd) {
 };
 
 Window.enableFrame = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -877,8 +883,7 @@ Window.enableFrame = function(identity) {
 };
 
 Window.executeJavascript = function(identity, code, callback = () => {}) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         callback(new Error(`Could not locate window '${identity.name}'`));
@@ -891,8 +896,7 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
 };
 
 Window.flash = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -902,8 +906,7 @@ Window.flash = function(identity) {
 };
 
 Window.stopFlashing = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -913,8 +916,7 @@ Window.stopFlashing = function(identity) {
 };
 
 Window.focus = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -924,8 +926,7 @@ Window.focus = function(identity) {
 };
 
 Window.getBounds = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return {
@@ -954,24 +955,30 @@ Window.getBounds = function(identity) {
 
 
 Window.getGroup = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return [];
     }
 
+    let openfinWindow = Window.wrap(identity.uuid, identity.name);
     return WindowGroups.getGroup(openfinWindow.groupUuid);
 };
 
 
-Window.getNativeId = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+// returns an object reminiscent of DOM's window.location object
+Window.getWindowInfo = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'get info for');
+    let webContents = browserWindow.webContents;
 
-    if (!browserWindow) {
-        throw new Error(`Could not locate ID for window '${identity.name}'`);
-    }
+    return {
+        url: webContents.getURL(),
+        title: webContents.getTitle()
+    };
+};
+
+Window.getNativeId = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
 
     return browserWindow.nativeId;
 };
@@ -981,12 +988,7 @@ Window.getNativeWindow = function() {};
 
 
 Window.getOptions = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error(`Could not locate options for window '${identity.name}'`);
-    }
+    let browserWindow = getElectronBrowserWindow(identity, 'get options for');
 
     return browserWindow._options;
 };
@@ -1002,11 +1004,10 @@ Window.getParentWindow = function() {};
 
 
 Window.getSnapshot = function(identity, callback = () => {}) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
-        callback(new Error(`Could not locate window '${identity.name}'`));
+        callback(new Error(`Unknown window named '${identity.name}'`));
         return;
     }
 
@@ -1017,8 +1018,7 @@ Window.getSnapshot = function(identity, callback = () => {}) {
 
 
 Window.getState = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (browserWindow && browserWindow.isMinimized()) {
         return 'minimized';
@@ -1031,8 +1031,7 @@ Window.getState = function(identity) {
 
 
 Window.hide = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1043,8 +1042,7 @@ Window.hide = function(identity) {
 
 
 Window.isShowing = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     return !!(browserWindow && browserWindow.isVisible());
 };
@@ -1065,25 +1063,19 @@ Window.joinGroup = function(identity, grouping) {
 
 
 Window.leaveGroup = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
     }
 
+    let openfinWindow = Window.wrap(identity.uuid, identity.name);
     WindowGroups.leaveGroup(openfinWindow);
 };
 
 
 Window.maximize = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error(`Could not maximize. No window found named '${identity.name}'`);
-    }
-
+    let browserWindow = getElectronBrowserWindow(identity, 'maximize');
     let maximizable = getOptFromBrowserWin('maximizable', browserWindow, true);
     if (maximizable) {
         browserWindow.maximize();
@@ -1106,13 +1098,7 @@ Window.mergeGroups = function(identity, grouping) {
 
 
 Window.minimize = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error(`Could not minimize. No window found named '${identity.name}'`);
-    }
-
+    let browserWindow = getElectronBrowserWindow(identity, 'minimize');
     let minimizable = getOptFromBrowserWin('minimizable', browserWindow, true);
     if (minimizable) {
         browserWindow.minimize();
@@ -1121,8 +1107,7 @@ Window.minimize = function(identity) {
 
 
 Window.moveBy = function(identity, deltaLeft, deltaTop) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1142,8 +1127,7 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
 
 
 Window.moveTo = function(identity, x, y) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1161,29 +1145,20 @@ Window.moveTo = function(identity, x, y) {
 
 
 Window.redirect = function(identity, redirectUrl) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error(`Could not locate window '${identity.name}'`);
-    }
+    let browserWindow = getElectronBrowserWindow(identity, 'redirect');
 
     browserWindow.webContents.loadURL(redirectUrl);
 };
 
 
 Window.removeEventListener = function(identity, type, listener) {
-
-    var openfinWindow = Window.wrap(identity.uuid, identity.name);
-
-    var id = openfinWindow.browserWindow.id;
-    ofEvents.removeListener(`window/${type}/${id}`, listener);
+    let browserWindow = getElectronBrowserWindow(identity, 'remove event listener for');
+    ofEvents.removeListener(`window/${type}/${browserWindow.id}`, listener);
 };
 
 
 Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1203,8 +1178,7 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
 
 
 Window.resizeTo = function(identity, width, height, anchor) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1223,12 +1197,7 @@ Window.resizeTo = function(identity, width, height, anchor) {
 
 
 Window.restore = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error(`Could not restore. No window found named '${identity.name}'`);
-    }
+    let browserWindow = getElectronBrowserWindow(identity, 'restore');
 
     if (browserWindow.isMinimized()) {
         browserWindow.restore();
@@ -1241,8 +1210,7 @@ Window.restore = function(identity) {
 
 
 Window.setAsForeground = function(identity) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1253,13 +1221,7 @@ Window.setAsForeground = function(identity) {
 
 
 Window.setBounds = function(identity, left, top, width, height) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error(`Could not set window bounds. No window found named '${identity.name}'`);
-    }
-
+    let browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
     let bounds = browserWindow.getBounds();
     browserWindow.setBounds(clipBounds({
         x: (typeof left === 'number' ? left : bounds.x),
@@ -1271,8 +1233,7 @@ Window.setBounds = function(identity, left, top, width, height) {
 
 
 Window.show = function(identity, force = false) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1290,8 +1251,7 @@ Window.show = function(identity, force = false) {
 
 
 Window.showAt = function(identity, left, top, force = false) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1320,12 +1280,7 @@ Window.showAt = function(identity, left, top, force = false) {
 };
 
 Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
-    let {
-        uuid,
-        name
-    } = identity;
-    let openfinWindow = Window.wrap(uuid, name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1378,7 +1333,7 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
         click: () => {
             try {
                 const Application = require('./application.js').Application;
-                const app = Application.wrap(uuid);
+                const app = Application.wrap(identity.uuid);
 
                 Application.getChildWindows(identity).forEach(childWin => {
                     childWin.browserWindow.close();
@@ -1408,12 +1363,7 @@ Window.defineDraggableArea = function() {};
 
 
 Window.updateOptions = function(identity, updateObj) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error('Could not update window settings.');
-    }
+    let browserWindow = getElectronBrowserWindow(identity, 'update settings for');
 
     try {
         for (var opt in updateObj) {
@@ -1464,23 +1414,13 @@ Window.authenticate = function(identity, username, password, callback) {
 };
 
 Window.getZoomLevel = function(identity, callback) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error(`Could not get zoom level. No window found named '${identity.name}'`);
-    }
+    let browserWindow = getElectronBrowserWindow(identity, 'get zoom level for');
 
     browserWindow.webContents.getZoomLevel(callback);
 };
 
 Window.setZoomLevel = function(identity, level) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    let browserWindow = openfinWindow && openfinWindow.browserWindow;
-
-    if (!browserWindow) {
-        throw new Error(`Could not set zoom level. No window found named '${identity.name}'`);
-    }
+    let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
 
     browserWindow.webContents.setZoomLevel(level);
 };
@@ -1532,7 +1472,7 @@ function createWindowTearDown(identity, id) {
             childWindows.forEach(childId => {
                 let child = coreState.getWinObjById(childId);
 
-                // TODO right now this is forcable to handle the event that there was a close
+                // TODO right now this is forceable to handle the event that there was a close
                 //      requested on a child window and the main window closes. This needs
                 //      looking into
                 if (child) {
@@ -1695,11 +1635,11 @@ function setOptOnBrowserWin(opt, val, browserWin) {
 
 
 function closeRequestedDecorator(payload) {
-    let propogate = true;
+    let propagate = true;
 
     payload.force = false;
 
-    return propogate;
+    return propagate;
 }
 
 
@@ -1775,10 +1715,9 @@ function visibilityChangedDecorator(payload, args) {
                 coreState.setSentFirstHideSplashScreen(uuid, true);
             }
         } else {
-            payload.type = 'hidden';
-
             let openfinWindow = Window.wrap(payload.uuid, payload.name);
 
+            payload.type = 'hidden';
             payload.reason = openfinWindow.hideReason;
 
             // reset to 'hide' in case visibility changes
@@ -1938,7 +1877,18 @@ function handleCustomAlerts(id, opts) {
         uuid: opts.uuid,
         name: opts.name
     }, type, id);
+}
 
+//If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
+function getElectronBrowserWindow(identity, errDesc) {
+    let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    let browserWindow = openfinWindow && openfinWindow.browserWindow;
+
+    if (errDesc && !browserWindow) {
+        throw new Error(`Could not ${errDesc} unknown window named '${identity.name}'`);
+    }
+
+    return browserWindow;
 }
 
 module.exports.Window = Window;

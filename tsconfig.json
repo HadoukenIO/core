@@ -6,11 +6,10 @@
         "preserveConstEnums": true,
         "sourceMap": false,
         "target": "es6",
-        "outDir": "./staging/core/src/",
-        "rootDir": "./src",
+        "outDir": "./staging/core/",
         "moduleResolution": "node"
     },
     "exclude": [
-        "node_modules"
+        "node_modules", "staging"
     ]
 }
