@@ -1001,7 +1001,9 @@ Window.getWindowInfo = function(identity) {
 
     return {
         url: webContents.getURL(),
-        title: webContents.getTitle()
+        title: webContents.getTitle(),
+        canNavigateForward: webContents.canGoForward(),
+        canNavigateBack: webContents.canGoBack()
     };
 };
 
@@ -1199,13 +1201,35 @@ Window.moveTo = function(identity, x, y) {
     });
 };
 
-
-Window.redirect = function(identity, redirectUrl) {
-    let browserWindow = getElectronBrowserWindow(identity, 'redirect');
-
-    browserWindow.webContents.loadURL(redirectUrl);
+Window.navigate = function(identity, url) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
+    browserWindow.webContents.loadURL(url);
 };
 
+Window.navigateBack = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate back');
+    browserWindow.webContents.goBack();
+};
+
+Window.navigateForward = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
+    browserWindow.webContents.goForward();
+};
+
+Window.reload = function(identity, ignoreCache = false) {
+    let browserWindow = getElectronBrowserWindow(identity, 'reload');
+
+    if (!ignoreCache) {
+        browserWindow.webContents.reload();
+    } else {
+        browserWindow.webContents.reloadIgnoringCache();
+    }
+};
+
+Window.stopNavigation = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
+    browserWindow.webContents.stop();
+};
 
 Window.removeEventListener = function(identity, type, listener) {
     let browserWindow = getElectronBrowserWindow(identity, 'remove event listener for');
