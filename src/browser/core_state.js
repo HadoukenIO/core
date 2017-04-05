@@ -16,7 +16,22 @@ limitations under the License.
 /*
 	src/browser/core_state.js
 */
+
+// built-in modules
+var electronApp = require('electron').app;
+
+// npm modules
+var minimist = require('minimist');
+
+// local modules
 var externalApplication = require('./api_protocol/external_application.js');
+
+
+// locals
+const args = electronApp.getCommandLineArguments(); // command line string ("s" for "string")
+const argv = electronApp.getCommandLineArgv(); // argument list ("v" for "vector")
+const argo = minimist(argv); // minimist-style object ("o" for "object"; hash of command line options:values; see https://github.com/substack/minimist)
+
 var coreState = {
     apps: []
 };
@@ -30,6 +45,7 @@ var manifestProxySettings_ = {
     proxyPort: 0,
     type: 'system'
 };
+
 
 // TODO: Remove after Dependency Injection refactor
 function setStartManifest(url, data) {
@@ -623,9 +639,13 @@ function getSocketServerState() {
     return socketServerState;
 }
 
+// methods
 module.exports = {
     addApp,
     addChildToWin,
+    argo,
+    args,
+    argv,
     appByUuid,
     coreState,
     getAllApplications,
@@ -643,6 +663,7 @@ module.exports = {
     getMainWindowOptions,
     getManifestProxySettings,
     getOfWindowByUuidName,
+    getSocketServerState,
     getStartManifest,
     getWinById,
     getWindowByUuidName,
@@ -651,6 +672,7 @@ module.exports = {
     remoteAppPropDecorator,
     removeApp,
     removeChildById,
+    sentFirstHideSplashScreen,
     setAppId,
     setAppObj,
     setAppOptions,
@@ -660,9 +682,7 @@ module.exports = {
     setStartManifest,
     setWindowObj,
     setSentFirstHideSplashScreen,
-    shouldCloseRuntime,
-    windowExists,
-    sentFirstHideSplashScreen,
     setSocketServerState,
-    getSocketServerState
+    shouldCloseRuntime,
+    windowExists
 };

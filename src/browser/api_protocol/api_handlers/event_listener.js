@@ -13,12 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// built-in modules
+// (none)
+
+// npm modules
+let _ = require('underscore');
+
+// local modules
 let apiProtocolBase = require('./api_protocol_base.js');
 let Window = require('../../api/window.js').Window;
 let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 let ExternalApplication = require('../../api/external_application.js').ExternalConnections;
-let _ = require('underscore');
 import {
     default as connectionManager
 } from '../../connection_manager';
@@ -27,11 +34,14 @@ import * as log from '../../log';
 import {
     default as ofEvents
 } from '../../of_events';
-
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
+
+
+// locals
 const successAck = {
     success: true
 };
+
 
 function addRemoteWindowListener(fin, targetWindowIdentity, type) {
     const topic = 'window';

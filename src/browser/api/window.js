@@ -17,21 +17,20 @@ limitations under the License.
     src/browser/api/window.js
  */
 
-// node API packages
+// build-in modules
 let fs = require('fs');
 let path = require('path');
 let url = require('url');
+let electron = require('electron');
+let BrowserWindow = electron.BrowserWindow;
+let electronApp = electron.app;
+let Menu = electron.Menu;
+let nativeImage = electron.nativeImage;
 
-// electron API packages
-let BrowserWindow = require('electron').BrowserWindow;
-let electronApp = require('electron').app;
-let Menu = require('electron').Menu;
-let nativeImage = require('electron').nativeImage;
-
-// misc npm packages
+// npm modules
 let _ = require('underscore');
 
-// local packages
+// local modules
 let animations = require('../animations.js');
 let authenticationDelegate = require('../authentication_delegate.js');
 let BoundsChangedStateTracker = require('../bounds_changed_state_tracker.js');
@@ -53,6 +52,8 @@ import {
     navigationValidator
 } from '../navigation_validation';
 
+
+// locals
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
 const userCache = electronApp.getPath('userCache');
