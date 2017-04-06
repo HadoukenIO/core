@@ -17,15 +17,19 @@ limitations under the License.
     src/browser/convert_options.js
  */
 
+// built-in modules
 let fs = require('fs');
 let path = require('path');
 
 let app = require('electron').app;
 let ResourceFetcher = require('electron').resourceFetcher;
 
+// npm modules
 let _ = require('underscore');
+
+// local modules
+let coreState = require('./core_state.js');
 let log = require('./log');
-let parseArgv = require('minimist');
 let regex = require('../common/regex');
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
@@ -242,8 +246,8 @@ module.exports = {
             nodeIntegration: false,
             plugins: newOptions['plugins']
         };
-        let argv = parseArgv(app.getCommandLineArguments().split(' '));
-        if (argv['disable-web-security'] || newOptions['webSecurity'] === false) {
+
+        if (coreState.argo['disable-web-security'] || newOptions['webSecurity'] === false) {
             newOptions['webPreferences'].webSecurity = false;
         }
 
@@ -271,11 +275,10 @@ module.exports = {
         }
     },
 
-    fetchOptions: function(processArgs, onComplete, onError) {
-        let argv = parseArgv(processArgs);
+    fetchOptions: function(argo, onComplete, onError) {
         // ensure removal of eclosing double-quotes when absolute path.
-        let configUrl = (argv['startup-url'] || argv['config']);
-        let localConfigPath = argv['local-startup-url'];
+        let configUrl = (argo['startup-url'] || argo['config']);
+        let localConfigPath = argo['local-startup-url'];
         let offlineAccess = false;
         let errorCallback = err => {
             if (offlineAccess) {

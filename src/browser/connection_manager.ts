@@ -8,15 +8,22 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
   Because the runtime-p2p module may or may not be there, this module provides
   a uniform interface to either the real p2p module or a safe stubbed out version
 */
-declare let process: any;
 
-const parseArgv = require('minimist');
+// built-in modules
+declare let process: any;
 const app = require('electron').app;
 import { EventEmitter } from 'events';
+
+// npm modules
+// (none)
+
+// local modules
+const coreState = require('./core_state');
 import * as log from './log';
+
+
 const multiRuntimeCommandLineFlag = 'enable-multi-runtime';
-const argv = process.argv;
-const multiRuntimeEnabled = parseArgv(argv)[multiRuntimeCommandLineFlag];
+const multiRuntimeEnabled = coreState.argo[multiRuntimeCommandLineFlag];
 
 let connectionManager: any;
 let meshEnabled = false;

@@ -54,11 +54,16 @@ function WindowApiHandler() {
         'move-window': moveWindow,
         'move-window-by': moveWindowBy,
 
+        'navigate-window': navigateWindow,
+        'navigate-window-back': navigateWindowBack,
+        'navigate-window-forward': navigateWindowForward,
+        'stop-window-navigation': stopWindowNavigation,
+        'reload-window': reloadWindow,
+
         // Event fired when window is unloading its content and resources.
         // Reloading a window or navigating away will fire this event
         'on-window-unload': onWindowUnload,
-
-        'redirect-window-to-url': redirectWindowToUrl,
+        'redirect-window-to-url': redirectWindowToUrl, // Deprecated
         'resize-window': resizeWindow,
         'resize-window-by': resizeWindowBy,
         'restore-window': restoreWindow,
@@ -123,7 +128,7 @@ function WindowApiHandler() {
                 name: payload.targetName
             };
 
-        Window.redirect(windowIdentity, payload.url);
+        Window.navigate(windowIdentity, payload.url);
         ack(successAck);
     }
 
@@ -228,6 +233,48 @@ function WindowApiHandler() {
             windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 
         Window.moveBy(windowIdentity, payload.deltaLeft, payload.deltaTop);
+        ack(successAck);
+    }
+
+    function navigateWindow(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+        let url = payload.url;
+
+        Window.navigate(windowIdentity, url);
+        ack(successAck);
+    }
+
+    function navigateWindowBack(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+        Window.navigateBack(windowIdentity);
+        ack(successAck);
+    }
+
+    function navigateWindowForward(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+        Window.navigateForward(windowIdentity);
+        ack(successAck);
+    }
+
+    function stopWindowNavigation(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+        Window.stopNavigation(windowIdentity);
+        ack(successAck);
+    }
+
+    function reloadWindow(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+        let ignoreCache = !!payload.ignoreCache;
+
+        Window.reload(windowIdentity, ignoreCache);
         ack(successAck);
     }
 

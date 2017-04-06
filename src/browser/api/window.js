@@ -17,21 +17,20 @@ limitations under the License.
     src/browser/api/window.js
  */
 
-// node API packages
+// build-in modules
 let fs = require('fs');
 let path = require('path');
 let url = require('url');
+let electron = require('electron');
+let BrowserWindow = electron.BrowserWindow;
+let electronApp = electron.app;
+let Menu = electron.Menu;
+let nativeImage = electron.nativeImage;
 
-// electron API packages
-let BrowserWindow = require('electron').BrowserWindow;
-let electronApp = require('electron').app;
-let Menu = require('electron').Menu;
-let nativeImage = require('electron').nativeImage;
-
-// misc npm packages
+// npm modules
 let _ = require('underscore');
 
-// local packages
+// local modules
 let animations = require('../animations.js');
 let authenticationDelegate = require('../authentication_delegate.js');
 let BoundsChangedStateTracker = require('../bounds_changed_state_tracker.js');
@@ -52,6 +51,8 @@ import {
     navigationValidator
 } from '../navigation_validation';
 
+
+// locals
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
 const userCache = electronApp.getPath('userCache');
@@ -1000,7 +1001,9 @@ Window.getWindowInfo = function(identity) {
 
     return {
         url: webContents.getURL(),
-        title: webContents.getTitle()
+        title: webContents.getTitle(),
+        canNavigateForward: webContents.canGoForward(),
+        canNavigateBack: webContents.canGoBack()
     };
 };
 
@@ -1198,13 +1201,35 @@ Window.moveTo = function(identity, x, y) {
     });
 };
 
-
-Window.redirect = function(identity, redirectUrl) {
-    let browserWindow = getElectronBrowserWindow(identity, 'redirect');
-
-    browserWindow.webContents.loadURL(redirectUrl);
+Window.navigate = function(identity, url) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
+    browserWindow.webContents.loadURL(url);
 };
 
+Window.navigateBack = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate back');
+    browserWindow.webContents.goBack();
+};
+
+Window.navigateForward = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
+    browserWindow.webContents.goForward();
+};
+
+Window.reload = function(identity, ignoreCache = false) {
+    let browserWindow = getElectronBrowserWindow(identity, 'reload');
+
+    if (!ignoreCache) {
+        browserWindow.webContents.reload();
+    } else {
+        browserWindow.webContents.reloadIgnoringCache();
+    }
+};
+
+Window.stopNavigation = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
+    browserWindow.webContents.stop();
+};
 
 Window.removeEventListener = function(identity, type, listener) {
     let browserWindow = getElectronBrowserWindow(identity, 'remove event listener for');

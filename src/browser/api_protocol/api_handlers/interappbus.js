@@ -31,8 +31,14 @@ function InterApplicationBusApiHandler() {
             'publish-message': publishMessage,
             'send-message': sendMessage,
             'subscribe': subscribe,
-            'unsubscribe': unsubscribe
+            'unsubscribe': unsubscribe,
+            'subscriber-added': subscriberAdded,
+            'subscriber-removed': subscriberRemoved
         };
+
+    //TODO: Figure out a way to share these keys beween interappbus api and handler.
+    const SUBSCRIBER_ADDED_EVENT = 'subscriber-added';
+    const SUBSCRIBER_REMOVED_EVENT = 'subscriber-removed';
 
     apiProtocolBase.registerActionMap(interAppBusExternalApiMap);
 
@@ -67,7 +73,7 @@ function InterApplicationBusApiHandler() {
                 payload
             };
 
-            // old subscribing to new 
+            // old subscribing to new
             if (!subscribedMessageKey && (sentMessageKey === 'messageString')) {
                 command.payload.message = JSON.parse(payload[sentMessageKey]);
             }
@@ -107,6 +113,23 @@ function InterApplicationBusApiHandler() {
         ack(successAck);
     }
 
+    function subscriberAdded(identity, message, ack) {
+        const {
+            payload
+        } = message;
+
+        InterApplicationBus.raiseSubscriberEvent(SUBSCRIBER_ADDED_EVENT, payload);
+        ack(successAck);
+    }
+
+    function subscriberRemoved(identity, message, ack) {
+        const {
+            payload
+        } = message;
+
+        InterApplicationBus.raiseSubscriberEvent(SUBSCRIBER_REMOVED_EVENT, payload);
+        ack(successAck);
+    }
 
     function initSubscriptionListeners(connectionIdentity) {
         var iabIdentity = {
@@ -124,13 +147,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, 'subscriber-added');
+                    sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_ADDED_EVENT);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, 'subscriber-added');
+                sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_ADDED_EVENT);
             }
         });
 
@@ -142,13 +165,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, 'subscriber-removed');
+                    sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_REMOVED_EVENT);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, 'subscriber-removed');
+                sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_REMOVED_EVENT);
             }
 
         });

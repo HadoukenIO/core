@@ -348,6 +348,9 @@ function generateListenerKeys(topic, uuid, name) {
     ];
 }
 
+function raiseSubscriberEvent(eventName, evtObj) {
+    busEventing.emit(eventName, evtObj);
+}
 
 module.exports.InterApplicationBus = {
     publish,
@@ -357,5 +360,6 @@ module.exports.InterApplicationBus = {
     subscriberAdded,
     removeSubscriberAdded,
     subscriberRemoved,
-    removeSubscriberRemoved
+    removeSubscriberRemoved,
+    raiseSubscriberEvent
 };

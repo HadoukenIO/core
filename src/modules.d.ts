@@ -77,4 +77,16 @@ declare module 'electron' {
         public reset(): void;
         public isRunning(): boolean;
     }
+
+    namespace clipboard {
+        export function write(data: {text?: string; html?: string; rtf?: string;}, type?: string): void;
+        export function writeRtf(data: string, type?: string): void;
+        export function writeHtml(data: string, type?: string): void;
+        export function writeText(data: string, type?: string): void;
+        export function availableFormats(type?: string): string[];
+        export function clear(type?: string): void;
+        export function readRtf(type?: string): string;
+        export function readHtml(type?: string): string;
+        export function readText(type?: string): string;
+    }
 }

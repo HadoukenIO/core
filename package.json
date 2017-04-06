@@ -56,7 +56,7 @@
     "q": "^1.2.0",
     "request": "^2.67.0",
     "runtime-p2p": "git@github.com:openfin/runtime-p2p.git#4e1eda457ee5e84a539511ddae81d768029afaea",
-    "js-adapter": "git@github.com:openfin/js-adapter.git#1c34b57cf71276fb930632ad2e935dbf296e1ee5",
+    "js-adapter": "git@github.com:openfin/js-adapter.git#486aa1e059f2d7cdfad686b4356d533b2331aec4",
     "rx": "^4.1.0",
     "ultron": "^1.0.2",
     "underscore": "^1.8.3",

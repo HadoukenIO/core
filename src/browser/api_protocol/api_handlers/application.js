@@ -13,13 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// built-in modules
+let BrowserWindow = require('electron').BrowserWindow;
+let electronApp = require('electron').app;
+
+// npm modules
+let _ = require('underscore');
+
+// local modules
 let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
-let BrowserWindow = require('electron').BrowserWindow;
-let electronApp = require('electron').app;
-let _ = require('underscore');
+
 
 function ApplicationApiHandler() {
     let successAck = {

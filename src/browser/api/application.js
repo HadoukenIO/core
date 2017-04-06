@@ -17,20 +17,23 @@ limitations under the License.
     src/browser/api/application.js
  */
 
+// built-in modules
 let path = require('path');
+let electron = require('electron');
+let BrowserWindow = electron.BrowserWindow;
+let electronApp = electron.app;
+let globalShortcut = electron.globalShortcut;
+let nativeImage = electron.nativeImage;
+let ProcessInfo = electron.processInfo;
+let ResourceFetcher = electron.resourceFetcher;
+let Tray = electron.Tray;
 
-let BrowserWindow = require('electron').BrowserWindow;
-let electronApp = require('electron').app;
-let globalShortcut = require('electron').globalShortcut;
-let nativeImage = require('electron').nativeImage;
-let ProcessInfo = require('electron').processInfo;
-let ResourceFetcher = require('electron').resourceFetcher;
-let Tray = require('electron').Tray;
+// npm modules
+let _ = require('underscore');
 
+// local modules
 let System = require('./system.js').System;
 let Window = require('./window.js').Window;
-
-let _ = require('underscore');
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
@@ -38,20 +41,34 @@ import {
     cachedFetch
 } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
-let parseArgv = require('minimist');
 let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
 import {
     sendToRVM
 } from '../rvm/utils';
-
 import {
     validateNavigationRules
 } from '../navigation_validation';
 
 
+// locals
 let runtimeIsClosing = false;
 let hasPlugins = false;
+let rvmBus;
+let MonitorInfo;
+var Application = {};
+// var OfEvents = [
+//     'closed',
+//     'error',
+//     'crashed',
+//     'not-responding',
+//     'out-of-memory',
+//     'responding',
+//     'started',
+//     'run-requested',
+//     'window-navigation-rejected'
+// ];
+
 
 // this event is emitted from the native side to determine whether plugins should
 // be enabled or not, since webContents don't seem to be available at the time of
@@ -63,8 +80,6 @@ electronApp.on('use-plugins-requested', event => {
     }
 });
 
-let rvmBus;
-let MonitorInfo;
 electronApp.on('ready', function() {
     console.log('RVM MESSAGE BUS READY');
     rvmBus = require('../rvm/rvm_message_bus.js');
@@ -90,21 +105,6 @@ electronApp.on('ready', function() {
     });
 
 });
-
-
-// var OfEvents = [
-//     'closed',
-//     'error',
-//     'crashed',
-//     'not-responding',
-//     'out-of-memory',
-//     'responding',
-//     'started',
-//     'run-requested',
-//     'window-navigation-rejected'
-// ];
-
-var Application = {};
 
 Application.create = function(opts, configUrl = '', parentIdentify = {}) {
     //Hide Window until run is called
@@ -472,9 +472,9 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
 
     // if the runtime is in offline mode, the RVM still expects the
     // startup-url/config for communication
-    let argv = parseArgv(process.argv);
-    if (sourceUrl === argv['local-startup-url']) {
-        sourceUrl = argv['startup-url'] || argv['config'];
+    let argo = coreState.argo;
+    if (sourceUrl === argo['local-startup-url']) {
+        sourceUrl = argo['startup-url'] || argo['config'];
     }
 
     if (coreState.getAppRunningState(uuid)) {

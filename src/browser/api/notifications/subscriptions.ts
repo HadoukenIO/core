@@ -178,6 +178,8 @@ seqs.requestNoteClose
             } else {
                 scheduleNoteClose(req, 1000);
             }
+        } else {
+            removePendingNote(req.id);
         }
     });
 
@@ -749,6 +751,13 @@ function createPendingNote(): void {
         invokeCreateAck(ack);
         pendindNotes.shift();
     }
+}
+
+function removePendingNote(identity: Identity): void {
+    pendindNotes = pendindNotes.filter(pendingNote => {
+        return pendingNote.noteData.options.name !== identity.name;
+    });
+    assignAndUpdateQCounter();
 }
 
 function invokeCreateAck(ack: any): void {
