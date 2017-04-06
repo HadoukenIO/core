@@ -220,6 +220,10 @@ function getAppObjByUuid(uuid) {
     return app && app.appObj;
 }
 
+function getExternalAppObjByUuid(uuid) {
+    return externalApplication.getAllExternalConnctions().find(ea => ea.uuid === uuid);
+}
+
 function getUuidBySourceUrl(sourceUrl) {
     var app = coreState.apps.filter(app => {
         var appObj = app.appObj,
@@ -684,5 +688,6 @@ module.exports = {
     setSentFirstHideSplashScreen,
     setSocketServerState,
     shouldCloseRuntime,
-    windowExists
+    windowExists,
+    getExternalAppObjByUuid
 };

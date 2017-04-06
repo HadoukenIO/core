@@ -369,6 +369,7 @@ module.exports = (grunt) => {
             'src/browser/api_protocol/transport_strategy/ws_strategy.ts',
             'src/browser/api_protocol/api_handlers/authorization.js',
             'src/browser/api_protocol/api_handlers/api_policy_processor.ts',
+            'src/browser/api_protocol/api_handlers/mesh_middleware.ts',
             'src/browser/port_discovery.ts',
             'src/browser/rvm/rvm_message_bus.js',
             'src/browser/rvm/runtime_initiated_topics/app_assets.js',

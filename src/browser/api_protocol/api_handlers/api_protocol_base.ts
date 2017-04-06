@@ -20,59 +20,14 @@ const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrat
 
 import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { ActionMap, MessagePackage } from '../transport_strategy/api_transport_base';
+import { registerMiddleware as registerMeshMiddleware } from './mesh_middleware';
+import { meshEnabled } from '../../connection_manager';
 
-import * as log from '../../log';
-
-import {default as connectionManager, meshEnabled} from '../../connection_manager';
-
-const coreState = require('../../core_state');
 const actionMap: ActionMap = {};
 const requestHandler = new RequestHandler<MessagePackage>();
 
 if (meshEnabled) {
-    requestHandler.addPreProcessor((msg: MessagePackage, next: () => void) => {
-        const {identity, data, ack, nack } = msg;
-        const payload = data && data.payload;
-        const uuid = payload && payload.uuid;
-        const isSync = data && data.isSync;  //TODO handle the sync case?
-        const action = data && data.action;
-        const islocalWindow = !!coreState.getWindowByUuidName(uuid, uuid);
-        const hasIdentityObj = typeof (identity) === 'object';
-
-        /* Determine if the requesting application is actually an external browser
-           instance. If this is the case we don't want to try to resolve the target
-           window even in the case that we don't have it. This prevents a recursive
-           resolution. */
-        const fromExternal = connectionManager.connections.map((conn: any) => {
-            return conn.portInfo.version + ':' + conn.portInfo.port;
-        }).filter((id: any) => id === identity.uuid).length > 0;
-
-        // if it is a listener subscription, let the event listener module deal with it
-        if (action === 'subscribe-to-desktop-event') {
-            next();
-        } else  if (hasIdentityObj && !isSync && !islocalWindow && ! fromExternal) {
-
-            try {
-                connectionManager.resolveIdentity({uuid})
-                    .then((id: any) => {
-                        id.runtime.fin.System.executeOnRemote(data, ack, nack);
-                    })
-                    .catch((e: Error) => {
-                        next();
-                    });
-
-            } catch (e) {
-
-                // something failed asking for the remote
-                log.writeToLog('info', e.message);
-                next();
-            }
-        } else {
-
-            // handle local
-            next();
-        }
-    });
+    registerMeshMiddleware(requestHandler);
 }
 
 // add the handler + create with action map
