@@ -31,6 +31,12 @@ const path = require('path');
 const os = require('os');
 const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
 
+//optional dependencies that we ship.
+const optionalDependencies = [
+    'js-adapter/**',
+    'runtime-p2p/**'
+];
+
 try {
     var openfinSign = require('openfin-sign');
 } catch (err) {
@@ -113,7 +119,7 @@ module.exports = (grunt) => {
                 files: [{
                     cwd: './node_modules',
                     expand: true,
-                    src: [dependencies],
+                    src: [dependencies, optionalDependencies],
                     dest: 'staging/core/node_modules'
                 }]
             },
