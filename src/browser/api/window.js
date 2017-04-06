@@ -1509,7 +1509,7 @@ Window.setZoomLevel = function(identity, level) {
 };
 
 Window.onUnload = (identity) => {
-    ofEvents.emit('window/unload', identity);
+    ofEvents.emit(`window/unload/${identity.uuid}/${identity.name}`, identity);
     ofEvents.emit('window/init-subscription-listeners', identity);
 };
 

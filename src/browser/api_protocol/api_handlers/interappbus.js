@@ -81,22 +81,27 @@ function InterApplicationBusApiHandler() {
             apiProtocolBase.sendToIdentity(identity, command);
         };
 
-        let subscriptionObj;
+        const subscriptionArgs = [
+            identity,
+            topic,
+            identity.uuid,
+            sourceUuid,
+            sourceWindowName,
+            subScriptionTypes.MESSAGE
+        ];
 
-        if (apiProtocolBase.subscriptionExists(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE)) {
-            apiProtocolBase.uppSubscriptionRefCount(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE);
+        if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
+            apiProtocolBase.uppSubscriptionRefCount(...subscriptionArgs);
 
         } else {
 
-            subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
+            const subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
 
-            apiProtocolBase.registerSubscription(subscriptionObj.unsubscribe,
-                identity,
-                topic,
-                identity.uuid,
-                sourceUuid,
-                sourceWindowName,
-                subScriptionTypes.MESSAGE);
+            apiProtocolBase.registerSubscription(subscriptionObj.unsubscribe, ...subscriptionArgs);
+
+            ofEvents.once(`window/unload/${identity.uuid}/${identity.name}`, () => {
+                apiProtocolBase.removeSubscription(...subscriptionArgs);
+            });
         }
 
         ack(successAck);
