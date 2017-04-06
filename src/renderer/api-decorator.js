@@ -200,10 +200,57 @@ limitations under the License.
         return visible;
     }
 
+    function setWindowBoundsSync(uuid, name, bounds) {
+        try {
+            syncApiCall('set-window-bounds', {
+                uuid,
+                name,
+                left: bounds.left,
+                top: bounds.top,
+                width: bounds.width,
+                height: bounds.height
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function showWindowSync(uuid, name) {
+        try {
+            syncApiCall('show-window', {
+                uuid,
+                name
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function maximizeWindowSync(uuid, name) {
+        try {
+            syncApiCall('maximize-window', {
+                uuid,
+                name
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function minimizeWindowSync(uuid, name) {
+        try {
+            syncApiCall('minimize-window', {
+                uuid,
+                name
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
     function showOnReady(global, currWindowOpts) {
         let autoShow = currWindowOpts.autoShow;
         let toShowOnRun = currWindowOpts.toShowOnRun;
-        let win = fin.desktop.Window.getCurrent();
         let onFinish = callback => {
             if (autoShow || toShowOnRun) {
                 callback();
@@ -231,23 +278,23 @@ limitations under the License.
                 restoreBounds.left = displayRoot.x;
             }
 
-            win.setBounds(restoreBounds.left, restoreBounds.top, restoreBounds.width, restoreBounds.height, () => {
-                onFinish(() => {
-                    switch (restoreBounds.windowState) {
-                        case 'maximized':
-                            win.maximize(win.show);
-                            break;
-                        case 'minimized':
-                            win.minimize(win.show);
-                            break;
-                        default:
-                            win.show();
-                    }
-                });
+            setWindowBoundsSync(currWindowOpts.uuid, currWindowOpts.name, restoreBounds);
+            onFinish(() => {
+                switch (restoreBounds.windowState) {
+                    case 'maximized':
+                        maximizeWindowSync(currWindowOpts.uuid, currWindowOpts.name);
+                        break;
+                    case 'minimized':
+                        minimizeWindowSync(currWindowOpts.uuid, currWindowOpts.name);
+                        break;
+                    default:
+                        showWindowSync(currWindowOpts.uuid, currWindowOpts.name);
+                        break;
+                }
             });
         } else {
             onFinish(() => {
-                win.show();
+                showWindowSync(currWindowOpts.uuid, currWindowOpts.name);
             });
         }
     }
