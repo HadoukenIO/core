@@ -80,7 +80,7 @@ const webSocketStrategy = new WebSocketStrategy(actionMap, requestHandler);
 const elipcStrategy = new ElipcStrategy(actionMap, requestHandler);
 const subscriptionManager = new SubscriptionManager();
 
-function registerActionMap(am: ActionMap) {
+export function registerActionMap(am: ActionMap) {
     Object.getOwnPropertyNames(am).forEach(n => {
         if (actionMap[n] === undefined) {
             actionMap[n] = am[n];
@@ -90,7 +90,7 @@ function registerActionMap(am: ActionMap) {
     });
 }
 
-function sendToIdentity(identity: any, payload: any) {
+export function sendToIdentity(identity: any, payload: any) {
     const externalConnection = externalAppplication.getExternalConnectionByUuid(identity.uuid);
 
     if (externalConnection) {
@@ -102,51 +102,51 @@ function sendToIdentity(identity: any, payload: any) {
     }
 }
 
-function subscriptionExists(identity: any, ...args: any[]) {
+export function subscriptionExists(identity: any, ...args: any[]) {
     return subscriptionManager.subscriptionExists(identity, ...args);
 }
 
-function uppSubscriptionRefCount(identity: any, ...args: any[]) {
+export function uppSubscriptionRefCount(identity: any, ...args: any[]) {
     return subscriptionManager.uppSubscriptionRefCount(identity, ...args);
 }
 
-function registerSubscription(fn: any, identity: any, ...args: any[]) {
+export function registerSubscription(fn: any, identity: any, ...args: any[]) {
     return subscriptionManager.registerSubscription(fn, identity, ...args);
 }
 
-function removeSubscription(identity: any, ...args: any[]) {
+export function removeSubscription(identity: any, ...args: any[]) {
     return subscriptionManager.removeSubscription(identity, ...args);
 }
 
-function getDefaultRequestHandler(): RequestHandler<MessagePackage> {
+export function getDefaultRequestHandler(): RequestHandler<MessagePackage> {
     return requestHandler;
 }
 
-function getGroupingWindowIdentity(payload: any) {
+export function getGroupingWindowIdentity(payload: any) {
     return {
         uuid: payload.groupingUuid,
         name: payload.groupingWindowName
     };
 }
 
-function getTargetWindowIdentity(payload: any) {
+export function getTargetWindowIdentity(payload: any) {
     return {
         uuid: payload.uuid,
         name: payload.name
     };
 }
 
-function getTargetApplicationIdentity(payload: any) {
+export function getTargetApplicationIdentity(payload: any) {
     return {
         uuid: payload.uuid
     };
 }
 
-function onClientAuthenticated(cb: any) {
+export function onClientAuthenticated(cb: any) {
     webSocketStrategy.onClientAuthenticated(cb);
 }
 
-function onClientDisconnect(id: any, cb: any) {
+export function onClientDisconnect(id: any, cb: any) {
     webSocketStrategy.onClientDisconnect(onDisconnect(id, cb));
 }
 
@@ -158,23 +158,7 @@ function onDisconnect(id: any, cb: any) {
     };
 }
 
-function init() {
+export function init() {
     webSocketStrategy.registerMessageHandlers();
     elipcStrategy.registerMessageHandlers();
 }
-
-module.exports = {
-    registerSubscription,
-    removeSubscription,
-    subscriptionExists,
-    uppSubscriptionRefCount,
-    getDefaultRequestHandler,
-    getGroupingWindowIdentity,
-    getTargetWindowIdentity,
-    getTargetApplicationIdentity,
-    onClientAuthenticated,
-    onClientDisconnect,
-    sendToIdentity,
-    registerActionMap,
-    init
-};

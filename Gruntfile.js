@@ -42,6 +42,7 @@ try {
  * slowly increase as more and more files are moved to TypeScript
  */
 const trans2TSFiles = [
+    'src/browser/api_protocol/api_handlers/clipboard.ts',
     'src/browser/transports/base.ts',
     'src/browser/transports/chromium_ipc.ts',
     'src/browser/transports/electron_ipc.ts',
