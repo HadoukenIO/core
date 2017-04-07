@@ -19,7 +19,8 @@
   },
   "homepage": "https://github.com/openfin/openfin",
   "optionalDependencies": {
-    "openfin-sign": "git+ssh://git@github.com:openfin/openfin-sign.git#caee55ecbe6f81e6ed9630790781fe4d1835cb03"
+      "openfin-sign": "git+ssh://git@github.com:openfin/openfin-sign.git#caee55ecbe6f81e6ed9630790781fe4d1835cb03",
+      "runtime-p2p": "git@github.com:openfin/runtime-p2p.git#168ec43c232b06533d0236c1aeeb3fb695c4700a"
   },
   "devDependencies": {
     "@types/node": "^6.0.49",
@@ -55,8 +56,6 @@
     "options": "0.0.6",
     "q": "^1.2.0",
     "request": "^2.67.0",
-    "runtime-p2p": "git@github.com:openfin/runtime-p2p.git#4e1eda457ee5e84a539511ddae81d768029afaea",
-    "js-adapter": "git@github.com:openfin/js-adapter.git#486aa1e059f2d7cdfad686b4356d533b2331aec4",
     "rx": "^4.1.0",
     "ultron": "^1.0.2",
     "underscore": "^1.8.3",

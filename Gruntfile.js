@@ -22,14 +22,21 @@ limitations under the License.
  *
  */
 
+const fs = require('fs');
+const path = require('path');
+
+const asar = require('asar');
 const nativeBuilder = require('electron-rebuild');
 const wrench = require('wrench');
-const fs = require('fs');
-const asar = require('asar');
-const exec = require('child_process').exec;
-const path = require('path');
-const os = require('os');
+
 const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
+const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
+
+//optional dependencies that we ship.
+const optionalDependencies = [
+    'js-adapter/**',
+    'runtime-p2p/**'
+];
 
 try {
     var openfinSign = require('openfin-sign');
@@ -99,21 +106,13 @@ module.exports = (grunt) => {
     // Load all grunt tasks matching the ['grunt-*', '@*/grunt-*'] patterns
     require('load-grunt-tasks')(grunt);
 
-    const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
-    const staging = path.resolve(__dirname, 'staging', 'core');
-    const isWindows = os.type().toLowerCase().indexOf('windows') !== -1;
-    const version = grunt.option('of-version') || '6.44.8.55';
-    const eightOrGreater = '\\AppData\\Local\\OpenFin';
-    const dest = process.env['USERPROFILE'] + eightOrGreater + '\\runtime\\' + version + '\\OpenFin\\resources\\default_app';
-    const runner = grunt.option('run') || path.resolve(dest, '../', '../', 'openfin.exe');
-
     grunt.initConfig({
         copy: {
             lib: {
                 files: [{
                     cwd: './node_modules',
                     expand: true,
-                    src: [dependencies],
+                    src: [dependencies, optionalDependencies],
                     dest: 'staging/core/node_modules'
                 }]
             },
@@ -133,12 +132,6 @@ module.exports = (grunt) => {
                 files: [{
                     src: ['src/certificate/*'],
                     dest: 'staging/core/'
-                }]
-            },
-            rcb: { //copy the rcb - windows only
-                files: [{
-                    src: 'rcb',
-                    dest: path.resolve(dest, '../' + 'rcb')
                 }]
             }
         },
@@ -248,10 +241,12 @@ module.exports = (grunt) => {
                 openfinSign(filepath);
             }
         });
+        grunt.log.ok('Finished signing files.');
     });
 
     grunt.registerTask('sign-asar', function() {
         openfinSign('out/app.asar');
+        grunt.log.ok('Finished signing asar.');
     });
 
     grunt.registerTask('clean', 'clean the out house', function() {
@@ -267,20 +262,20 @@ module.exports = (grunt) => {
         const outdir = './staging/core/node_modules';
         const arch = grunt.option('arch') || 'ia32';
 
-        grunt.log.writeln('Checking if must rebuild native modules...').ok();
+        grunt.log.ok('Checking if rebuilding native modules is required.');
         nativeBuilder.shouldRebuildNativeModules(undefined, nativeModVersion).then(function(shouldBuild) {
             if (!shouldBuild) {
-                grunt.log.writeln('Skipping native builds').ok();
+                grunt.log.ok('Skipping native builds.');
                 done();
                 return true;
             }
 
-            grunt.log.writeln('Installing headers...').ok();
+            grunt.log.ok('Installing headers.');
             return nativeBuilder.installNodeHeaders(nodeHeaderVersion, undefined, undefined, 'ia32')
                 .then(function() {
                     // Ensure directory tree exists
                     grunt.file.mkdir(outdir);
-                    grunt.log.writeln('Building native modules...').ok();
+                    grunt.log.ok('Building native modules.');
                     nativeBuilder.rebuildNativeModules(rebuildNativeVersion, outdir, undefined, undefined, arch).then(function() {
                         done();
                     });
@@ -296,32 +291,11 @@ module.exports = (grunt) => {
         const done = this.async();
 
         asar.createPackage('staging/core', 'out/app.asar', function() {
-            done();
-            grunt.log.writeln('Finished packaging as asar.').ok();
-
+            grunt.log.ok('Finished packaging as asar.');
             wrench.rmdirSyncRecursive('staging', true);
-            grunt.log.writeln('Staging cleaned up.').ok();
+            grunt.log.ok('Cleaned up staging.');
+            done();
         });
-
-    });
-
-    grunt.registerTask('dev', 'copy over', function() {
-        const done = this.async();
-        const url = grunt.option('url') || 'https://demoappdirectory.openf.in/desktop/config/apps/OpenFin/HelloOpenFin/alpha-next.json';
-
-        if (isWindows) {
-            grunt.task.run(['copy:rcb']);
-
-            wrench.copyDirRecursive(staging, dest, {
-                forceDelete: true
-            }, function() {
-                grunt.log.writeln(runner + ' --debug="5858" --startup-url="' + url + '"');
-                exec(runner + ' --debug="5858" --startup-url="' + url + '"', function() {
-                    done();
-                });
-
-            });
-        }
     });
 
     grunt.registerTask('copy-local', function() {
@@ -329,7 +303,7 @@ module.exports = (grunt) => {
         const done = this.async();
 
         if (!target) {
-            console.log('No target specified skipping local deploy');
+            grunt.log.ok('No target specified...skipping local deploy.');
             done();
         } else {
             const asarFile = path.join(target, 'app.asar');
@@ -339,13 +313,13 @@ module.exports = (grunt) => {
 
             if (fs.existsSync(asarFile)) {
                 fs.renameSync(asarFile, asarFileBk);
-                grunt.log.writeln(`renamed: ${asarFile} to: ${asarFileBk}\n`);
+                grunt.log.ok(`renamed: ${asarFile} to: ${asarFileBk}`);
             }
 
             wrench.copyDirRecursive(origin, defaultAppFolder, {
                 forceDelete: true
             }, function() {
-                grunt.log.writeln(`deployed to: ${defaultAppFolder}`);
+                grunt.log.ok(`Deployed to: ${defaultAppFolder}`);
                 done();
             });
         }
