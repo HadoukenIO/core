@@ -6,7 +6,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 let fs = require('fs');
 let apiProtocolBase = require('./api_protocol_base.js');
-let externalApplication = require('../external_application.js');
+import * as externalApplication from '../../api/external_application';
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 let _ = require('underscore');

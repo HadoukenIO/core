@@ -6,11 +6,28 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import ofEvents from '../of_events';
 
-let authenticatedConnections = [];
+import { Identity } from '../../shapes';
+
+const authenticatedConnections: any[] = [];
 const connectedEvent = 'external-application/connected';
 const disconnectedEvent = 'external-application/disconnected';
 
-function addExternalConnection(externalConnObj) {
+export module ExternalApplication {
+    export function addEventListener(identity: any, type: string, listener: Function) {
+        const evt = `external-application/${type}/${identity.uuid}`;
+        ofEvents.on(evt, listener);
+
+        return () => {
+            ofEvents.removeListener(evt, listener);
+        };
+    }
+
+    export function removeEventListener(identity: any, type: string, listener: Function) {
+        ofEvents.removeListener(`external-application/${type}/${identity.uuid}`, listener);
+    }
+}
+
+export function addExternalConnection(externalConnObj: Identity) {
     const {
         uuid
     } = externalConnObj;
@@ -25,19 +42,19 @@ function addExternalConnection(externalConnObj) {
     });
 }
 
-function getExternalConnectionByUuid(uuid) {
-    return authenticatedConnections.find(function(c) {
+export function getExternalConnectionByUuid(uuid: string) {
+    return authenticatedConnections.find(c => {
         return c.uuid === uuid;
     });
 }
 
-function getExternalConnectionById(id) {
-    return authenticatedConnections.find(function(c) {
+export function getExternalConnectionById(id: number) {
+    return authenticatedConnections.find(c => {
         return c.id === id;
     });
 }
 
-function removeExternalConnection(externalConnection) {
+export function removeExternalConnection(externalConnection: Identity) {
     authenticatedConnections.splice(authenticatedConnections.indexOf(externalConnection), 1);
 
     ofEvents.emit(disconnectedEvent + `/${externalConnection.uuid}`, {
@@ -49,15 +66,7 @@ function removeExternalConnection(externalConnection) {
     });
 }
 
-function getAllExternalConnctions() {
+export function getAllExternalConnctions() {
     //return a copy.
     return authenticatedConnections.slice(0);
 }
-
-module.exports = {
-    addExternalConnection,
-    getExternalConnectionByUuid,
-    getExternalConnectionById,
-    removeExternalConnection,
-    getAllExternalConnctions
-};

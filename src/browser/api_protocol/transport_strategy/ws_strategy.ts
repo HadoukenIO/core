@@ -10,7 +10,7 @@ import {default as RequestHandler} from './base_handler';
 
 declare var require: any;
 
-const externalApplication = require('../external_application');
+import * as externalApplication from '../../api/external_application';
 const socketServer = require('../../transports/socket_server').server;
 const system = require('../../api/system').System;
 

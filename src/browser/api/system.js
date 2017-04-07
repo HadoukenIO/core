@@ -26,7 +26,7 @@ let _ = require('underscore');
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let electronIPC = require('../transports/electron_ipc.js');
-let externalApplication = require('../api_protocol/external_application.js');
+import * as externalApplication from './external_application';
 let log = require('../log.js');
 import ofEvents from '../of_events';
 let ProcessTracker = require('../process_tracker.js');

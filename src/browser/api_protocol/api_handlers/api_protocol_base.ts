@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-const externalAppplication = require('../external_application.js');
+import * as externalAppplication from '../../api/external_application';
 const SubscriptionManager = require('../../subscription_manager.js').SubscriptionManager;
 const WebSocketStrategy = require('../transport_strategy/ws_strategy').WebSocketStrategy;
 const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrategy;

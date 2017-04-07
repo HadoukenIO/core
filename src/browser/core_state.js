@@ -24,7 +24,7 @@ var electronApp = require('electron').app;
 var minimist = require('minimist');
 
 // local modules
-var externalApplication = require('./api_protocol/external_application.js');
+import * as externalApplication from './api/external_application';
 
 
 // locals
