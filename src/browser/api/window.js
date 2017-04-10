@@ -17,15 +17,20 @@ limitations under the License.
     src/browser/api/window.js
  */
 
+// build-in modules
 let fs = require('fs');
 let path = require('path');
+let url = require('url');
+let electron = require('electron');
+let BrowserWindow = electron.BrowserWindow;
+let electronApp = electron.app;
+let Menu = electron.Menu;
+let nativeImage = electron.nativeImage;
 
-let BrowserWindow = require('electron').BrowserWindow;
-let electronApp = require('electron').app;
-let Menu = require('electron').Menu;
-let nativeImage = require('electron').nativeImage;
-
+// npm modules
 let _ = require('underscore');
+
+// local modules
 let animations = require('../animations.js');
 let authenticationDelegate = require('../authentication_delegate.js');
 let BoundsChangedStateTracker = require('../bounds_changed_state_tracker.js');
@@ -33,25 +38,29 @@ let clipBounds = require('../clip_bounds.js').default;
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
-let Icon = require('../icon');
+import {
+    cachedFetch
+} from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
 let ProcessTracker = require('../process_tracker.js');
 let regex = require('../../common/regex');
-let subScriptionManager = new require('../subscription_manager.js').SubscriptionManager();
+let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
 let WindowGroups = require('../window_groups.js');
 import {
     validateNavigation,
     navigationValidator
 } from '../navigation_validation';
 
+
+// locals
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
 const userCache = electronApp.getPath('userCache');
 
 let Window = {};
 
-let electronToOfEvent = {
+let browserWindowEventMap = {
     'blur': {
         topic: 'blurred'
     },
@@ -108,6 +117,16 @@ let electronToOfEvent = {
     // }
 };
 
+let webContentsEventMap = {
+    'did-get-response-details': {
+        topic: 'resource-response-received',
+        decorator: responseReceivedDecorator
+    },
+    'did-fail-load': {
+        topic: 'resource-load-failed',
+        decorator: loadFailedDecorator
+    }
+};
 
 /*
     For the bounds stuff, looks like 5.0 does not take actions until the
@@ -451,48 +470,53 @@ Window.create = function(id, opts) {
             }
         });
 
-        // todo this should be on demand, for now just blast them all
-        Object.keys(electronToOfEvent).forEach(evnt => {
-            var mappedMeta = electronToOfEvent[evnt];
-            var mappedTopic = mappedMeta.topic || '';
+        let mapEvents = function(eventMap, eventEmitter) {
+            // todo this should be on demand, for now just blast them all
+            Object.keys(eventMap).forEach(evnt => {
+                var mappedMeta = eventMap[evnt];
+                var mappedTopic = mappedMeta.topic || '';
 
-            var electronEventListener = function( /*event , arg1, ... */ ) {
+                var electronEventListener = function( /*event , arg1, ... */ ) {
 
-                // if the window has already been removed from core_state,
-                // don't propogate anymore events
-                if (!Window.wrap(uuid, name)) {
-                    return;
-                }
+                    // if the window has already been removed from core_state,
+                    // don't propogate anymore events
+                    if (!Window.wrap(uuid, name)) {
+                        return;
+                    }
 
-                // Bare minimum shape of an OpenFin window event payload
-                let payload = {
+                    // Bare minimum shape of an OpenFin window event payload
+                    let payload = {
 
-                    // todo: remove this hard-code
-                    //reason: 'self',
-                    name,
-                    uuid,
-                    topic: 'window',
-                    type: mappedTopic /* May be overridden by decorator */
+                        // todo: remove this hard-code
+                        //reason: 'self',
+                        name,
+                        uuid,
+                        topic: 'window',
+                        type: mappedTopic /* May be overridden by decorator */
+                    };
+
+                    let eventString = `window/${payload.type}/${uuidname}`;
+                    let decoratorFn = mappedMeta.decorator || noOpDecorator;
+
+                    // Payload is modified by the decorator and returns true on success
+                    if (decoratorFn(payload, arguments)) {
+                        // Let the decorator apply changes to the type
+                        eventString = `window/${payload.type}/${uuidname}`;
+                        ofEvents.emit(eventString, payload);
+                    }
                 };
 
-                let eventString = `window/${payload.type}/${uuidname}`;
-                let decoratorFn = mappedMeta.decorator || noOpDecorator;
+                eventEmitter.on(evnt, electronEventListener);
 
-                // Payload is modified by the decorator and returns true on success
-                if (decoratorFn(payload, arguments)) {
-                    // Let the decorator apply changes to the type
-                    eventString = `window/${payload.type}/${uuidname}`;
-                    ofEvents.emit(eventString, payload);
-                }
-            };
-
-            browserWindow.on(evnt, electronEventListener);
-
-            // push the unhooking functions in to the queue
-            _openListeners.push(() => {
-                browserWindow.removeListener(evnt, electronEventListener);
+                // push the unhooking functions in to the queue
+                _openListeners.push(() => {
+                    eventEmitter.removeListener(evnt, electronEventListener);
+                });
             });
-        });
+        };
+
+        mapEvents(browserWindowEventMap, browserWindow);
+        mapEvents(webContentsEventMap, webContents);
 
         // hideOnClose is deprecated; treat it as if it's just another
         // listener on the 'close-requested' event
@@ -535,7 +559,7 @@ Window.create = function(id, opts) {
         };
 
         WindowGroups.on(groupChangedEventString, groupChangedListener);
-        subScriptionManager.registerSubscription(groupChangedUnsubscribe, identity, groupChangedEventString);
+        subscriptionManager.registerSubscription(groupChangedUnsubscribe, identity, groupChangedEventString);
 
         // Event listener for external process started
         let synthProcessStartedEventString = `synth-process-started/${uuidname}`;
@@ -554,7 +578,7 @@ Window.create = function(id, opts) {
         };
 
         ProcessTracker.on(synthProcessStartedEventString, synthProcessStartedListener);
-        subScriptionManager.registerSubscription(synthProcessStartedUnsubscribe, identity, synthProcessStartedEventString);
+        subscriptionManager.registerSubscription(synthProcessStartedUnsubscribe, identity, synthProcessStartedEventString);
 
         // Event listener for external process termination
         let synthProcessTerminatedEventString = `synth-process-terminated/${uuidname}`;
@@ -573,7 +597,7 @@ Window.create = function(id, opts) {
         };
 
         ProcessTracker.on(synthProcessTerminatedEventString, synthProcessTerminatedListener);
-        subScriptionManager.registerSubscription(synthProcessTerminatedUnsubscribe, identity, synthProcessTerminatedEventString);
+        subscriptionManager.registerSubscription(synthProcessTerminatedUnsubscribe, identity, synthProcessTerminatedEventString);
 
         // will-navigate URL for white/black listing
         const navValidator = navigationValidator(uuid, name, id);
@@ -591,7 +615,7 @@ Window.create = function(id, opts) {
         let startLoadingUnsubscribe = () => {
             webContents.removeListener(startLoadingString, startLoadingSubscribe);
         };
-        subScriptionManager.registerSubscription(startLoadingUnsubscribe, identity, startLoadingString);
+        subscriptionManager.registerSubscription(startLoadingUnsubscribe, identity, startLoadingString);
 
         let documentLoadedSubscribe = (event, isMain, documentName) => {
             if (isMain && uuid === name) { // main window
@@ -617,7 +641,7 @@ Window.create = function(id, opts) {
         let documentLoadedUnsubscribe = () => {
             webContents.removeListener(documentLoadedString, documentLoadedSubscribe);
         };
-        subScriptionManager.registerSubscription(documentLoadedUnsubscribe, identity, documentLoadedString);
+        subscriptionManager.registerSubscription(documentLoadedUnsubscribe, identity, documentLoadedString);
 
         // picked up in src/browser/external_connection/interappbus_external_api.js
         // hooks up (un)subscribe listeners
@@ -629,7 +653,6 @@ Window.create = function(id, opts) {
         let constructorCallbackMessage = {
             success: true
         };
-        let didFailLoadHandler;
 
         let emitErrMessage = (errCode) => {
             let chromeErrLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
@@ -643,30 +666,37 @@ Window.create = function(id, opts) {
             ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
         };
 
-        let didGetResponseDetailsHandler = (event, status, newURL, originalURL, httpResponseCode) => {
-            browserWindow.httpResponseCode = httpResponseCode;
-            webContents.removeListener('did-fail-load', didFailLoadHandler);
+        let resourceResponseReceivedHandler, resourceLoadFailedHandler;
+
+        let resourceResponseReceivedEventString = `window/resource-response-received/${uuidname}`;
+        let resourceLoadFailedEventString = `window/resource-load-failed/${uuidname}`;
+
+        let httpResponseCode = null;
+
+        resourceResponseReceivedHandler = (details) => {
+            httpResponseCode = details.httpResponseCode;
+            ofEvents.removeListener(resourceLoadFailedEventString, resourceLoadFailedHandler);
         };
 
-        didFailLoadHandler = (event, errCode) => {
-            emitErrMessage(errCode);
-            webContents.removeListener('did-get-response-details', didGetResponseDetailsHandler);
+        resourceLoadFailedHandler = (failure) => {
+            emitErrMessage(failure.errCode);
+            ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
         };
 
         if (opts.url === 'about:blank') {
             webContents.once('did-finish-load', () => {
                 constructorCallbackMessage.data = {
-                    httpResponseCode: null
+                    httpResponseCode
                 };
                 ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
             });
 
         } else {
-            webContents.once('did-get-response-details', didGetResponseDetailsHandler);
-            webContents.once('did-fail-load', didFailLoadHandler);
-            ofEvents.once(`window/connected/${uuid}-${name}`, () => {
+            ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+            ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
+            ofEvents.once(`window/connected/${uuidname}`, () => {
                 constructorCallbackMessage.data = {
-                    httpResponseCode: browserWindow.httpResponseCode
+                    httpResponseCode
                 };
                 ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
             });
@@ -966,16 +996,26 @@ Window.getGroup = function(identity) {
 };
 
 
-// returns an object reminiscent of DOM's window.location object
 Window.getWindowInfo = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get info for');
     let webContents = browserWindow.webContents;
 
     return {
         url: webContents.getURL(),
-        title: webContents.getTitle()
+        title: webContents.getTitle(),
+        canNavigateForward: webContents.canGoForward(),
+        canNavigateBack: webContents.canGoBack()
     };
 };
+
+
+Window.getAbsolutePath = function(identity, path) {
+    let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
+    let windowURL = browserWindow.webContents.getURL();
+
+    return (path || path === 0) ? url.resolve(windowURL, path) : '';
+};
+
 
 Window.getNativeId = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
@@ -1001,6 +1041,25 @@ Window.getParentApplication = function() {
 
 
 Window.getParentWindow = function() {};
+
+/**
+ * Fetches window's preload script and gets its content
+ */
+Window.getPreloadScript = function(identity, preloadUrl, callback) {
+    cachedFetch(identity.uuid, preloadUrl, (fetchError, scriptPath) => {
+        if (fetchError) {
+            return callback(new Error(`Failed to fetch preload script from ${preloadUrl}`));
+        }
+
+        fs.readFile(scriptPath, 'utf8', (readError, content) => {
+            if (readError) {
+                callback(new Error('Failed to read the content of the preload script'));
+            } else {
+                callback(null, content);
+            }
+        });
+    });
+};
 
 
 Window.getSnapshot = function(identity, callback = () => {}) {
@@ -1143,13 +1202,35 @@ Window.moveTo = function(identity, x, y) {
     });
 };
 
-
-Window.redirect = function(identity, redirectUrl) {
-    let browserWindow = getElectronBrowserWindow(identity, 'redirect');
-
-    browserWindow.webContents.loadURL(redirectUrl);
+Window.navigate = function(identity, url) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
+    browserWindow.webContents.loadURL(url);
 };
 
+Window.navigateBack = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate back');
+    browserWindow.webContents.goBack();
+};
+
+Window.navigateForward = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
+    browserWindow.webContents.goForward();
+};
+
+Window.reload = function(identity, ignoreCache = false) {
+    let browserWindow = getElectronBrowserWindow(identity, 'reload');
+
+    if (!ignoreCache) {
+        browserWindow.webContents.reload();
+    } else {
+        browserWindow.webContents.reloadIgnoringCache();
+    }
+};
+
+Window.stopNavigation = function(identity) {
+    let browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
+    browserWindow.webContents.stop();
+};
 
 Window.removeEventListener = function(identity, type, listener) {
     let browserWindow = getElectronBrowserWindow(identity, 'remove event listener for');
@@ -1336,7 +1417,10 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
                 const app = Application.wrap(identity.uuid);
 
                 Application.getChildWindows(identity).forEach(childWin => {
-                    childWin.browserWindow.close();
+                    Window.close({
+                        name: childWin.name,
+                        uuid: childWin.uuid
+                    }, true);
                 });
 
                 app.mainWindow.webContents.reloadIgnoringCache();
@@ -1349,8 +1433,7 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
     }, {
         label: 'Inspect element',
         click: (menuItem, browserWindow) => {
-            var clickPosition = browserWindow.getClickPosition();
-            browserWindow.webContents.inspectElement(clickPosition.x, clickPosition.y);
+            browserWindow.webContents.inspectElement(x, y);
         },
         accelerator: 'CommandOrControl+Shift+I'
     });
@@ -1423,6 +1506,11 @@ Window.setZoomLevel = function(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
 
     browserWindow.webContents.setZoomLevel(level);
+};
+
+Window.onUnload = (identity) => {
+    ofEvents.emit(`window/unload/${identity.uuid}/${identity.name}`, identity);
+    ofEvents.emit('window/init-subscription-listeners', identity);
 };
 
 function emitCloseEvents(identity) {
@@ -1731,6 +1819,53 @@ function visibilityChangedDecorator(payload, args) {
     return propogate;
 }
 
+function responseReceivedDecorator(payload, args) {
+    var [
+        /*event*/
+        ,
+        status,
+        newUrl,
+        originalUrl,
+        httpResponseCode,
+        requestMethod,
+        referrer,
+        headers,
+        resourceType
+    ] = args;
+
+    Object.assign(payload, {
+        status,
+        newUrl,
+        originalUrl,
+        httpResponseCode,
+        requestMethod,
+        referrer,
+        headers,
+        resourceType
+    });
+
+    return true;
+}
+
+function loadFailedDecorator(payload, args) {
+    var [
+        /*event*/
+        ,
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame
+    ] = args;
+
+    Object.assign(payload, {
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame
+    });
+
+    return true;
+}
 
 function noOpDecorator( /*payload*/ ) {
 
@@ -1765,9 +1900,11 @@ function setTaskbar(browserWindow) {
 
     setBlankTaskbarIcon(browserWindow);
 
-    // if we aren't loading the page via http, then
-    // the 'page-favicon-updated' event never fires
-    if (regex.isURI(options.url)) {
+    // If the window isn't loaded by a URL, or is "about:blank", then the
+    // page-favicon-updated event never fires (explained below). In this case
+    // we try the window options and if that fails we get the icon info
+    // from the main window.
+    if (!regex.isURL(options.url)) {
         let _url = getWinOptsIconUrl(options);
 
         // v6 needs to match v5's behavior: if the window url is a file uri,
@@ -1787,7 +1924,13 @@ function setTaskbar(browserWindow) {
         return;
     }
 
-    // this event will not be fired if the window url is 'about:blank'
+    // When a page loads, Electron fires the page-favicon-updated event
+    // which signals the core to fetch/set the taskbar icon. The core
+    // first tries to use the icon info provided by the window options.
+    // If that fails, then it tries to use the list of favicons provided by
+    // the page-favicon-updated event. Finally, if that fails, it'll grab
+    // the icon info from the main window and use that. By default, the
+    // taskbar icon is blank.
     browserWindow.webContents.on('page-favicon-updated', (event, urls) => {
         // try the window icon options first
         setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {
@@ -1809,7 +1952,7 @@ function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
     let options = browserWindow._options;
     let uuid = options.uuid;
 
-    Icon.fetch(uuid, iconUrl, (error, iconFilepath) => {
+    cachedFetch(uuid, iconUrl, (error, iconFilepath) => {
         if (!error) {
             setIcon(browserWindow, iconFilepath, errorCallback);
         } else {
@@ -1873,7 +2016,7 @@ function handleCustomAlerts(id, opts) {
     }
 
     browserWindow.on(subTopic, subscription);
-    subScriptionManager.registerSubscription(unsubscribe, {
+    subscriptionManager.registerSubscription(unsubscribe, {
         uuid: opts.uuid,
         name: opts.name
     }, type, id);

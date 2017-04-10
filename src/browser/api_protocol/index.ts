@@ -17,7 +17,7 @@ declare var require: any;
 
 const ApplicationApiHandler = require('./api_handlers/application').ApplicationApiHandler;
 const AuthorizationApiHandler = require('./api_handlers/authorization').AuthorizationApiHandler;
-const ClipboardApiHandler = require('./api_handlers/clipboard').ClipboardApiHandler;
+import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
 const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
@@ -30,7 +30,7 @@ export function initApiHandlers() {
     /* tslint:disable: no-unused-variable */
     const applicationApiHandler = new ApplicationApiHandler();
     const authorizationApiHandler = new AuthorizationApiHandler();
-    const clipboardApiHandler = new ClipboardApiHandler();
+    initClipboardAPIHandler();
     const eventListenerApiHandler = new EventListenerApiHandler();
     const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
     const notificationApiHandler = new NotificationApiHandler();
@@ -38,4 +38,6 @@ export function initApiHandlers() {
     const windowApiHandler = new WindowApiHandler();
 
     apiProtocolBase.init();
+
+    const apiPolicyProcessor = require('./api_handlers/api_policy_processor');
 }

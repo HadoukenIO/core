@@ -137,6 +137,10 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
 
             procObj = eProcess.launch(fpath, cwd, args, !!parentWindowUuidName);
 
+            if (!procObj) {
+                return error(`Error attempting to launch '${fpath}'.`);
+            }
+
             if (parentWindowUuidName) {
                 let processes = this._windowToUuids[parentWindowUuidName] || [];
                 processes.push(uuid);

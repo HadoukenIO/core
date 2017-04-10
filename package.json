@@ -1,23 +1,27 @@
 {
-  "name": "runtime-core",
+  "name": "openfin",
   "version": "0.0.1",
   "description": "The core app of the OpenFin Runtime 6.0",
   "main": "index.js",
   "scripts": {
     "pretest": "grunt babel && grunt ts",
     "test": "mocha staging/core/test --recursive",
-    "install": "grunt"
+    "postinstall": "grunt"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/openfin/runtime-core.git"
+    "url": "https://github.com/openfin/openfin.git"
   },
   "author": "OpenFin",
   "license": "",
   "bugs": {
-    "url": "https://github.com/openfin/runtime-core/issues"
+    "url": "https://github.com/openfin/openfin/issues"
   },
-  "homepage": "https://github.com/openfin/runtime-core",
+  "homepage": "https://github.com/openfin/openfin",
+  "optionalDependencies": {
+      "openfin-sign": "git+ssh://git@github.com:openfin/openfin-sign.git#caee55ecbe6f81e6ed9630790781fe4d1835cb03",
+      "runtime-p2p": "git@github.com:openfin/runtime-p2p.git#168ec43c232b06533d0236c1aeeb3fb695c4700a"
+  },
   "devDependencies": {
     "@types/node": "^6.0.49",
     "asar": "^0.12.1",
@@ -34,7 +38,6 @@
     "grunt-tslint": "^3.3.0",
     "load-grunt-tasks": "^3.3.0",
     "mocha": "^3.0.2",
-    "npm": "^3.3.8",
     "rewire": "^2.5.2",
     "should": "^11.1.0",
     "should-sinon": "^0.0.5",

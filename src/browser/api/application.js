@@ -17,38 +17,58 @@ limitations under the License.
     src/browser/api/application.js
  */
 
+// built-in modules
 let path = require('path');
+let electron = require('electron');
+let BrowserWindow = electron.BrowserWindow;
+let electronApp = electron.app;
+let globalShortcut = electron.globalShortcut;
+let nativeImage = electron.nativeImage;
+let ProcessInfo = electron.processInfo;
+let ResourceFetcher = electron.resourceFetcher;
+let Tray = electron.Tray;
 
-let BrowserWindow = require('electron').BrowserWindow;
-let electronApp = require('electron').app;
-let globalShortcut = require('electron').globalShortcut;
-let nativeImage = require('electron').nativeImage;
-let ProcessInfo = require('electron').processInfo;
-let ResourceFetcher = require('electron').resourceFetcher;
-let Tray = require('electron').Tray;
+// npm modules
+let _ = require('underscore');
 
+// local modules
 let System = require('./system.js').System;
 let Window = require('./window.js').Window;
-
-let _ = require('underscore');
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
-let Icon = require('../icon.js');
+import {
+    cachedFetch
+} from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
 import {
     sendToRVM
 } from '../rvm/utils';
-
 import {
     validateNavigationRules
 } from '../navigation_validation';
 
 
+// locals
 let runtimeIsClosing = false;
 let hasPlugins = false;
+let rvmBus;
+let MonitorInfo;
+var Application = {};
+// var OfEvents = [
+//     'closed',
+//     'error',
+//     'crashed',
+//     'not-responding',
+//     'out-of-memory',
+//     'responding',
+//     'started',
+//     'run-requested',
+//     'window-navigation-rejected'
+// ];
+
 
 // this event is emitted from the native side to determine whether plugins should
 // be enabled or not, since webContents don't seem to be available at the time of
@@ -60,8 +80,6 @@ electronApp.on('use-plugins-requested', event => {
     }
 });
 
-let rvmBus;
-let MonitorInfo;
 electronApp.on('ready', function() {
     console.log('RVM MESSAGE BUS READY');
     rvmBus = require('../rvm/rvm_message_bus.js');
@@ -87,21 +105,6 @@ electronApp.on('ready', function() {
     });
 
 });
-
-
-// var OfEvents = [
-//     'closed',
-//     'error',
-//     'crashed',
-//     'not-responding',
-//     'out-of-memory',
-//     'responding',
-//     'started',
-//     'run-requested',
-//     'window-navigation-rejected'
-// ];
-
-var Application = {};
 
 Application.create = function(opts, configUrl = '', parentIdentify = {}) {
     //Hide Window until run is called
@@ -132,14 +135,14 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
         throw new Error(`Application with specified UUID already exists: ${opts.uuid}`);
     }
 
-    let existingApp = coreState.appByUuid(opts.uuid);
-    if (existingApp) {
-        coreState.removeApp(existingApp.id);
-    }
-
     let parentUuid = parentIdentify && parentIdentify.uuid;
     if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
+    }
+
+    let existingApp = coreState.appByUuid(opts.uuid);
+    if (existingApp) {
+        coreState.removeApp(existingApp.id);
     }
 
     let appObj = createAppObj(opts.uuid, opts, configUrl);
@@ -388,12 +391,13 @@ Application.removeTrayIcon = function(identity /*callback, errorCallback*/ ) {
 
 Application.restart = function(identity /*, callback, errorCallback*/ ) {
     let uuid = identity.uuid;
+    const appObj = coreState.getAppObjByUuid(uuid);
 
     coreState.setAppRestartingState(uuid, true);
 
     try {
         Application.close(identity, true, () => {
-            Application.run(identity);
+            Application.run(identity, appObj._configUrl);
             ofEvents.once(`application/initialized/${uuid}`, function() {
                 coreState.setAppRestartingState(uuid, false);
             });
@@ -412,20 +416,20 @@ Application.revokeWindowAccess = function( /*action, windowName, callback, error
     console.warn('Deprecated');
 };
 
-
-Application.run = function(identity /*callback , errorCallback*/ ) {
+Application.run = function(identity, configUrl = '' /*callback , errorCallback*/ ) {
     if (!identity) {
         return;
     }
 
-    createAppObj(identity.uuid);
+    createAppObj(identity.uuid, null, configUrl);
 
-    let app = Application.wrap(identity.uuid),
-        uuid = identity.uuid,
+    let uuid = identity.uuid,
+        app = Application.wrap(uuid),
+        appState = coreState.appByUuid(uuid),
         mainWindowOpts = _.clone(app._options),
         hideSplashTopic = `application/hide-splashscreen/${uuid}`,
         eventListenerStrings = [],
-        sourceUrl = coreState.appByUuid(uuid).appObj._configUrl,
+        sourceUrl = appState.appObj._configUrl,
         hideSplashListener = () => {
             let rvmPayload = {
                 action: 'hide-splashscreen',
@@ -450,6 +454,14 @@ Application.run = function(identity /*callback , errorCallback*/ ) {
             if (type === 'ready' || type === 'run-requested') {
                 rvmPayload.hideSplashScreenSupported = true;
             } else if (type === 'closed') {
+
+                // Don't send 'closed' event to RVM when app is restarting.
+                // This solves the problem of apps not being able to make API
+                // calls that rely on RVM and manifest URL
+                if (appState.isRestarting) {
+                    return;
+                }
+
                 rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
             }
 
@@ -457,6 +469,13 @@ Application.run = function(identity /*callback , errorCallback*/ ) {
                 rvmBus.send('application-event', JSON.stringify(rvmPayload));
             }
         };
+
+    // if the runtime is in offline mode, the RVM still expects the
+    // startup-url/config for communication
+    let argo = coreState.argo;
+    if (sourceUrl === argo['local-startup-url']) {
+        sourceUrl = argo['startup-url'] || argo['config'];
+    }
 
     if (coreState.getAppRunningState(uuid)) {
         if (coreState.sentFirstHideSplashScreen(uuid)) {
@@ -642,7 +661,13 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     // cleanup the old one so it can be replaced
     removeTrayIcon(app);
 
-    Icon.fetch(app.uuid, iconUrl, (error, iconFilepath) => {
+    let mainWindowIdentity = {
+        uuid: identity.uuid,
+        name: identity.uuid
+    };
+    iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
+
+    cachedFetch(app.uuid, iconUrl, (error, iconFilepath) => {
         if (!error) {
             if (app && app.tray) {
                 let icon = nativeImage.createFromPath(iconFilepath);
@@ -888,6 +913,16 @@ function createAppObj(uuid, opts, configUrl = '') {
         appObj.mainWindow = new BrowserWindow(eOpts);
         appObj.mainWindow.setFrameConnectStrategy(eOpts.frameConnect || 'last');
         appObj.id = appObj.mainWindow.id;
+
+        appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
+            if (isMainFrame) {
+                _.defer(() => {
+                    Application.close({
+                        uuid: opts.uuid
+                    }, true);
+                });
+            }
+        });
 
         // the name must match the uuid for apps to match 5.0
         opts.name = opts.uuid;

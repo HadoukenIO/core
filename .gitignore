@@ -29,6 +29,9 @@ node_modules
 #deploy folder
 out
 
+# private key folder
+signature
+
 #tmp folder
 staging
 

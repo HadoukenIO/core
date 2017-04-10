@@ -23,17 +23,23 @@ export interface ActionMap {
     [key: string]: Function;
 }
 
+export interface Identity {
+    uuid: string;
+    name?: string;
+    runtimeUuid?: string;
+}
+
 /**
  * This represents the raw data that comes off the wire as well as the ack and
  * nack functions that get created at the strategy (elipc, ws, etc)
  */
 export interface MessagePackage {
-    identity: any; // of the caller
+    identity: Identity; // of the caller
     data: any;
     ack: any;
     nack: any;
     e?: any;
-    strategyName: any; // ws / elipc 
+    strategyName: any; // ws / elipc
 }
 
 export abstract class ApiTransportBase<T> {
@@ -46,7 +52,7 @@ export abstract class ApiTransportBase<T> {
         this.requestHandler = requestHandler;
     }
 
-    public abstract registerMessageHandlers(actionMap: ActionMap): void;
+    public abstract registerMessageHandlers(): void;
 
     public abstract send(identity: any, payload: any): void
 

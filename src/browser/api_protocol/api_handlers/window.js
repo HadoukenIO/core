@@ -40,6 +40,7 @@ function WindowApiHandler() {
         'get-window-info': getWindowInfo,
         'get-window-native-id': getWindowNativeId,
         'get-window-options': getWindowOptions,
+        'get-window-preload-script': getWindowPreloadScript,
         'get-window-snapshot': getWindowSnapshot,
         'get-window-state': getWindowState,
         'get-zoom-level': getZoomLevel,
@@ -52,7 +53,17 @@ function WindowApiHandler() {
         'minimize-window': minimizeWindow,
         'move-window': moveWindow,
         'move-window-by': moveWindowBy,
-        'redirect-window-to-url': redirectWindowToUrl,
+
+        'navigate-window': navigateWindow,
+        'navigate-window-back': navigateWindowBack,
+        'navigate-window-forward': navigateWindowForward,
+        'stop-window-navigation': stopWindowNavigation,
+        'reload-window': reloadWindow,
+
+        // Event fired when window is unloading its content and resources.
+        // Reloading a window or navigating away will fire this event
+        'on-window-unload': onWindowUnload,
+        'redirect-window-to-url': redirectWindowToUrl, // Deprecated
         'resize-window': resizeWindow,
         'resize-window-by': resizeWindowBy,
         'restore-window': restoreWindow,
@@ -71,6 +82,21 @@ function WindowApiHandler() {
         'window-authenticate': windowAuthenticate
     };
     apiProtocolBase.registerActionMap(windowExternalApiMap);
+
+    function getWindowPreloadScript(identity, message, ack, nack) {
+        const payload = message.payload;
+        const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
+
+        Window.getPreloadScript(windowIdentity, payload.preload, (error, preloadScript) => {
+            if (error) {
+                nack(error);
+            } else {
+                const dataAck = _.clone(successAck);
+                dataAck.data = preloadScript;
+                ack(dataAck);
+            }
+        });
+    }
 
     function windowAuthenticate(identity, message, ack, nack) {
         let {
@@ -102,7 +128,7 @@ function WindowApiHandler() {
                 name: payload.targetName
             };
 
-        Window.redirect(windowIdentity, payload.url);
+        Window.navigate(windowIdentity, payload.url);
         ack(successAck);
     }
 
@@ -207,6 +233,48 @@ function WindowApiHandler() {
             windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 
         Window.moveBy(windowIdentity, payload.deltaLeft, payload.deltaTop);
+        ack(successAck);
+    }
+
+    function navigateWindow(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+        let url = payload.url;
+
+        Window.navigate(windowIdentity, url);
+        ack(successAck);
+    }
+
+    function navigateWindowBack(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+        Window.navigateBack(windowIdentity);
+        ack(successAck);
+    }
+
+    function navigateWindowForward(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+        Window.navigateForward(windowIdentity);
+        ack(successAck);
+    }
+
+    function stopWindowNavigation(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+        Window.stopNavigation(windowIdentity);
+        ack(successAck);
+    }
+
+    function reloadWindow(identity, message, ack) {
+        let payload = message.payload;
+        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+        let ignoreCache = !!payload.ignoreCache;
+
+        Window.reload(windowIdentity, ignoreCache);
         ack(successAck);
     }
 
@@ -499,6 +567,11 @@ function WindowApiHandler() {
         let level = payload.level;
 
         Window.setZoomLevel(windowIdentity, level);
+        ack(successAck);
+    }
+
+    function onWindowUnload(identity, message, ack) {
+        Window.onUnload(identity);
         ack(successAck);
     }
 

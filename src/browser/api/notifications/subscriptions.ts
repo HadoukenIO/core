@@ -97,7 +97,7 @@ ofEvents.on('window/closed/*', (e: any) => {
                 }
             }
         } catch (e) {
-            writeToLog('info', e.message);
+            writeToLog('info', e);
         }
     }, 10);
 
@@ -153,12 +153,12 @@ ofEvents.on('application/window-end-load/*', (e: any) => {
                     name: 'queueCounter'
                 });
             } catch (e){
-                writeToLog('info', e.message)
+                writeToLog('info', e)
             }
         }
 
     } catch (e) {
-        writeToLog('info', e.message);
+        writeToLog('info', e);
     }
 });
 
@@ -178,6 +178,8 @@ seqs.requestNoteClose
             } else {
                 scheduleNoteClose(req, 1000);
             }
+        } else {
+            removePendingNote(req.id);
         }
     });
 
@@ -214,7 +216,7 @@ seqs.removes.subscribe((removedOpts: Object) => {
 
         assignAndUpdateQCounter();
     } catch (e) {
-        writeToLog('info', e.message);
+        writeToLog('info', e);
     }
 });
 
@@ -590,7 +592,7 @@ function dispatchMessageToNote (msg: NotificationMessage): void {
             ofEvents.emit(noteTopicStr(uuid, name), msg);
         }
     } catch (e) {
-        writeToLog('info', e.message);
+        writeToLog('info', e);
     }
 }
 
@@ -696,7 +698,7 @@ function closeNotification(req: NotificationMessage): void {
         Window.close(id);
 
         // TODO removeFromExternalMaps(id);
-    }, (e: any) => { writeToLog('info', e.message); });
+    }, (e: any) => { writeToLog('info', e); });
 }
 
 function updateAnimationState(animationState: boolean): void {
@@ -749,6 +751,13 @@ function createPendingNote(): void {
         invokeCreateAck(ack);
         pendindNotes.shift();
     }
+}
+
+function removePendingNote(identity: Identity): void {
+    pendindNotes = pendindNotes.filter(pendingNote => {
+        return pendingNote.noteData.options.name !== identity.name;
+    });
+    assignAndUpdateQCounter();
 }
 
 function invokeCreateAck(ack: any): void {
