@@ -54,6 +54,7 @@ import {
 // locals
 let runtimeIsClosing = false;
 let hasPlugins = false;
+let enableChromiumRendererFork = false; // native code in AtomRendererClient::ShouldFork
 let rvmBus;
 let MonitorInfo;
 var Application = {};
@@ -69,13 +70,18 @@ var Application = {};
 //     'window-navigation-rejected'
 // ];
 
-
 // this event is emitted from the native side to determine whether plugins should
 // be enabled or not, since webContents don't seem to be available at the time of
 // app creation. the hasPlugins flag denotes that 'plugins' is set to true
 // in the app's window options
 electronApp.on('use-plugins-requested', event => {
     if (hasPlugins) {
+        event.preventDefault();
+    }
+});
+// flows the same way as use-plugins-requested
+electronApp.on('enable-chromium-renderer-fork', event => {
+    if (enableChromiumRendererFork) {
         event.preventDefault();
     }
 });
@@ -518,6 +524,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
 
     // turn on plugins for the main window
     hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
+    enableChromiumRendererFork = mainWindowOpts.enableChromiumRendererFork;
 
     // loadUrl will synchronously cause an event to be fired from the native side 'use-plugins-requested'
     // to determine whether plugins should be enabled. The event is handled at the top of the file
@@ -525,6 +532,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
 
     // give other windows a chance to not have plugins enabled
     hasPlugins = false;
+    enableChromiumRendererFork = false;
 
     app.mainWindow.on('newListener', (eventString) => {
         eventListenerStrings.push(eventString);
