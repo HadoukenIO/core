@@ -70,6 +70,7 @@ var Application = {};
 //     'window-navigation-rejected'
 // ];
 
+
 // this event is emitted from the native side to determine whether plugins should
 // be enabled or not, since webContents don't seem to be available at the time of
 // app creation. the hasPlugins flag denotes that 'plugins' is set to true
