@@ -21,7 +21,6 @@ limitations under the License.
 let fs = require('fs');
 let path = require('path');
 
-let app = require('electron').app;
 let ResourceFetcher = require('electron').resourceFetcher;
 
 // npm modules
@@ -98,7 +97,6 @@ function five0BaseOptions() {
         'backgroundColor': '#000'
     };
 }
-
 
 function isInContainer(type) {
     return process && process.versions && process.versions[type];
@@ -267,7 +265,10 @@ module.exports = {
             newOptions.preload = options.preload;
         }
 
-        app.vlog(1, JSON.stringify(newOptions));
+        if (options.hasOwnProperty('backgroundThrottling')) {
+            newOptions.backgroundThrottling = options.backgroundThrottling;
+        }
+
         if (returnAsString) {
             return JSON.stringify(newOptions);
         } else {
