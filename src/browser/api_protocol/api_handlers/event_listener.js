@@ -25,7 +25,9 @@ let apiProtocolBase = require('./api_protocol_base.js');
 let Window = require('../../api/window.js').Window;
 let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
-let ExternalApplication = require('../../api/external_application.js').ExternalApplication;
+import {
+    ExternalApplication
+} from '../../api/external_application';
 import {
     default as connectionManager
 } from '../../connection_manager';

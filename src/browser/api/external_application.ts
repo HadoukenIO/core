@@ -8,12 +8,14 @@ import ofEvents from '../of_events';
 
 import { Identity } from '../../shapes';
 
+import * as ProcessTracker from '../process_tracker.js';
+
 const authenticatedConnections: any[] = [];
 const connectedEvent = 'external-application/connected';
 const disconnectedEvent = 'external-application/disconnected';
 
 export module ExternalApplication {
-    export function addEventListener(identity: any, type: string, listener: Function) {
+    export function addEventListener(identity: Identity, type: string, listener: Function) {
         const evt = `external-application/${type}/${identity.uuid}`;
         ofEvents.on(evt, listener);
 
@@ -22,51 +24,56 @@ export module ExternalApplication {
         };
     }
 
-    export function removeEventListener(identity: any, type: string, listener: Function) {
+    export function removeEventListener(identity: Identity, type: string, listener: Function) {
         ofEvents.removeListener(`external-application/${type}/${identity.uuid}`, listener);
     }
-}
 
-export function addExternalConnection(externalConnObj: Identity) {
-    const {
-        uuid
-    } = externalConnObj;
+    export function getParent(externalApp: Identity) {
+        const process: any = ProcessTracker.getProcess(externalApp.uuid);
+        return <Identity>(process ? process.window : null);
+    }
 
-    //TODO: compare perf from this and a map.
-    authenticatedConnections.push(externalConnObj);
-    ofEvents.emit(connectedEvent + `/${externalConnObj.uuid}`, {
-        uuid
-    });
-    ofEvents.emit(connectedEvent, {
-        uuid
-    });
-}
+    export function addExternalConnection(externalConnObj: Identity) {
+        const {
+            uuid
+        } = externalConnObj;
 
-export function getExternalConnectionByUuid(uuid: string) {
-    return authenticatedConnections.find(c => {
-        return c.uuid === uuid;
-    });
-}
+        //TODO: compare perf from this and a map.
+        authenticatedConnections.push(externalConnObj);
+        ofEvents.emit(connectedEvent + `/${externalConnObj.uuid}`, {
+            uuid
+        });
+        ofEvents.emit(connectedEvent, {
+            uuid
+        });
+    }
 
-export function getExternalConnectionById(id: number) {
-    return authenticatedConnections.find(c => {
-        return c.id === id;
-    });
-}
+    export function getExternalConnectionByUuid(uuid: string) {
+        return authenticatedConnections.find(c => {
+            return c.uuid === uuid;
+        });
+    }
 
-export function removeExternalConnection(externalConnection: Identity) {
-    authenticatedConnections.splice(authenticatedConnections.indexOf(externalConnection), 1);
+    export function getExternalConnectionById(id: number) {
+        return authenticatedConnections.find(c => {
+            return c.id === id;
+        });
+    }
 
-    ofEvents.emit(disconnectedEvent + `/${externalConnection.uuid}`, {
-        uuid: externalConnection.uuid
-    });
+    export function removeExternalConnection(externalConnection: Identity) {
+        authenticatedConnections.splice(authenticatedConnections.indexOf(externalConnection), 1);
 
-    ofEvents.emit(disconnectedEvent, {
-        uuid: externalConnection.uuid
-    });
-}
+        ofEvents.emit(disconnectedEvent + `/${externalConnection.uuid}`, {
+            uuid: externalConnection.uuid
+        });
 
-export function getAllExternalConnctions() {
-    //return a copy.
-    return authenticatedConnections.slice(0);
+        ofEvents.emit(disconnectedEvent, {
+            uuid: externalConnection.uuid
+        });
+    }
+
+    export function getAllExternalConnctions() {
+        //return a copy.
+        return authenticatedConnections.slice(0);
+    }
 }

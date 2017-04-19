@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import * as externalAppplication from '../../api/external_application';
+import { ExternalApplication } from '../../api/external_application';
 const SubscriptionManager = require('../../subscription_manager.js').SubscriptionManager;
 const WebSocketStrategy = require('../transport_strategy/ws_strategy').WebSocketStrategy;
 const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrategy;
@@ -46,7 +46,7 @@ export function registerActionMap(am: ActionMap) {
 }
 
 export function sendToIdentity(identity: any, payload: any) {
-    const externalConnection = externalAppplication.getExternalConnectionByUuid(identity.uuid);
+    const externalConnection = ExternalApplication.getExternalConnectionByUuid(identity.uuid);
 
     if (externalConnection) {
         // TODO confirm that this will always be an object on the way in here...

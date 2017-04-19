@@ -6,7 +6,9 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 let fs = require('fs');
 let apiProtocolBase = require('./api_protocol_base.js');
-import * as externalApplication from '../../api/external_application';
+import {
+    ExternalApplication
+} from '../../api/external_application';
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 let _ = require('underscore');
@@ -44,8 +46,6 @@ function AuthorizationApiHandler() {
         addPendingAuthentication(uuidToRegister, token, null, identity);
         ack(dataAck);
     }
-
-
 
     function onRequestExternalAuth(id, message) {
         console.log('processing request-external-authorization', message);
@@ -111,7 +111,7 @@ function AuthorizationApiHandler() {
             }
             socketServer.send(id, JSON.stringify(authorizationResponse));
 
-            externalApplication.addExternalConnection(externalConnObj);
+            ExternalApplication.addExternalConnection(externalConnObj);
             socketServer.connectionAuthenticated(id, uuid);
             if (!success) {
                 socketServer.closeConnection(id);
@@ -139,7 +139,7 @@ function AuthorizationApiHandler() {
     }
 
     function authenticateUuid(authObj, authRequest, cb) {
-        if (externalApplication.getExternalConnectionByUuid(authRequest.uuid)) {
+        if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid)) {
             cb(false, 'Application with specified UUID already exists: ' + authRequest.uuid);
         } else if (authObj.type === AUTH_TYPE.file) {
             try {
@@ -176,10 +176,10 @@ function AuthorizationApiHandler() {
         }
         pendingAuthentications.delete(keyToDelete);
 
-        externalConnection = externalApplication.getExternalConnectionById(id);
+        externalConnection = ExternalApplication.getExternalConnectionById(id);
         if (externalConnection) {
-            externalApplication.removeExternalConnection(externalConnection);
-            ofEvents.emit(`externalconn/closed`, externalApplication);
+            ExternalApplication.removeExternalConnection(externalConnection);
+            ofEvents.emit(`externalconn/closed`, ExternalApplication);
         }
 
         if (coreState.shouldCloseRuntime()) {

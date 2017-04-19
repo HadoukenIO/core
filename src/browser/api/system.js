@@ -26,7 +26,9 @@ let _ = require('underscore');
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let electronIPC = require('../transports/electron_ipc.js');
-import * as externalApplication from './external_application';
+import {
+    ExternalApplication
+} from './external_application';
 let log = require('../log.js');
 import ofEvents from '../of_events';
 let ProcessTracker = require('../process_tracker.js');
@@ -537,14 +539,14 @@ module.exports.System = {
         }
     },
     getAllExternalApplications: function() {
-        return externalApplication.getAllExternalConnctions().map(eApp => {
+        return ExternalApplication.getAllExternalConnctions().map(eApp => {
             return {
                 uuid: eApp.uuid
             };
         });
     },
     resolveUuid: function(identity, uuid, cb) {
-        const externalConn = externalApplication.getAllExternalConnctions().filter(c => c.uuid === uuid)[0];
+        const externalConn = ExternalApplication.getAllExternalConnctions().filter(c => c.uuid === uuid)[0];
         const app = coreState.getAppObjByUuid(uuid);
 
         if (externalConn) {

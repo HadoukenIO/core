@@ -4,13 +4,13 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-import { AckTemplate,  AckFunc } from './ack';
+import { AckMessage,  AckFunc, AckPayload, NackPayload } from './ack';
 import { ApiTransportBase, ActionMap, MessagePackage, Identity } from './api_transport_base';
 import {default as RequestHandler} from './base_handler';
 
 declare var require: any;
 
-import * as externalApplication from '../../api/external_application';
+import { ExternalApplication } from '../../api/external_application';
 const socketServer = require('../../transports/socket_server').server;
 const system = require('../../api/system').System;
 
@@ -27,12 +27,17 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
             if (strategyName !== this.constructor.name) {
                 next();
             } else if (typeof (action) === 'function') {
-
-                try {
-                    action(identity, data, ack, nack);
-                } catch (err) {
-                    nack(err);
-                }
+                Promise.resolve()
+                    .then(() => action(identity, data, ack, nack))
+                    .then(result => {
+                        if (result !== undefined) {
+                            ack(new AckPayload(result));
+                        }
+                    }).catch(err => {
+                        if (err !== undefined) {
+                            ack(new NackPayload(err));
+                        }
+                    });
             }
         });
     }
@@ -56,7 +61,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     protected onMessage(id: number, data: any): void {
         const ack = this.ackDecorator(id, data.messageId);
         const nack = this.nackDecorator(ack);
-        const requestingConnection = externalApplication.getExternalConnectionById(id);
+        const requestingConnection = ExternalApplication.getExternalConnectionById(id);
         //Identity can have three states, the requestingConnection, originatorIdentity or null.
         let identity: Identity = null;
         if (requestingConnection) {
@@ -88,7 +93,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     protected ackDecorator(id: number, messageId: number): AckFunc {
-        const ackObj = new AckTemplate();
+        const ackObj = new AckMessage();
         return (payload: any) => {
             ackObj.payload = payload;
             ackObj.correlationId = messageId;

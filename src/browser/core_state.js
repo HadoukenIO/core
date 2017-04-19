@@ -24,7 +24,9 @@ var electronApp = require('electron').app;
 var minimist = require('minimist');
 
 // local modules
-import * as externalApplication from './api/external_application';
+import {
+    ExternalApplication
+} from './api/external_application';
 
 
 // locals
@@ -221,7 +223,7 @@ function getAppObjByUuid(uuid) {
 }
 
 function getExternalAppObjByUuid(uuid) {
-    return externalApplication.getAllExternalConnctions().find(ea => ea.uuid === uuid);
+    return ExternalApplication.getAllExternalConnctions().find(ea => ea.uuid === uuid);
 }
 
 function getUuidBySourceUrl(sourceUrl) {
@@ -606,7 +608,7 @@ function anyAppRestarting() {
 
 function shouldCloseRuntime(ignoreArray) {
     let ignoredApps = ignoreArray || [];
-    let extConnections = externalApplication.getAllExternalConnctions();
+    let extConnections = ExternalApplication.getAllExternalConnctions();
     let connections = extConnections.filter((conn) => {
         let {
             nonPersistent

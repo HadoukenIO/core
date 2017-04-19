@@ -340,6 +340,12 @@ ProcessTracker.prototype.terminate = function(uuid, timeout, child) {
     return this._processes[pid].process.terminate(timeout, child);
 };
 
+ProcessTracker.prototype.getProcess = function(uuid) {
+    var pid = this._uuidToPid[uuid];
+
+    return pid ? this._processes[pid] : null;
+};
+
 ProcessTracker.prototype._cleanup = function(pid, uuid) {
     let winIdentity = this._processes[pid].window;
     let lifetime = this._processes[pid].lifetime;
