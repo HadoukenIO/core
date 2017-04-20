@@ -925,11 +925,16 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
             if (isMainFrame) {
-                _.defer(() => {
-                    Application.close({
-                        uuid: opts.uuid
-                    }, true);
-                });
+                if (errorCode === -3) {
+                    // 304 can trigger net::ERR_ABORTED, ignore it 
+                    electronApp.vlog(1, `ignoring net error -3 for ${opts.uuid}`);
+                } else {
+                    _.defer(() => {
+                        Application.close({
+                            uuid: opts.uuid
+                        }, true);
+                    });
+                }
             }
         });
 
