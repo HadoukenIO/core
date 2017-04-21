@@ -14,14 +14,14 @@ import { ActionMap } from '../transport_strategy/api_transport_base';
 
 export class ExternalApplicationApiHandler {
     private readonly actionMap: ActionMap = {
-        'get-external-application-parent': this.getParent
+        'get-external-application-info': this.getInfo
     };
 
     constructor() {
         apiProtocolBase.registerActionMap(this.actionMap);
     }
 
-    private getParent(source: Identity, message: any) {
-        return ExternalApplication.getParent(message.payload);
+    private getInfo(source: Identity, message: any) {
+        return ExternalApplication.getInfo(message.payload);
     }
 }

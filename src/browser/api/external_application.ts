@@ -28,9 +28,11 @@ export module ExternalApplication {
         ofEvents.removeListener(`external-application/${type}/${identity.uuid}`, listener);
     }
 
-    export function getParent(externalApp: Identity) {
+    export function getInfo(externalApp: Identity): ExternalProcessInfo {
         const process: any = ProcessTracker.getProcess(externalApp.uuid);
-        return <Identity>(process ? process.window : null);
+        return {
+            parent: <Identity>(process ? process.window : null)
+        };
     }
 
     export function addExternalConnection(externalConnObj: Identity) {
@@ -75,5 +77,9 @@ export module ExternalApplication {
     export function getAllExternalConnctions() {
         //return a copy.
         return authenticatedConnections.slice(0);
+    }
+
+    interface ExternalProcessInfo {
+        parent: Identity;
     }
 }
