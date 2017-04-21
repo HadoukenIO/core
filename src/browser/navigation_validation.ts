@@ -66,7 +66,7 @@ export function navigationValidator(uuid: string, name:string, id: number) {
         let appObject = coreState.getAppObjByUuid(uuid);
         let isMailTo = /^mailto:/i.test(url);
         let allowed = isMailTo || validateNavigationRules(uuid, url, appObject.parentUuid, appObject._options);
-        if (allowed === false) {
+        if (!allowed) {
             console.log('Navigation is blocked ' + url);
             let self = coreState.getWinById(id);
             let sourceName = name;

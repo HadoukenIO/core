@@ -172,10 +172,7 @@ Application.getCurrentApplication = function() {
 
 // TODO confirm with external connections, this does not get used
 // in the render process
-Application.wrap = function(uuid) {
-
-    return coreState.getAppObjByUuid(uuid);
-};
+Application.wrap = coreState.getAppObjByUuid;
 
 /**
  * Add a listener for the given Application event
@@ -276,7 +273,7 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
 
 Application.getManifest = function(identity, callback, errCallback) {
     let appObject = coreState.getAppObjByUuid(identity.uuid);
-    let manifestUrl = (appObject || {})._configUrl;
+    let manifestUrl = appObject && appObject._configUrl;
     let fetcher;
 
     if (manifestUrl) {
@@ -314,7 +311,7 @@ Application.getParentApplication = function(identity) {
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
     let app = Application.wrap(identity.uuid);
-    let manifestUrl = (app || {})._configUrl;
+    let manifestUrl = app && app._configUrl;
 
     // Only apps started from a manifest can retrieve shortcut configuration
     if (!manifestUrl) {
@@ -647,7 +644,7 @@ Application.send = function( /*topic, message*/ ) {
 
 Application.setShortcuts = function(identity, config, callback, errorCallback) {
     let app = Application.wrap(identity.uuid);
-    let manifestUrl = (app || {})._configUrl;
+    let manifestUrl = app && app._configUrl;
 
     // Only apps started from a manifest can retrieve shortcut configuration
     if (!manifestUrl) {
@@ -674,6 +671,7 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
         uuid: identity.uuid,
         name: identity.uuid
     };
+
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
     cachedFetch(app.uuid, iconUrl, (error, iconFilepath) => {
@@ -681,10 +679,10 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
             if (app && app.tray) {
                 let icon = nativeImage.createFromPath(iconFilepath);
                 app.tray.icon = new Tray(icon);
-                app.tray.listener = (data) => {
+                app.tray.listener = data => {
                     ofEvents.emit(`application/tray-icon-clicked/${app.uuid}`, data);
                 };
-                let clickHandler = (button) => {
+                let clickHandler = button => {
                     return (sender, rawData) => {
                         let data = JSON.parse(JSON.stringify(rawData));
                         app.tray.listener({
@@ -799,7 +797,7 @@ function broadcastAppLoaded(targetIdentity) {
                 }
             };
 
-            _.each(listeners, (listener) => {
+            _.each(listeners, listener => {
                 //TODO: this needs to be refactored to look like the other event listeners.
                 externalApiBase.sendToIdentity(listener, loadedMessage);
             });
@@ -821,7 +819,7 @@ function broadcastOnAppConnected(targetIdentity) {
                 }
             };
 
-            _.each(listeners, (listener) => {
+            _.each(listeners, listener => {
                 //TODO: this needs to be refactored to look like the other event listeners.
                 externalApiBase.sendToIdentity(listener, connectedMessage);
             });
@@ -829,10 +827,10 @@ function broadcastOnAppConnected(targetIdentity) {
     }
 }
 
-ofEvents.on('window/dom-content-loaded/*', (payload) => {
+ofEvents.on('window/dom-content-loaded/*', payload => {
     broadcastAppLoaded(payload.data[0]);
 });
-ofEvents.on('window/connected/*', (payload) => {
+ofEvents.on('window/connected/*', payload => {
     broadcastOnAppConnected(payload.data[0]);
 });
 
