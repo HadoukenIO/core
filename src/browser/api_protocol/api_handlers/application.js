@@ -285,9 +285,7 @@ function ApplicationApiHandler() {
             if (loadInfo.success) {
                 let successReturn = _.clone(successAck);
 
-                successReturn.data = {
-                    httpResponseCode: loadInfo.data.httpResponseCode
-                };
+                successReturn.data = loadInfo.data;
 
                 ack(successReturn);
             } else {

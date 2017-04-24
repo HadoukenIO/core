@@ -61,6 +61,9 @@ const userCache = electronApp.getPath('userCache');
 let Window = {};
 
 let browserWindowEventMap = {
+    'api-injection-failed': {
+        topic: 'api-injection-failed'
+    },
     'blur': {
         topic: 'blurred'
     },
@@ -705,8 +708,13 @@ Window.create = function(id, opts) {
         };
 
         resourceLoadFailedHandler = (failure) => {
-            emitErrMessage(failure.errCode);
-            ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+            if (failure.errorCode === -3) {
+                // 304 can trigger net::ERR_ABORTED, ignore it
+                electronApp.vlog(1, `ignoring net error -3 for ${failure.validatedURL}`);
+            } else {
+                emitErrMessage(failure.errorCode);
+                ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+            }
         };
 
         if (opts.url === 'about:blank') {
@@ -722,7 +730,20 @@ Window.create = function(id, opts) {
             ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
             ofEvents.once(`window/connected/${uuidname}`, () => {
                 constructorCallbackMessage.data = {
-                    httpResponseCode
+                    httpResponseCode,
+                    apiInjected: true
+                };
+                ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
+            });
+            ofEvents.once(`window/api-injection-failed/${uuidname}`, () => {
+                electronApp.vlog(1, `api-injection-failed ${uuidname}`);
+                // can happen if child window has a different domain.   @TODO allow injection for different domains
+                if (_options.autoShow) {
+                    browserWindow.show();
+                }
+                constructorCallbackMessage.data = {
+                    httpResponseCode,
+                    apiInjected: false
                 };
                 ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
             });
