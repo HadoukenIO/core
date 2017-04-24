@@ -257,6 +257,15 @@ app.on('ready', function() {
 
     });
 
+    // native code in AtomRendererClient::ShouldFork
+    app.on('enable-chromium-renderer-fork', event => {
+        // @TODO it should be an option for app, not runtime->arguments
+        if (coreState.argo['enable-chromium-renderer-fork']) {
+            app.vlog(1, 'applying Chromium renderer fork');
+            event.preventDefault();
+        }
+    });
+
     rvmBus.on('rvm-message-bus/broadcast/download-asset/progress', payload => {
         if (payload) {
             ofEvents.emit(`system/asset-download-progress-${payload.downloadId}`, {
