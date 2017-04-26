@@ -458,15 +458,11 @@ function launchApp(argo, startExternalAdapterServer) {
             tickCount: app.getTickCount()
         });
     }, error => {
-        console.log('Error:' + error.message);
+        log.writeToLog(1, error, true);
 
-        // Synchronous when no callback is passed
-        dialog.showMessageBox(null, {
-            type: 'warning',
-            buttons: ['OK'],
-            title: 'Fatal error',
-            message: error.message
-        });
+        if (!coreState.argo['noerrdialog']) {
+            dialog.showErrorBox('Fatal Error', `${error}`);
+        }
 
         app.quit();
     });
@@ -487,13 +483,18 @@ function initFirstApp(options, configUrl) {
             firstApp = null;
         });
     } catch (error) {
-        console.log(`Error: ${error.message}`);
+        log.writeToLog(1, error, true);
 
         if (rvmBus) {
             rvmBus.send('application', {
                 action: 'hide-splashscreen',
                 sourceUrl: configUrl
             });
+        }
+
+        if (!coreState.argo['noerrdialog']) {
+            const errorMessage = options.loadErrorMessage || 'There was an error loading the application.';
+            dialog.showErrorBox('Fatal Error', errorMessage);
         }
 
         if (coreState.shouldCloseRuntime()) {

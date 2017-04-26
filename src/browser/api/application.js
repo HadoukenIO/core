@@ -22,6 +22,7 @@ let path = require('path');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
+let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
 let nativeImage = electron.nativeImage;
 let ProcessInfo = electron.processInfo;
@@ -49,7 +50,7 @@ import {
 import {
     validateNavigationRules
 } from '../navigation_validation';
-
+import * as log from '../log';
 
 // locals
 let runtimeIsClosing = false;
@@ -915,9 +916,14 @@ function createAppObj(uuid, opts, configUrl = '') {
         appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
             if (isMainFrame) {
                 if (errorCode === -3) {
-                    // 304 can trigger net::ERR_ABORTED, ignore it 
-                    electronApp.vlog(1, `ignoring net error -3 for ${opts.uuid}`);
+                    // 304 can trigger net::ERR_ABORTED, ignore it
+                    log.writeToLog(1, `ignoring net error -3 for ${opts.uuid}`, true);
                 } else {
+                    if (!coreState.argo['noerrdialog'] && configUrl) {
+                        // NOTE: don't show this dialog if the app is created via the api
+                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application.';
+                        dialog.showErrorBox('Fatal Error', errorMessage);
+                    }
                     _.defer(() => {
                         Application.close({
                             uuid: opts.uuid
