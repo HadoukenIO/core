@@ -352,7 +352,11 @@ limitations under the License.
         let winOpts = getWindowOptionsSync();
 
         window.addEventListener('unload', () => {
-            syncApiCall('on-window-unload');
+            ipc.send(renderFrameId, 'of-window-message', {
+                action: 'on-window-unload',
+                payload: {},
+                isSync: false
+            });
         });
 
         showOnReady(glbl, winOpts);
