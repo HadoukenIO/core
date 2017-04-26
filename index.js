@@ -136,11 +136,7 @@ portDiscovery.on('runtime/launched', (portInfo) => {
 
         connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
             //one connected we broadcast our port discovery message.
-            try {
-                portDiscovery.broadcast(myPortInfo);
-            } catch (e) {
-                log.writeToLog('info', e);
-            }
+            staggerPortBroadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
 
         }).catch(err => {
@@ -291,6 +287,16 @@ app.on('ready', function() {
         }
     });
 }); // end app.ready
+
+function staggerPortBroadcast(myPortInfo) {
+    setTimeout(() => {
+        try {
+            portDiscovery.broadcast(myPortInfo);
+        } catch (e) {
+            log.writeToLog('info', e);
+        }
+    }, Math.floor(Math.random() * 50));
+}
 
 function includeFlashPlugin() {
     let pluginName;
