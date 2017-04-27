@@ -265,7 +265,7 @@ ProcessTracker.prototype.monitor = function(winIdentity, options) {
         pid: pidRequested,
         uuid: uuidRequested,
         lifetime,
-        monitor,
+        monitor: monitorRequested,
     } = options;
 
     let pid = parseInt(pidRequested, 10);
@@ -275,7 +275,7 @@ ProcessTracker.prototype.monitor = function(winIdentity, options) {
         throw new Error(`Error monitoring external process, invalid pid value specified.`);
     }
 
-    if (processEntry.monitor) {
+    if (monitorRequested && processEntry.monitor) {
         throw new Error(`Error monitoring external process, already monitoring pid: '${pid}'.`);
     }
 
@@ -284,6 +284,7 @@ ProcessTracker.prototype.monitor = function(winIdentity, options) {
     }
 
     let uuid = processEntry.uuid || uuidRequested || generateUuid();
+    let monitor = processEntry.monitor || monitorRequested;
 
     let eProcess = new ExternalProcess();
     let parentWindowUuidName = getParentWindowUuidName(winIdentity, lifetime);
