@@ -73,7 +73,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
                 */
                 identity.runtimeUuid = requestingConnection.uuid;
             } else {
-                identity = { uuid: requestingConnection.uuid };
+                identity = { uuid: requestingConnection.uuid, name: requestingConnection.uuid };
             }
         }
 
