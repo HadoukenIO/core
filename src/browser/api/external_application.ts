@@ -29,7 +29,7 @@ export module ExternalApplication {
     }
 
     export function getInfo(externalApp: Identity): ExternalProcessInfo {
-        const process: any = ProcessTracker.getProcess(externalApp.uuid);
+        const process: any = ProcessTracker.getProcessByUuid(externalApp.uuid);
         return {
             parent: <Identity>((process && process.window && process.window.uuid) ? process.window : null)
         };

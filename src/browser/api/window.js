@@ -588,45 +588,7 @@ Window.create = function(id, opts) {
 
         WindowGroups.on(groupChangedEventString, groupChangedListener);
         subscriptionManager.registerSubscription(groupChangedUnsubscribe, identity, groupChangedEventString);
-        /*
-                // Event listener for external process started
-                let synthProcessStartedEventString = `synth-process-started/${uuidname}`;
-                let synthProcessStartedListener = (payload) => {
-                    var eventString = `window/external-process-started/${uuidname}`;
 
-                    ofEvents.emit(eventString, _.extend(payload, {
-                        name,
-                        uuid,
-                        topic: 'window',
-                        type: 'external-process-started'
-                    }));
-                };
-                let synthProcessStartedUnsubscribe = () => {
-                    ProcessTracker.removeListener(synthProcessStartedEventString, synthProcessStartedListener);
-                };
-
-                ProcessTracker.on(synthProcessStartedEventString, synthProcessStartedListener);
-                subscriptionManager.registerSubscription(synthProcessStartedUnsubscribe, identity, synthProcessStartedEventString);
-
-                // Event listener for external process termination
-                let synthProcessTerminatedEventString = `synth-process-terminated/${uuidname}`;
-                let synthProcessTerminatedListener = (payload) => {
-                    var eventString = `window/external-process-exited/${uuidname}`;
-
-                    ofEvents.emit(eventString, _.extend(payload, {
-                        name,
-                        uuid,
-                        topic: 'window',
-                        type: 'external-process-exited'
-                    }));
-                };
-                let synthProcessTerminatedUnsubscribe = () => {
-                    ProcessTracker.removeListener(synthProcessTerminatedEventString, synthProcessTerminatedListener);
-                };
-
-                ProcessTracker.on(synthProcessTerminatedEventString, synthProcessTerminatedListener);
-                subscriptionManager.registerSubscription(synthProcessTerminatedUnsubscribe, identity, synthProcessTerminatedEventString);
-        */
         // will-navigate URL for white/black listing
         const navValidator = navigationValidator(uuid, name, id);
         validateNavigation(webContents, identity, navValidator);

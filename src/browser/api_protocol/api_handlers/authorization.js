@@ -58,14 +58,16 @@ function AuthorizationApiHandler() {
         let process, file, token;
 
         if (pid) {
-            process = ProcessTracker.monitor({
-                uuid: null,
-                name: null
-            }, {
-                pid,
-                uuid: uuidRequested,
-                monitor: false
-            });
+            process =
+                ProcessTracker.getProcessByPid(pid) ||
+                ProcessTracker.monitor({ 
+                    uuid: null,
+                    name: null
+                }, {
+                    pid,
+                    uuid: uuidRequested,
+                    monitor: false
+                });
         }
 
         // UUID assignment priority: mapped process, client-requested, then auto-generated
