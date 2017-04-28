@@ -136,11 +136,7 @@ portDiscovery.on('runtime/launched', (portInfo) => {
 
         connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
             //one connected we broadcast our port discovery message.
-            try {
-                portDiscovery.broadcast(myPortInfo);
-            } catch (e) {
-                log.writeToLog('info', e);
-            }
+            staggerPortBroadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
 
         }).catch(err => {
@@ -257,6 +253,15 @@ app.on('ready', function() {
 
     });
 
+    // native code in AtomRendererClient::ShouldFork
+    app.on('enable-chromium-renderer-fork', event => {
+        // @TODO it should be an option for app, not runtime->arguments
+        if (coreState.argo['enable-chromium-renderer-fork']) {
+            app.vlog(1, 'applying Chromium renderer fork');
+            event.preventDefault();
+        }
+    });
+
     rvmBus.on('rvm-message-bus/broadcast/download-asset/progress', payload => {
         if (payload) {
             ofEvents.emit(`system/asset-download-progress-${payload.downloadId}`, {
@@ -282,6 +287,16 @@ app.on('ready', function() {
         }
     });
 }); // end app.ready
+
+function staggerPortBroadcast(myPortInfo) {
+    setTimeout(() => {
+        try {
+            portDiscovery.broadcast(myPortInfo);
+        } catch (e) {
+            log.writeToLog('info', e);
+        }
+    }, Math.floor(Math.random() * 50));
+}
 
 function includeFlashPlugin() {
     let pluginName;
@@ -449,15 +464,11 @@ function launchApp(argo, startExternalAdapterServer) {
             tickCount: app.getTickCount()
         });
     }, error => {
-        console.log('Error:' + error.message);
+        log.writeToLog(1, error, true);
 
-        // Synchronous when no callback is passed
-        dialog.showMessageBox(null, {
-            type: 'warning',
-            buttons: ['OK'],
-            title: 'Fatal error',
-            message: error.message
-        });
+        if (!coreState.argo['noerrdialog']) {
+            dialog.showErrorBox('Fatal Error', `${error}`);
+        }
 
         app.quit();
     });
@@ -478,13 +489,18 @@ function initFirstApp(options, configUrl) {
             firstApp = null;
         });
     } catch (error) {
-        console.log(`Error: ${error.message}`);
+        log.writeToLog(1, error, true);
 
         if (rvmBus) {
             rvmBus.send('application', {
                 action: 'hide-splashscreen',
                 sourceUrl: configUrl
             });
+        }
+
+        if (!coreState.argo['noerrdialog']) {
+            const errorMessage = options.loadErrorMessage || 'There was an error loading the application.';
+            dialog.showErrorBox('Fatal Error', errorMessage);
         }
 
         if (coreState.shouldCloseRuntime()) {

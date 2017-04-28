@@ -97,7 +97,7 @@ function publish(identity, payload) {
         destinationUuid: ANY_UUID
     }, payload);
 
-    dispatchToSubscriptions(topic, identity, null, null, payloadToDeliver);
+    dispatchToSubscriptions(topic, identity, null, null, payloadToDeliver, true);
 }
 
 function send(identity, payload) {
@@ -117,11 +117,18 @@ function send(identity, payload) {
     }
 }
 
-function dispatchToSubscriptions(topic, identity, destUuid, destName, payload) {
+function dispatchToSubscriptions(topic, identity, destUuid, destName, payload, sendToAll) {
     const keys = generateSendKeys(topic, identity, {
         uuid: destUuid || ANY_UUID,
         name: destName || ANY_NAME
     });
+
+    //TODO: sendToAll is a symptom of not knowing the target identity given a set of keys.
+    if (sendToAll) {
+        return ofBus.emit(keys.fromAny, payload) +
+            ofBus.emit(keys.fromApp, payload) +
+            ofBus.emit(keys.fromWin, payload);
+    }
 
     return ofBus.emit(keys.fromAny, payload) ||
         ofBus.emit(keys.fromApp, payload) ||

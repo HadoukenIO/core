@@ -62,19 +62,11 @@ function ApplicationApiHandler() {
     apiProtocolBase.registerActionMap(appExternalApiMap);
 
     function setTrayIcon(identity, rawMessage, ack, errAck) {
-
-        // prevent GC
         let message = JSON.parse(JSON.stringify(rawMessage));
-
         let payload = message.payload;
-        let {
-            // disabledIcon, // in 5.0 payload, not used here
-            enabledIcon,
-            // hoverIcon // in 5.0 payload, not used here
-        } = payload;
         let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-        Application.setTrayIcon(appIdentity, enabledIcon, () => {
+        Application.setTrayIcon(appIdentity, payload.enabledIcon, () => {
             ack(successAck);
         }, errAck);
     }
@@ -147,11 +139,10 @@ function ApplicationApiHandler() {
         let dataAck = _.clone(successAck);
         let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-        Application.getManifest(appIdentity,
-            function appManifestCB(manifest) {
-                dataAck.data = manifest;
-                ack(dataAck);
-            }, errAck);
+        Application.getManifest(appIdentity, manifest => {
+            dataAck.data = manifest;
+            ack(dataAck);
+        }, errAck);
     }
 
     function getApplicationGroups(identity, message, ack) {
@@ -162,12 +153,12 @@ function ApplicationApiHandler() {
         // NOTE: the Window API returns a wrapped window with 'name' as a member,
         // while the adaptor expects it to be 'windowName'
         let groups = _.filter(Application.getGroups(), windowGroup => {
-            return _.some(windowGroup, (window) => {
+            return _.some(windowGroup, window => {
                 return window.uuid === appIdentity.uuid;
             });
         });
-        dataAck.data = _.map(groups, (groupOfWindows) => {
-            return _.map(groupOfWindows, (window) => {
+        dataAck.data = _.map(groups, groupOfWindows => {
+            return _.map(groupOfWindows, window => {
                 if (payload.crossApp === true) {
                     var _window = _.clone(window);
                     _window.windowName = window.name;
@@ -287,14 +278,12 @@ function ApplicationApiHandler() {
             uuid
         } = appIdentity;
 
-        ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, (loadInfo) => {
+        ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, loadInfo => {
 
             if (loadInfo.success) {
                 let successReturn = _.clone(successAck);
 
-                successReturn.data = {
-                    httpResponseCode: loadInfo.data.httpResponseCode
-                };
+                successReturn.data = loadInfo.data;
 
                 ack(successReturn);
             } else {

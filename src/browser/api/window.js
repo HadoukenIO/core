@@ -60,6 +60,9 @@ const userCache = electronApp.getPath('userCache');
 let Window = {};
 
 let browserWindowEventMap = {
+    'api-injection-failed': {
+        topic: 'api-injection-failed'
+    },
     'blur': {
         topic: 'blurred'
     },
@@ -331,14 +334,15 @@ Window.create = function(id, opts) {
         name,
         uuid
     };
-    let baseOpts,
-        uuidname,
-        browserWindow,
-        _openListeners,
-        webContents,
-        _options,
-        _boundsChangedHandler,
-        groupUuid = null; // windows by default don't belong to any groups
+    let baseOpts;
+    let uuidname;
+    let browserWindow;
+    let _openListeners;
+    let webContents;
+    let _options;
+    let _boundsChangedHandler;
+    let groupUuid = null; // windows by default don't belong to any groups
+    let urlBeforeunload;
 
     let hideReason = 'hide';
     let hideOnCloseListener = () => {
@@ -346,6 +350,21 @@ Window.create = function(id, opts) {
         openfinWindow.hideReason = 'hide-on-close';
         browserWindow.hide();
     };
+
+    function onDidUnload() {
+        urlBeforeunload = webContents ? webContents.getURL() : null;
+    }
+
+    function onDocumentLoaded() {
+        const url = webContents.getURL();
+        if (url === urlBeforeunload) {
+            emitReloadedEvent({
+                uuid,
+                name
+            }, url);
+        }
+        urlBeforeunload = '';
+    }
 
     let _externalWindowEventAdapter;
 
@@ -391,6 +410,8 @@ Window.create = function(id, opts) {
         uuid = _options.uuid;
         name = _options.name;
         uuidname = `${uuid}-${name}`;
+        const WINDOW_UNLOAD_EVENT = `window/unload/${uuid}/${name}`;
+        const WINDOW_DOCUMENT_LOADED = 'document-loaded';
 
         browserWindow._options = _options;
 
@@ -416,9 +437,17 @@ Window.create = function(id, opts) {
             _openListeners.forEach(unhook => {
                 unhook();
             });
+
+            //tear down any listeners on external event emitters.
+            ofEvents.removeListener(WINDOW_UNLOAD_EVENT, onDidUnload);
+            webContents.removeListener(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
         };
 
         let windowTeardown = createWindowTearDown(identity, id);
+
+        //wire up unload/navigate events for reload.
+        ofEvents.on(WINDOW_UNLOAD_EVENT, onDidUnload);
+        webContents.on(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
 
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
@@ -678,8 +707,13 @@ Window.create = function(id, opts) {
         };
 
         resourceLoadFailedHandler = (failure) => {
-            emitErrMessage(failure.errCode);
-            ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+            if (failure.errorCode === -3) {
+                // 304 can trigger net::ERR_ABORTED, ignore it
+                electronApp.vlog(1, `ignoring net error -3 for ${failure.validatedURL}`);
+            } else {
+                emitErrMessage(failure.errorCode);
+                ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+            }
         };
 
         if (opts.url === 'about:blank') {
@@ -695,7 +729,20 @@ Window.create = function(id, opts) {
             ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
             ofEvents.once(`window/connected/${uuidname}`, () => {
                 constructorCallbackMessage.data = {
-                    httpResponseCode
+                    httpResponseCode,
+                    apiInjected: true
+                };
+                ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
+            });
+            ofEvents.once(`window/api-injection-failed/${uuidname}`, () => {
+                electronApp.vlog(1, `api-injection-failed ${uuidname}`);
+                // can happen if child window has a different domain.   @TODO allow injection for different domains
+                if (_options.autoShow) {
+                    browserWindow.show();
+                }
+                constructorCallbackMessage.data = {
+                    httpResponseCode,
+                    apiInjected: false
                 };
                 ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
             });
@@ -1539,6 +1586,27 @@ function emitCloseEvents(identity) {
         type: 'window-closed',
         uuid: identity.uuid,
         name: identity.name
+    });
+}
+
+function emitReloadedEvent(identity, url) {
+    const {
+        uuid,
+        name
+    } = identity;
+
+    ofEvents.emit(`window/reloaded/${uuid}-${name}`, {
+        uuid,
+        name,
+        url
+    });
+
+    ofEvents.emit(`application/window-reloaded/${uuid}`, {
+        topic: 'application',
+        type: 'window-reloaded',
+        uuid,
+        name,
+        url
     });
 }
 
