@@ -355,7 +355,8 @@ limitations under the License.
             ipc.send(renderFrameId, 'of-window-message', {
                 action: 'on-window-unload',
                 payload: {},
-                isSync: false
+                isSync: false,
+                singleFrameOnly: true
             });
         });
 
