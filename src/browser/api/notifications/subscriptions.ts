@@ -166,22 +166,26 @@ ofEvents.on('application/window-end-load/*', (e: any) => {
 
 seqs.requestNoteClose
     .subscribe((req: NotificationMessage) => {
-        const noteIsOpen = windowIsValid(req.id);
+        try {
+            const noteIsOpen = windowIsValid(req.id);
 
-        if (noteIsOpen) {
-            const ns = getCurrNotes();
-            const mousePos = System.getMousePosition();
-            const monitorInfo = getPrimaryMonitorAvailableRect();
-            const mouseOver = mouseisOverNotes(mousePos, monitorInfo, ns.length);
+            if (noteIsOpen) {
+                const ns = getCurrNotes();
+                const mousePos = System.getMousePosition();
+                const monitorInfo = getPrimaryMonitorAvailableRect();
+                const mouseOver = mouseisOverNotes(mousePos, monitorInfo, ns.length);
 
-            if (!mouseOver || req.data.force) {
-                closeNotification(req);
+                if (!mouseOver || req.data.force) {
+                    closeNotification(req);
 
+                } else {
+                    scheduleNoteClose(req, 1000);
+                }
             } else {
-                scheduleNoteClose(req, 1000);
+                removePendingNote(req.id);
             }
-        } else {
-            removePendingNote(req.id);
+        } catch (e) {
+            writeToLog('info', e);
         }
     });
 
