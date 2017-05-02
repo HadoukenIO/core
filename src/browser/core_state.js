@@ -182,6 +182,14 @@ function getUuidBySourceUrl(sourceUrl) {
     return app && app.appObj && app.appObj.uuid;
 }
 
+function getConfigUrlByUuid(uuid) {
+    let app = appByUuid(uuid);
+    while (app && app.appObj && app.appObj.parentUuid) {
+        app = appByUuid(app.appObj.parentUuid);
+    }
+    return app && app._configUrl;
+}
+
 function setAppObj(appId, appObj) {
     const app = getAppById(appId);
 
@@ -506,6 +514,7 @@ module.exports = {
     getAppObj,
     getAppObjByUuid,
     getUuidBySourceUrl,
+    getConfigUrlByUuid,
     getAppRunningState,
     getAppRestartingState,
     getChildrenByApp,
