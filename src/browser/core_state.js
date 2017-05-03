@@ -142,6 +142,7 @@ function getAppRestartingState(uuid) {
 
 function setAppRestartingState(uuid, restarting) {
     const app = appByUuid(uuid); // check if uuid is recognized
+
     if (app) {
         app.isRestarting = !!restarting;
     }
@@ -410,7 +411,7 @@ function getAllApplications() {
         return {
             isRunning: app.isRunning,
             uuid: app.uuid,
-            parentUuid: app.appObj && app.appObj.parentUuid
+            parentUuid: app.parentUuid
         };
     });
 }

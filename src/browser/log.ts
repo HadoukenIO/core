@@ -19,7 +19,7 @@ import {errorToPOJO} from '../common/errors';
 /**
  * Parses log messages and uses Electron's APIs to log them to console
  */
-export function writeToLog(level: any, message: any, debug?: boolean): any {
+export function writeToLog(level: number, message: any, debug?: boolean): any {
     let parsedMessage: string;
 
     // Parse log message
