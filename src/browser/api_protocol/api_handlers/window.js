@@ -404,11 +404,11 @@ function WindowApiHandler() {
         // while the adaptor expects it to be 'windowName'
         dataAck.data = _.map(Window.getGroup(windowIdentity), (window) => {
             if (payload.crossApp === true) {
-                var _window = _.clone(window);
-                _window.windowName = window.name;
-                return _window;
+                var clone = _.clone(window);
+                clone.windowName = window.name;
+                return clone;
             } else {
-                return window.name; // backward compatible
+                return window.name; // backwards compatible
             }
         });
         ack(dataAck);

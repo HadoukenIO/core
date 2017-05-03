@@ -22,6 +22,7 @@ let path = require('path');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
+let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
 let nativeImage = electron.nativeImage;
 let ProcessInfo = electron.processInfo;
@@ -49,9 +50,11 @@ import {
 import {
     validateNavigationRules
 } from '../navigation_validation';
-
+import * as log from '../log';
+let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
 
 // locals
+const TRAY_ICON_KEY = 'tray-icon-events';
 let runtimeIsClosing = false;
 let hasPlugins = false;
 let rvmBus;
@@ -94,7 +97,7 @@ electronApp.on('ready', function() {
                 var json = manifestObject.json;
                 var uuid = coreState.getUuidBySourceUrl(sourceUrl);
                 if (uuid) {
-                    ofEvents.emit(`application/manifest-changed/${uuid}`, sourceUrl, json);
+                    ofEvents.emit(eventRoute(uuid, 'manifest-changed'), sourceUrl, json);
                 } else {
                     console.log('Received manifest-changed event from RVM, unable to determine uuid from source url though:', sourceUrl);
                 }
@@ -165,10 +168,7 @@ Application.getCurrentApplication = function() {
 
 // TODO confirm with external connections, this does not get used
 // in the render process
-Application.wrap = function(uuid) {
-
-    return coreState.getAppObjByUuid(uuid);
-};
+Application.wrap = coreState.getAppObjByUuid;
 
 /**
  * Add a listener for the given Application event
@@ -185,7 +185,7 @@ Application.addEventListener = function(identity, appEvent, listener) {
     //      automatically
 
     let uuid = identity.uuid;
-    let eventString = `application/${appEvent}/${uuid}`;
+    let eventString = eventRoute(uuid, appEvent);
     let errRegex = /^Attempting to call a function in a renderer window that has been closed or released/;
 
     let unsubscribe, safeListener, browserWinIsDead;
@@ -240,7 +240,6 @@ function closeChildWins(identity) {
 }
 
 Application.close = function(identity, force, callback) {
-
     var app = Application.wrap(identity.uuid),
         mainWin = app.mainWindow;
 
@@ -269,15 +268,15 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
 
 Application.getManifest = function(identity, callback, errCallback) {
     let appObject = coreState.getAppObjByUuid(identity.uuid);
-    let manifestUrl = (appObject || {})._configUrl;
+    let manifestUrl = appObject && appObject._configUrl;
     let fetcher;
 
     if (manifestUrl) {
         fetcher = new ResourceFetcher('string');
         fetcher.on('fetch-complete', (obj, status, data) => {
             try {
-                electronApp.vlog(1, 'application manifest ' + manifestUrl);
-                electronApp.vlog(1, data);
+                log.writeToLog(1, 'application manifest ' + manifestUrl, true);
+                log.writeToLog(1, data, true);
 
                 let manifest = JSON.parse(data);
                 if (typeof callback === 'function') {
@@ -307,7 +306,7 @@ Application.getParentApplication = function(identity) {
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
     let app = Application.wrap(identity.uuid);
-    let manifestUrl = (app || {})._configUrl;
+    let manifestUrl = app && app._configUrl;
 
     // Only apps started from a manifest can retrieve shortcut configuration
     if (!manifestUrl) {
@@ -380,7 +379,7 @@ Application.registerCustomData = function(identity, data, callback, errorCallbac
 Application.removeEventListener = function(identity, type, listener /*,callback, errorCallback*/ ) {
     var app = Application.wrap(identity.uuid);
 
-    ofEvents.removeListener(`application/${type}/${app.id}`, listener);
+    ofEvents.removeListener(eventRoute(app.id, type), listener);
 };
 
 Application.removeTrayIcon = function(identity /*callback, errorCallback*/ ) {
@@ -398,7 +397,7 @@ Application.restart = function(identity /*, callback, errorCallback*/ ) {
     try {
         Application.close(identity, true, () => {
             Application.run(identity, appObj._configUrl);
-            ofEvents.once(`application/initialized/${uuid}`, function() {
+            ofEvents.once(eventRoute(uuid, 'initialized'), function() {
                 coreState.setAppRestartingState(uuid, false);
             });
         });
@@ -427,7 +426,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
         app = Application.wrap(uuid),
         appState = coreState.appByUuid(uuid),
         mainWindowOpts = _.clone(app._options),
-        hideSplashTopic = `application/hide-splashscreen/${uuid}`,
+        hideSplashTopic = eventRoute(uuid, 'hide-splashscreen'),
         eventListenerStrings = [],
         sourceUrl = appState.appObj._configUrl,
         hideSplashListener = () => {
@@ -489,7 +488,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
     // Set up RVM related listeners for events the RVM cares about
     ofEvents.on(hideSplashTopic, hideSplashListener);
     appEventsForRVM.forEach(appEvent => {
-        ofEvents.on(`application/${appEvent}/${uuid}`, sendAppsEventsToRVMListener);
+        ofEvents.on(eventRoute(uuid, appEvent), sendAppsEventsToRVMListener);
     });
 
 
@@ -509,7 +508,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
             app._processInfo.getCpuUsage();
         }
 
-        ofEvents.emit(`application/connected/${uuid}`, {
+        ofEvents.emit(eventRoute(uuid, 'connected'), {
             topic: 'application',
             type: 'connected',
             uuid
@@ -534,7 +533,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
     // app will need to consider remote connections shortly...
     ofEvents.once(`window/closed/${uuid}-${uuid}`, () => {
 
-        ofEvents.emit(`application/closed/${uuid}`, {
+        ofEvents.emit(eventRoute(uuid, 'closed'), {
             topic: 'application',
             type: 'closed',
             uuid
@@ -550,7 +549,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
 
         ofEvents.removeAllListeners(hideSplashTopic);
         appEventsForRVM.forEach(appEvent => {
-            ofEvents.removeListener(`application/${appEvent}/${uuid}`, sendAppsEventsToRVMListener);
+            ofEvents.removeListener(eventRoute(uuid, appEvent), sendAppsEventsToRVMListener);
         });
 
         removeTrayIcon(app);
@@ -565,10 +564,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
                 for (var i = appsToClose.length - 1; i >= 0; i--) {
                     let a = appsToClose[i];
                     if (a.uuid !== app.uuid) {
-                        Application.close({
-                            uuid: a.uuid,
-                            name: a.uuid
-                        }, true);
+                        Application.close(a.identity, true);
                     }
                 }
                 rvmBus.closeTransport();
@@ -594,13 +590,13 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
     });
 
     app.mainWindow.webContents.on('crashed', () => {
-        ofEvents.emit(`application/crashed/${uuid}`, {
+        ofEvents.emit(eventRoute(uuid, 'crashed'), {
             topic: 'application',
             type: 'crashed',
             uuid
         });
 
-        ofEvents.emit(`application/out-of-memory/${uuid}`, {
+        ofEvents.emit(eventRoute(uuid, 'out-of-memory'), {
             topic: 'application',
             type: 'out-of-memory',
             uuid
@@ -608,7 +604,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
     });
 
     app.mainWindow.on('responsive', () => {
-        ofEvents.emit(`application/responding/${uuid}`, {
+        ofEvents.emit(eventRoute(uuid, 'responding'), {
             topic: 'application',
             type: 'responding',
             uuid
@@ -616,7 +612,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
     });
 
     app.mainWindow.on('unresponsive', () => {
-        ofEvents.emit(`application/not-responding/${uuid}`, {
+        ofEvents.emit(eventRoute(uuid, 'not-responding'), {
             topic: 'application',
             type: 'not-responding',
             uuid
@@ -625,7 +621,7 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
 
     coreState.setAppRunningState(uuid, true);
 
-    ofEvents.emit(`application/started/${uuid}`, {
+    ofEvents.emit(eventRoute(uuid, 'started'), {
         topic: 'application',
         type: 'started',
         uuid
@@ -638,7 +634,7 @@ Application.send = function( /*topic, message*/ ) {
 
 Application.setShortcuts = function(identity, config, callback, errorCallback) {
     let app = Application.wrap(identity.uuid);
-    let manifestUrl = (app || {})._configUrl;
+    let manifestUrl = app && app._configUrl;
 
     // Only apps started from a manifest can retrieve shortcut configuration
     if (!manifestUrl) {
@@ -661,47 +657,60 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     // cleanup the old one so it can be replaced
     removeTrayIcon(app);
 
-    let mainWindowIdentity = {
-        uuid: identity.uuid,
-        name: identity.uuid
-    };
+    let mainWindowIdentity = app.identity;
+
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
     cachedFetch(app.uuid, iconUrl, (error, iconFilepath) => {
         if (!error) {
-            if (app && app.tray) {
-                let icon = nativeImage.createFromPath(iconFilepath);
-                app.tray.icon = new Tray(icon);
-                app.tray.listener = (data) => {
-                    ofEvents.emit(`application/tray-icon-clicked/${app.uuid}`, data);
+            if (app) {
+                const iconImage = nativeImage.createFromPath(iconFilepath);
+                const icon = app.icon = new Tray(iconImage);
+                const monitorInfo = MonitorInfo.getInfo('system-query');
+                const clickedRoute = eventRoute(app.uuid, 'tray-icon-clicked');
+
+                const getData = (bounds, source) => {
+                    const data = {
+                        x: bounds.x,
+                        y: bounds.y,
+                        bounds,
+                        monitorInfo
+                    };
+                    return Object.assign(data, source);
                 };
-                let clickHandler = (button) => {
-                    return (sender, rawData) => {
-                        let data = JSON.parse(JSON.stringify(rawData));
-                        app.tray.listener({
-                            x: data.x,
-                            y: data.y,
-                            monitorInfo: MonitorInfo.getInfo('system-query'),
+
+                const makeClickHandler = (button) => {
+                    return (event, bounds) => {
+                        ofEvents.emit(clickedRoute, getData(bounds, {
                             button
-                        });
+                        }));
                     };
                 };
 
-                app.tray.leftClickListener = clickHandler(0);
-                app.tray.middleClickListener = clickHandler(1);
-                app.tray.rightClickListener = clickHandler(2);
+                const hoverHandler = (event, bounds) => {
+                    ofEvents.emit(eventRoute(app.uuid, 'tray-icon-hovering'), getData(bounds));
+                };
 
-                // because this is going out over the wire only care about the data
-                app.tray.icon.on('click', app.tray.leftClickListener);
-                app.tray.icon.on('middle-click', app.tray.middleClickListener);
-                app.tray.icon.on('right-click', app.tray.rightClickListener);
+                const listenerSignatures = [
+                    ['hover', hoverHandler],
+                    ['click', makeClickHandler(0)],
+                    ['middle-click', makeClickHandler(1)],
+                    ['right-click', makeClickHandler(2)]
+                ];
 
-                if (typeof(callback) === 'function') {
+                listenerSignatures.forEach(signature => icon.on.apply(icon, signature));
+
+                const unsubscribe = () => {
+                    listenerSignatures.forEach(signature => icon.removeListener.apply(icon, signature));
+                };
+                subscriptionManager.registerSubscription(unsubscribe, app.identity, TRAY_ICON_KEY);
+
+                if (typeof callback === 'function') {
                     callback();
                 }
             }
         } else {
-            if (typeof(errorCallback) === 'function') {
+            if (typeof errorCallback === 'function') {
                 errorCallback(error);
             }
         }
@@ -738,14 +747,14 @@ Application.terminate = function(identity, callback) {
 Application.emitHideSplashScreen = function(identity) {
     var uuid = identity && identity.uuid;
     if (uuid) {
-        ofEvents.emit(`application/hide-splashscreen/${uuid}`);
+        ofEvents.emit(eventRoute(uuid, 'hide-splashscreen'));
     }
 };
 
 Application.emitRunRequested = function(identity) {
     var uuid = identity && identity.uuid;
     if (uuid) {
-        ofEvents.emit(`application/run-requested/${uuid}`, {
+        ofEvents.emit(eventRoute(uuid, 'run-requested'), {
             topic: 'application',
             type: 'run-requested',
             uuid
@@ -790,7 +799,7 @@ function broadcastAppLoaded(targetIdentity) {
                 }
             };
 
-            _.each(listeners, (listener) => {
+            _.each(listeners, listener => {
                 //TODO: this needs to be refactored to look like the other event listeners.
                 externalApiBase.sendToIdentity(listener, loadedMessage);
             });
@@ -812,7 +821,7 @@ function broadcastOnAppConnected(targetIdentity) {
                 }
             };
 
-            _.each(listeners, (listener) => {
+            _.each(listeners, listener => {
                 //TODO: this needs to be refactored to look like the other event listeners.
                 externalApiBase.sendToIdentity(listener, connectedMessage);
             });
@@ -820,10 +829,10 @@ function broadcastOnAppConnected(targetIdentity) {
     }
 }
 
-ofEvents.on('window/dom-content-loaded/*', (payload) => {
+ofEvents.on('window/dom-content-loaded/*', payload => {
     broadcastAppLoaded(payload.data[0]);
 });
-ofEvents.on('window/connected/*', (payload) => {
+ofEvents.on('window/connected/*', payload => {
     broadcastOnAppConnected(payload.data[0]);
 });
 
@@ -838,16 +847,10 @@ Application.notifyOnAppConnected = function(target, identity) {
 
 
 function removeTrayIcon(app) {
-    if (app && app.tray && app.tray.icon) {
-        app.tray.icon.removeListener('click', app.tray.leftClickListener);
-        app.tray.icon.removeListener('middle-click', app.tray.middleClickListener);
-        app.tray.icon.removeListener('right-click', app.tray.rightClickListener);
-        app.tray.leftClickListener = null;
-        app.tray.middleClickListener = null;
-        app.tray.rightClickListener = null;
-        app.tray.listener = null;
-        app.tray.icon.destroy();
-        app.tray.icon = null;
+    if (app && app.icon) {
+        subscriptionManager.removeSubscription(app.identity, TRAY_ICON_KEY);
+        app.icon.destroy();
+        app.icon = null;
     }
 }
 
@@ -860,13 +863,6 @@ function createAppObj(uuid, opts, configUrl = '') {
         if (!opts) {
             opts = app._options;
         }
-        let tray = {
-            icon: null,
-            listener: null,
-            leftClickListener: null,
-            middleClickListener: null,
-            rightClickListener: null,
-        };
         let _processInfo;
         let toShowOnRun = false;
         let mainWindowOptions = opts.mainWindowOptions;
@@ -874,8 +870,14 @@ function createAppObj(uuid, opts, configUrl = '') {
         appObj = {
             _configUrl: configUrl,
             _options: opts,
-            tray,
+            icon: null,
             uuid: opts.uuid,
+            get identity() {
+                return {
+                    uuid: this.uuid,
+                    name: this.uuid
+                };
+            },
             _processInfo,
             toShowOnRun
         };
@@ -916,11 +918,21 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
             if (isMainFrame) {
-                _.defer(() => {
-                    Application.close({
-                        uuid: opts.uuid
-                    }, true);
-                });
+                if (errorCode === -3) {
+                    // 304 can trigger net::ERR_ABORTED, ignore it
+                    log.writeToLog(1, `ignoring net error -3 for ${opts.uuid}`, true);
+                } else {
+                    if (!coreState.argo['noerrdialog'] && configUrl) {
+                        // NOTE: don't show this dialog if the app is created via the api
+                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application.';
+                        dialog.showErrorBox('Fatal Error', errorMessage);
+                    }
+                    _.defer(() => {
+                        Application.close({
+                            uuid: opts.uuid
+                        }, true);
+                    });
+                }
             }
         });
 
@@ -964,7 +976,7 @@ function createAppObj(uuid, opts, configUrl = '') {
         }
         coreState.setAppObj(appObj.id, appObj);
 
-        ofEvents.emit(`application/created/${uuid}`, {
+        ofEvents.emit(eventRoute(uuid, 'created'), {
             topic: 'application',
             type: 'application-created',
             uuid
@@ -979,6 +991,10 @@ function isURI(str) {
 
 function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
+}
+
+function eventRoute(id, name) {
+    return `application/${name}/${id}`;
 }
 
 module.exports.Application = Application;
