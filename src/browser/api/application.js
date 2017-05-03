@@ -84,7 +84,7 @@ electronApp.on('use-plugins-requested', event => {
 });
 
 electronApp.on('ready', function() {
-    log.writeToLog(1,'RVM MESSAGE BUS READY', true);
+    log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
     rvmBus = require('../rvm/rvm_message_bus.js');
     MonitorInfo = require('../monitor_info.js');
 
@@ -99,11 +99,11 @@ electronApp.on('ready', function() {
                 if (uuid) {
                     ofEvents.emit(eventRoute(uuid, 'manifest-changed'), sourceUrl, json);
                 } else {
-                    log.writeToLog(1,'Received manifest-changed event from RVM, unable to determine uuid from source url though: ' + sourceUrl, true);
+                    log.writeToLog(1, 'Received manifest-changed event from RVM, unable to determine uuid from source url though: ' + sourceUrl, true);
                 }
             });
         } else {
-            log.writeToLog(1,'Received manifest-changed event from RVM with invalid data object: ' + payload, true);
+            log.writeToLog(1, 'Received manifest-changed event from RVM with invalid data object: ' + payload, true);
         }
     });
 
