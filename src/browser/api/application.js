@@ -89,10 +89,10 @@ electronApp.on('ready', function() {
     MonitorInfo = require('../monitor_info.js');
 
     // listen to and broadcast 'broadcast' messages from RVM as an openfin app event
-    rvmBus.on('rvm-message-bus/broadcast/application/manifest-changed', function(payload) {
-
-        if (payload && payload.manifests) {
-            _.each(payload.manifests, function(manifestObject) {
+    rvmBus.on('rvm-message-bus/broadcast/application/manifest-changed', payload => {
+        const manifests = payload && payload.manifests;
+        if (manifests) {
+            _.each(manifests, manifestObject => {
                 var sourceUrl = manifestObject.sourceUrl;
                 var json = manifestObject.json;
                 var uuid = coreState.getUuidBySourceUrl(sourceUrl);
@@ -228,14 +228,12 @@ Application.addEventListener = function(identity, appEvent, listener) {
 
 //TODO:Ricardo: This is private do not expose it as part of the module.
 function closeChildWins(identity) {
-    var childWins = Application.getChildWindows(identity);
-
-    childWins.forEach(function(c) {
-        // this requires that the first arg be the identity obj
-        Window.close({
-            name: c.name,
-            uuid: c.uuid
-        }, true);
+    Application.getChildWindows(identity).forEach(function(childWindow) {
+        const childWindowIdentity = {
+            name: childWindow.name,
+            uuid: childWindow.uuid
+        };
+        Window.close(childWindowIdentity, true);
     });
 }
 
@@ -248,14 +246,15 @@ Application.close = function(identity, force, callback) {
     }
 
     if (mainWin) {
-        Window.close({
-            name: app._options.name,
+        const mainWindowIdentity = {
+            name: app._options.uuid,
             uuid: app._options.uuid
-        }, force, callback);
+        };
+        Window.close(mainWindowIdentity, force, callback);
     }
 };
 
-Application.getChildWindows = function(identity /*callback, errorCallback*/ ) {
+Application.getChildWindows = function(identity /*, callback, errorCallback*/ ) {
     var app = Application.wrap(identity.uuid);
 
     return coreState.getChildrenByApp(app.id);
@@ -275,7 +274,7 @@ Application.getManifest = function(identity, callback, errCallback) {
         fetcher = new ResourceFetcher('string');
         fetcher.on('fetch-complete', (obj, status, data) => {
             try {
-                log.writeToLog(1, 'application manifest ' + manifestUrl, true);
+                log.writeToLog(1, `application manifest ${manifestUrl}`, true);
                 log.writeToLog(1, data, true);
 
                 let manifest = JSON.parse(data);
@@ -376,13 +375,13 @@ Application.registerCustomData = function(identity, data, callback, errorCallbac
 };
 
 //TODO:Ricardo: This should be deprecated.
-Application.removeEventListener = function(identity, type, listener /*,callback, errorCallback*/ ) {
+Application.removeEventListener = function(identity, type, listener /*, callback, errorCallback*/ ) {
     var app = Application.wrap(identity.uuid);
 
     ofEvents.removeListener(eventRoute(app.id, type), listener);
 };
 
-Application.removeTrayIcon = function(identity /*callback, errorCallback*/ ) {
+Application.removeTrayIcon = function(identity /*, callback, errorCallback*/ ) {
     let app = Application.wrap(identity.uuid);
 
     removeTrayIcon(app);
@@ -415,7 +414,7 @@ Application.revokeWindowAccess = function( /*action, windowName, callback, error
     console.warn('Deprecated');
 };
 
-Application.run = function(identity, configUrl = '' /*callback , errorCallback*/ ) {
+Application.run = function(identity, configUrl = '' /*, callback , errorCallback*/ ) {
     if (!identity) {
         return;
     }
@@ -570,9 +569,8 @@ Application.run = function(identity, configUrl = '' /*callback , errorCallback*/
                 rvmBus.closeTransport();
 
                 // Force close any windows that have slipped past core-state
-                let openedWindows = BrowserWindow.getAllWindows();
-                openedWindows.forEach(function(w) {
-                    w.close();
+                BrowserWindow.getAllWindows().forEach(function(window) {
+                    window.close();
                 });
 
                 // Unregister all shortcuts.
@@ -636,18 +634,20 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     let app = Application.wrap(identity.uuid);
     let manifestUrl = app && app._configUrl;
 
-    // Only apps started from a manifest can retrieve shortcut configuration
-    if (!manifestUrl) {
-        return errorCallback(new Error('App must be started from a manifest to be able to change its shortcut configuration'));
-    }
-
-    sendToRVM({
+    if (manifestUrl) {
+        // Only apps started from a manifest can retrieve shortcut configuration
+        const options = {
             topic: 'application',
             action: 'set-shortcut-state',
             sourceUrl: manifestUrl,
             data: config
-        }).then(callback, errorCallback)
-        .catch(errorCallback);
+        };
+        sendToRVM(options)
+            .then(callback, errorCallback)
+            .catch(errorCallback);
+    } else {
+        errorCallback(new Error('App must be started from a manifest to be able to change its shortcut configuration'));
+    }
 };
 
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
@@ -665,7 +665,7 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
         if (!error) {
             if (app) {
                 const iconImage = nativeImage.createFromPath(iconFilepath);
-                const icon = app.icon = new Tray(iconImage);
+                const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = eventRoute(app.uuid, 'tray-icon-clicked');
 
@@ -715,6 +715,23 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
             }
         }
     });
+};
+
+
+Application.getTrayIconInfo = function(identity, callback, errorCallback) {
+    const app = Application.wrap(identity.uuid);
+    const bounds = app && app.tray && app.tray.getIconRect();
+
+    if (bounds) {
+        callback({
+            x: bounds.x,
+            y: bounds.y,
+            monitorInfo: MonitorInfo.getInfo('system-query'),
+            bounds
+        });
+    } else {
+        errorCallback(new Error('cannot get tray icon rect'));
+    }
 };
 
 
@@ -847,10 +864,10 @@ Application.notifyOnAppConnected = function(target, identity) {
 
 
 function removeTrayIcon(app) {
-    if (app && app.icon) {
+    if (app && app.tray) {
         subscriptionManager.removeSubscription(app.identity, TRAY_ICON_KEY);
-        app.icon.destroy();
-        app.icon = null;
+        app.tray.destroy();
+        app.tray = null;
     }
 }
 
@@ -865,12 +882,11 @@ function createAppObj(uuid, opts, configUrl = '') {
         }
         let _processInfo;
         let toShowOnRun = false;
-        let mainWindowOptions = opts.mainWindowOptions;
 
         appObj = {
             _configUrl: configUrl,
             _options: opts,
-            icon: null,
+            tray: null,
             uuid: opts.uuid,
             get identity() {
                 return {
@@ -882,22 +898,20 @@ function createAppObj(uuid, opts, configUrl = '') {
             toShowOnRun
         };
 
-        if (typeof mainWindowOptions === 'object') {
-            Object.keys(mainWindowOptions).forEach(key => {
-                switch (key) {
-                    case 'name':
+        _.each(typeof opts.mainWindowOptions === 'object' && opts.mainWindowOptions, (value, key) => {
+            switch (key) {
+                case 'name':
+                    break;
+                case 'url':
+                    // only copy over mainWindowOptions value if the opts value is invalid
+                    if (isNonEmptyString(opts[key])) {
                         break;
-                    case 'url':
-                        // only copy over mainWindowOptions `url` if the opts `url` is invalid
-                        if (isNonEmptyString(opts[key])) {
-                            break;
-                        }
-                        /* falls through */
-                    default:
-                        opts[key] = mainWindowOptions[key];
-                }
-            });
-        }
+                    }
+                    /* falls through */
+                default:
+                    opts[key] = value;
+            }
+        });
 
         opts.url = opts.url || 'about:blank';
 
