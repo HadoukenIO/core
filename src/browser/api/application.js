@@ -99,17 +99,17 @@ electronApp.on('ready', function() {
                 if (uuid) {
                     ofEvents.emit(eventRoute(uuid, 'manifest-changed'), sourceUrl, json);
                 } else {
-                    log.writeToLog(1, 'Received manifest-changed event from RVM, unable to determine uuid from source url though: ' + sourceUrl, true);
+                    log.writeToLog(1, `Received manifest-changed event from RVM, unable to determine uuid from source url though: ${sourceUrl}`, true);
                 }
             });
         } else {
-            log.writeToLog(1, 'Received manifest-changed event from RVM with invalid data object: ' + payload, true);
+            log.writeToLog(1, `Received manifest-changed event from RVM with invalid data object: ${payload}`, true);
         }
     });
 
 });
 
-Application.create = function(opts, configUrl = '', parentIdentify = {}) {
+Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
     let appUrl = opts.url;
@@ -138,7 +138,7 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
         throw new Error(`Application with specified UUID already exists: ${opts.uuid}`);
     }
 
-    let parentUuid = parentIdentify && parentIdentify.uuid;
+    let parentUuid = parentIdentity && parentIdentity.uuid;
     if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
@@ -150,10 +150,10 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
 
     let appObj = createAppObj(opts.uuid, opts, configUrl);
 
-    if (parentIdentify && parentIdentify.uuid) {
+    if (parentIdentity && parentIdentity.uuid) {
         let app = coreState.appByUuid(opts.uuid);
 
-        app.parentUuid = parentIdentify.uuid;
+        app.parentUuid = parentIdentity.uuid;
     }
 
     return appObj;
