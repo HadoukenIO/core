@@ -17,6 +17,7 @@ const apiProtocolBase = require('./api_protocol_base');
 const Window = require('../../api/window').Window;
 const Application = require('../../api/application').Application;
 const _ = require('underscore');
+const log = require('../../log');
 
 function WindowApiHandler() {
     let successAck = {
@@ -404,11 +405,11 @@ function WindowApiHandler() {
         // while the adaptor expects it to be 'windowName'
         dataAck.data = _.map(Window.getGroup(windowIdentity), (window) => {
             if (payload.crossApp === true) {
-                var _window = _.clone(window);
-                _window.windowName = window.name;
-                return _window;
+                var clone = _.clone(window);
+                clone.windowName = window.name;
+                return clone;
             } else {
-                return window.name; // backward compatible
+                return window.name; // backwards compatible
             }
         });
         ack(dataAck);
@@ -571,7 +572,11 @@ function WindowApiHandler() {
     }
 
     function onWindowUnload(identity, message, ack) {
-        Window.onUnload(identity);
+        if (message.isMainRenderFrame === true) {
+            Window.onUnload(identity);
+        } else {
+            log.writeToLog(1, `Ignoring unload for non-main frame ${JSON.stringify(identity)}`, true);
+        }
         ack(successAck);
     }
 

@@ -120,11 +120,15 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     const payload = data && data.payload;
     const uuid = payload && payload.uuid;
     const action = data && data.action;
-    const hasIdentityObj = typeof (identity) === 'object';
 
-    //TODO: Xavier, fix this.
+    const isValidUuid = uuid !== void(0);
+    const isValidIdentity = typeof (identity) === 'object';
+    const isForwardAction = !apiMessagesToIgnore[action];
+    const isRemoteEntity = !isLocalUuid(uuid);
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
-    if (!apiMessagesToIgnore[action] && hasIdentityObj && !isLocalUuid(uuid) && !identity.runtimeUuid) {
+    const isLocalAction = !identity.runtimeUuid;
+
+    if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction) {
         try {
             connectionManager.resolveIdentity({uuid})
             .then((id: any) => {
