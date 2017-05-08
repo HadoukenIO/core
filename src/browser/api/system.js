@@ -522,16 +522,21 @@ module.exports.System = {
         return ofEvents.emit(eventName, eventArgs);
     },
     downloadAsset: function(identity, asset, cb) {
-        let appObject = coreState.getAppObjByUuid(identity.uuid);
-        let srcUrl = (appObject || {})._configUrl;
-        let downloadId = module.exports.System.generateGUID().toString('hex');
-        let rvmMessage = {
+        const appObject = coreState.getAppObjByUuid(identity.uuid);
+        const srcUrl = (appObject || {})._configUrl;
+        const downloadId = asset.downloadId;
+
+        //setup defaults.
+        asset.args = asset.args || '';
+
+        const rvmMessage = {
             type: 'download-asset',
             appConfig: srcUrl,
             showRvmProgressDialog: false,
             asset: asset,
             downloadId: downloadId
         };
+
         if (rvmBus.send('app-assets', JSON.stringify(rvmMessage))) {
             cb(null, downloadId);
 
