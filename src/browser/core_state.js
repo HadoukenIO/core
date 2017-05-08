@@ -499,6 +499,19 @@ function getSocketServerState() {
     return socketServerState;
 }
 
+/**
+ * Get app's very first ancestor
+ */
+function getAppAncestor(descendantAppUuid) {
+    const app = appByUuid(descendantAppUuid);
+
+    if (app && app.appObj && app.appObj.parentUuid) {
+        return getAppAncestor(app.uuid);
+    } else {
+        return app;
+    }
+}
+
 // methods
 module.exports = {
     addApp,
@@ -511,6 +524,7 @@ module.exports = {
     getAllApplications,
     getAllAppObjects,
     getAllWindows,
+    getAppAncestor,
     getAppById,
     getAppByWin,
     getAppObj,

@@ -27,6 +27,8 @@ let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 
+import { addPendingSubscription, cleanUpSubscription } from '../../pending_subscriptions';
+
 function ApplicationApiHandler() {
     let successAck = {
         success: true
@@ -141,10 +143,16 @@ function ApplicationApiHandler() {
     }
 
     function getApplicationManifest(identity, message, ack, nack) {
+        const payload = message.payload;
         const dataAck = _.clone(successAck);
-        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+        let appIdentity;
 
-        Application.getManifest(appIdentity, manifest => {
+        // When manifest URL is provided, will be retrieving a remote manifest
+        if (!payload.hasOwnProperty('manifestUrl')) {
+            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        }
+
+        Application.getManifest(appIdentity, payload.manifestUrl, manifest => {
             dataAck.data = manifest;
             ack(dataAck);
         }, nack);
@@ -268,13 +276,22 @@ function ApplicationApiHandler() {
         ack(successAck);
     }
 
-    function runApplication(identity, message, ack, nack) {
-        const payload = message.payload;
-        /*jshint unused:false */
+    function runApplication(identity, message, ack, errAck) {
+        const { payload } = message;
+        const { manifestUrl } = payload;
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-        const uuid = appIdentity.uuid;
+        const { uuid } = appIdentity;
+        const fullEventPath = `window/fire-constructor-callback/${uuid}-${uuid}`;
+        const pendingSubscription = {
+            uuid,
+            name: uuid,
+            fullEventPath,
+            listenType: 'once',
+            className: 'window',
+            eventName: 'fire-constructor-callback'
+        };
 
-        ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, loadInfo => {
+        ofEvents.once(fullEventPath, loadInfo => {
             if (loadInfo.success) {
                 const successReturn = _.clone(successAck);
                 successReturn.data = loadInfo.data;
@@ -284,9 +301,17 @@ function ApplicationApiHandler() {
                 theErr.networkErrorCode = loadInfo.data.networkErrorCode;
                 nack(theErr);
             }
+
+            cleanUpSubscription(pendingSubscription);
         });
 
-        Application.run(appIdentity);
+        if (manifestUrl) {
+            addPendingSubscription(pendingSubscription).then(() => {
+                Application.runWithRVM(identity, manifestUrl).catch(errAck);
+            });
+        } else {
+            Application.run(appIdentity);
+        }
     }
 
     function registerExternalWindow(identity, message, ack) {
