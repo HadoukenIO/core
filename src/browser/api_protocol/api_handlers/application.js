@@ -44,6 +44,7 @@ function ApplicationApiHandler() {
         'get-info': getInfo,
         'get-parent-application': getParentApplication,
         'get-shortcuts': getShortcuts,
+        'get-tray-icon-info': getTrayIconInfo,
         'is-application-running': isApplicationRunning,
         'notify-on-app-connected': notifyOnAppConnected,
         'notify-on-content-loaded': notifyOnContentLoaded,
@@ -62,44 +63,42 @@ function ApplicationApiHandler() {
 
     apiProtocolBase.registerActionMap(appExternalApiMap);
 
-    function setTrayIcon(identity, rawMessage, ack, errAck) {
-
-        // prevent GC
+    function setTrayIcon(identity, rawMessage, ack, nack) {
         let message = JSON.parse(JSON.stringify(rawMessage));
-
         let payload = message.payload;
-        let {
-            // disabledIcon, // in 5.0 payload, not used here
-            enabledIcon,
-            // hoverIcon // in 5.0 payload, not used here
-        } = payload;
         let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-        Application.setTrayIcon(appIdentity, enabledIcon, () => {
+        Application.setTrayIcon(appIdentity, payload.enabledIcon, () => {
             ack(successAck);
-        }, errAck);
+        }, nack);
     }
 
+    function getTrayIconInfo(identity, message, ack, nack) {
+        const dataAck = _.clone(successAck);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+
+        Application.getTrayIconInfo(appIdentity, response => {
+            dataAck.data = response;
+            ack(dataAck);
+        }, nack);
+    }
 
     function removeTrayIcon(identity, message, ack) {
-        let payload = message.payload;
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         Application.removeTrayIcon(appIdentity);
         ack(successAck);
     }
 
     function waitForHungApplication(identity, message, ack) {
-        var payload = message.payload,
-            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         Application.wait(appIdentity);
         ack(successAck);
     }
 
     function terminateApplication(identity, message, ack) {
-        var payload = message.payload,
-            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         Application.terminate(appIdentity, () => {
             ack(successAck);
@@ -108,8 +107,7 @@ function ApplicationApiHandler() {
     }
 
     function restartApplication(identity, message, ack) {
-        var payload = message.payload,
-            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         Application.restart(appIdentity);
         ack(successAck);
@@ -136,40 +134,37 @@ function ApplicationApiHandler() {
     }
 
     function isApplicationRunning(identity, message, ack) {
-        var payload = message.payload,
-            dataAck = _.clone(successAck),
-            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const dataAck = _.clone(successAck);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         dataAck.data = Application.isRunning(appIdentity);
         ack(dataAck);
     }
 
-    function getApplicationManifest(identity, message, ack, errAck) {
-        let payload = message.payload;
-        let dataAck = _.clone(successAck);
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    function getApplicationManifest(identity, message, ack, nack) {
+        const dataAck = _.clone(successAck);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
-        Application.getManifest(appIdentity,
-            function appManifestCB(manifest) {
-                dataAck.data = manifest;
-                ack(dataAck);
-            }, errAck);
+        Application.getManifest(appIdentity, manifest => {
+            dataAck.data = manifest;
+            ack(dataAck);
+        }, nack);
     }
 
     function getApplicationGroups(identity, message, ack) {
-        var payload = message.payload,
-            dataAck = _.clone(successAck),
-            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const payload = message.payload;
+        const dataAck = _.clone(successAck);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
         // NOTE: the Window API returns a wrapped window with 'name' as a member,
         // while the adaptor expects it to be 'windowName'
         let groups = _.filter(Application.getGroups(), windowGroup => {
-            return _.some(windowGroup, (window) => {
+            return _.some(windowGroup, window => {
                 return window.uuid === appIdentity.uuid;
             });
         });
-        dataAck.data = _.map(groups, (groupOfWindows) => {
-            return _.map(groupOfWindows, (window) => {
+        dataAck.data = _.map(groups, groupOfWindows => {
+            return _.map(groupOfWindows, window => {
                 if (payload.crossApp === true) {
                     var _window = _.clone(window);
                     _window.windowName = window.name;
@@ -183,9 +178,8 @@ function ApplicationApiHandler() {
     }
 
     function getChildWindows(identity, message, ack) {
-        var payload = message.payload,
-            dataAck = _.clone(successAck),
-            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const dataAck = _.clone(successAck);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         dataAck.data = _.chain(Application.getChildWindows(appIdentity))
             .filter(function(c) {
@@ -197,57 +191,54 @@ function ApplicationApiHandler() {
         ack(dataAck);
     }
 
-    function getInfo(identity, message, ack, errAck) {
-        const payload = message.payload;
+    function getInfo(identity, message, ack, nack) {
         const dataAck = _.clone(successAck);
-        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         Application.getInfo(appIdentity, response => {
             dataAck.data = response;
             ack(dataAck);
-        }, errAck);
+        }, nack);
     }
 
-    function getParentApplication(identity, message, ack, errAck) {
-        let payload = message.payload;
-        let dataAck = _.clone(successAck);
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    function getParentApplication(identity, message, ack, nack) {
+        const dataAck = _.clone(successAck);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+        const parentUuid = Application.getParentApplication(appIdentity);
 
-        let parentUuid = Application.getParentApplication(appIdentity);
         if (parentUuid) {
             dataAck.data = parentUuid;
             ack(dataAck);
         } else {
-            errAck(new Error('No parent application found'));
+            nack(new Error('No parent application found'));
         }
     }
 
-    function getShortcuts(identity, message, ack, errAck) {
-        let payload = message.payload;
-        let dataAck = _.clone(successAck);
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    function getShortcuts(identity, message, ack, nack) {
+        const dataAck = _.clone(successAck);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         Application.getShortcuts(appIdentity, response => {
             dataAck.data = response;
             ack(dataAck);
-        }, errAck);
+        }, nack);
     }
 
-    function setShortcuts(identity, message, ack, errAck) {
-        let payload = message.payload;
-        let dataAck = _.clone(successAck);
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    function setShortcuts(identity, message, ack, nack) {
+        const payload = message.payload;
+        const dataAck = _.clone(successAck);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
         Application.setShortcuts(appIdentity, payload.data, response => {
             dataAck.data = response;
             ack(dataAck);
-        }, errAck);
+        }, nack);
     }
 
     function closeApplication(identity, message, ack) {
-        let payload = message.payload;
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-        let force = !!payload.force;
+        const payload = message.payload;
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const force = !!payload.force;
 
         Application.close(appIdentity, force, () => {
             ack(successAck);
@@ -278,34 +269,22 @@ function ApplicationApiHandler() {
         ack(successAck);
     }
 
-    function runApplication(identity, message, ack, errAck) {
-        let {
-            payload
-        } = message;
+    function runApplication(identity, message, ack, nack) {
+        const payload = message.payload;
         /*jshint unused:false */
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        const uuid = appIdentity.uuid;
 
-        let {
-            uuid
-        } = appIdentity;
-
-        ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, (loadInfo) => {
-
+        ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, loadInfo => {
             if (loadInfo.success) {
-                let successReturn = _.clone(successAck);
-
-                successReturn.data = {
-                    httpResponseCode: loadInfo.data.httpResponseCode
-                };
-
+                const successReturn = _.clone(successAck);
+                successReturn.data = loadInfo.data;
                 ack(successReturn);
             } else {
-                let theErr = new Error(loadInfo.data.message);
-
+                const theErr = new Error(loadInfo.data.message);
                 theErr.networkErrorCode = loadInfo.data.networkErrorCode;
-                errAck(theErr);
+                nack(theErr);
             }
-
         });
 
         Application.run(appIdentity);
@@ -327,8 +306,7 @@ function ApplicationApiHandler() {
     }
 
     function deregisterExternalWindow(identity, message, ack) {
-        let payload = message.payload;
-        let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+        const windowIdentity = apiProtocolBase.getTargetWindowIdentity(message.payload);
 
         ofEvents.emit(`external-window/close/${windowIdentity.uuid}-${windowIdentity.name}`);
         ack(successAck);
@@ -412,22 +390,21 @@ function ApplicationApiHandler() {
         /* jshint bitwise: true */
     }
 
-    function registerCustomData(identity, message, ack, errAck) {
-        let payload = message.payload;
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    function registerCustomData(identity, message, ack, nack) {
+        const payload = message.payload;
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
         Application.registerCustomData(appIdentity, payload.data, () => {
             ack(successAck);
-        }, errAck);
+        }, nack);
     }
 
-    function relaunchOnClose(identity, message, ack, errAck) {
-        let payload = message.payload;
-        let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    function relaunchOnClose(identity, message, ack, nack) {
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
         Application.scheduleRestart(appIdentity, () => {
             ack(successAck);
-        }, errAck);
+        }, nack);
     }
 }
 
