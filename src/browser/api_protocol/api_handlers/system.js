@@ -60,10 +60,18 @@ function SystemApiHandler() {
         'raise-event': raiseEvent,
         'download-asset': downloadAsset,
         'get-all-external-applications': getAllExternalApplications,
-        'resolve-uuid': resolveUuid
+        'resolve-uuid': resolveUuid,
+        'get-device-user-id': getDeviceUserId
     };
 
     apiProtocolBase.registerActionMap(SystemApiHandlerMap);
+
+    function getDeviceUserId(identity, message, ack) {
+        let dataAck = _.clone(successAck);
+
+        dataAck.data = System.getDeviceUserId();
+        ack(dataAck);
+    }
 
     function getAllExternalApplications(identity, message, ack) {
         let dataAck = _.clone(successAck);
