@@ -5,24 +5,29 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 
+import * as _ from 'underscore';
 import ofEvents from './of_events';
 import connectionManager, { PeerRuntime } from './connection_manager';
-import { System } from './api/system.js';
 
 let subscriptionIdCount = 0; // id count to generate IDs for subscriptions
 const pendingSubscriptions: IPendingSubscription[] = []; // all pending subscriptions are stored here
 
 /**
- * Shape of pending subscriptions
+ * Shape of pending subscription props
  */
-interface IPendingSubscription {
-    _id?: number; // ID of the subscription
+interface IPendingSubscriptionProps {
     uuid: string; // app uuid
     name?: string; // window name
     className: 'application'|'window'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
-    fullEventPath: string; // full event name of the subscription (ex: window/connected/uuid-name)
+}
+
+/**
+ * Shape of pending subscriptions
+ */
+interface IPendingSubscription extends IPendingSubscriptionProps {
+    _id?: number; // ID of the subscription
     isCleaned?: boolean; // helps prevents repetitive un-subscriptions
     unSubscriptions?: { // a map of un-subscriptions assigned to runtime versions
         [runtimeVersion: string]: () => void
@@ -32,8 +37,10 @@ interface IPendingSubscription {
 /**
  * Handles addition of a new pending subscription
  */
-export function addPendingSubscription(subscription: IPendingSubscription) {
+export function addPendingSubscription(subscriptionProps: IPendingSubscriptionProps): Promise<() => void> {
     return new Promise(resolve => {
+        const subscription: IPendingSubscription = _.clone(subscriptionProps);
+
         subscription._id = getId();
         subscription.unSubscriptions = {};
 
@@ -53,21 +60,30 @@ export function addPendingSubscription(subscription: IPendingSubscription) {
                 applyPendingSubscription(conn, subscription);
             });
 
-        }).then(() => resolve());
+        }).then(() => {
+            const unsubscribe = cleanUpSubscription.bind(null, subscription);
+            resolve(unsubscribe);
+        });
+    });
+}
+
+/**
+ * Apply all pending subscriptions for a given runtime
+ */
+export function applyAllPendingSubscriptions(runtime: PeerRuntime) {
+    pendingSubscriptions.forEach(subscription => {
+        applyPendingSubscription(runtime, subscription);
     });
 }
 
 /**
  * Subscribe to an event in a remote runtime
  */
-export function applyPendingSubscription(runtime: PeerRuntime, subscription: IPendingSubscription) {
+function applyPendingSubscription(runtime: PeerRuntime, subscription: IPendingSubscription) {
     const classEventEmitter = getClassEventEmitter(runtime, subscription);
     const runtimeVersion = runtime.portInfo.version;
-    const {
-        eventName,
-        listenType,
-        fullEventPath
-    } = subscription;
+    const { uuid, name, className, eventName, listenType } = subscription;
+    const fullEventPath = `${className}/${eventName}/${uuid}-${name}`;
 
     function listener(data: any) {
         ofEvents.emit(fullEventPath, data);
@@ -88,28 +104,16 @@ export function applyPendingSubscription(runtime: PeerRuntime, subscription: IPe
 }
 
 /**
- * Apply all pending subscriptions for a given runtime
- */
-export function applyAllPendingSubscriptions(runtime: PeerRuntime) {
-    pendingSubscriptions.forEach(subscription => {
-        applyPendingSubscription(runtime, subscription);
-    });
-}
-
-/**
  * Clean up a pending subscription.
  *
  * Clean up is done when one of the listener fires. This means at that moment
  * we know which runtime is a true subscriptions holder. We then remove the
- * subscription from other runtimes and from the list.
+ * subscription from other runtimes and from the pending list.
  */
-export function cleanUpSubscription(subscription: IPendingSubscription, keepInRuntimeVersion?: string) {
-    if (!keepInRuntimeVersion) {
-        keepInRuntimeVersion = System.getVersion();
-    }
+function cleanUpSubscription(subscription: IPendingSubscription, keepInRuntimeVersion?: string) {
 
-    // Already been cleaned before
-    if (subscription.isCleaned) {
+    // Already been cleaned before in unneeded runtime versions
+    if (subscription.isCleaned && keepInRuntimeVersion) {
         return;
     }
 
@@ -142,11 +146,7 @@ export function cleanUpSubscription(subscription: IPendingSubscription, keepInRu
  */
 function getClassEventEmitter(runtime: PeerRuntime, subscription: IPendingSubscription) {
     let classEventEmitter;
-    const {
-        uuid,
-        name,
-        className
-    } = subscription;
+    const { uuid, name, className } = subscription;
 
     switch (className) {
         case 'application':
