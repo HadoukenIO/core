@@ -238,8 +238,19 @@ module.exports.System = {
     },
     getDeviceUserId: function() {
         const hash = crypto.createHash('sha256');
-        const hostToken = electronApp.getHostToken();
-        const username = process.env['USERNAME'];
+
+        let hostToken;
+        let username;
+
+        if (process.platform === 'darwin') {
+            hostToken = os.networkInterfaces().en0[0].mac;
+            username = process.env.USER;
+        } else {
+
+            // assume windows
+            hostToken = electronApp.getHostToken();
+            username = process.env.USERNAME;
+        }
 
         if (!username || !username) {
             throw new Error(`One of username (${username}) or host token ${hostToken} not defined `);
