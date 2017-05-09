@@ -107,7 +107,4 @@ interface ConnectionManager extends EventEmitter {
 
 
 export default connectionManager as ConnectionManager;
-export {
-    meshEnabled,
-    PeerRuntime
-};
+export { meshEnabled, PeerRuntime };
