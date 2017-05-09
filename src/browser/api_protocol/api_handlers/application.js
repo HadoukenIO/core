@@ -26,8 +26,7 @@ let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
-
-import { addPendingSubscription, cleanUpSubscription } from '../../pending_subscriptions';
+import { addPendingSubscription } from '../../pending_subscriptions';
 
 function ApplicationApiHandler() {
     let successAck = {
@@ -276,22 +275,21 @@ function ApplicationApiHandler() {
         ack(successAck);
     }
 
-    function runApplication(identity, message, ack, errAck) {
+    function runApplication(identity, message, ack, nack) {
         const { payload } = message;
         const { manifestUrl } = payload;
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
         const { uuid } = appIdentity;
-        const fullEventPath = `window/fire-constructor-callback/${uuid}-${uuid}`;
+        let pendingSubscriptionUnSubscribe;
         const pendingSubscription = {
             uuid,
             name: uuid,
-            fullEventPath,
             listenType: 'once',
             className: 'window',
             eventName: 'fire-constructor-callback'
         };
 
-        ofEvents.once(fullEventPath, loadInfo => {
+        ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, loadInfo => {
             if (loadInfo.success) {
                 const successReturn = _.clone(successAck);
                 successReturn.data = loadInfo.data;
@@ -302,12 +300,15 @@ function ApplicationApiHandler() {
                 nack(theErr);
             }
 
-            cleanUpSubscription(pendingSubscription);
+            if (typeof pendingSubscriptionUnSubscribe === 'function') {
+                pendingSubscriptionUnSubscribe();
+            }
         });
 
         if (manifestUrl) {
-            addPendingSubscription(pendingSubscription).then(() => {
-                Application.runWithRVM(identity, manifestUrl).catch(errAck);
+            addPendingSubscription(pendingSubscription).then((unSubscribe) => {
+                pendingSubscriptionUnSubscribe = unSubscribe;
+                Application.runWithRVM(identity, manifestUrl).catch(nack);
             });
         } else {
             Application.run(appIdentity);
