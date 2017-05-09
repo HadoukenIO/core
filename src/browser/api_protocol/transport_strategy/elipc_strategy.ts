@@ -44,9 +44,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                                 ack(new AckPayload(result));
                             }
                         }).catch(err => {
-                            if (err !== undefined) {
-                                nack(err);
-                            }
+                            nack(err);
                         });
                 } else {
                     nack('API access has been superseded by another frame in this window.');

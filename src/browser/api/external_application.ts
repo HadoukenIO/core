@@ -4,6 +4,7 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
+
 import ofEvents from '../of_events';
 
 import { Identity } from '../../shapes';
@@ -29,9 +30,9 @@ export module ExternalApplication {
     }
 
     export function getInfo(externalApp: Identity): ExternalProcessInfo {
-        const process: any = ProcessTracker.getProcessByUuid(externalApp.uuid);
+        const extProcess: any = ProcessTracker.getProcessByUuid(externalApp.uuid);
         return {
-            parent: <Identity>((process && process.window && process.window.uuid) ? process.window : null)
+            parent: <Identity>((extProcess && extProcess.window && extProcess.window.uuid) ? extProcess.window : null)
         };
     }
 
@@ -42,7 +43,7 @@ export module ExternalApplication {
 
         //TODO: compare perf from this and a map.
         authenticatedConnections.push(externalConnObj);
-        ofEvents.emit(connectedEvent + `/${externalConnObj.uuid}`, {
+        ofEvents.emit(`${connectedEvent}/${externalConnObj.uuid}`, {
             uuid
         });
         ofEvents.emit(connectedEvent, {
@@ -65,7 +66,7 @@ export module ExternalApplication {
     export function removeExternalConnection(externalConnection: Identity) {
         authenticatedConnections.splice(authenticatedConnections.indexOf(externalConnection), 1);
 
-        ofEvents.emit(disconnectedEvent + `/${externalConnection.uuid}`, {
+        ofEvents.emit(`${disconnectedEvent}/${externalConnection.uuid}`, {
             uuid: externalConnection.uuid
         });
 

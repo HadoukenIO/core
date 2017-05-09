@@ -34,9 +34,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
                             ack(new AckPayload(result));
                         }
                     }).catch(err => {
-                        if (err !== undefined) {
-                            ack(new NackPayload(err));
-                        }
+                        ack(new NackPayload(err));
                     });
             }
         });

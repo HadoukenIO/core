@@ -5,7 +5,6 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 
-//import ofEvents from '../../../browser/of_events';
 import * as apiProtocolBase from './api_protocol_base';
 
 import { ExternalApplication } from '../../api/external_application';

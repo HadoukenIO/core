@@ -55,12 +55,12 @@ function AuthorizationApiHandler() {
             pid
         } = message.payload;
 
-        let process, file, token;
+        let extProcess, file, token;
 
         if (pid) {
-            process =
+            extProcess =
                 ProcessTracker.getProcessByPid(pid) ||
-                ProcessTracker.monitor({ 
+                ProcessTracker.monitor({
                     uuid: null,
                     name: null
                 }, {
@@ -71,7 +71,7 @@ function AuthorizationApiHandler() {
         }
 
         // UUID assignment priority: mapped process, client-requested, then auto-generated
-        var uuid = (process || {}).uuid || uuidRequested || electronApp.generateGUID();
+        var uuid = (extProcess || {}).uuid || uuidRequested || electronApp.generateGUID();
 
         if (pendingAuthentications.has(uuid)) {
             return;
