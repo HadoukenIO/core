@@ -506,7 +506,7 @@ function getAppAncestor(descendantAppUuid) {
     const app = appByUuid(descendantAppUuid);
 
     if (app && app.appObj && app.appObj.parentUuid) {
-        return getAppAncestor(app.uuid);
+        return getAppAncestor(app.appObj.parentUuid);
     } else {
         return app;
     }
