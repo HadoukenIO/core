@@ -253,7 +253,7 @@ module.exports.System = {
         }
 
         if (!username || !username) {
-            throw new Error(`One of username (${username}) or host token ${hostToken} not defined `);
+            throw new Error(`One of username (${username}) or host token (${hostToken}) not defined `);
         }
 
         hash.update(hostToken);
