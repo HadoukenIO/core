@@ -438,20 +438,20 @@ function initServer() {
 //please see the discussion on https://github.com/openfin/runtime-core/pull/194
 function launchApp(argo, startExternalAdapterServer) {
     convertOptions.fetchOptions(argo, configuration => {
-        let {
+        const {
             configUrl,
             configObject
         } = configuration;
-        let openfinWinOpts = convertOptions.getWindowOptions(configObject);
-        let startUpApp = configObject.startup_app; /* jshint ignore:line */
-        let uuid = startUpApp && startUpApp.uuid;
-        let ofApp = Application.wrap(uuid);
-        let isRunning = Application.isRunning(ofApp);
+        const startupAppOptions = configObject.startup_app; /* jshint ignore:line */
+        const uuid = startupAppOptions && startupAppOptions.uuid;
+        const ofApp = Application.wrap(uuid);
+        const isRunning = Application.isRunning(ofApp);
 
-        if (openfinWinOpts && !isRunning) {
-            //making sure that if a window is pressent we set the window name === to the uuid as per 5.0
-            openfinWinOpts.name = uuid;
-            initFirstApp(openfinWinOpts, configUrl);
+        if (startupAppOptions && !isRunning) {
+            // make sure that if a window is present we set
+            // window.name === window.uuid as per 5.0
+            startupAppOptions.name = uuid;
+            initFirstApp(startupAppOptions, configUrl);
         } else if (uuid) {
             Application.run({
                 uuid,

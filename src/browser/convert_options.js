@@ -13,23 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/*
-    src/browser/convert_options.js
- */
 
 // built-in modules
-let fs = require('fs');
-let path = require('path');
+const fs = require('fs');
+const path = require('path');
 
-let ResourceFetcher = require('electron').resourceFetcher;
+const ResourceFetcher = require('electron').resourceFetcher;
 
 // npm modules
-let _ = require('underscore');
+const _ = require('underscore');
 
 // local modules
-let coreState = require('./core_state.js');
-let log = require('./log');
-let regex = require('../common/regex');
+const coreState = require('./core_state.js');
+import * as log from './log';
+import * as regex from '../common/regex';
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
@@ -49,12 +46,14 @@ function five0BaseOptions() {
         'alwaysOnTop': false,
         'applicationIcon': '',
         'autoShow': false,
+        'backgroundColor': '#000',
         'backgroundThrottling': false,
         'contextMenu': true,
         'cornerRounding': {
             'height': 0,
             'width': 0
         },
+        'customData': '',
         'defaultCentered': false,
         'defaultHeight': 500,
         'defaultLeft': 10,
@@ -79,7 +78,9 @@ function five0BaseOptions() {
         'minimizable': true,
         'name': '',
         'opacity': 1,
+        'permissions': null,
         'plugins': false,
+        'preload': '',
         'resizable': true,
         'resize': true,
         'resizeRegion': {
@@ -96,12 +97,8 @@ function five0BaseOptions() {
         'url': 'about:blank',
         'uuid': '',
         'waitForPageLoad': true,
-        'backgroundColor': '#000'
+        'webSecurity': true
     };
-}
-
-function isInContainer(type) {
-    return process && process.versions && process.versions[type];
 }
 
 function readFile(filePath, done, onError) {
@@ -152,18 +149,6 @@ function getURL(url, done, onError) {
     fetcher.fetch(url);
 }
 
-function validateOptions(options) {
-    var baseOptions = five0BaseOptions();
-
-    // extend the base options to handle a raw window.open
-    // exclusde from the general base options as this is internal use
-    if (options.rawWindowOpen) {
-        baseOptions.rawWindowOpen = options.rawWindowOpen;
-    }
-
-    return validate(baseOptions, options);
-}
-
 function validate(base, user) {
     let options = {};
 
@@ -193,87 +178,70 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 
 module.exports = {
 
-    getWindowOptions: function(appJson) {
-        return appJson['startup_app'];
-    },
-
     convertToElectron: function(options, returnAsString) {
-
         // build on top of the 5.0 base
-        let newOptions = validateOptions(options);
+        const newOptions = validate(five0BaseOptions(), options);
+        const {
+            defaultHeight,
+            defaultWidth,
+            maxHeight,
+            maxWidth,
+            minHeight,
+            minWidth
+        } = newOptions;
 
-        if (isInContainer('openfin')) {
-            newOptions.resizable = newOptions.resize && newOptions.resizable;
-            newOptions.show = newOptions.autoShow && !newOptions.waitForPageLoad;
-            newOptions.skipTaskbar = !newOptions.showTaskbarIcon;
-            newOptions.title = newOptions.name;
+        newOptions.resizable = newOptions.resize && newOptions.resizable;
+        newOptions.show = newOptions.autoShow && !newOptions.waitForPageLoad;
+        newOptions.skipTaskbar = !newOptions.showTaskbarIcon;
+        newOptions.title = newOptions.name;
 
-            let minHeight = newOptions.minHeight;
-            let maxHeight = newOptions.maxHeight;
-            let defaultHeight = newOptions.defaultHeight;
-            if (defaultHeight < minHeight) {
-                newOptions.height = minHeight;
-            } else if (maxHeight !== -1 && defaultHeight > maxHeight) {
-                newOptions.height = maxHeight;
-            } else {
-                newOptions.height = defaultHeight;
-            }
-
-            let defaultWidth = newOptions.defaultWidth;
-            let minWidth = newOptions.minWidth;
-            let maxWidth = newOptions.maxWidth;
-            if (defaultWidth < minWidth) {
-                newOptions.width = minWidth;
-            } else if (maxWidth !== -1 && defaultWidth > maxWidth) {
-                newOptions.width = maxWidth;
-            } else {
-                newOptions.width = defaultWidth;
-            }
-
-            newOptions.center = newOptions.defaultCentered;
-            if (!newOptions.center) {
-                newOptions.x = newOptions.defaultLeft;
-                newOptions.y = newOptions.defaultTop;
-            }
+        // set height
+        if (defaultHeight < minHeight) {
+            newOptions.height = minHeight;
+        } else if (maxHeight !== -1 && defaultHeight > maxHeight) {
+            newOptions.height = maxHeight;
+        } else {
+            newOptions.height = defaultHeight;
         }
 
-        // Electron BrowserWindow options
+        // set width
+        if (defaultWidth < minWidth) {
+            newOptions.width = minWidth;
+        } else if (maxWidth !== -1 && defaultWidth > maxWidth) {
+            newOptions.width = maxWidth;
+        } else {
+            newOptions.width = defaultWidth;
+        }
+
+        newOptions.center = newOptions.defaultCentered;
+        if (!newOptions.center) {
+            newOptions.x = newOptions.defaultLeft;
+            newOptions.y = newOptions.defaultTop;
+        }
+
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
             nodeIntegration: false,
-            plugins: newOptions.plugins
+            plugins: newOptions.plugins,
+            webSecurity: newOptions.webSecurity && !coreState.argo['disable-web-security']
         };
 
-        if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
-            newOptions.webPreferences.webSecurity = false;
+        // handle raw window.open; for internal use
+        if (options.rawWindowOpen !== undefined) {
+            newOptions.rawWindowOpen = options.rawWindowOpen;
         }
 
+        // used internally by notifications
         if (options.message !== undefined) {
             newOptions.message = options.message;
         }
 
-        if (options.customData !== undefined) {
-            newOptions.customData = options.customData;
-        }
-
-        if (options.permissions !== undefined) { // API policy
-            newOptions.permissions = options.permissions;
-        }
-
-        if (options.hasOwnProperty('preload')) {
-            newOptions.preload = options.preload;
-        }
-
-        if (returnAsString) {
-            return JSON.stringify(newOptions);
-        } else {
-            return JSON.parse(JSON.stringify(newOptions));
-        }
+        const optsAsString = JSON.stringify(newOptions);
+        return returnAsString ? optsAsString : JSON.parse(optsAsString);
     },
 
     fetchOptions: function(argo, onComplete, onError) {
-        // ensure removal of eclosing double-quotes when absolute path.
         let configUrl = (argo['startup-url'] || argo['config']);
         let localConfigPath = argo['local-startup-url'];
         let offlineAccess = false;
