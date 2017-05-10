@@ -60,6 +60,8 @@ let hasPlugins = false;
 let rvmBus;
 let MonitorInfo;
 var Application = {};
+let fetchingIcon = false;
+
 // var OfEvents = [
 //     'closed',
 //     'error',
@@ -650,12 +652,11 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     }
 };
 
-let fetchingIcon = false;
 
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     if (fetchingIcon) {
-        errorCallback('currently fetching icon');
+        errorCallback(new Error('currently fetching icon'));
         return;
     }
 
