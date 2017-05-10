@@ -650,7 +650,17 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     }
 };
 
+let fetchingIcon = false;
+
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
+
+    if (fetchingIcon) {
+        errorCallback('currently fetching icon');
+        return;
+    }
+
+    fetchingIcon = true;
+
     let app = Application.wrap(identity.uuid);
 
     // only one tray icon per app
@@ -714,6 +724,8 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
                 errorCallback(error);
             }
         }
+
+        fetchingIcon = false;
     });
 };
 
