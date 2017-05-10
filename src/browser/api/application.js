@@ -60,7 +60,7 @@ let hasPlugins = false;
 let rvmBus;
 let MonitorInfo;
 var Application = {};
-let fetchingIcon = false;
+let fetchingIcon = {};
 
 // var OfEvents = [
 //     'closed',
@@ -384,7 +384,7 @@ Application.removeEventListener = function(identity, type, listener /*, callback
 };
 
 Application.removeTrayIcon = function(identity /*, callback, errorCallback*/ ) {
-    let app = Application.wrap(identity.uuid);
+    const app = Application.wrap(identity.uuid);
 
     removeTrayIcon(app);
 };
@@ -534,6 +534,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     // app will need to consider remote connections shortly...
     ofEvents.once(`window/closed/${uuid}-${uuid}`, () => {
 
+        delete fetchingIcon[uuid];
         removeTrayIcon(app);
 
         ofEvents.emit(eventRoute(uuid, 'closed'), {
@@ -654,13 +655,16 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
 
 
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
+    let {
+        uuid
+    } = identity;
 
-    if (fetchingIcon) {
+    if (fetchingIcon[uuid]) {
         errorCallback(new Error('currently fetching icon'));
         return;
     }
 
-    fetchingIcon = true;
+    fetchingIcon[uuid] = true;
 
     let app = Application.wrap(identity.uuid);
 
@@ -726,7 +730,7 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
             }
         }
 
-        fetchingIcon = false;
+        fetchingIcon[uuid] = false;
     });
 };
 
@@ -877,6 +881,7 @@ Application.notifyOnAppConnected = function(target, identity) {
 
 
 function removeTrayIcon(app) {
+
     if (app && app.tray) {
         try {
             app.tray.destroy();
