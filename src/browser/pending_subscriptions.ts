@@ -27,9 +27,9 @@ interface IPendingSubscriptionProps {
  * Shape of pending subscriptions
  */
 interface IPendingSubscription extends IPendingSubscriptionProps {
-    _id?: number; // ID of the subscription
-    isCleaned?: boolean; // helps prevents repetitive un-subscriptions
-    unSubscriptions?: { // a map of un-subscriptions assigned to runtime versions
+    _id: number; // ID of the subscription
+    isCleaned: boolean; // helps prevents repetitive un-subscriptions
+    unSubscriptions: { // a map of un-subscriptions assigned to runtime versions
         [runtimeVersion: string]: () => void
     };
 }
@@ -39,10 +39,11 @@ interface IPendingSubscription extends IPendingSubscriptionProps {
  */
 export function addPendingSubscription(subscriptionProps: IPendingSubscriptionProps): Promise<() => void> {
     return new Promise(resolve => {
-        const subscription: IPendingSubscription = _.clone(subscriptionProps);
-
-        subscription._id = getId();
-        subscription.unSubscriptions = {};
+        const subscription: IPendingSubscription = _.extend(_.clone(subscriptionProps), {
+            _id: getId(),
+            isCleaned: false,
+            unSubscriptions: {}
+        });
 
         connectionManager.resolveIdentity({
             uuid: subscription.uuid
