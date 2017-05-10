@@ -532,6 +532,8 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     // app will need to consider remote connections shortly...
     ofEvents.once(`window/closed/${uuid}-${uuid}`, () => {
 
+        removeTrayIcon(app);
+
         ofEvents.emit(eventRoute(uuid, 'closed'), {
             topic: 'application',
             type: 'closed',
@@ -550,8 +552,6 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
         appEventsForRVM.forEach(appEvent => {
             ofEvents.removeListener(eventRoute(uuid, appEvent), sendAppsEventsToRVMListener);
         });
-
-        removeTrayIcon(app);
 
         coreState.removeApp(app.id);
 
@@ -865,9 +865,14 @@ Application.notifyOnAppConnected = function(target, identity) {
 
 function removeTrayIcon(app) {
     if (app && app.tray) {
-        subscriptionManager.removeSubscription(app.identity, TRAY_ICON_KEY);
-        app.tray.destroy();
-        app.tray = null;
+        try {
+            app.tray.destroy();
+            app.tray = null;
+            subscriptionManager.removeSubscription(app.identity, TRAY_ICON_KEY);
+
+        } catch (e) {
+            log.writeToLog(1, e, true);
+        }
     }
 }
 
