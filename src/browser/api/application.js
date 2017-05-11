@@ -60,6 +60,8 @@ let hasPlugins = false;
 let rvmBus;
 let MonitorInfo;
 var Application = {};
+let fetchingIcon = {};
+
 // var OfEvents = [
 //     'closed',
 //     'error',
@@ -382,7 +384,7 @@ Application.removeEventListener = function(identity, type, listener /*, callback
 };
 
 Application.removeTrayIcon = function(identity /*, callback, errorCallback*/ ) {
-    let app = Application.wrap(identity.uuid);
+    const app = Application.wrap(identity.uuid);
 
     removeTrayIcon(app);
 };
@@ -532,6 +534,9 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     // app will need to consider remote connections shortly...
     ofEvents.once(`window/closed/${uuid}-${uuid}`, () => {
 
+        delete fetchingIcon[uuid];
+        removeTrayIcon(app);
+
         ofEvents.emit(eventRoute(uuid, 'closed'), {
             topic: 'application',
             type: 'closed',
@@ -550,8 +555,6 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
         appEventsForRVM.forEach(appEvent => {
             ofEvents.removeListener(eventRoute(uuid, appEvent), sendAppsEventsToRVMListener);
         });
-
-        removeTrayIcon(app);
 
         coreState.removeApp(app.id);
 
@@ -650,7 +653,19 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     }
 };
 
+
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
+    let {
+        uuid
+    } = identity;
+
+    if (fetchingIcon[uuid]) {
+        errorCallback(new Error('currently fetching icon'));
+        return;
+    }
+
+    fetchingIcon[uuid] = true;
+
     let app = Application.wrap(identity.uuid);
 
     // only one tray icon per app
@@ -714,6 +729,8 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
                 errorCallback(error);
             }
         }
+
+        fetchingIcon[uuid] = false;
     });
 };
 
@@ -864,10 +881,16 @@ Application.notifyOnAppConnected = function(target, identity) {
 
 
 function removeTrayIcon(app) {
+
     if (app && app.tray) {
-        subscriptionManager.removeSubscription(app.identity, TRAY_ICON_KEY);
-        app.tray.destroy();
-        app.tray = null;
+        try {
+            app.tray.destroy();
+            app.tray = null;
+            subscriptionManager.removeSubscription(app.identity, TRAY_ICON_KEY);
+
+        } catch (e) {
+            log.writeToLog(1, e, true);
+        }
     }
 }
 
