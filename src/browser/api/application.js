@@ -84,7 +84,7 @@ electronApp.on('use-plugins-requested', event => {
 });
 
 electronApp.on('ready', function() {
-    console.log('RVM MESSAGE BUS READY');
+    log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
     rvmBus = require('../rvm/rvm_message_bus.js');
     MonitorInfo = require('../monitor_info.js');
 
@@ -99,17 +99,17 @@ electronApp.on('ready', function() {
                 if (uuid) {
                     ofEvents.emit(eventRoute(uuid, 'manifest-changed'), sourceUrl, json);
                 } else {
-                    console.log('Received manifest-changed event from RVM, unable to determine uuid from source url though:', sourceUrl);
+                    log.writeToLog(1, `Received manifest-changed event from RVM, unable to determine uuid from source url though: ${sourceUrl}`, true);
                 }
             });
         } else {
-            console.log('Received manifest-changed event from RVM with invalid data object: ', payload);
+            log.writeToLog(1, `Received manifest-changed event from RVM with invalid data object: ${payload}`, true);
         }
     });
 
 });
 
-Application.create = function(opts, configUrl = '', parentIdentify = {}) {
+Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
     let appUrl = opts.url;
@@ -138,7 +138,7 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
         throw new Error(`Application with specified UUID already exists: ${opts.uuid}`);
     }
 
-    let parentUuid = parentIdentify && parentIdentify.uuid;
+    let parentUuid = parentIdentity && parentIdentity.uuid;
     if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
@@ -149,8 +149,11 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
     }
 
     let appObj = createAppObj(opts.uuid, opts, configUrl);
-    if (parentIdentify && parentIdentify.uuid) {
-        appObj.parentUuid = parentIdentify.uuid;
+
+    if (parentIdentity && parentIdentity.uuid) {
+        let app = coreState.appByUuid(opts.uuid);
+
+        app.parentUuid = parentIdentity.uuid;
     }
 
     return appObj;
@@ -297,10 +300,12 @@ Application.getManifest = function(identity, callback, errCallback) {
 };
 
 Application.getParentApplication = function(identity) {
-    let appObject = coreState.getAppObjByUuid(identity.uuid);
-    if (appObject && appObject.parentUuid) {
-        return appObject.parentUuid;
-    }
+    const app = coreState.appByUuid(identity.uuid);
+    const {
+        parentUuid
+    } = app || {};
+
+    return parentUuid;
 };
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
@@ -874,6 +879,7 @@ function removeTrayIcon(app) {
 function createAppObj(uuid, opts, configUrl = '') {
     let appObj;
     let app = coreState.appByUuid(uuid);
+
     if (app && app.appObj) {
         appObj = app.appObj;
     } else {
