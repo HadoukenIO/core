@@ -252,7 +252,7 @@ module.exports.System = {
             username = process.env.USERNAME;
         }
 
-        if (!username || !username) {
+        if (!username || !hostToken) {
             throw new Error(`One of username (${username}) or host token (${hostToken}) not defined `);
         }
 
