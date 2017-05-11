@@ -499,7 +499,9 @@ function initFirstApp(options, configUrl) {
         }
 
         if (!coreState.argo['noerrdialog']) {
-            const errorMessage = options.loadErrorMessage || 'There was an error loading the application.';
+            const srcMsg = error ? error.message : '';
+            const errorMessage = options.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
+
             dialog.showErrorBox('Fatal Error', errorMessage);
         }
 
