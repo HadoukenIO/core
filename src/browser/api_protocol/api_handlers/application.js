@@ -281,7 +281,7 @@ function ApplicationApiHandler() {
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
         const { uuid } = appIdentity;
         let pendingSubscriptionUnSubscribe;
-        const pendingSubscription = {
+        const remoteSubscription = {
             uuid,
             name: uuid,
             listenType: 'once',
@@ -306,7 +306,7 @@ function ApplicationApiHandler() {
         });
 
         if (manifestUrl) {
-            addPendingSubscription(pendingSubscription).then((unSubscribe) => {
+            addPendingSubscription(remoteSubscription).then((unSubscribe) => {
                 pendingSubscriptionUnSubscribe = unSubscribe;
                 Application.runWithRVM(identity, manifestUrl).catch(nack);
             });
