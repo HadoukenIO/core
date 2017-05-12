@@ -11,7 +11,6 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 
 // built-in modules
 declare let process: any;
-const app = require('electron').app;
 import { EventEmitter } from 'events';
 import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 
@@ -82,6 +81,7 @@ interface PeerRuntime {
     portInfo: PortInfo;
     fin: any;
     isDisconnected: boolean;
+    identity: Identity;
 }
 
 interface IdentityAddress {
@@ -107,4 +107,4 @@ interface ConnectionManager extends EventEmitter {
 
 
 export default connectionManager as ConnectionManager;
-export  { meshEnabled };
+export { meshEnabled, PeerRuntime };
