@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^6.0.49",
+    "@types/underscore": "^1.8.0",
     "asar": "^0.12.1",
     "babel-preset-es2015": "^6.1.4",
     "electron-rebuild": "1.4.0",
