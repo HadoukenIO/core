@@ -25,6 +25,7 @@ limitations under the License.
 
     let renderFrameId = global.routingId;
     let customData = global.getFrameData(renderFrameId);
+    let isMainRenderFrame = global.isMainFrame;
     let glbl = global;
 
     let rqr = require;
@@ -355,7 +356,9 @@ limitations under the License.
             ipc.send(renderFrameId, 'of-window-message', {
                 action: 'on-window-unload',
                 payload: {},
-                isSync: false
+                isSync: false,
+                singleFrameOnly: true,
+                isMainRenderFrame
             });
         });
 

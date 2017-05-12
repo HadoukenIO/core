@@ -30,6 +30,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
                 Promise.resolve()
                     .then(() => action(identity, data, ack, nack))
                     .then(result => {
+                        // older action calls will invoke ack internally, newer ones will return a value
                         if (result !== undefined) {
                             ack(new AckPayload(result));
                         }

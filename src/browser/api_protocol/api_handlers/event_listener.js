@@ -38,7 +38,6 @@ import {
 } from '../../of_events';
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
 
-
 // locals
 const successAck = {
     success: true

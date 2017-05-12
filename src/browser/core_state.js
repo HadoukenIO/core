@@ -143,6 +143,7 @@ function getAppRestartingState(uuid) {
 
 function setAppRestartingState(uuid, restarting) {
     const app = appByUuid(uuid); // check if uuid is recognized
+
     if (app) {
         app.isRestarting = !!restarting;
     }
@@ -181,6 +182,14 @@ function getUuidBySourceUrl(sourceUrl) {
     });
 
     return app && app.appObj && app.appObj.uuid;
+}
+
+function getConfigUrlByUuid(uuid) {
+    let app = appByUuid(uuid);
+    while (app && app.appObj && app.appObj.parentUuid) {
+        app = appByUuid(app.appObj.parentUuid);
+    }
+    return app && app._configUrl;
 }
 
 function setAppObj(appId, appObj) {
@@ -411,7 +420,7 @@ function getAllApplications() {
         return {
             isRunning: app.isRunning,
             uuid: app.uuid,
-            parentUuid: app.appObj && app.appObj.parentUuid
+            parentUuid: app.parentUuid
         };
     });
 }
@@ -507,6 +516,7 @@ module.exports = {
     getAppObj,
     getAppObjByUuid,
     getUuidBySourceUrl,
+    getConfigUrlByUuid,
     getAppRunningState,
     getAppRestartingState,
     getChildrenByApp,

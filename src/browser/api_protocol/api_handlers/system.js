@@ -113,22 +113,22 @@ function SystemApiHandler() {
         ack(successAck);
     }
 
-    function clearCache(identity, message, ack, errAck) {
+    function clearCache(identity, message, ack, nack) {
         System.clearCache(message.payload, (err) => {
             if (!err) {
                 ack(successAck);
             } else {
-                errAck(err);
+                nack(err);
             }
         });
     }
 
-    function deleteCacheRequest(identity, message, ack, errAck) {
+    function deleteCacheRequest(identity, message, ack, nack) {
         // deleteCacheOnRestart has been deprecated; redirects
         // to deleteCacheOnExit
         System.deleteCacheOnExit(() => {
             ack(successAck);
-        }, errAck);
+        }, nack);
     }
 
     function exitDesktop(identity, message, ack) {
@@ -166,7 +166,7 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
-    function getRemoteConfig(identity, message, ack, errAck) {
+    function getRemoteConfig(identity, message, ack, nack) {
         System.getRemoteConfig(message.payload.url,
             function(data) {
                 var dataAck = _.clone(successAck);
@@ -174,7 +174,7 @@ function SystemApiHandler() {
                 ack(dataAck);
             },
             function(reason) {
-                errAck(reason);
+                nack(reason);
             });
     }
 
@@ -184,26 +184,26 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
-    function viewLog(identity, message, ack, errAck) {
+    function viewLog(identity, message, ack, nack) {
         System.getLog((message.payload || {}).name || '', (err, contents) => {
             if (!err) {
                 var dataAck = _.clone(successAck);
                 dataAck.data = contents;
                 ack(dataAck);
             } else {
-                errAck(err);
+                nack(err);
             }
         });
     }
 
-    function listLogs(identity, message, ack, errAck) {
+    function listLogs(identity, message, ack, nack) {
         System.getLogList((err, logList) => {
             if (!err) {
                 var dataAck = _.clone(successAck);
                 dataAck.data = logList;
                 ack(dataAck);
             } else {
-                errAck(err);
+                nack(err);
             }
         });
     }
@@ -238,33 +238,33 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
-    function getRvmInfo(identity, message, ack, errAck) {
+    function getRvmInfo(identity, message, ack, nack) {
         System.getRvmInfo(identity, function(data) {
             let dataAck = _.clone(successAck);
             dataAck.data = data;
             ack(dataAck);
         }, function(err) {
-            errAck(err);
+            nack(err);
         });
     }
 
-    function launchExternalProcess(identity, message, ack, errAck) {
+    function launchExternalProcess(identity, message, ack, nack) {
         let dataAck = _.clone(successAck);
         System.launchExternalProcess(identity, message.payload, (err, res) => {
             if (!err) {
                 dataAck.data = res;
                 ack(dataAck);
             } else {
-                errAck(err);
+                nack(err);
             }
         });
     }
 
-    function writeToLog(identity, message, ack, errAck) {
+    function writeToLog(identity, message, ack, nack) {
         var logData = message.payload || {};
         var err = System.log(logData.level || '', logData.message || '');
         if (err) {
-            errAck(err);
+            nack(err);
         } else {
             ack(successAck);
         }
@@ -281,21 +281,21 @@ function SystemApiHandler() {
         ack(successAck);
     }
 
-    function monitorExternalProcess(identity, message, ack, errAck) {
+    function monitorExternalProcess(identity, message, ack, nack) {
         System.monitorExternalProcess(identity, message.payload, function(data) {
             let dataAck = _.clone(successAck);
             dataAck.data = data;
             ack(dataAck);
         }, function(err) {
-            errAck(err);
+            nack(err);
         });
     }
 
-    function setCookie(identity, message, ack, errAck) {
+    function setCookie(identity, message, ack, nack) {
         System.setCookie(message.payload, function() {
             ack(successAck);
         }, function(err) {
-            errAck(err);
+            nack(err);
         });
 
     }
@@ -307,7 +307,7 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
-    function updateProxy(identity, message, ack, errAck) {
+    function updateProxy(identity, message, ack, nack) {
         var err = System.updateProxySettings(message.payload.type,
             message.payload.proxyAddress,
             message.payload.proxyPort);
@@ -315,7 +315,7 @@ function SystemApiHandler() {
         if (!err) {
             ack(successAck);
         } else {
-            errAck(err);
+            nack(err);
         }
     }
 
