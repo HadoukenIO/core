@@ -13,18 +13,40 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-export class AckTemplate  {
-    public action: string = 'ack';
+
+const errors = require('../../../common/errors');
+
+export class AckMessage {
+    public readonly action: string = 'ack';
     public correlationId: number;
-    public payload: any;
+    public payload: AckPayload | NackPayload;
 }
 
-export class NackPayloadTemplate {
-    public success: boolean = false;
+export class AckPayload {
+    public readonly success: boolean = true;
+    public data: any;
+
+    constructor(data: any) {
+        this.data = data;
+    }
+}
+
+export class NackPayload {
+    public readonly success: boolean = false;
     public reason: string = '';
     public error: Error = null;
+
+    constructor(error: string | Error) {
+        if (typeof (error) === 'string') {
+            this.reason = error;
+        } else {
+            const errorObject = errors.errorToPOJO(error);
+            this.reason = errorObject.toString();
+            this.error = errorObject;
+        }
+    }
 }
 
 export interface AckFunc {
-    (payload: any): void;
+    (payload: AckPayload | NackPayload): void;
 }
