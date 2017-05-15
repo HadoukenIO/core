@@ -172,7 +172,7 @@ app.on('ready', function() {
 
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
 
-    rvmBus = require('./src/browser/rvm/rvm_message_bus');
+    rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
 
     let otherInstanceRunning = app.makeSingleInstance(function(commandLine) {
         let otherInstanceArgo = minimist(commandLine);

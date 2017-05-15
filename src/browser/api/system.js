@@ -71,7 +71,7 @@ let defaultSession;
 electronApp.on('ready', function() {
     MonitorInfo = require('../monitor_info.js');
     Session = require('../session').default;
-    rvmBus = require('../rvm/rvm_message_bus.js');
+    rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
 
     MonitorInfo.on('monitor-info-changed', payload => {
         ofEvents.emit('system/monitor-info-changed', payload);

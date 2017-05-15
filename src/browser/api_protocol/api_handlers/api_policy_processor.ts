@@ -10,7 +10,7 @@ const coreState = require('../../core_state');
 const electronApp = require('electron').app;
 const system = require('../../api/system').System;
 const apiProtocolBase = require('./api_protocol_base');
-const rvmBus = require('../../rvm/rvm_message_bus');  // retrieve permission setting from registry
+const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
 const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUrl => permission object, retrieved from RVM
                                             // if a configUrl is mapped to a boolean true, request to RVM is successful
                                             // did not return permissions

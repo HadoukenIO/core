@@ -85,7 +85,7 @@ electronApp.on('use-plugins-requested', event => {
 
 electronApp.on('ready', function() {
     console.log('RVM MESSAGE BUS READY');
-    rvmBus = require('../rvm/rvm_message_bus.js');
+    rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
     MonitorInfo = require('../monitor_info.js');
 
     // listen to and broadcast 'broadcast' messages from RVM as an openfin app event
@@ -566,7 +566,6 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
                         Application.close(a.identity, true);
                     }
                 }
-                rvmBus.closeTransport();
 
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {
