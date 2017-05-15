@@ -66,7 +66,8 @@ const trans2TSFiles = [
     'src/common/errors.ts',
     'src/common/regex.ts',
     'src/browser/port_discovery.ts',
-    'src/browser/api_protocol/**/**.ts'
+    'src/browser/api_protocol/**/**.ts',
+    'src/browser/api/**.ts'
 ];
 
 // OpenFin commercial license
@@ -243,6 +244,11 @@ module.exports = (grunt) => {
         'sign-asar'
     ]);
 
+    grunt.registerTask('typescript', [
+        'tslint',
+        'ts'
+    ]);
+
     grunt.registerTask('sign-files', function() {
         wrench.readdirSyncRecursive('staging/core').forEach(function(filename) {
             let filepath = path.join('staging', 'core', filename);
@@ -348,11 +354,13 @@ module.exports = (grunt) => {
 
         // List of files that must have OpenFin commercial license
         const ofLicensedFiles = [
+            'src/browser/api/external_application.ts',
             'src/browser/api_protocol/external_application.js',
             'src/browser/api_protocol/transport_strategy/base_handler.ts',
             'src/browser/api_protocol/transport_strategy/ws_strategy.ts',
             'src/browser/api_protocol/api_handlers/authorization.js',
             'src/browser/api_protocol/api_handlers/api_policy_processor.ts',
+            'src/browser/api_protocol/api_handlers/external_application.ts',
             'src/browser/api_protocol/api_handlers/mesh_middleware.ts',
             'src/browser/pending_subscriptions.ts',
             'src/browser/port_discovery.ts',
@@ -360,7 +368,6 @@ module.exports = (grunt) => {
             'src/browser/rvm/runtime_initiated_topics/app_assets.js',
             'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
             'src/browser/rvm/utils.ts',
-            'src/browser/api/external_application.js',
             'src/browser/external_window_event_adapter.js',
             'src/browser/connection_manager.ts',
             'src/browser/transport.ts',

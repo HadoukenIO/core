@@ -27,7 +27,6 @@ let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 
-
 function ApplicationApiHandler() {
     let successAck = {
         success: true
