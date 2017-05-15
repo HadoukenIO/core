@@ -101,7 +101,6 @@ module.exports = (grunt) => {
     // The default task is to build and and package resulting in an asar file in ./out/
     grunt.registerTask('default', ['build-pac']);
     grunt.registerTask('deploy', ['build-dev', 'copy-local']);
-    grunt.registerTask('test', ['mochaTest']);
 
     // Load all grunt tasks matching the ['grunt-*', '@*/grunt-*'] patterns
     require('load-grunt-tasks')(grunt);
@@ -209,7 +208,7 @@ module.exports = (grunt) => {
         'babel',
         'tslint',
         'ts',
-        'test',
+        'mochaTest',
         'copy:lib',
         'copy:etc',
         'copy:login',
@@ -217,6 +216,17 @@ module.exports = (grunt) => {
         'sign-files'
     ]);
 
+    grunt.registerTask('test', [
+        'license',
+        'jshint',
+        'jsbeautifier',
+        'clean',
+        'babel',
+        'tslint',
+        'ts',
+        'mochaTest',
+    ]);
+    
     grunt.registerTask('build-pac', [
         'license',
         'jshint',
@@ -225,7 +235,7 @@ module.exports = (grunt) => {
         'babel',
         'tslint',
         'ts',
-        'test',
+        'mochaTest',
         'copy',
         'build-deploy-modules',
         'sign-files',
