@@ -505,8 +505,8 @@ function getSocketServerState() {
 function getAppAncestor(descendantAppUuid) {
     const app = appByUuid(descendantAppUuid);
 
-    if (app && app.appObj && app.appObj.parentUuid) {
-        return getAppAncestor(app.appObj.parentUuid);
+    if (app && app.parentUuid) {
+        return getAppAncestor(app.parentUuid);
     } else {
         return app;
     }
