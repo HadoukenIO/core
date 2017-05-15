@@ -24,6 +24,54 @@ interface rvmCallbacks {
     [key: string]: Function;
 }
 
+export interface rvmMessage {
+    topic: string;
+    data: any;
+    callback: Function;
+    timeToLiveInSeconds: number;
+}
+
+type registerCustomDataAction = 'register-custom-data';
+type hideSplashscreenAction = 'hide-splashscreen';
+type relaunchOnCloseAction = 'relaunch-on-close';
+type cleanupAction = 'cleanup';
+
+interface rvmMsgBase {
+    callback?: Function;
+    timeToLive?: number;
+}
+
+interface folderInfo {
+    [key: string]: {
+        name: string;
+        deleteIfEmpty: boolean;
+    }
+}
+
+export interface registerCustomData extends rvmMsgBase {
+    action: registerCustomDataAction;
+    sourceUrl: string;
+    runtimeVersion: string;
+    data: any;
+}
+
+export interface hideSplashscreen extends rvmMsgBase {
+    action: hideSplashscreenAction;
+    sourceUrl: string;
+}
+
+export interface relaunchOnClose extends rvmMsgBase {
+    action: relaunchOnCloseAction;
+    sourceUrl: string;
+    runtimeVersion: string;
+}
+
+export interface cleanup extends rvmMsgBase {
+    action: cleanupAction;
+    folders: folderInfo;
+}
+
+type rvmMsg = registerCustomData | hideSplashscreen | relaunchOnClose | cleanup;
 /**
  * Module to facilitate communication with the RVM.
  * A transport can be passed in to be used, otherwise a new WMCopyData transport is used.
@@ -120,6 +168,10 @@ class RVMMessageBus extends EventEmitter  {
         this.recordCallbackInfo(callback, timeToLiveInSeconds, envelope);
 
         return this.transport.publish(envelope);
+    };
+
+    public send2(payload: rvmMsg) {
+        payload = null;
     };
 
     /**
