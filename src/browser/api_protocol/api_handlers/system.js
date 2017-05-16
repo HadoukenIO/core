@@ -35,6 +35,7 @@ function SystemApiHandler() {
         'get-command-line-arguments': getCommandLineArguments,
         'get-config': getConfig,
         'get-device-id': getDeviceId,
+        'get-device-user-id': getDeviceUserId,
         'get-el-ipc-config': getElIPCConfig,
         'get-environment-variable': getEnvironmentVariable,
         'get-host-specs': getHostSpecs,
