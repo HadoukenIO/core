@@ -26,7 +26,7 @@ let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
-
+import { addPendingSubscription } from '../../pending_subscriptions';
 
 function ApplicationApiHandler() {
     let successAck = {
@@ -142,10 +142,16 @@ function ApplicationApiHandler() {
     }
 
     function getApplicationManifest(identity, message, ack, nack) {
+        const payload = message.payload;
         const dataAck = _.clone(successAck);
-        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+        let appIdentity;
 
-        Application.getManifest(appIdentity, manifest => {
+        // When manifest URL is provided, will be retrieving a remote manifest
+        if (!payload.hasOwnProperty('manifestUrl')) {
+            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        }
+
+        Application.getManifest(appIdentity, payload.manifestUrl, manifest => {
             dataAck.data = manifest;
             ack(dataAck);
         }, nack);
@@ -270,10 +276,18 @@ function ApplicationApiHandler() {
     }
 
     function runApplication(identity, message, ack, nack) {
-        const payload = message.payload;
-        /*jshint unused:false */
+        const { payload } = message;
+        const { manifestUrl } = payload;
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-        const uuid = appIdentity.uuid;
+        const { uuid } = appIdentity;
+        let pendingSubscriptionUnSubscribe;
+        const remoteSubscription = {
+            uuid,
+            name: uuid,
+            listenType: 'once',
+            className: 'window',
+            eventName: 'fire-constructor-callback'
+        };
 
         ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, loadInfo => {
             if (loadInfo.success) {
@@ -285,9 +299,20 @@ function ApplicationApiHandler() {
                 theErr.networkErrorCode = loadInfo.data.networkErrorCode;
                 nack(theErr);
             }
+
+            if (typeof pendingSubscriptionUnSubscribe === 'function') {
+                pendingSubscriptionUnSubscribe();
+            }
         });
 
-        Application.run(appIdentity);
+        if (manifestUrl) {
+            addPendingSubscription(remoteSubscription).then((unSubscribe) => {
+                pendingSubscriptionUnSubscribe = unSubscribe;
+                Application.runWithRVM(identity, manifestUrl).catch(nack);
+            });
+        } else {
+            Application.run(appIdentity);
+        }
     }
 
     function registerExternalWindow(identity, message, ack) {

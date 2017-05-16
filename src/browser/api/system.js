@@ -26,7 +26,9 @@ let _ = require('underscore');
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let electronIPC = require('../transports/electron_ipc.js');
-let externalApplication = require('../api_protocol/external_application.js');
+import {
+    ExternalApplication
+} from './external_application';
 let log = require('../log.js');
 import ofEvents from '../of_events';
 let ProcessTracker = require('../process_tracker.js');
@@ -126,7 +128,7 @@ ofEvents.on('application/crashed/*', payload => {
     });
 });
 
-ofEvents.on('externalapplication/connected', payload => {
+ofEvents.on('external-application/connected', payload => {
     ofEvents.emit('system/external-application-connected', {
         topic: 'system',
         type: 'external-application-connected',
@@ -134,7 +136,7 @@ ofEvents.on('externalapplication/connected', payload => {
     });
 });
 
-ofEvents.on('externalapplication/disconnected', payload => {
+ofEvents.on('external-application/disconnected', payload => {
     ofEvents.emit('system/external-application-disconnected', {
         topic: 'system',
         type: 'external-application-disconnected',
@@ -404,22 +406,19 @@ module.exports.System = {
         let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js');
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
     },
-    launchExternalProcess: function(identity, options, callback) {
+    launchExternalProcess: function(identity, options, errDataCallback) { // Node-style callback used here
         var appObject = coreState.getAppObjByUuid(identity.uuid);
         options.srcUrl = (appObject || {})._configUrl;
 
-        ProcessTracker.launch(identity, options, callback);
+        ProcessTracker.launch(identity, options, errDataCallback);
     },
     monitorExternalProcess: function(identity, options, callback, errorCallback) {
-        var pid = parseInt(options.pid);
+        var payload = ProcessTracker.monitor(identity, Object.assign({
+            monitor: true
+        }, options));
 
-        if (!isNaN(pid)) {
-            var payload = ProcessTracker.monitor(identity, pid, options.lifetime);
-            if (payload.uuid) {
-                callback(payload);
-            } else {
-                errorCallback('Error monitoring external process, pid: ' + options.pid);
-            }
+        if (payload) {
+            callback(payload);
         } else {
             errorCallback('Error monitoring external process, pid: ' + options.pid);
         }
@@ -522,16 +521,21 @@ module.exports.System = {
         return ofEvents.emit(eventName, eventArgs);
     },
     downloadAsset: function(identity, asset, cb) {
-        let appObject = coreState.getAppObjByUuid(identity.uuid);
-        let srcUrl = (appObject || {})._configUrl;
-        let downloadId = module.exports.System.generateGUID().toString('hex');
-        let rvmMessage = {
+        const appObject = coreState.getAppObjByUuid(identity.uuid);
+        const srcUrl = (appObject || {})._configUrl;
+        const downloadId = asset.downloadId;
+
+        //setup defaults.
+        asset.args = asset.args || '';
+
+        const rvmMessage = {
             type: 'download-asset',
             appConfig: srcUrl,
             showRvmProgressDialog: false,
             asset: asset,
             downloadId: downloadId
         };
+
         if (rvmBus.send('app-assets', JSON.stringify(rvmMessage))) {
             cb(null, downloadId);
 
@@ -540,14 +544,14 @@ module.exports.System = {
         }
     },
     getAllExternalApplications: function() {
-        return externalApplication.getAllExternalConnctions().map(eApp => {
+        return ExternalApplication.getAllExternalConnctions().map(eApp => {
             return {
                 uuid: eApp.uuid
             };
         });
     },
     resolveUuid: function(identity, uuid, cb) {
-        const externalConn = externalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);
+        const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);
         const app = coreState.getAppObjByUuid(uuid);
 
         if (externalConn) {
