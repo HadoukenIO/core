@@ -8,7 +8,7 @@ import { app } from 'electron';
 
 let rvmBus: any;
 app.on('ready', function() {
-    rvmBus = require('../rvm/rvm_message_bus.js');
+    rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
 });
 
 /**

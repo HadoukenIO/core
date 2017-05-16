@@ -24,21 +24,22 @@ interface rvmCallbacks {
     [key: string]: Function;
 }
 
-export interface rvmMessage {
-    topic: string;
-    data: any;
-    callback: Function;
-    timeToLiveInSeconds: number;
-}
+type applicationTopic = 'application';
 
-type registerCustomDataAction = 'register-custom-data';
-type hideSplashscreenAction = 'hide-splashscreen';
-type relaunchOnCloseAction = 'relaunch-on-close';
+
+
+
+
 type cleanupAction = 'cleanup';
+type getListType = 'get-list';
+type systemTopic = 'system';
+type getRvmInfoAction = 'get-rvm-info';
 
 interface rvmMsgBase {
     callback?: Function;
     timeToLive?: number;
+    topic: string;
+    action: string;
 }
 
 interface folderInfo {
@@ -48,30 +49,67 @@ interface folderInfo {
     }
 }
 
+
+
+type registerCustomDataAction = 'register-custom-data';
 export interface registerCustomData extends rvmMsgBase {
+    topic: applicationTopic;
     action: registerCustomDataAction;
     sourceUrl: string;
     runtimeVersion: string;
     data: any;
 }
 
+type hideSplashscreenAction = 'hide-splashscreen';
 export interface hideSplashscreen extends rvmMsgBase {
+    topic: applicationTopic;
     action: hideSplashscreenAction;
     sourceUrl: string;
 }
 
+type relaunchOnCloseAction = 'relaunch-on-close';
 export interface relaunchOnClose extends rvmMsgBase {
+    topic: applicationTopic;
     action: relaunchOnCloseAction;
     sourceUrl: string;
     runtimeVersion: string;
 }
+
+type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
+export interface getDesktopOwnerSettings extends rvmMsgBase {
+    action: getDesktopOwnerSettingsAction;
+    sourceUrl: string;
+
+}
+
+type appAssetsAction = 'app-assets';
+export interface appAssets extends rvmMsgBase {
+    action: appAssetsAction;
+    type: getListType;
+    appConfig: string
+}
+
 
 export interface cleanup extends rvmMsgBase {
     action: cleanupAction;
     folders: folderInfo;
 }
 
-type rvmMsg = registerCustomData | hideSplashscreen | relaunchOnClose | cleanup;
+export interface system extends rvmMsgBase {
+    action: systemTopic;
+
+    // todo rename this
+    payloadAction: getRvmInfoAction;
+}
+
+
+type rvmMsg = registerCustomData
+    | hideSplashscreen
+    | relaunchOnClose
+    | cleanup
+    | getDesktopOwnerSettings
+    | appAssets;
+
 /**
  * Module to facilitate communication with the RVM.
  * A transport can be passed in to be used, otherwise a new WMCopyData transport is used.
@@ -170,8 +208,22 @@ class RVMMessageBus extends EventEmitter  {
         return this.transport.publish(envelope);
     };
 
-    public send2(payload: rvmMsg) {
-        payload = null;
+    public publish(msg: rvmMsg, callback: Function) {
+        const {topic, timeToLive} = msg;
+
+        const envelope = {
+            topic: topic,
+            messageId: App.generateGUID(),
+            payload: Object.assign({
+                processId: process.pid,
+                runtimeVersion: processVersions['openfin']
+            }, msg)
+        };
+
+        this.recordCallbackInfo(callback, timeToLive, envelope);
+
+        return this.transport.publish(envelope);
+
     };
 
     /**
