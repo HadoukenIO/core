@@ -47,9 +47,9 @@ export function validateNavigationRules(uuid: string, url: string, parentUuid: s
         return false;
     } else if (parentUuid) {
         electronApp.vlog(1, `validateNavigationRules app ${uuid} check parent ${parentUuid}`);
-        let parentObject = coreState.getAppObjByUuid(parentUuid);
+        let parentObject = coreState.appByUuid(parentUuid);
         if (parentObject) {
-            let parentOpts = parentObject._options;
+            let parentOpts = parentObject.appObj._options;
             isAllowed = validateNavigationRules(uuid, url, parentObject.parentUuid,parentOpts);
         } else {
             electronApp.vlog(1, `validateNavigationRules missing parent ${parentUuid}`);
@@ -64,8 +64,9 @@ export function navigationValidator(uuid: string, name:string, id: number) {
     const uuidname = `${uuid}-${name}`;
     return (event: any, url: string) => {
         let appObject = coreState.getAppObjByUuid(uuid);
+        let appMetaInfo = coreState.appByUuid(uuid);
         let isMailTo = /^mailto:/i.test(url);
-        let allowed = isMailTo || validateNavigationRules(uuid, url, appObject.parentUuid, appObject._options);
+        let allowed = isMailTo || validateNavigationRules(uuid, url, appMetaInfo.parentUuid, appObject._options);
         if (!allowed) {
             console.log('Navigation is blocked ' + url);
             let self = coreState.getWinById(id);

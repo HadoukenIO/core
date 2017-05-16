@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { AckTemplate,  AckFunc } from './ack';
+import { AckMessage,  AckFunc, AckPayload } from './ack';
 import { ApiTransportBase, ActionMap, MessagePackage } from './api_transport_base';
 import {default as RequestHandler} from './base_handler';
 
@@ -35,15 +35,20 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             if (strategyName !== this.constructor.name) {
                 next();
             } else if (typeof (action) === 'function') {
-                try {
-                    // singleFrameOnly check first so to prevent frame superceding when disabled.
-                    if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
-                        action(identity, data, ack, nack);
-                    } else {
-                        nack('API access has been superseded by another frame in this window.');
-                    }
-                } catch (err) {
-                    nack(err);
+                // singleFrameOnly check first so to prevent frame superceding when disabled.
+                if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
+                    Promise.resolve()
+                        .then(() => action(identity, data, ack, nack))
+                        .then(result => {
+                            // older action calls will invoke ack internally, newer ones will return a value
+                            if (result !== undefined) {
+                                ack(new AckPayload(result));
+                            }
+                        }).catch(err => {
+                            nack(err);
+                        });
+                } else {
+                    nack('API access has been superseded by another frame in this window.');
                 }
             }
 
@@ -101,7 +106,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     protected ackDecoratorSync(e: any, messageId: number): AckFunc {
-        const ackObj = new AckTemplate();
+        const ackObj = new AckMessage();
         ackObj.correlationId = messageId;
 
         return (payload: any): void => {
@@ -121,7 +126,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     protected ackDecorator(e: any, messageId: number): AckFunc {
-        const ackObj = new AckTemplate();
+        const ackObj = new AckMessage();
         ackObj.correlationId = messageId;
 
         return (payload: any): void => {
