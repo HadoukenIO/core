@@ -149,7 +149,7 @@ module.exports = (grunt) => {
             options: {
                 // todo: use 'node_modules/tslint-microsoft-contrib/tslint.json'
                 // when transition to TypeScript is fully done
-                configuration: 'tslint.json',
+                configuration: grunt.file.readJSON('tslint.json'),
                 rulesDirectory: 'node_modules/tslint-microsoft-contrib',
                 force: false
             },
