@@ -56,7 +56,9 @@ import {
 
 import * as log from './src/browser/log';
 
-import { applyAllPendingSubscriptions } from './src/browser/pending_subscriptions';
+import {
+    applyAllPendingSubscriptions
+} from './src/browser/pending_subscriptions';
 
 // locals
 let firstApp = null;
