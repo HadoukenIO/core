@@ -56,9 +56,7 @@ import {
 
 import * as log from './src/browser/log';
 
-import {
-    applyAllPendingSubscriptions
-} from './src/browser/pending_subscriptions';
+import { applyAllRemoteSubscriptions } from './src/browser/remote_subscriptions';
 
 // locals
 let firstApp = null;
@@ -142,7 +140,7 @@ portDiscovery.on('runtime/launched', (portInfo) => {
             staggerPortBroadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
 
-            applyAllPendingSubscriptions(runtimePeer);
+            applyAllRemoteSubscriptions(runtimePeer);
 
         }).catch(err => {
             log.writeToLog('info', `Failed to connect to runtime ${JSON.stringify(portInfo)}, ${JSON.stringify(errors.errorToPOJO(err))}`);

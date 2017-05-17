@@ -26,9 +26,7 @@ let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
-import {
-    addPendingSubscription
-} from '../../pending_subscriptions';
+import { addRemoteSubscription } from '../../remote_subscriptions';
 
 function ApplicationApiHandler() {
     let successAck = {
@@ -278,17 +276,11 @@ function ApplicationApiHandler() {
     }
 
     function runApplication(identity, message, ack, nack) {
-        const {
-            payload
-        } = message;
-        const {
-            manifestUrl
-        } = payload;
+        const { payload } = message;
+        const { manifestUrl } = payload;
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-        const {
-            uuid
-        } = appIdentity;
-        let pendingSubscriptionUnSubscribe;
+        const { uuid } = appIdentity;
+        let remoteSubscriptionUnSubscribe;
         const remoteSubscription = {
             uuid,
             name: uuid,
@@ -308,14 +300,14 @@ function ApplicationApiHandler() {
                 nack(theErr);
             }
 
-            if (typeof pendingSubscriptionUnSubscribe === 'function') {
-                pendingSubscriptionUnSubscribe();
+            if (typeof remoteSubscriptionUnSubscribe === 'function') {
+                remoteSubscriptionUnSubscribe();
             }
         });
 
         if (manifestUrl) {
-            addPendingSubscription(remoteSubscription).then((unSubscribe) => {
-                pendingSubscriptionUnSubscribe = unSubscribe;
+            addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
+                remoteSubscriptionUnSubscribe = unSubscribe;
                 Application.runWithRVM(identity, manifestUrl).catch(nack);
             });
         } else {
