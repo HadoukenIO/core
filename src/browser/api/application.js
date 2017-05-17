@@ -966,7 +966,7 @@ function createAppObj(uuid, opts, configUrl = '') {
                 } else {
                     if (!coreState.argo['noerrdialog'] && configUrl) {
                         // NOTE: don't show this dialog if the app is created via the api
-                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application.';
+                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application: ${ errorDescription }';
                         dialog.showErrorBox('Fatal Error', errorMessage);
                     }
                     _.defer(() => {
