@@ -4,18 +4,28 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-var RvmMessageBus = require('../rvm_message_bus').rvmMessageBus;
+import {rvmMessageBus, appAssetsGetList} from '../rvm_message_bus';
 var _ = require('underscore');
+
+interface callbackObj {
+    successCB: Function;
+    failureCB: Function;
+}
+
+interface pendingRequestsObj {
+    [key: string]: {
+        [key: string] : Array<callbackObj>
+    }
+}
 
 /**
  * Module to handle fetching of app assets from RVM
  *
  **/
-var AppAssetsFetcher = function() {
-    var me = this;
-    var pendingRequests = {}; // pending fetch requests, key = sourceUrl, value = {alias1:[{successCB:func, failureCB:func}, {...}], alias2...}
+class AppAssetsFetcher {
+    private pendingRequests: pendingRequestsObj = {}; // pending fetch requests, key = sourceUrl, value = {alias1:[{successCB:func, failureCB:func}, {...}], alias2...}
 
-    me.fetchAppAsset = function(sourceUrl, assetAlias, successCB, failureCB) {
+    public fetchAppAsset (sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
 
         if (!sourceUrl) {
             console.log('sourceUrl is required!');
@@ -28,7 +38,7 @@ var AppAssetsFetcher = function() {
         } else { // Have all mandatory params
 
 
-            let firstRequest = addPendingRequest(sourceUrl, assetAlias, successCB, failureCB);
+            let firstRequest = this.addPendingRequest(sourceUrl, assetAlias, successCB, failureCB);
             if (firstRequest) // Ask RVM for this app's assets on 1st request, duplicates get recorded in pending object
             {
                 let topic = 'app-assets';
@@ -36,28 +46,36 @@ var AppAssetsFetcher = function() {
                     type: 'get-list',
                     appConfig: sourceUrl
                 };
-                RvmMessageBus.send(topic, JSON.stringify(data), responseHandler, 7); // give up after 7 seconds
+
+                const msg: appAssetsGetList = {
+                    timeToLive: 7,
+                    topic: 'app-assets',
+                    type: 'get-list',
+                    appConfig: sourceUrl
+                };
+
+                rvmMessageBus.publish(msg , this.responseHandler);
             }
         }
 
     };
 
     // Returns bool which indicates whether this is the 1st request for sourceUrl - then we actually need to send it to RVM
-    var addPendingRequest = function(sourceUrl, assetAlias, successCB, failureCB) {
+    private addPendingRequest = function(sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
         var pendingCBObj = {
             successCB: successCB,
             failureCB: failureCB
         };
 
-        if (!(sourceUrl in pendingRequests)) // 1st requester!
+        if (!(sourceUrl in this.pendingRequests)) // 1st requester!
         {
-            pendingRequests[sourceUrl] = {};
-            pendingRequests[sourceUrl][assetAlias] = [pendingCBObj];
+            this.pendingRequests[sourceUrl] = {};
+            this.pendingRequests[sourceUrl][assetAlias] = [pendingCBObj];
             return true;
         } else // duplicate request!
         {
-            pendingRequests[sourceUrl][assetAlias] = pendingRequests[sourceUrl][assetAlias] || [];
-            pendingRequests[sourceUrl][assetAlias].push(pendingCBObj);
+            this.pendingRequests[sourceUrl][assetAlias] = this.pendingRequests[sourceUrl][assetAlias] || [];
+            this.pendingRequests[sourceUrl][assetAlias].push(pendingCBObj);
             return false;
         }
     };
@@ -66,7 +84,7 @@ var AppAssetsFetcher = function() {
      *  High level app assets response handler policy; 1st point of entry upon recepit of RVM Message bus response
      *
      */
-    var responseHandler = function(dataObj) {
+    private responseHandler = function(dataObj: any) {
         var sourceUrl;
         var timeToLiveExpired = _.has(dataObj, 'time-to-live-expiration');
         if (timeToLiveExpired) {
@@ -75,15 +93,15 @@ var AppAssetsFetcher = function() {
             dataObj.error = 'Unable to determine app asset information for ' + sourceUrl;
         } else {
             console.log('AppAssetsFetcher received a response from RVM:', dataObj);
-            if (!isResponseValid(dataObj)) {
+            if (!this.isResponseValid(dataObj)) {
                 return;
             }
             sourceUrl = dataObj.appConfig;
         }
-        notifyObservers(sourceUrl, dataObj);
+        this.notifyObservers(sourceUrl, dataObj);
 
         if (_.isString(sourceUrl)) {
-            delete pendingRequests[sourceUrl];
+            delete this.pendingRequests[sourceUrl];
         }
     };
 
@@ -91,7 +109,7 @@ var AppAssetsFetcher = function() {
      *  Checks RVM app asset responses for mandatory message attributes
      *
      */
-    var isResponseValid = function(dataObj) {
+    private isResponseValid = function(dataObj: any) {
         var hasSourceUrl = _.has(dataObj, 'appConfig');
         var hasResult = _.has(dataObj, 'result');
         var hasError = _.has(dataObj, 'error');
@@ -101,7 +119,7 @@ var AppAssetsFetcher = function() {
             return false;
         }
 
-        var waitingForThisResponse = _.has(pendingRequests, dataObj.appConfig);
+        var waitingForThisResponse = _.has(this.pendingRequests, dataObj.appConfig);
         if (!waitingForThisResponse) {
             console.log('Received app assets response from RVM for,', dataObj.appConfig, 'but we have no pending requests.');
             return false;
@@ -113,11 +131,11 @@ var AppAssetsFetcher = function() {
      *  Determines how to notify observers!(error or info)
      *
      */
-    var notifyObservers = function(sourceUrl, dataObj) {
+    private notifyObservers = function(sourceUrl: string, dataObj: any) {
         if (_.has(dataObj, 'error')) {
-            handleErrorResponse(sourceUrl, dataObj);
+            this.handleErrorResponse(sourceUrl, dataObj);
         } else {
-            handleInfoResponse(sourceUrl, dataObj);
+            this.handleInfoResponse(sourceUrl, dataObj);
         }
     };
 
@@ -125,9 +143,9 @@ var AppAssetsFetcher = function() {
      *  Notifies all observers of sourceUrl of error
      *
      */
-    var handleErrorResponse = function(sourceUrl, dataObj) {
+    private handleErrorResponse = function(sourceUrl: string, dataObj: any) {
         console.log('Received error for,', sourceUrl, ', Error:', dataObj.error);
-        _.each(pendingRequests[sourceUrl], function(requestedAliasCallbackArray) {
+        _.each(this.pendingRequests[sourceUrl], function(requestedAliasCallbackArray: any) {
             _.invoke(requestedAliasCallbackArray, 'failureCB', dataObj.error);
         });
     };
@@ -136,8 +154,8 @@ var AppAssetsFetcher = function() {
      *  Notifies all observers of relevant alias info! (or lack thereof)
      *
      */
-    var handleInfoResponse = function(sourceUrl, dataObj) {
-        _.mapObject(pendingRequests[sourceUrl], function(requestedAliasCallbackArray, alias) {
+    private handleInfoResponse = function(sourceUrl: string, dataObj: any) {
+        _.mapObject(this.pendingRequests[sourceUrl], function(requestedAliasCallbackArray: any, alias: string) {
             var aliasInResponse = _.findWhere(dataObj.result, {
                 'alias': alias
             });
@@ -150,4 +168,5 @@ var AppAssetsFetcher = function() {
     };
 };
 
-module.exports = new AppAssetsFetcher();
+export const appAssetsFetcher = new AppAssetsFetcher();
+

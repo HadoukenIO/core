@@ -19,34 +19,18 @@ interface RvmCallbacks {
     [key: string]: Function;
 }
 
-type applicationTopic = 'application';
-
-
-
-
-
-type cleanupAction = 'cleanup';
-type getListType = 'get-list';
-type systemTopic = 'system';
-type getRvmInfoAction = 'get-rvm-info';
-
 interface rvmMsgBase {
-    callback?: Function;
     timeToLive?: number;
     topic: string;
-    action: string;
 }
 
-interface folderInfo {
-    [key: string]: {
-        name: string;
-        deleteIfEmpty: boolean;
-    }
-}
-
-
-
+// topic: application -----
+type applicationTopic = 'application';
 type registerCustomDataAction = 'register-custom-data';
+type hideSplashscreenAction = 'hide-splashscreen';
+type relaunchOnCloseAction = 'relaunch-on-close';
+type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
+
 export interface registerCustomData extends rvmMsgBase {
     topic: applicationTopic;
     action: registerCustomDataAction;
@@ -55,14 +39,12 @@ export interface registerCustomData extends rvmMsgBase {
     data: any;
 }
 
-type hideSplashscreenAction = 'hide-splashscreen';
 export interface hideSplashscreen extends rvmMsgBase {
     topic: applicationTopic;
     action: hideSplashscreenAction;
     sourceUrl: string;
 }
 
-type relaunchOnCloseAction = 'relaunch-on-close';
 export interface relaunchOnClose extends rvmMsgBase {
     topic: applicationTopic;
     action: relaunchOnCloseAction;
@@ -70,40 +52,83 @@ export interface relaunchOnClose extends rvmMsgBase {
     runtimeVersion: string;
 }
 
-type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
 export interface getDesktopOwnerSettings extends rvmMsgBase {
+    topic: applicationTopic;
     action: getDesktopOwnerSettingsAction;
     sourceUrl: string;
+}
+
+// topic: application (used only by the utils module)
+type getShortcutStateAction = 'get-shortcut-state';
+type setShortcutStateAction = 'set-shortcut-state';
+type launchedFromAction = 'launched-from';
+
+export interface getShortcutState extends rvmMsgBase {
+    topic: applicationTopic;
+    action: getShortcutStateAction;
+    sourceUrl: string;
+}
+
+export interface setShortcutState extends rvmMsgBase {
+    topic: applicationTopic;
+    action: setShortcutStateAction;
+    sourceUrl: string;
+    data: any;
 
 }
 
-type appAssetsAction = 'app-assets';
-export interface appAssets extends rvmMsgBase {
-    action: appAssetsAction;
+export interface launchedFrom extends rvmMsgBase {
+    topic: applicationTopic;
+    action: launchedFromAction;
+    sourceUrl: string;
+}
+
+// topic: app-assets -----
+type appAssetsTopic = 'app-assets';
+type getListType = 'get-list';
+type downloadAssetType =  'download-asset';
+
+export interface appAssetsGetList extends rvmMsgBase {
+    topic: appAssetsTopic;
     type: getListType;
-    appConfig: string
+    appConfig: string;
+    timeToLive: number;
 }
 
+export interface appAssetsDownloadAsset extends rvmMsgBase {
+    topic: appAssetsTopic;
+    type: downloadAssetType;
+    appConfig: string;
+    showRvmProgressDialog: boolean;
+    asset: any;
+    downloadId: string;
+}
+
+// topic: cleanup -----
+type cleanupTopic = 'cleanup';
+
+interface folderInfo {
+    [key: string]: {
+        name: string;
+        deleteIfEmpty: boolean;
+    }
+}
 
 export interface cleanup extends rvmMsgBase {
-    action: cleanupAction;
+    topic: cleanupTopic;
     folders: folderInfo;
 }
 
-export interface system extends rvmMsgBase {
-    action: systemTopic;
+// topic: system -----
+type systemTopic = 'system';
+type getRvmInfoAction = 'get-rvm-info';
 
-    // todo rename this
-    payloadAction: getRvmInfoAction;
+export interface system extends rvmMsgBase {
+    topic: systemTopic;
+    action: getRvmInfoAction;
+    sourceUrl: string;
 }
 
-
-type rvmMsg = registerCustomData
-    | hideSplashscreen
-    | relaunchOnClose
-    | cleanup
-    | getDesktopOwnerSettings
-    | appAssets;
 
 /**
  * Module to facilitate communication with the RVM.
@@ -174,6 +199,8 @@ class RVMMessageBus extends EventEmitter  {
     // TODO: the type of the data here is to be defined in RUN-2947
     public send(topic: string, data: any, callback: Function, timeToLiveInSeconds: number) {
 
+        log.writeToLog(1, `RVM message bus .send is deprecated, please use .publish`, true);
+
         if (!this.areSendParametersValid(topic, data, callback, timeToLiveInSeconds)) {
             return false;
         }
@@ -204,16 +231,19 @@ class RVMMessageBus extends EventEmitter  {
         return this.transport.publish(envelope);
     };
 
-    public publish(msg: rvmMsg, callback: Function) {
+    public publish(msg: rvmMsgBase, callback: Function) {
         const {topic, timeToLive} = msg;
+        const payload: any = Object.assign({
+            processId: process.pid,
+            runtimeVersion: processVersions['openfin']
+        }, msg);
+
+        delete payload.topic; // ensure original payload that lacked the topic
 
         const envelope = {
             topic: topic,
             messageId: App.generateGUID(),
-            payload: Object.assign({
-                processId: process.pid,
-                runtimeVersion: processVersions['openfin']
-            }, msg)
+            payload
         };
 
         this.recordCallbackInfo(callback, timeToLive, envelope);
