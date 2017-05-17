@@ -16,6 +16,7 @@ limitations under the License.
 declare var require: any;
 
 const ApplicationApiHandler = require('./api_handlers/application').ApplicationApiHandler;
+import { ExternalApplicationApiHandler } from './api_handlers/external_application';
 const AuthorizationApiHandler = require('./api_handlers/authorization').AuthorizationApiHandler;
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
@@ -29,6 +30,7 @@ const apiProtocolBase = require('./api_handlers/api_protocol_base.js');
 export function initApiHandlers() {
     /* tslint:disable: no-unused-variable */
     const applicationApiHandler = new ApplicationApiHandler();
+    const externalApplicationApiHandler = new ExternalApplicationApiHandler();
     const authorizationApiHandler = new AuthorizationApiHandler();
     initClipboardAPIHandler();
     const eventListenerApiHandler = new EventListenerApiHandler();

@@ -24,8 +24,9 @@ const electronApp = require('electron').app;
 const minimist = require('minimist');
 
 // local modules
-const externalApplication = require('./api_protocol/external_application.js');
-
+import {
+    ExternalApplication
+} from './api/external_application';
 
 // locals
 const args = electronApp.getCommandLineArguments(); // command line string ("s" for "string")
@@ -171,7 +172,7 @@ function getAppObjByUuid(uuid) {
 }
 
 function getExternalAppObjByUuid(uuid) {
-    return externalApplication.getAllExternalConnctions().find(ea => ea.uuid === uuid);
+    return ExternalApplication.getAllExternalConnctions().find(ea => ea.uuid === uuid);
 }
 
 function getUuidBySourceUrl(sourceUrl) {
@@ -472,7 +473,7 @@ function shouldCloseRuntime(ignoreArray) {
         console.log('not close Runtime during app restart');
         return false;
     } else {
-        const extConnections = externalApplication.getAllExternalConnctions();
+        const extConnections = ExternalApplication.getAllExternalConnctions();
         const hasPersistentConnections = extConnections.find(
             conn => conn.nonPersistent === undefined || !conn.nonPersistent
         );
@@ -498,6 +499,19 @@ function getSocketServerState() {
     return socketServerState;
 }
 
+/**
+ * Get app's very first ancestor
+ */
+function getAppAncestor(descendantAppUuid) {
+    const app = appByUuid(descendantAppUuid);
+
+    if (app && app.parentUuid) {
+        return getAppAncestor(app.parentUuid);
+    } else {
+        return app;
+    }
+}
+
 // methods
 module.exports = {
     addApp,
@@ -510,6 +524,7 @@ module.exports = {
     getAllApplications,
     getAllAppObjects,
     getAllWindows,
+    getAppAncestor,
     getAppById,
     getAppByWin,
     getAppObj,

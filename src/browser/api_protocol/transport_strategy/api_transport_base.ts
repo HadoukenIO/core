@@ -13,21 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { NackPayloadTemplate, AckFunc } from './ack';
-import {default as RequestHandler} from './base_handler';
+import { NackPayload, AckFunc } from './ack';
+import { default as RequestHandler } from './base_handler';
+import { Identity } from '../../../shapes';
+
 declare var require: any;
 
-const errors = require('../../../common/errors');
-
 export interface ActionMap {
-    [key: string]: Function;
+    [key: string]: (identity: Identity, message: any, ack: AckFunc, nack: (err: string | Error) => void) => void;
 }
 
-export interface Identity {
-    uuid: string;
-    name?: string;
-    runtimeUuid?: string;
-}
+export { Identity };
 
 /**
  * This represents the raw data that comes off the wire as well as the ack and
@@ -36,8 +32,8 @@ export interface Identity {
 export interface MessagePackage {
     identity: Identity; // of the caller
     data: any;
-    ack: any;
-    nack: any;
+    ack: AckFunc;
+    nack: (err: Error | string) => void;
     e?: any;
     strategyName: any; // ws / elipc
 }
@@ -66,18 +62,9 @@ export abstract class ApiTransportBase<T> {
 
     protected abstract ackDecoratorSync(e: any, messageId: number): AckFunc;
 
-    protected nackDecorator(ackFunction: AckFunc): AckFunc {
-        return (err: any) => {
-            const payload = new NackPayloadTemplate();
-
-            if (typeof(err) === 'string') {
-                payload.reason = err;
-            } else {
-                const errorObject = errors.errorToPOJO(err);
-                payload.reason = errorObject.toString();
-                payload.error = errorObject;
-            }
-            ackFunction(payload);
+    protected nackDecorator(ackFunction: AckFunc): (err: Error | string) => void {
+        return (err: Error | string) => {
+            ackFunction(new NackPayload(err));
         };
     }
 }
