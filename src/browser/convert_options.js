@@ -49,6 +49,7 @@ function five0BaseOptions() {
         'alwaysOnTop': false,
         'applicationIcon': '',
         'autoShow': false,
+        'backgroundThrottling': false,
         'contextMenu': true,
         'cornerRounding': {
             'height': 0,
@@ -264,10 +265,6 @@ module.exports = {
 
         if (options.hasOwnProperty('preload')) {
             newOptions.preload = options.preload;
-        }
-
-        if (options.hasOwnProperty('backgroundThrottling')) {
-            newOptions.backgroundThrottling = options.backgroundThrottling;
         }
 
         if (returnAsString) {
