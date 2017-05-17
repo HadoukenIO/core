@@ -260,10 +260,13 @@ function requestAppPermissions(configUrl: string): Promise<any> {
             electronApp.vlog(1, `requestAppPermissions cached ${configUrl} `);
             resolve(configUrlPermissionsMap[configUrl]);
         } else {
-            rvmBus.publish(<getDesktopOwnerSettings> {
+            const msg: getDesktopOwnerSettings =  {
+                topic: 'application',
                 action: 'get-desktop-owner-settings',
                 sourceUrl: configUrl
-            }, (rvmResponse: any) => {
+            };
+
+            rvmBus.publish(msg, (rvmResponse: any) => {
                 electronApp.vlog(1, `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
                 if (rvmResponse.payload && rvmResponse.payload.success === true &&
                     rvmResponse.payload.payload) {

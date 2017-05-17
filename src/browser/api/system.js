@@ -143,7 +143,7 @@ ofEvents.on('externalapplication/disconnected', payload => {
 });
 
 module.exports.System = {
-    addEventListener: function(type, listener /*, callback, errorCallback */ ) {
+    addEventListener: function(type, listener) {
         ofEvents.on(`system/${type}`, listener);
 
         var unsubscribe = () => {
@@ -205,37 +205,40 @@ module.exports.System = {
         });
     },
     deleteCacheOnExit: function(callback, errorCallback) {
-        let data = {
-            folders: [{
-                name: electronApp.getPath('userData') // deleteIfEmpty defaults to false on RVM side
-            }, {
-                name: electronApp.getPath('userDataRoot'),
-                deleteIfEmpty: true
-            }]
-        };
+        const folders = [{
+            name: electronApp.getPath('userData') // deleteIfEmpty defaults to false on RVM side
+        }, {
+            name: electronApp.getPath('userDataRoot'),
+            deleteIfEmpty: true
+        }];
 
-        if (rvmBus.send('cleanup', JSON.stringify(data))) {
+        const publishSuccess = rvmBus.publish({
+            topic: 'cleanup',
+            folders
+        });
+
+        if (publishSuccess) {
             callback();
         } else {
             errorCallback('Failed to send a message to the RVM.');
         }
     },
-    exit: function( /*callback*/ ) {
+    exit: function() {
         electronApp.quit();
     },
-    getAllWindows: function( /*callback, errorCallback*/ ) {
+    getAllWindows: function() {
         return coreState.getAllWindows();
     },
-    getAllApplications: function( /*callback , errorCallback*/ ) {
+    getAllApplications: function() {
         return coreState.getAllApplications();
     },
-    getCommandLineArguments: function( /*callback, errorCallback*/ ) {
+    getCommandLineArguments: function() {
         return electronApp.getCommandLineArguments();
     },
-    getConfig: function( /*callback, errorCallback*/ ) {
+    getConfig: function() {
         return coreState.getStartManifest();
     },
-    getDeviceId: function( /*callback, errorCallback*/ ) {
+    getDeviceId: function() {
         return electronApp.getHostToken();
     },
     getEnvironmentVariable: function(varsToExpand /*, successCallback, errorCallback*/ ) {
@@ -333,10 +336,10 @@ module.exports.System = {
     getMonitorInfo: function( /*callback, errorCallback*/ ) {
         return MonitorInfo.getInfo('api-query');
     },
-    getMousePosition: function( /*callback, errorCallback*/ ) {
+    getMousePosition: function() {
         return MonitorInfo.getMousePosition();
     },
-    getProcessList: function( /*callback, errorCallback*/ ) {
+    getProcessList: function() {
 
         let allApps = coreState.getAllApplications();
         let runningAps = allApps.filter(app => {
@@ -368,7 +371,7 @@ module.exports.System = {
         return processList;
     },
 
-    getProxySettings: function( /*callback, errorCallback*/ ) {
+    getProxySettings: function() {
         return {
             config: coreState.getManifestProxySettings(),
             system: session.defaultSession.getProxySettings()
@@ -392,7 +395,7 @@ module.exports.System = {
 
         fetcher.fetch(url);
     },
-    getVersion: function( /*callback, errorCallback*/ ) {
+    getVersion: function() {
         return process.versions['openfin'];
     },
     getRvmInfo: function(identity, callback, errorCallback) {
@@ -455,7 +458,7 @@ module.exports.System = {
         }
     },
 
-    showChromeNotificationCenter: function( /*callback, errorCallback*/ ) {},
+    showChromeNotificationCenter: function() {},
     terminateExternalProcess: function(processUuid, timeout = 3000, child = false) {
         let status = ProcessTracker.terminate(processUuid, timeout, child);
 
@@ -526,13 +529,17 @@ module.exports.System = {
         let srcUrl = (appObject || {})._configUrl;
         let downloadId = module.exports.System.generateGUID().toString('hex');
         let rvmMessage = {
+            topic: 'app-assets',
             type: 'download-asset',
             appConfig: srcUrl,
             showRvmProgressDialog: false,
             asset: asset,
             downloadId: downloadId
         };
-        if (rvmBus.send('app-assets', JSON.stringify(rvmMessage))) {
+
+        const publishSuccess = rvmBus.publish(rvmMessage);
+
+        if (publishSuccess) {
             cb(null, downloadId);
 
         } else {
