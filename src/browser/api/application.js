@@ -84,7 +84,7 @@ electronApp.on('use-plugins-requested', event => {
 });
 
 electronApp.on('ready', function() {
-    console.log('RVM MESSAGE BUS READY');
+    log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
     rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
     MonitorInfo = require('../monitor_info.js');
 
@@ -99,17 +99,17 @@ electronApp.on('ready', function() {
                 if (uuid) {
                     ofEvents.emit(eventRoute(uuid, 'manifest-changed'), sourceUrl, json);
                 } else {
-                    console.log('Received manifest-changed event from RVM, unable to determine uuid from source url though:', sourceUrl);
+                    log.writeToLog(1, `Received manifest-changed event from RVM, unable to determine uuid from source url though: ${sourceUrl}`, true);
                 }
             });
         } else {
-            console.log('Received manifest-changed event from RVM with invalid data object: ', payload);
+            log.writeToLog(1, `Received manifest-changed event from RVM with invalid data object: ${payload}`, true);
         }
     });
 
 });
 
-Application.create = function(opts, configUrl = '', parentIdentify = {}) {
+Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
     let appUrl = opts.url;
@@ -138,7 +138,7 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
         throw new Error(`Application with specified UUID already exists: ${opts.uuid}`);
     }
 
-    let parentUuid = parentIdentify && parentIdentify.uuid;
+    let parentUuid = parentIdentity && parentIdentity.uuid;
     if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
@@ -149,8 +149,11 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
     }
 
     let appObj = createAppObj(opts.uuid, opts, configUrl);
-    if (parentIdentify && parentIdentify.uuid) {
-        appObj.parentUuid = parentIdentify.uuid;
+
+    if (parentIdentity && parentIdentity.uuid) {
+        let app = coreState.appByUuid(opts.uuid);
+
+        app.parentUuid = parentIdentity.uuid;
     }
 
     return appObj;
@@ -265,13 +268,17 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
 };
 
 
-Application.getManifest = function(identity, callback, errCallback) {
-    let appObject = coreState.getAppObjByUuid(identity.uuid);
-    let manifestUrl = appObject && appObject._configUrl;
-    let fetcher;
+Application.getManifest = function(identity, manifestUrl, callback, errCallback) {
+
+    // When manifest URL is not provided, get the manifest for the current application
+    if (!manifestUrl) {
+        const appObject = coreState.getAppObjByUuid(identity.uuid);
+        manifestUrl = appObject && appObject._configUrl;
+    }
 
     if (manifestUrl) {
-        fetcher = new ResourceFetcher('string');
+        let fetcher = new ResourceFetcher('string');
+
         fetcher.on('fetch-complete', (obj, status, data) => {
             try {
                 log.writeToLog(1, `application manifest ${manifestUrl}`, true);
@@ -288,6 +295,7 @@ Application.getManifest = function(identity, callback, errCallback) {
                 fetcher = null;
             }
         });
+
         // start async fetch
         fetcher.fetch(manifestUrl);
 
@@ -297,10 +305,12 @@ Application.getManifest = function(identity, callback, errCallback) {
 };
 
 Application.getParentApplication = function(identity) {
-    let appObject = coreState.getAppObjByUuid(identity.uuid);
-    if (appObject && appObject.parentUuid) {
-        return appObject.parentUuid;
-    }
+    const app = coreState.appByUuid(identity.uuid);
+    const {
+        parentUuid
+    } = app || {};
+
+    return parentUuid;
 };
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
@@ -625,6 +635,23 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     });
 };
 
+/**
+ * Run an application via RVM
+ */
+Application.runWithRVM = function(identity, manifestUrl) {
+    const ancestor = coreState.getAppAncestor(identity.uuid);
+    const ancestorManifestUrl = ancestor && ancestor._configUrl;
+
+    return sendToRVM({
+        topic: 'application',
+        action: 'launch-app',
+        sourceUrl: ancestorManifestUrl,
+        data: {
+            configUrl: manifestUrl
+        }
+    });
+};
+
 Application.send = function( /*topic, message*/ ) {
     console.warn('Deprecated. Please use InterAppBus');
 };
@@ -873,6 +900,7 @@ function removeTrayIcon(app) {
 function createAppObj(uuid, opts, configUrl = '') {
     let appObj;
     let app = coreState.appByUuid(uuid);
+
     if (app && app.appObj) {
         appObj = app.appObj;
     } else {
@@ -937,7 +965,7 @@ function createAppObj(uuid, opts, configUrl = '') {
                 } else {
                     if (!coreState.argo['noerrdialog'] && configUrl) {
                         // NOTE: don't show this dialog if the app is created via the api
-                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application.';
+                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application: ${ errorDescription }';
                         dialog.showErrorBox('Fatal Error', errorMessage);
                     }
                     _.defer(() => {

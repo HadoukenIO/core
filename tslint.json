@@ -21,7 +21,6 @@
         "jquery-deferred-must-complete": true,
         "jsdoc-format": false,
         "label-position": true,
-        "label-undefined": true,
         "linebreak-style": [
             true,
             "LF"
@@ -65,7 +64,6 @@
         ],
         "no-constant-condition": true,
         "no-construct": true,
-        "no-constructor-vars": true,
         "no-control-regex": true,
         "no-cookies": true,
         "no-debugger": true,
@@ -127,7 +125,6 @@
         "no-unnecessary-override": true,
         "no-unnecessary-semicolons": true,
         "no-unsupported-browser-code": false,
-        "no-unreachable": true,
         "no-unsafe-finally": true,
         "no-unused-expression": true,
         "no-unused-imports": false,
