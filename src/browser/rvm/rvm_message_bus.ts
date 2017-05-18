@@ -6,7 +6,6 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import {WMCopyData} from '../transport';
 import {EventEmitter} from 'events';
-import BaseTransport from '../transports/base';
 import * as log from '../log';
 
 // as to be require as we have added generateGUID, which is not on the ts definitions for app
@@ -16,11 +15,7 @@ const  _ = require('underscore');
 
 const processVersions = <any> process.versions;
 
-interface rvmBusConfiguration {
-    transport: BaseTransport;
-}
-
-interface rvmCallbacks {
+interface RvmCallbacks {
     [key: string]: Function;
 }
 
@@ -31,13 +26,13 @@ interface rvmCallbacks {
  *
  **/
 class RVMMessageBus extends EventEmitter  {
-    private messageIdToCallback: rvmCallbacks; // Tracks functions that we'll notify If a response is received
+    private messageIdToCallback: RvmCallbacks; // Tracks functions that we'll notify If a response is received
     private transport: WMCopyData;
 
     constructor() {
         super();
 
-        this.messageIdToCallback = <rvmCallbacks>{};
+        this.messageIdToCallback = <RvmCallbacks>{};
         this.transport = new WMCopyData('RvmMessageBus', 'OpenFinRVM_Messaging');
 
         this.transport.on('message', (hwnd: any, data: any) => {
@@ -66,13 +61,14 @@ class RVMMessageBus extends EventEmitter  {
                         if (topic && payload && action) {
                             this.emit('rvm-message-bus/broadcast/' + topic + '/' + action, payload);
                         } else {
-                            log.writeToLog(1, `RVMMessageBus received an invalid broadcast message: &{dataObj}`, true);
+                            log.writeToLog(1, `RVMMessageBus received an invalid broadcast message: ${dataObj}`, true);
                         }
                     } else {
-                        log.writeToLog(1,`messageId: ${messageId} has no one waiting for this response, nor was it a broadcast message, doing nothing.`, true);
+                        log.writeToLog(1, `messageId: ${messageId} has no one waiting for this response, nor was it a broadcast`
+                                       + 'message, doing nothing.', true);
                     }
                 } else {
-                    log.writeToLog(1, `messageId not found in response.`, true);
+                    log.writeToLog(1, 'messageId not found in response.', true);
                 }
             } catch (e) {
                 log.writeToLog(1, `data must be valid JSON; Error: ${e.message}`, true);
@@ -80,13 +76,13 @@ class RVMMessageBus extends EventEmitter  {
         });
     }
 
-
     /**
      * me.send() - Sends a valid JSON message to the RVM, and allows sender to be notified of any responses
      * topic - Message topic
      * data - Valid JSON string or object; add in 'messageId' to override id used in main envelope
      * callback - Optional callback that is notified if a response is received. Called with response JSON object.
-     * timeToLiveInSeconds - Mandatory w/callback, Callback will be called at expirating with obj containing 'time-to-live-expiration' and 'envelope' at expiration
+     * timeToLiveInSeconds - Mandatory w/callback, Callback will be called at expirating with obj containing 'time-to-live-expiration'
+     *                       and 'envelope' at expiration
      *
      **/
     // TODO: the type of the data here is to be defined in RUN-2947
@@ -109,7 +105,7 @@ class RVMMessageBus extends EventEmitter  {
         // Add in our info
         dataObj.processId = process.pid;
 
-        dataObj.runtimeVersion = <string> processVersions['openfin'];;  // eventually switch to App.getVersion()
+        dataObj.runtimeVersion = <string> processVersions.openfin;  // eventually switch to App.getVersion()
 
         const envelope = {
             topic: topic,
@@ -128,7 +124,7 @@ class RVMMessageBus extends EventEmitter  {
      **/
     private areSendParametersValid (topic: string, data: any, callback: Function, timeToLiveInSeconds: number) {
         if (!topic) {
-            log.writeToLog(1, 'topic is required' ,true);
+            log.writeToLog(1, 'topic is required' , true);
             return false;
         } else if (!data) {
             log.writeToLog(1, 'data is required!', true);
@@ -216,8 +212,7 @@ class RVMMessageBus extends EventEmitter  {
             }
         }
     };
-};
-
+}
 
 const rvmMessageBus = new RVMMessageBus();
 export {rvmMessageBus};

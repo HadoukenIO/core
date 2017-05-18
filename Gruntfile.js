@@ -66,7 +66,8 @@ const trans2TSFiles = [
     'src/common/errors.ts',
     'src/common/regex.ts',
     'src/browser/port_discovery.ts',
-    'src/browser/api_protocol/**/**.ts'
+    'src/browser/api_protocol/**/**.ts',
+    'src/browser/rvm/rvm_message_bus.ts'
 ];
 
 // OpenFin commercial license
