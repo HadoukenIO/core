@@ -279,22 +279,19 @@ Application.getManifest = function(identity, manifestUrl, callback, errCallback)
     }
 
     if (manifestUrl) {
-        let fetcher = new ResourceFetcher('string');
+        const fetcher = new ResourceFetcher('string');
 
-        fetcher.on('fetch-complete', (obj, status, data) => {
+        fetcher.once('fetch-complete', (obj, status, data) => {
             try {
                 log.writeToLog(1, `application manifest ${manifestUrl}`, true);
                 log.writeToLog(1, data, true);
 
-                let manifest = JSON.parse(data);
+                const manifest = JSON.parse(data);
                 if (typeof callback === 'function') {
                     callback(manifest);
                 }
             } catch (err) {
                 errCallback(new Error(`Error parsing JSON from ${manifestUrl}`));
-            } finally {
-                fetcher.removeAllListeners('fetch-complete');
-                fetcher = null;
             }
         });
 
