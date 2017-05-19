@@ -8,7 +8,7 @@ import { app } from 'electron';
 
 let rvmBus: any;
 app.on('ready', function() {
-    rvmBus = require('../rvm/rvm_message_bus.js');
+    rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
 });
 
 /**
@@ -17,7 +17,7 @@ app.on('ready', function() {
 interface SendToRVMOpts {
     topic: 'application';
     action: string;
-    sourceUrl: string;
+    sourceUrl?: string;
     data?: any;
 }
 
@@ -67,21 +67,16 @@ export function sendToRVM(opts: SendToRVMOpts): Promise<any> {
                 return reject(new Error(rvmResponse.error));
             }
 
-            // Communication error
-            if (!rvmResponse.hasOwnProperty('payload')) {
-                return reject(new Error('Problem communicating with RVM'));
-            }
-
             // Action execution error
-            if (rvmResponse.payload.status === false) {
+            if (rvmResponse.payload && rvmResponse.payload.status === false) {
                 return reject(new Error(rvmResponse.payload.error));
             }
 
             // Prepare a clean response for the user
             let payload = Object.assign({}, rvmResponse.payload);
-            delete payload.action;
-            delete payload.status;
-            delete payload.error;
+            delete payload['action'];
+            delete payload['status'];
+            delete payload['error'];
             if (Object.keys(payload).length === 0) {
                 payload = undefined;
             }

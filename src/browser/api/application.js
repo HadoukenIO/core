@@ -85,7 +85,7 @@ electronApp.on('use-plugins-requested', event => {
 
 electronApp.on('ready', function() {
     log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
-    rvmBus = require('../rvm/rvm_message_bus.js');
+    rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
     MonitorInfo = require('../monitor_info.js');
 
     // listen to and broadcast 'broadcast' messages from RVM as an openfin app event
@@ -268,13 +268,17 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
 };
 
 
-Application.getManifest = function(identity, callback, errCallback) {
-    let appObject = coreState.getAppObjByUuid(identity.uuid);
-    let manifestUrl = appObject && appObject._configUrl;
-    let fetcher;
+Application.getManifest = function(identity, manifestUrl, callback, errCallback) {
+
+    // When manifest URL is not provided, get the manifest for the current application
+    if (!manifestUrl) {
+        const appObject = coreState.getAppObjByUuid(identity.uuid);
+        manifestUrl = appObject && appObject._configUrl;
+    }
 
     if (manifestUrl) {
-        fetcher = new ResourceFetcher('string');
+        let fetcher = new ResourceFetcher('string');
+
         fetcher.on('fetch-complete', (obj, status, data) => {
             try {
                 log.writeToLog(1, `application manifest ${manifestUrl}`, true);
@@ -291,6 +295,7 @@ Application.getManifest = function(identity, callback, errCallback) {
                 fetcher = null;
             }
         });
+
         // start async fetch
         fetcher.fetch(manifestUrl);
 
@@ -571,7 +576,6 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
                         Application.close(a.identity, true);
                     }
                 }
-                rvmBus.closeTransport();
 
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {
@@ -628,6 +632,23 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
         topic: 'application',
         type: 'started',
         uuid
+    });
+};
+
+/**
+ * Run an application via RVM
+ */
+Application.runWithRVM = function(identity, manifestUrl) {
+    const ancestor = coreState.getAppAncestor(identity.uuid);
+    const ancestorManifestUrl = ancestor && ancestor._configUrl;
+
+    return sendToRVM({
+        topic: 'application',
+        action: 'launch-app',
+        sourceUrl: ancestorManifestUrl,
+        data: {
+            configUrl: manifestUrl
+        }
     });
 };
 
@@ -944,7 +965,7 @@ function createAppObj(uuid, opts, configUrl = '') {
                 } else {
                     if (!coreState.argo['noerrdialog'] && configUrl) {
                         // NOTE: don't show this dialog if the app is created via the api
-                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application.';
+                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application: ${ errorDescription }';
                         dialog.showErrorBox('Fatal Error', errorMessage);
                     }
                     _.defer(() => {

@@ -67,6 +67,7 @@ const trans2TSFiles = [
     'src/common/regex.ts',
     'src/browser/port_discovery.ts',
     'src/browser/api_protocol/**/**.ts',
+    'src/browser/rvm/rvm_message_bus.ts',
     'src/browser/api/**.ts'
 ];
 
@@ -148,7 +149,7 @@ module.exports = (grunt) => {
             options: {
                 // todo: use 'node_modules/tslint-microsoft-contrib/tslint.json'
                 // when transition to TypeScript is fully done
-                configuration: 'tslint.json',
+                configuration: grunt.file.readJSON('tslint.json'),
                 rulesDirectory: 'node_modules/tslint-microsoft-contrib',
                 force: false
             },
@@ -364,7 +365,7 @@ module.exports = (grunt) => {
             'src/browser/api_protocol/api_handlers/mesh_middleware.ts',
             'src/browser/pending_subscriptions.ts',
             'src/browser/port_discovery.ts',
-            'src/browser/rvm/rvm_message_bus.js',
+            'src/browser/rvm/rvm_message_bus.ts',
             'src/browser/rvm/runtime_initiated_topics/app_assets.js',
             'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
             'src/browser/rvm/utils.ts',

@@ -56,7 +56,9 @@ import {
 
 import * as log from './src/browser/log';
 
-import { applyAllPendingSubscriptions } from './src/browser/pending_subscriptions';
+import {
+    applyAllPendingSubscriptions
+} from './src/browser/pending_subscriptions';
 
 // locals
 let firstApp = null;
@@ -175,7 +177,7 @@ app.on('ready', function() {
 
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
 
-    rvmBus = require('./src/browser/rvm/rvm_message_bus');
+    rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
 
     let otherInstanceRunning = app.makeSingleInstance(function(commandLine) {
         let otherInstanceArgo = minimist(commandLine);
@@ -502,7 +504,9 @@ function initFirstApp(options, configUrl) {
         }
 
         if (!coreState.argo['noerrdialog']) {
-            const errorMessage = options.loadErrorMessage || 'There was an error loading the application.';
+            const srcMsg = error ? error.message : '';
+            const errorMessage = options.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
+
             dialog.showErrorBox('Fatal Error', errorMessage);
         }
 
