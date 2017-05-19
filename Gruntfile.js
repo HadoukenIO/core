@@ -378,6 +378,7 @@ module.exports = (grunt) => {
             'src/browser/remote_subscriptions.ts',
             'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
             'src/browser/rvm/utils.ts',
+            'src/browser/api/external_application.js',
             'src/browser/external_window_event_adapter.js',
             'src/browser/connection_manager.ts',
             'src/browser/transport.ts',
