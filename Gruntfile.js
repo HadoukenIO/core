@@ -357,7 +357,7 @@ module.exports = (grunt) => {
             'src/browser/pending_subscriptions.ts',
             'src/browser/port_discovery.ts',
             'src/browser/rvm/rvm_message_bus.ts',
-            'src/browser/rvm/runtime_initiated_topics/app_assets.js',
+            'src/browser/rvm/runtime_initiated_topics/app_assets.ts',
             'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
             'src/browser/rvm/utils.ts',
             'src/browser/external_window_event_adapter.js',

@@ -11,7 +11,7 @@ const electronApp = require('electron').app;
 const system = require('../../api/system').System;
 const apiProtocolBase = require('./api_protocol_base');
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
-import { getDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
+import { GetDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
 const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUrl => permission object, retrieved from RVM
                                             // if a configUrl is mapped to a boolean true, request to RVM is successful
                                             // did not return permissions
@@ -260,7 +260,7 @@ function requestAppPermissions(configUrl: string): Promise<any> {
             electronApp.vlog(1, `requestAppPermissions cached ${configUrl} `);
             resolve(configUrlPermissionsMap[configUrl]);
         } else {
-            const msg: getDesktopOwnerSettings =  {
+            const msg: GetDesktopOwnerSettings =  {
                 topic: 'application',
                 action: 'get-desktop-owner-settings',
                 sourceUrl: configUrl

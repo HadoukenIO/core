@@ -116,7 +116,7 @@ interface FolderInfo {
 
 export interface Cleanup extends RvmMsgBase {
     topic: cleanupTopic;
-    folders: folderInfo;
+    folders: FolderInfo;
 }
 
 // topic: system -----
@@ -234,7 +234,7 @@ class RVMMessageBus extends EventEmitter  {
         const {topic, timeToLive} = msg;
         const payload: any = Object.assign({
             processId: process.pid,
-            runtimeVersion: processVersions.openfin]
+            runtimeVersion: processVersions.openfin
         }, msg);
 
         delete payload.topic; // ensure original payload that lacked the topic

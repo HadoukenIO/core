@@ -4,18 +4,19 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-import {rvmMessageBus, appAssetsGetList} from '../rvm_message_bus';
-var _ = require('underscore');
+import {rvmMessageBus, AppAssetsGetList} from '../rvm_message_bus';
+import * as log from '../../log';
+import * as  _ from 'underscore';
 
-interface callbackObj {
+interface CallbackObj {
     successCB: Function;
     failureCB: Function;
 }
 
-interface pendingRequestsObj {
+interface PendingRequestObj {
     [key: string]: {
-        [key: string] : Array<callbackObj>
-    }
+        [key: string] : Array<CallbackObj>
+    };
 }
 
 /**
@@ -23,31 +24,24 @@ interface pendingRequestsObj {
  *
  **/
 class AppAssetsFetcher {
-    private pendingRequests: pendingRequestsObj = {}; // pending fetch requests, key = sourceUrl, value = {alias1:[{successCB:func, failureCB:func}, {...}], alias2...}
+    private pendingRequests: PendingRequestObj = {};
 
     public fetchAppAsset (sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
 
         if (!sourceUrl) {
-            console.log('sourceUrl is required!');
+            log.writeToLog(1, 'sourceUrl is required!', true);
         } else if (!assetAlias) {
-            console.log('assetAlias is required!');
+            log.writeToLog(1, 'assetAlias is required!', true);
         } else if (!successCB) {
-            console.log('successCB is required!');
+            log.writeToLog(1, 'successCB is required!', true);
         } else if (!failureCB) {
-            console.log('failureCB is required!');
+            log.writeToLog(1, 'failureCB is required!', true);
         } else { // Have all mandatory params
+            const firstRequest = this.addPendingRequest(sourceUrl, assetAlias, successCB, failureCB);
 
+            if (firstRequest) {// Ask RVM for this app's assets on 1st request, duplicates get recorded in pending object
 
-            let firstRequest = this.addPendingRequest(sourceUrl, assetAlias, successCB, failureCB);
-            if (firstRequest) // Ask RVM for this app's assets on 1st request, duplicates get recorded in pending object
-            {
-                let topic = 'app-assets';
-                let data = {
-                    type: 'get-list',
-                    appConfig: sourceUrl
-                };
-
-                const msg: appAssetsGetList = {
+                const msg: AppAssetsGetList = {
                     timeToLive: 7,
                     topic: 'app-assets',
                     type: 'get-list',
@@ -61,19 +55,19 @@ class AppAssetsFetcher {
     };
 
     // Returns bool which indicates whether this is the 1st request for sourceUrl - then we actually need to send it to RVM
-    private addPendingRequest = function(sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
-        var pendingCBObj = {
+    private addPendingRequest (sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
+        const pendingCBObj = {
             successCB: successCB,
             failureCB: failureCB
         };
 
-        if (!(sourceUrl in this.pendingRequests)) // 1st requester!
-        {
+        if (!(sourceUrl in this.pendingRequests)) { // 1st requester!
+
             this.pendingRequests[sourceUrl] = {};
             this.pendingRequests[sourceUrl][assetAlias] = [pendingCBObj];
             return true;
-        } else // duplicate request!
-        {
+        } else {// duplicate request!
+
             this.pendingRequests[sourceUrl][assetAlias] = this.pendingRequests[sourceUrl][assetAlias] || [];
             this.pendingRequests[sourceUrl][assetAlias].push(pendingCBObj);
             return false;
@@ -84,15 +78,18 @@ class AppAssetsFetcher {
      *  High level app assets response handler policy; 1st point of entry upon recepit of RVM Message bus response
      *
      */
-    private responseHandler = function(dataObj: any) {
-        var sourceUrl;
-        var timeToLiveExpired = _.has(dataObj, 'time-to-live-expiration');
+    private responseHandler (dataObj: any) {
+        let sourceUrl;
+        const timeToLiveExpired = _.has(dataObj, 'time-to-live-expiration');
+
         if (timeToLiveExpired) {
             sourceUrl = dataObj.envelope.payload.appConfig;
-            console.log('Time to live of', dataObj['time-to-live-expiration'], 'seconds for app asset request for app config:', sourceUrl, 'reached.');
+            log.writeToLog(1, `Time to live of ${dataObj['time-to-live-expiration']} seconds for app asset request for `
+                           + `app config: ${sourceUrl} reached.`, true);
+
             dataObj.error = 'Unable to determine app asset information for ' + sourceUrl;
         } else {
-            console.log('AppAssetsFetcher received a response from RVM:', dataObj);
+            log.writeToLog(1, `AppAssetsFetcher received a response from RVM: ${dataObj}`, true);
             if (!this.isResponseValid(dataObj)) {
                 return;
             }
@@ -109,19 +106,19 @@ class AppAssetsFetcher {
      *  Checks RVM app asset responses for mandatory message attributes
      *
      */
-    private isResponseValid = function(dataObj: any) {
-        var hasSourceUrl = _.has(dataObj, 'appConfig');
-        var hasResult = _.has(dataObj, 'result');
-        var hasError = _.has(dataObj, 'error');
+    private isResponseValid (dataObj: any) {
+        const hasSourceUrl = _.has(dataObj, 'appConfig');
+        const hasResult = _.has(dataObj, 'result');
+        const hasError = _.has(dataObj, 'error');
 
         if (!hasSourceUrl || !(hasResult || hasError)) {
-            console.log('Invalid request from the RVM, missing required fields.');
+            log.writeToLog(1, 'Invalid request from the RVM, missing required fields.', true);
             return false;
         }
 
-        var waitingForThisResponse = _.has(this.pendingRequests, dataObj.appConfig);
+        const waitingForThisResponse = _.has(this.pendingRequests, dataObj.appConfig);
         if (!waitingForThisResponse) {
-            console.log('Received app assets response from RVM for,', dataObj.appConfig, 'but we have no pending requests.');
+            log.writeToLog(1, `Received app assets response from RVM for ${dataObj.appConfig} but we have no pending requests`, true);
             return false;
         }
         return true;
@@ -131,7 +128,7 @@ class AppAssetsFetcher {
      *  Determines how to notify observers!(error or info)
      *
      */
-    private notifyObservers = function(sourceUrl: string, dataObj: any) {
+    private notifyObservers (sourceUrl: string, dataObj: any) {
         if (_.has(dataObj, 'error')) {
             this.handleErrorResponse(sourceUrl, dataObj);
         } else {
@@ -143,9 +140,9 @@ class AppAssetsFetcher {
      *  Notifies all observers of sourceUrl of error
      *
      */
-    private handleErrorResponse = function(sourceUrl: string, dataObj: any) {
-        console.log('Received error for,', sourceUrl, ', Error:', dataObj.error);
-        _.each(this.pendingRequests[sourceUrl], function(requestedAliasCallbackArray: any) {
+    private handleErrorResponse (sourceUrl: string, dataObj: any) {
+        log.writeToLog(1, `Received error for ${sourceUrl}, Error: ${dataObj.error}`);
+        _.each(this.pendingRequests[sourceUrl], (requestedAliasCallbackArray: any) => {
             _.invoke(requestedAliasCallbackArray, 'failureCB', dataObj.error);
         });
     };
@@ -154,9 +151,9 @@ class AppAssetsFetcher {
      *  Notifies all observers of relevant alias info! (or lack thereof)
      *
      */
-    private handleInfoResponse = function(sourceUrl: string, dataObj: any) {
-        _.mapObject(this.pendingRequests[sourceUrl], function(requestedAliasCallbackArray: any, alias: string) {
-            var aliasInResponse = _.findWhere(dataObj.result, {
+    private handleInfoResponse (sourceUrl: string, dataObj: any) {
+        _.mapObject(this.pendingRequests[sourceUrl], (requestedAliasCallbackArray: any, alias: string) => {
+            const aliasInResponse = _.findWhere(dataObj.result, {
                 'alias': alias
             });
             if (aliasInResponse) {
@@ -166,7 +163,6 @@ class AppAssetsFetcher {
             }
         });
     };
-};
+}
 
 export const appAssetsFetcher = new AppAssetsFetcher();
-
