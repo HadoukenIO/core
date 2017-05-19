@@ -49,4 +49,23 @@ describe('safe_int', () => {
             assert.equal(err.message, `${ Number.NaN } is not a parsable number and default value not provided.`);
         }
     });
+
+    it('Should use default value if given a non number', () => {
+        const i:any = [];
+        const def = 55;
+        const safeI = toSafeInt(<number>i, def);
+
+        assert.equal(safeI, def, 'Expected numbers to be equal');
+
+    });
+
+    it('Should throw an Error given a non number', () => {
+        const i:any = true;
+
+        try {
+            const safeI = toSafeInt(<number>i);
+        } catch (err) {
+            assert.ok(err.message.includes('is not a parsable number and default value not provided.'));
+        }
+    });
 });

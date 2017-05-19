@@ -1,3 +1,4 @@
+
 /*
 Copyright 2017 OpenFin Inc.
 
@@ -19,7 +20,7 @@ export function toSafeInt(n: number, def?: number) {
         return n;
     }
 
-    if (!isNaN(n)) {
+    if (typeof(n) === 'number' && Number.isFinite(n)) {
         return Math.floor(n);
     } else if (def) {
         return def;
