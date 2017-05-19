@@ -251,6 +251,7 @@ class RVMMessageBus extends EventEmitter  {
 
     };
 
+
     /**
      * areSendParametersValid() - Validates params necessary to send() on rvm message bus
      *
