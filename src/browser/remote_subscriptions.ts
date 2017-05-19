@@ -22,21 +22,19 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
  * then may come back up again in the future.
  */
 
-import * as _ from 'underscore';
 import ofEvents from './of_events';
 import connectionManager, { PeerRuntime } from './connection_manager';
+import { Identity } from '../shapes';
 
 // id count to generate IDs for subscriptions
 let subscriptionIdCount = 0;
 // all pending remote subscriptions are stored here
-const pendingRemoteSubscriptions: Map<number, IRemoteSubscription> = new Map();
+const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
 
 /**
  * Shape of remote subscription props
  */
-interface IRemoteSubscriptionProps {
-    uuid: string; // app uuid
-    name?: string; // window name
+interface RemoteSubscriptionProps extends Identity {
     className: 'application'|'window'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
@@ -45,12 +43,10 @@ interface IRemoteSubscriptionProps {
 /**
  * Shape of a remote subscription
  */
-interface IRemoteSubscription extends IRemoteSubscriptionProps {
+interface RemoteSubscription extends RemoteSubscriptionProps {
     _id: number; // ID of the subscription
     isCleaned: boolean; // helps prevents repetitive un-subscriptions and other cleanup
-    unSubscriptions: { // a map of un-subscriptions assigned to runtime versions
-        [runtimeVersion: string]: (() => void)[]
-    };
+    unSubscriptions: Map<string, (() => void)[]>; // a map of un-subscriptions assigned to runtime versions
 }
 
 /**
@@ -61,10 +57,10 @@ interface IRemoteSubscription extends IRemoteSubscriptionProps {
  * After the runtime that was a true subscription holder exits, we don't know which runtime will have
  * the needed identity in the future, and so we need to treat this subscription the same way as new.
  */
-export function addRemoteSubscription(subscriptionProps: IRemoteSubscriptionProps|IRemoteSubscription): Promise<() => void> {
+export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
     return new Promise(resolve => {
-        const clonedProps = _.clone(subscriptionProps);
-        const subscription: IRemoteSubscription = _.extend(clonedProps, { isCleaned: false });
+        const clonedProps = Object.create(subscriptionProps);
+        const subscription: RemoteSubscription = Object.assign(clonedProps, {isCleaned: false});
 
         // Only generate an ID for new subscriptions
         if (!subscription._id) {
@@ -73,7 +69,7 @@ export function addRemoteSubscription(subscriptionProps: IRemoteSubscriptionProp
 
         // Create a new un-subscription map only for new subscriptions
         if (typeof subscription.unSubscriptions !== 'object') {
-            subscription.unSubscriptions = {};
+            subscription.unSubscriptions = new Map();
         }
 
         connectionManager.resolveIdentity({
@@ -112,7 +108,7 @@ export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
 /**
  * Subscribe to an event in a remote runtime
  */
-function applyRemoteSubscription(subscription: IRemoteSubscription, runtime: PeerRuntime) {
+function applyRemoteSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
     const classEventEmitter = getClassEventEmitter(subscription, runtime);
     const runtimeVersion = getRuntimeVersion(runtime);
     const { uuid, name, className, eventName, listenType, unSubscriptions } = subscription;
@@ -131,10 +127,10 @@ function applyRemoteSubscription(subscription: IRemoteSubscription, runtime: Pee
 
     // Store a cleanup function for the added listener in
     // un-subscription map, so that later we can remove extra subscriptions
-    if (!Array.isArray(unSubscriptions[runtimeVersion])) {
-        unSubscriptions[runtimeVersion] = [];
+    if (!Array.isArray(unSubscriptions.get(runtimeVersion))) {
+        unSubscriptions.set(runtimeVersion, []);
     }
-    unSubscriptions[runtimeVersion].push(() => {
+    unSubscriptions.get(runtimeVersion).push(() => {
         classEventEmitter.removeListener(eventName, listener);
     });
 }
@@ -146,7 +142,7 @@ function applyRemoteSubscription(subscription: IRemoteSubscription, runtime: Pee
  * we know which runtime is a true subscriptions holder. We then remove the
  * subscription from other runtimes and from the pending list.
  */
-function cleanUpSubscription(subscription: IRemoteSubscription, keepInRuntimeVersion?: string) {
+function cleanUpSubscription(subscription: RemoteSubscription, keepInRuntimeVersion?: string) {
 
     // Already been cleaned before in unneeded runtime versions
     if (subscription.isCleaned && keepInRuntimeVersion) {
@@ -179,7 +175,7 @@ function cleanUpSubscription(subscription: IRemoteSubscription, keepInRuntimeVer
  * back into the list of pending remote subscriptions, so that when that runtime possibly
  * comes back in the future, we can subscribe again
  */
-function persistSubscription(subscription: IRemoteSubscription, runtime: PeerRuntime) {
+function persistSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
     const runtimeVersion = getRuntimeVersion(runtime);
     const { unSubscriptions } = subscription;
     const disconnectEventName = 'disconnected';
@@ -190,7 +186,7 @@ function persistSubscription(subscription: IRemoteSubscription, runtime: PeerRun
     };
 
     runtime.fin.on(disconnectEventName, listener);
-    unSubscriptions[runtimeVersion].push(() => {
+    unSubscriptions.get(runtimeVersion).push(() => {
         runtime.fin.removeListener(disconnectEventName, listener);
     });
 }
@@ -198,18 +194,18 @@ function persistSubscription(subscription: IRemoteSubscription, runtime: PeerRun
 /**
  * Remove subscription from a given runtime
  */
-function unSubscribe(subscription: IRemoteSubscription, runtime: PeerRuntime) {
+function unSubscribe(subscription: RemoteSubscription, runtime: PeerRuntime) {
     const runtimeVersion = getRuntimeVersion(runtime);
     const { unSubscriptions } = subscription;
 
-    unSubscriptions[runtimeVersion].forEach(unSubscribe => unSubscribe());
-    delete unSubscriptions[runtimeVersion];
+    unSubscriptions.get(runtimeVersion).forEach(unSubscribe => unSubscribe());
+    unSubscriptions.delete(runtimeVersion);
 }
 
 /**
  * Get event emitter of the class
  */
-function getClassEventEmitter(subscription: IRemoteSubscription, runtime: PeerRuntime) {
+function getClassEventEmitter(subscription: RemoteSubscription, runtime: PeerRuntime) {
     let classEventEmitter;
     const { uuid, name, className } = subscription;
 
