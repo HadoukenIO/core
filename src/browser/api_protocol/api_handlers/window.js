@@ -32,17 +32,17 @@ function WindowApiHandler() {
         'disable-window-frame': disableWindowFrame,
         'dock-window': dockWindow,
         'enable-window-frame': enableWindowFrame,
-        'execute-javascript-in-window': executeJavascript,
+        'execute-javascript-in-window': { actor: executeJavascript, apiPath: '.executeJavaScript' },
         'flash-window': flashWindow,
         'focus-window': focusWindow,
         'get-current-window-options': getCurrentWindowOptions,
         'get-window-bounds': getWindowBounds,
         'get-window-group': getWindowGroup,
         'get-window-info': getWindowInfo,
-        'get-window-native-id': getWindowNativeId,
+        'get-window-native-id': { actor: getWindowNativeId, apiPath: '.getNativeId' },
         'get-window-options': getWindowOptions,
         'get-window-preload-script': getWindowPreloadScript,
-        'get-window-snapshot': getWindowSnapshot,
+        'get-window-snapshot': { actor: getWindowSnapshot, apiPath: '.getSnapshot' },
         'get-window-state': getWindowState,
         'get-zoom-level': getZoomLevel,
         'hide-window': hideWindow,
@@ -54,16 +54,12 @@ function WindowApiHandler() {
         'minimize-window': minimizeWindow,
         'move-window': moveWindow,
         'move-window-by': moveWindowBy,
-
         'navigate-window': navigateWindow,
         'navigate-window-back': navigateWindowBack,
         'navigate-window-forward': navigateWindowForward,
         'stop-window-navigation': stopWindowNavigation,
         'reload-window': reloadWindow,
-
-        // Event fired when window is unloading its content and resources.
-        // Reloading a window or navigating away will fire this event
-        'on-window-unload': onWindowUnload,
+        'on-window-unload': onWindowUnload, // Fires as window unloads its content and resources; reloading a window or navigating away will fire this event
         'redirect-window-to-url': redirectWindowToUrl, // Deprecated
         'resize-window': resizeWindow,
         'resize-window-by': resizeWindowBy,
@@ -82,7 +78,7 @@ function WindowApiHandler() {
         'window-get-cached-bounds': getCachedBounds,
         'window-authenticate': windowAuthenticate
     };
-    apiProtocolBase.registerActionMap(windowExternalApiMap);
+    apiProtocolBase.registerActionMap(windowExternalApiMap, 'Window');
 
     function getWindowPreloadScript(identity, message, ack, nack) {
         const payload = message.payload;

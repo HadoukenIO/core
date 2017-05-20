@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 const errors = require('../../../common/errors');
+import { EverTrue, EverFalse } from '../../../shapes';
 
 export class AckMessage {
     public readonly action: string = 'ack';
@@ -22,9 +23,11 @@ export class AckMessage {
     public payload: AckPayload | NackPayload;
 }
 
+// ToDo following duplicated in src/shapes.ts
+
 export class AckPayload {
-    public readonly success: boolean = true;
-    public data: any;
+    public success: EverTrue;
+    public data?: any;
 
     constructor(data: any) {
         this.data = data;
@@ -32,12 +35,12 @@ export class AckPayload {
 }
 
 export class NackPayload {
-    public readonly success: boolean = false;
-    public reason: string = '';
-    public error: Error = null;
+    public success: EverFalse;
+    public reason?: string = '';
+    public error?: Error = null;
 
     constructor(error: string | Error) {
-        if (typeof (error) === 'string') {
+        if (typeof error === 'string') {
             this.reason = error;
         } else {
             const errorObject = errors.errorToPOJO(error);
@@ -49,4 +52,8 @@ export class NackPayload {
 
 export interface AckFunc {
     (payload: AckPayload | NackPayload): void;
+}
+
+export interface NackFunc {
+    (error: string | Error): void;
 }

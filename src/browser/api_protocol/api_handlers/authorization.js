@@ -31,7 +31,10 @@ function AuthorizationApiHandler() {
         authenticationApiMap = {
             'request-external-authorization': onRequestExternalAuth,
             'request-authorization': onRequestAuthorization,
-            'register-external-connection': registerExternalConnection
+            'register-external-connection': {
+                actor: registerExternalConnection,
+                apiPath: 'System.registerExternalConnection'
+            }
         };
 
     function registerExternalConnection(identity, message, ack) {

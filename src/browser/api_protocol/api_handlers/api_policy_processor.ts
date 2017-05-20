@@ -5,11 +5,11 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 
-import {MessagePackage} from '../transport_strategy/api_transport_base';
+import { MessagePackage } from '../transport_strategy/api_transport_base';
 const coreState = require('../../core_state');
-const electronApp = require('electron').app;
 const system = require('../../api/system').System;
-const apiProtocolBase = require('./api_protocol_base');
+import { getDefaultRequestHandler, actionMap } from './api_protocol_base';
+import { ApiPath } from '../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
 const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUrl => permission object, retrieved from RVM
                                             // if a configUrl is mapped to a boolean true, request to RVM is successful
@@ -28,46 +28,13 @@ enum POLICY_AUTH_RESULT {
     NotDefined // config URL not found in policy.  Check window options instead
 }
 
-// actionAPINameMap has all APIs that must be authorized
-// @todo this map should be set in group policy or some other way
-const actionAPINameMap : { [index: string]: [string] } = {  // map of action sent by API -> API name.  if not listed here, always allowed
-    'set-shortcuts' : ['Application', 'setShortcuts'],
+function getApiPath(action: string) : string {
+    return actionMap[action] ? actionMap[action].apiPath : '';
+}
 
-    'clear-cache' : ['System', 'clearCache'],
-    'get-config' : ['System', 'getConfig'],
-    'get-device-id' : ['System', 'getDeviceId'],
-    'get-environment-variable' : ['System', 'getEnvironmentVariable'],
-    'get-host-specs' : ['System', 'getHostSpecs'],
-    'view-log' : ['System', 'getLog'],
-    'list-logs' : ['System', 'getLogList'],
-//    'get-monitor-info' : ['System', 'getMonitorInfo'], called by js adapter during init so can't be disabled
-    'get-mouse-position' : ['System', 'getMousePosition'],
-    'get-remote-config' : ['System', 'getRemoteConfig'],
-    'monitor-external-process' : ['System', 'monitorExternalProcess'],
-    'register-external-connection' : ['System', 'registerExternalConnection'],
-    'release-external-process' : ['System', 'releaseExternalProcess'],
-    'set-clipboard' : ['System', 'setClipboard'],
-    'launch-external-process' : ['System', 'launchExternalProcess'],
-    'terminate-external-process' : ['System', 'terminateExternalProcess'],
-
-    'clipboard-read-formats' : ['System', 'Clipboard', 'availableFormats'],
-    'clipboard-read-html' : ['System', 'Clipboard', 'readHtml'],
-    'clipboard-read-rtf' : ['System', 'Clipboard', 'readRtf'],
-    'clipboard-read-text' : ['System', 'Clipboard', 'readText'],
-    'clipboard-write' : ['System', 'Clipboard', 'write'],
-    'clipboard-write-html' : ['System', 'Clipboard', 'writeHtml'],
-    'clipboard-write-rtf' : ['System', 'Clipboard', 'writeRtf'],
-    'clipboard-write-text' : ['System', 'Clipboard', 'writeText'],
-    'delete-cache-request' : ['System', 'deleteCacheOnExit'],
-//    'delete-cache-request' : ['System', 'deleteCacheOnRestart'],  deprecated
-    'download-asset' : ['System', 'downloadAsset'],
-    'exit-desktop' : ['System', 'exit'],
-    'get-command-line-arguments' : ['System', 'getCommandLineArguments'],
-
-    'execute-javascript-in-window' : ['Window', 'executeJavaScript'],
-    'get-window-native-id' : ['Window', 'getNativeId'],
-    'get-window-snapshot' : ['Window', 'getSnapshot']
-};
+function debugLog(method: string, message: any) : void {
+    system.debugLog(1, `${method} ${message.toString().trim()}`);
+}
 
 /**
  * Checks if action needs to be listed in permissions option of the window
@@ -78,7 +45,7 @@ const actionAPINameMap : { [index: string]: [string] } = {  // map of action sen
  *      "System": { "launchExternalProcess": true },
  *      "System": { "Clipboard" : { "availableFormats": true } },
  *      "Window": { "getNativeId": true }
- *   }
+ *  }
  *
  * For an app, if an API is not listed in its 'permissions' section, reject.
  *
@@ -87,24 +54,26 @@ const actionAPINameMap : { [index: string]: [string] } = {  // map of action sen
  * @param apiPath array of strings such as  ['Window', 'getNativeId']
  * @param windowPermissions permissions options for the window or app
  * @param isChildWindow true if being called for a child window
- * @returns {boolean} true if permitted
+ * @returns {boolean} true means permitted
  */
-function checkWindowPermissions(apiPath: [string], windowPermissions: any, isChildWindow: boolean) : boolean {
+function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, isChildWindow: boolean) : boolean {
     let permitted: boolean = isChildWindow;  // defaults to true of child window
-    if (!!windowPermissions) {
-        let level: number = 0;
+    if (windowPermissions) {
+        const parts: string[] = apiPath.split('.');
+        const levels: number = parts.length;
+        let level: number;
         let lastValue: any = windowPermissions;
-        while (level < apiPath.length) {
-            if (lastValue.hasOwnProperty(apiPath[level])) {
-                lastValue = lastValue[apiPath[level]];
+        for (level = 0; level < levels; level += 1) {
+            const part: string = parts[level];
+            if (lastValue.hasOwnProperty(part)) {
+                lastValue = lastValue[part];
             } else {
                 break;
             }
-            level += 1;
         }
-        electronApp.vlog(1, `checkWindowPermissions level ${level}`);
-        if (level === apiPath.length && typeof lastValue === 'boolean') {
-            permitted = !!lastValue;
+        debugLog('checkWindowPermissions', `level ${level}`);
+        if (level === levels && typeof lastValue === 'boolean') {
+            permitted = lastValue;
         }
     }
     return permitted;
@@ -119,32 +88,39 @@ function checkWindowPermissions(apiPath: [string], windowPermissions: any, isChi
  * @returns {Promise<boolean>} resolves true if authorized
  */
 function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, action: string): boolean {
-    electronApp.vlog(1, `authorizeAction ${action} for ${windowOpts.uuid} ${windowOpts.name}`);
-    const apiPath: [string] = actionAPINameMap[action];
+    vlog('');
+    const apiPath: ApiPath = getApiPath(action);
     let allowed: boolean = true;
-    if (actionAPINameMap.hasOwnProperty(action)) {  // if listed in the map, has to be checked
+
+    if (apiPath) {  // if listed in the map, has to be checked
         const isChildWindow = windowOpts.uuid !== windowOpts.name;
         allowed = isChildWindow;
         if (windowOpts && windowOpts.permissions) {
             allowed = checkWindowPermissions(apiPath, windowOpts.permissions, isChildWindow);
         }
     }
+
     if (allowed && parentUuid) {  // check parent if there is one
         const parentObject = coreState.getAppObjByUuid(parentUuid);
         if (parentObject) {
             const parentOpts = parentObject._options;
             if (parentOpts) {
-                electronApp.vlog(1, `authorizeAction checks parent ${parentUuid}`);
+                vlog(`checks parent ${parentUuid}`);
                 allowed = authorizeActionFromWindowOptions(parentOpts, parentObject.parentUuid, action);
                 return;
             } else {
-                electronApp.vlog(1, `authorizeAction missing parent options ${parentUuid}`);
+                vlog(`missing parent options ${parentUuid}`);
             }
         } else {
-            electronApp.vlog(1, `authorizeAction missing parent ${parentUuid}`);
+            vlog(`missing parent ${parentUuid}`);
         }
     }
+
     return allowed;
+
+    function vlog(message: string) : void {
+        debugLog('authorizeAction', `${message} '${action}' for ${windowOpts.uuid} ${windowOpts.name}`);
+    }
 }
 
 /**
@@ -156,19 +132,19 @@ function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, a
  * @returns {Promise<string>} resolves with POLICY_AUTH_RESULT
  */
 function authorizeActionFromPolicy(windowOpts: any, action: string): Promise<POLICY_AUTH_RESULT> {
-    electronApp.vlog(1, `authorizeActionFromPolicy ${action} for ${windowOpts.uuid} ${windowOpts.name}`);
-    const apiPath: [string] = actionAPINameMap[action];
+    vlog('');
+    const apiPath: ApiPath = getApiPath(action);
     return new Promise((resolve, reject) => {
         if (desktopOwnerSettingEnabled === true) {
             const configUrl = coreState.getConfigUrlByUuid(windowOpts.uuid);
             if (configUrl) {
-                electronApp.vlog(1, `authorizeActionFromPolicy checking with config url ${configUrl}`);
+                vlog(`checking with config url ${configUrl}`);
                 requestAppPermissions(configUrl).then((resultByUrl: any) => {
                     if (resultByUrl.permissions) {
                         resolve(checkWindowPermissions(apiPath, resultByUrl.permissions, false) ?
                             POLICY_AUTH_RESULT.Allowed : POLICY_AUTH_RESULT.Denied);
                     } else {  // check default permissions defined with CONFIG_URL_WILDCARD
-                        electronApp.vlog(1, `authorizeActionFromPolicy checking with RVM ${CONFIG_URL_WILDCARD}`);
+                        vlog(`checking with RVM ${CONFIG_URL_WILDCARD}`);
                         requestAppPermissions(CONFIG_URL_WILDCARD).then((resultByDefault: any) => {
                             if (resultByDefault.permissions) {
                                 resolve(checkWindowPermissions(apiPath, resultByDefault.permissions, false) ? POLICY_AUTH_RESULT.Allowed :
@@ -177,23 +153,27 @@ function authorizeActionFromPolicy(windowOpts: any, action: string): Promise<POL
                                 resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
                             }
                         }).catch((error: any) => {
-                            electronApp.vlog(1, `authorizeActionFromPolicy query for permissions failed ${CONFIG_URL_WILDCARD}`);
+                            vlog(`query for permissions failed ${CONFIG_URL_WILDCARD}`);
                             reject(false);
                         });
                     }
                 }).catch((error: any) => {
-                    electronApp.vlog(1, `authorizeActionFromPolicy query for permissions failed ${configUrl}`);
+                    vlog(`query for permissions failed ${configUrl}`);
                     reject(false);
                 });
             } else {
-                electronApp.vlog(1, 'authorizeActionFromPolicy configUrl not defined');
+                vlog('configUrl not defined');
                 resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
             }
         } else {
-            electronApp.vlog(1, `authorizeActionFromPolicy desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`);
+            vlog(`desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`);
             resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
         }
     });
+
+    function vlog(message: string) : void {
+        debugLog('authorizeActionFromPolicy', `${message} '${action}' for ${windowOpts.uuid} ${windowOpts.name}`);
+    }
 }
 
 /**
@@ -203,45 +183,45 @@ function authorizeActionFromPolicy(windowOpts: any, action: string): Promise<POL
  * @param next function to call if ok to proceed
  */
 function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
-    const {identity, data, nack } = msg;
+    const { identity, data, nack } = msg;
     const action = data && data.action;
-    const hasIdentityObj = typeof (identity) === 'object';
-    if (hasIdentityObj) {
-        if (actionAPINameMap.hasOwnProperty(action)) {  // only check if included in the map
-            electronApp.vlog(1, `apiPolicyPreProcessor ${action} from ${identity.uuid} ${identity.name}`);
-            const originWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
-            if (originWindow) {
-                const appObject = coreState.getAppObjByUuid(identity.uuid);
-                // parentUuid for child windows is uuid of the app
-                const parentUuid = identity.uuid === identity.name ? appObject.parentUuid : identity.uuid;
-                authorizeActionFromPolicy(coreState.getWindowOptionsById(originWindow.id), action).then((result: POLICY_AUTH_RESULT) => {
-                    if (result === POLICY_AUTH_RESULT.Allowed) {
-                        next();
-                    } else if (result === POLICY_AUTH_RESULT.Denied) {
-                        electronApp.vlog(1, `apiPolicyPreProcessor rejecting from policy ${action} from ${identity.uuid} ${identity.name}`);
-                        nack('Rejected, action is not authorized');
-                    } else {
-                        if (authorizeActionFromWindowOptions(coreState.getWindowOptionsById(originWindow.id), parentUuid, action)) {
-                            next();
-                        } else {
-                            electronApp.vlog(1, `apiPolicyPreProcessor rejecting from win opts ${action} from ${identity.uuid} ` +
-                                                        `${identity.name}`);
-                            nack('Rejected, action is not authorized');
-                        }
-                    }
-                }).catch(() => {
-                    electronApp.vlog(1, `apiPolicyPreProcessor rejecting from error ${action} from ${identity.uuid} ${identity.name}`);
-                    nack('Rejected, action is not authorized');
-                });
-            } else {
-                electronApp.vlog(1, `apiPolicyPreProcessor missing origin window ${action} from ${identity.uuid} ${identity.name}`);
-                next();
-            }
+    const apiPath: ApiPath = getApiPath(action);
+
+    if (typeof identity === 'object' && apiPath) {  // only check if included in the map
+        vlog('');
+        const originWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
+        if (originWindow) {
+            const appObject = coreState.getAppObjByUuid(identity.uuid);
+            // parentUuid for child windows is uuid of the app
+            const parentUuid = identity.uuid === identity.name ? appObject.parentUuid : identity.uuid;
+            authorizeActionFromPolicy(coreState.getWindowOptionsById(originWindow.id), action).then((result: POLICY_AUTH_RESULT) => {
+                if (result === POLICY_AUTH_RESULT.Allowed) {
+                    next();
+                } else if (result === POLICY_AUTH_RESULT.Denied) {
+                    bail('rejecting from policy');
+                } else if (authorizeActionFromWindowOptions(coreState.getWindowOptionsById(originWindow.id), parentUuid, action)) {
+                    next();
+                } else {
+                    bail('rejecting from win opts');
+                }
+            }).catch(() => {
+                bail('rejecting from error');
+            });
         } else {
+            vlog('missing origin window');
             next();
         }
     } else {
         next();
+    }
+
+    function vlog(message: string) : void {
+        debugLog('apiPolicyPreProcessor', `${message} '${action}' from ${identity.uuid} ${identity.name}`);
+    }
+
+    function bail(message: string) : void {
+        vlog(message);
+        nack('Rejected, action is not authorized');
     }
 }
 
@@ -253,17 +233,14 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
  *                                  reject if request to RVM failed
  */
 function requestAppPermissions(configUrl: string): Promise<any> {
-    electronApp.vlog(1, `requestAppPermissions ${configUrl} `);
+    vlog(configUrl);
     return new Promise((resolve, reject) => {
         if (configUrlPermissionsMap[configUrl]) {
-            electronApp.vlog(1, `requestAppPermissions cached ${configUrl} `);
+            vlog(`cached ${configUrl} `);
             resolve(configUrlPermissionsMap[configUrl]);
         } else {
-            rvmBus.send('application', {
-                action: 'get-desktop-owner-settings',
-                sourceUrl: configUrl
-            }, (rvmResponse: any) => {
-                electronApp.vlog(1, `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
+            rvmBus.send('application', { action: 'get-desktop-owner-settings', sourceUrl: configUrl }, (rvmResponse: any) => {
+                vlog(`from RVM ${JSON.stringify(rvmResponse)}`);
                 if (rvmResponse.payload && rvmResponse.payload.success === true &&
                     rvmResponse.payload.payload) {
                     if (rvmResponse.payload.payload.permissions) {
@@ -281,16 +258,20 @@ function requestAppPermissions(configUrl: string): Promise<any> {
             }, desktopOwnerSettingsTimeout / 1000);
         }
     });
+
+    function vlog(message: string) : void {
+        debugLog('requestAppPermissions', message);
+    }
 }
 
 if (coreState.argo['enable-strict-api-permissions']) {
-    electronApp.log('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
-    apiProtocolBase.getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
+    system.log('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
+    getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
     desktopOwnerSettingEnabled = !!coreState.argo[ENABLE_DESKTOP_OWNER_SETTINGS];
-    electronApp.vlog(1, `desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`);
+    debugLog('desktopOwnerSettingEnabled', desktopOwnerSettingEnabled);
     if (desktopOwnerSettingEnabled === true && coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
         desktopOwnerSettingsTimeout = Number(coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]);
-        electronApp.vlog(1, `desktopOwnerSettingsTimeout ${desktopOwnerSettingsTimeout}`);
+        debugLog('desktopOwnerSettingsTimeout', desktopOwnerSettingsTimeout);
     }
 }
 

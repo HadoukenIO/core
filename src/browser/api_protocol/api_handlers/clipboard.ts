@@ -15,23 +15,24 @@ limitations under the License.
 */
 import { registerActionMap } from './api_protocol_base';
 import { clipboard } from 'electron';
-import { APIMessage, APIPayloadAck } from '../../../shapes';
+import { APIMessage, APIPayloadAck, Acker } from '../../../shapes';
+import { ActionSpecMap } from '../shapes';
 
-const clipboardApiMap = {
+const clipboardApiMap: ActionSpecMap = {
     'clipboard-clear': clipboardClear,
-    'clipboard-read-formats': clipboardAvailableFormats,
-    'clipboard-read-html': clipboardReadHtml,
-    'clipboard-read-rtf': clipboardReadRtf,
-    'clipboard-read-text': clipboardReadText,
-    'clipboard-write': clipboardWrite,
-    'clipboard-write-html': clipboardWriteHtml,
-    'clipboard-write-rtf': clipboardWriteRtf,
-    'clipboard-write-text': clipboardWriteText,
-    'set-clipboard': clipboardWriteText // support for legacy api
+    'clipboard-read-formats': { actor: clipboardAvailableFormats, apiPath: '.availableFormats' },
+    'clipboard-read-html': { actor: clipboardReadHtml, apiPath: '.readHtml' },
+    'clipboard-read-rtf': { actor: clipboardReadRtf, apiPath: '.readRtf' },
+    'clipboard-read-text': { actor: clipboardReadText, apiPath: '.readText' },
+    'clipboard-write': { actor: clipboardWrite, apiPath: '.write' },
+    'clipboard-write-html': { actor: clipboardWriteHtml, apiPath: '.writeHtml' },
+    'clipboard-write-rtf': { actor: clipboardWriteRtf, apiPath: '.writeRtf' },
+    'clipboard-write-text': { actor: clipboardWriteText, apiPath: '.writeText' },
+    'set-clipboard': { actor: clipboardWriteText, apiPath: 'System.setClipboard' } // support for legacy api
 };
 
 export function init() {
-    registerActionMap(clipboardApiMap);
+    registerActionMap(clipboardApiMap, 'System.Clipboard');
 }
 
 interface Identity {
@@ -57,90 +58,52 @@ interface APIMessageClipboardExpanded extends APIMessage {
     };
 }
 
-function clipboardWrite(identity: Identity,
-                        message: APIMessageClipboardExpanded,
-                        ack: (payload: APIPayloadAck) => void) {
-    const {data, type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.write(data, type)
-    });
+function success(data: any): APIPayloadAck {
+    return { success: true, data };
 }
 
-function clipboardWriteRtf(identity: Identity,
-                           message: APIMessageClipboard,
-                           ack: (payload: APIPayloadAck) => void) {
+function clipboardWrite(identity: Identity, message: APIMessageClipboardExpanded, ack: Acker) {
     const {data, type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.writeRtf(data, type)
-    });
+    ack(success(clipboard.write(data, type)));
 }
 
-function clipboardWriteHtml(identity: Identity,
-                            message: APIMessageClipboard,
-                            ack: (payload: APIPayloadAck) => void) {
+function clipboardWriteRtf(identity: Identity, message: APIMessageClipboard, ack: Acker) {
     const {data, type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.writeHtml(data, type)
-    });
+    ack(success(clipboard.writeRtf(data, type)));
 }
 
-function clipboardWriteText(identity: Identity,
-                            message: APIMessageClipboard,
-                            ack: (payload: APIPayloadAck) => void) {
+function clipboardWriteHtml(identity: Identity, message: APIMessageClipboard, ack: Acker) {
     const {data, type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.writeText(data, type)
-    });
+    ack(success(clipboard.writeHtml(data, type)));
 }
 
-function clipboardAvailableFormats(identity: Identity,
-                                   message: APIMessageClipboard,
-                                   ack: (payload: APIPayloadAck) => void) {
+function clipboardWriteText(identity: Identity, message: APIMessageClipboard, ack: Acker) {
+    const {data, type} = message.payload;
+    ack(success(clipboard.writeText(data, type)));
+}
+
+function clipboardAvailableFormats(identity: Identity, message: APIMessageClipboard, ack: Acker) {
     const {type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.availableFormats(type)
-    });
+    ack(success(clipboard.availableFormats(type)));
 }
 
-function clipboardClear(identity: Identity,
-                        message: APIMessageClipboard,
-                        ack: (payload: APIPayloadAck) => void) {
+function clipboardClear(identity: Identity, message: APIMessageClipboard, ack: Acker) {
     const {type} = message.payload;
     clipboard.clear(type);
     ack({success: true});
 }
 
-function clipboardReadRtf(identity: Identity,
-                          message: APIMessageClipboard,
-                          ack: (payload: APIPayloadAck) => void) {
+function clipboardReadRtf(identity: Identity, message: APIMessageClipboard, ack: Acker) {
     const {type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.readRtf(type)
-    });
+    ack(success(clipboard.readRtf(type)));
 }
 
-function clipboardReadHtml(identity: Identity,
-                           message: APIMessageClipboard,
-                           ack: (payload: APIPayloadAck) => void) {
+function clipboardReadHtml(identity: Identity, message: APIMessageClipboard, ack: Acker) {
     const {type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.readHtml(type)
-    });
+    ack(success(clipboard.readHtml(type)));
 }
 
-function clipboardReadText(identity: Identity,
-                           message: APIMessageClipboard,
-                           ack: (payload: APIPayloadAck) => void) {
+function clipboardReadText(identity: Identity, message: APIMessageClipboard, ack: Acker) {
     const {type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.readText(type)
-    });
+    ack(success(clipboard.readText(type)));
 }

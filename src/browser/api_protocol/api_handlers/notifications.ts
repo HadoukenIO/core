@@ -20,11 +20,12 @@ import NoteAction from '../../api/notifications/note_action';
 declare var require: any;
 
 const apiProtocolBase = require('./api_protocol_base.js');
-const {writeToLog} = require('../../log');
+import { ActionSpecMap } from '../shapes';
+const { writeToLog } = require('../../log');
 
 /* tslint:disable: function-name */
 function NotificationApiHandler() {
-    const noteApiMap = {
+    const noteApiMap: ActionSpecMap = {
         'notifications': (id: any, request: any, ack: any) => {
             routeRequest(id, unpackGeneralMsg(request), ack);
         },
@@ -36,8 +37,8 @@ function NotificationApiHandler() {
     return apiProtocolBase;
 }
 
-function normalizeAndDispatch (id: any, msg: any, ack: () => void): void {
-    const {action} = msg;
+function normalizeAndDispatch(id: any, msg: any, ack: () => void): void {
+    const { action } = msg;
 
     switch (action) {
         case 'send-action-to-notifications-center':

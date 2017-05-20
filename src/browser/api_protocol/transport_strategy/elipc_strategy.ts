@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { AckMessage,  AckFunc, AckPayload } from './ack';
-import { ApiTransportBase, ActionMap, MessagePackage } from './api_transport_base';
-import {default as RequestHandler} from './base_handler';
+import { ApiTransportBase, MessagePackage } from './api_transport_base';
+import { default as RequestHandler } from './base_handler';
+import { Endpoint, ActionMap } from '../shapes';
 
 declare var require: any;
 
@@ -30,28 +31,29 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
         this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
             const {identity, data, ack, nack, e, strategyName} = mp;
-            const action = this.actionMap[data.action];
 
             if (strategyName !== this.constructor.name) {
                 next();
-            } else if (typeof (action) === 'function') {
-                // singleFrameOnly check first so to prevent frame superceding when disabled.
-                if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
-                    Promise.resolve()
-                        .then(() => action(identity, data, ack, nack))
-                        .then(result => {
-                            // older action calls will invoke ack internally, newer ones will return a value
-                            if (result !== undefined) {
-                                ack(new AckPayload(result));
-                            }
-                        }).catch(err => {
-                            nack(err);
-                        });
-                } else {
-                    nack('API access has been superseded by another frame in this window.');
+            } else {
+                const endpoint: Endpoint = this.actionMap[data.action];
+                if (endpoint) {
+                    // singleFrameOnly check first so to prevent frame superceding when disabled.
+                    if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
+                        Promise.resolve()
+                            .then(() => endpoint.actor(identity, data, ack, nack))
+                            .then(result => {
+                                // older action calls will invoke ack internally, newer ones will return a value
+                                if (result !== undefined) {
+                                    ack(new AckPayload(result));
+                                }
+                            }).catch(err => {
+                                nack(err);
+                            });
+                    } else {
+                        nack('API access has been superseded by another frame in this window.');
+                    }
                 }
             }
-
         });
     }
 

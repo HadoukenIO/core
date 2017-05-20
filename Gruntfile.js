@@ -38,6 +38,14 @@ const optionalDependencies = [
     'runtime-p2p/**'
 ];
 
+// https://github.com/beautify-web/js-beautify#options
+// (Options in above-linked page are hyphen-separarted but here must be either camelCase or underscore_separated.)
+const beautifierOptions = {
+    js: {
+        braceStyle: 'collapse,preserve-inline'
+    }
+};
+
 try {
     var openfinSign = require('openfin-sign');
 } catch (err) {
@@ -186,13 +194,12 @@ module.exports = (grunt) => {
         },
         jsbeautifier: {
             default: {
-                src: ['src/**/*.js', 'index.js']
+                src: ['src/**/*.js', 'index.js'],
+                options: beautifierOptions
             },
             'git-pre-commit': {
                 src: ['src/**/*.js', 'index.js'],
-                options: {
-                    mode: 'VERIFY_ONLY'
-                }
+                options: Object.assign({ mode: 'VERIFY_ONLY' }, beautifierOptions)
             }
         },
         mochaTest: {
@@ -424,14 +431,16 @@ module.exports = (grunt) => {
             // Open-sourced files or new files that are missing a license
             else {
 
+                let squashedFileContent = squash(fileContent);
+
                 // File has commercial license but is not added to the list of commercial files
-                if (fileContent.includes(commercialLic)) {
+                if (squashedFileContent.includes(squash(commercialLic))) {
                     grunt.log.writeln(`Found commercial license in ${filePartPath}, but file is `['yellow'].bold +
                         `not added to Grunt's list of commercial files. Please, add it.`['yellow'].bold);
                 }
 
                 // File is missing any kind of license
-                else if (!fileContent.includes(openSourceLic)) {
+                else if (!squashedFileContent.includes(squash(openSourceLic))) {
 
                     // When calling this task with an 'add' option, it will add open-source license
                     // to all the files that are missing a license and are not specified as commercial
@@ -455,3 +464,7 @@ module.exports = (grunt) => {
         }
     });
 };
+
+function squash(s) {
+    return s.replace(/\s+/g, ' ');
+}
