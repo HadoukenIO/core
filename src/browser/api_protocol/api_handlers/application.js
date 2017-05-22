@@ -26,7 +26,9 @@ let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
-import { addRemoteSubscription } from '../../remote_subscriptions';
+import {
+    addRemoteSubscription
+} from '../../remote_subscriptions';
 
 function ApplicationApiHandler() {
     let successAck = {
@@ -276,10 +278,16 @@ function ApplicationApiHandler() {
     }
 
     function runApplication(identity, message, ack, nack) {
-        const { payload } = message;
-        const { manifestUrl } = payload;
+        const {
+            payload
+        } = message;
+        const {
+            manifestUrl
+        } = payload;
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-        const { uuid } = appIdentity;
+        const {
+            uuid
+        } = appIdentity;
         let remoteSubscriptionUnSubscribe;
         const remoteSubscription = {
             uuid,

@@ -34,7 +34,9 @@ import {
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
 
-import { addRemoteSubscription } from '../../remote_subscriptions';
+import {
+    addRemoteSubscription
+} from '../../remote_subscriptions';
 
 // locals
 const successAck = {
@@ -59,7 +61,10 @@ function EventListenerApiHandler() {
         'window': {
             name: 'window',
             subscribe: function(identity, type, payload, cb) {
-                const { uuid, name } = payload;
+                const {
+                    uuid,
+                    name
+                } = payload;
                 const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
                 const targetUuid = windowIdentity.uuid;
                 const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
@@ -92,7 +97,9 @@ function EventListenerApiHandler() {
         'application': {
             name: 'application',
             subscribe: function(identity, type, payload, cb) {
-                const { uuid } = payload;
+                const {
+                    uuid
+                } = payload;
                 const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
                 const targetUuid = appIdentity.uuid;
                 const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);

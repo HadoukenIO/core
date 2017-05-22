@@ -56,7 +56,9 @@ import {
 
 import * as log from './src/browser/log';
 
-import { applyAllRemoteSubscriptions } from './src/browser/remote_subscriptions';
+import {
+    applyAllRemoteSubscriptions
+} from './src/browser/remote_subscriptions';
 
 // locals
 let firstApp = null;
