@@ -136,13 +136,16 @@ let RvmInfoFetcher = function() {
         });
 
         if (isFirstRequester) {
+
             let rvmPayload = {
+                topic: moduleTopic_,
                 action: moduleAction_,
+                timeToLive: moduleTimeToLive_,
                 sourceUrl
             };
 
             if (RvmMessageBus) {
-                RvmMessageBus.send(moduleTopic_, rvmPayload, responseHandler, moduleTimeToLive_);
+                RvmMessageBus.publish(rvmPayload, responseHandler);
             }
         }
     };

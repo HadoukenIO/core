@@ -369,7 +369,8 @@ Application.registerCustomData = function(identity, data, callback, errorCallbac
     } else if (!data || !data.userId || !data.organization) {
         errorCallback(new Error('\'userId\' and \'organization\' fields are required to send custom data'));
     } else {
-        let success = rvmBus.send('application', {
+        let success = rvmBus.publish({
+            topic: 'application',
             action: 'register-custom-data',
             sourceUrl: app._configUrl,
             runtimeVersion: System.getVersion(),
@@ -440,12 +441,13 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
         sourceUrl = appState.appObj._configUrl,
         hideSplashListener = () => {
             let rvmPayload = {
+                topic: 'application',
                 action: 'hide-splashscreen',
                 sourceUrl
             };
 
             if (rvmBus) {
-                rvmBus.send('application', rvmPayload);
+                rvmBus.publish(rvmPayload);
             }
         },
         appEventsForRVM = ['started', 'closed', 'ready', 'run-requested', 'crashed', 'error', 'not-responding', 'out-of-memory'],
@@ -455,6 +457,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
             }
             let type = appEvent.type,
                 rvmPayload = {
+                    topic: 'application-event',
                     type,
                     sourceUrl
                 };
@@ -474,7 +477,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
             }
 
             if (rvmBus) {
-                rvmBus.send('application-event', JSON.stringify(rvmPayload));
+                rvmBus.publish(JSON.stringify(rvmPayload));
             }
         };
 
@@ -769,7 +772,8 @@ Application.scheduleRestart = function(identity, callback, errorCallback) {
     } else if (!rvmBus) {
         errorCallback(new Error('cannot connect to the RVM'));
     } else {
-        let success = rvmBus.send('application', {
+        let success = rvmBus.publish({
+            topic: 'application',
             action: 'relaunch-on-close',
             sourceUrl: app._configUrl,
             runtimeVersion: System.getVersion()
