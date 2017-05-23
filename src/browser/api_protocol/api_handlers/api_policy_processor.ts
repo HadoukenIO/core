@@ -7,10 +7,11 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 const coreState = require('../../core_state');
-const system = require('../../api/system').System;
 import { getDefaultRequestHandler, actionMap } from './api_protocol_base';
 import { ApiPath } from '../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
+import { writeToLog } from '../../log';
+
 const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUrl => permission object, retrieved from RVM
                                             // if a configUrl is mapped to a boolean true, request to RVM is successful
                                             // did not return permissions
@@ -30,10 +31,6 @@ enum POLICY_AUTH_RESULT {
 
 function getApiPath(action: string) : string {
     return actionMap[action] ? actionMap[action].apiPath : '';
-}
-
-function debugLog(method: string, message: any) : void {
-    system.debugLog(1, `${method} ${message.toString().trim()}`);
 }
 
 /**
@@ -71,7 +68,7 @@ function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, isChil
                 break;
             }
         }
-        debugLog('checkWindowPermissions', `level ${level}`);
+        writeToLog(1, `checkWindowPermissions level ${level}`, true);
         if (level === levels && typeof lastValue === 'boolean') {
             permitted = lastValue;
         }
@@ -88,15 +85,20 @@ function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, isChil
  * @returns {Promise<boolean>} resolves true if authorized
  */
 function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, action: string): boolean {
-    vlog('');
+    windowOpts = windowOpts || {}; // todo Is this really needed?
+
+    const { uuid, name, permissions } = windowOpts;
+    const logSuffix = `'${action}' for ${uuid} ${name}`;
+    writeToLog(1, `authorizeAction ${logSuffix}`, true);
+
     const apiPath: ApiPath = getApiPath(action);
     let allowed: boolean = true;
 
     if (apiPath) {  // if listed in the map, has to be checked
-        const isChildWindow = windowOpts.uuid !== windowOpts.name;
+        const isChildWindow = uuid !== name;
         allowed = isChildWindow;
-        if (windowOpts && windowOpts.permissions) {
-            allowed = checkWindowPermissions(apiPath, windowOpts.permissions, isChildWindow);
+        if (permissions) {
+            allowed = checkWindowPermissions(apiPath, permissions, isChildWindow);
         }
     }
 
@@ -105,22 +107,18 @@ function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, a
         if (parentObject) {
             const parentOpts = parentObject._options;
             if (parentOpts) {
-                vlog(`checks parent ${parentUuid}`);
+                writeToLog(1, `authorizeAction checks parent ${parentUuid} ${logSuffix}`, true);
                 allowed = authorizeActionFromWindowOptions(parentOpts, parentObject.parentUuid, action);
                 return;
             } else {
-                vlog(`missing parent options ${parentUuid}`);
+                writeToLog(1, `authorizeAction missing parent options ${parentUuid} ${logSuffix}`, true);
             }
         } else {
-            vlog(`missing parent ${parentUuid}`);
+            writeToLog(1, `authorizeAction missing parent ${parentUuid} ${logSuffix}`, true);
         }
     }
 
     return allowed;
-
-    function vlog(message: string) : void {
-        debugLog('authorizeAction', `${message} '${action}' for ${windowOpts.uuid} ${windowOpts.name}`);
-    }
 }
 
 /**
@@ -132,19 +130,22 @@ function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, a
  * @returns {Promise<string>} resolves with POLICY_AUTH_RESULT
  */
 function authorizeActionFromPolicy(windowOpts: any, action: string): Promise<POLICY_AUTH_RESULT> {
-    vlog('');
+    const { uuid, name } = windowOpts;
+    const logSuffix = `'${action}' for ${uuid} ${name}`;
+    writeToLog(1, `authorizeActionFromPolicy ${logSuffix}`, true);
+
     const apiPath: ApiPath = getApiPath(action);
     return new Promise((resolve, reject) => {
         if (desktopOwnerSettingEnabled === true) {
-            const configUrl = coreState.getConfigUrlByUuid(windowOpts.uuid);
+            const configUrl = coreState.getConfigUrlByUuid(uuid);
             if (configUrl) {
-                vlog(`checking with config url ${configUrl}`);
+                writeToLog(1, `authorizeActionFromPolicy checking with config url ${configUrl} ${logSuffix}`, true);
                 requestAppPermissions(configUrl).then((resultByUrl: any) => {
                     if (resultByUrl.permissions) {
                         resolve(checkWindowPermissions(apiPath, resultByUrl.permissions, false) ?
                             POLICY_AUTH_RESULT.Allowed : POLICY_AUTH_RESULT.Denied);
                     } else {  // check default permissions defined with CONFIG_URL_WILDCARD
-                        vlog(`checking with RVM ${CONFIG_URL_WILDCARD}`);
+                        writeToLog(1, `authorizeActionFromPolicy checking with RVM ${CONFIG_URL_WILDCARD} ${logSuffix}`, true);
                         requestAppPermissions(CONFIG_URL_WILDCARD).then((resultByDefault: any) => {
                             if (resultByDefault.permissions) {
                                 resolve(checkWindowPermissions(apiPath, resultByDefault.permissions, false) ? POLICY_AUTH_RESULT.Allowed :
@@ -153,27 +154,24 @@ function authorizeActionFromPolicy(windowOpts: any, action: string): Promise<POL
                                 resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
                             }
                         }).catch((error: any) => {
-                            vlog(`query for permissions failed ${CONFIG_URL_WILDCARD}`);
+                            writeToLog(1, `authorizeActionFromPolicy query for permissions failed ${CONFIG_URL_WILDCARD} ${logSuffix}`,
+                                true);
                             reject(false);
                         });
                     }
                 }).catch((error: any) => {
-                    vlog(`query for permissions failed ${configUrl}`);
+                    writeToLog(1, `authorizeActionFromPolicy query for permissions failed ${configUrl} ${logSuffix}`, true);
                     reject(false);
                 });
             } else {
-                vlog('configUrl not defined');
+                writeToLog(1, `authorizeActionFromPolicy configUrl not defined ${logSuffix}`, true);
                 resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
             }
         } else {
-            vlog(`desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`);
+            writeToLog(1, `authorizeActionFromPolicy desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled} ${logSuffix}`, true);
             resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
         }
     });
-
-    function vlog(message: string) : void {
-        debugLog('authorizeActionFromPolicy', `${message} '${action}' for ${windowOpts.uuid} ${windowOpts.name}`);
-    }
 }
 
 /**
@@ -188,40 +186,38 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
     const apiPath: ApiPath = getApiPath(action);
 
     if (typeof identity === 'object' && apiPath) {  // only check if included in the map
-        vlog('');
-        const originWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
+        const { uuid, name } = identity;
+        const logSuffix = `'${action}' from ${uuid} ${name}`;
+
+        writeToLog(1, `apiPolicyPreProcessor ${logSuffix}`, true);
+
+        const originWindow = coreState.getWindowByUuidName(uuid, name);
         if (originWindow) {
-            const appObject = coreState.getAppObjByUuid(identity.uuid);
+            const appObject = coreState.getAppObjByUuid(uuid);
             // parentUuid for child windows is uuid of the app
-            const parentUuid = identity.uuid === identity.name ? appObject.parentUuid : identity.uuid;
+            const parentUuid = uuid === name ? appObject.parentUuid : uuid;
             authorizeActionFromPolicy(coreState.getWindowOptionsById(originWindow.id), action).then((result: POLICY_AUTH_RESULT) => {
                 if (result === POLICY_AUTH_RESULT.Allowed) {
                     next();
                 } else if (result === POLICY_AUTH_RESULT.Denied) {
-                    bail('rejecting from policy');
+                    writeToLog(1, `apiPolicyPreProcessor rejecting from policy ${logSuffix}`, true);
+                    nack('Rejected, action is not authorized');
                 } else if (authorizeActionFromWindowOptions(coreState.getWindowOptionsById(originWindow.id), parentUuid, action)) {
                     next();
                 } else {
-                    bail('rejecting from win opts');
+                    writeToLog(1, `apiPolicyPreProcessor rejecting from win opts ${logSuffix}`, true);
+                    nack('Rejected, action is not authorized');
                 }
             }).catch(() => {
-                bail('rejecting from error');
+                writeToLog(1, `apiPolicyPreProcessor rejecting from error ${logSuffix}`, true);
+                nack('Rejected, action is not authorized');
             });
         } else {
-            vlog('missing origin window');
+            writeToLog(1, `apiPolicyPreProcessor missing origin window ${logSuffix}`, true);
             next();
         }
     } else {
         next();
-    }
-
-    function vlog(message: string) : void {
-        debugLog('apiPolicyPreProcessor', `${message} '${action}' from ${identity.uuid} ${identity.name}`);
-    }
-
-    function bail(message: string) : void {
-        vlog(message);
-        nack('Rejected, action is not authorized');
     }
 }
 
@@ -233,14 +229,15 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
  *                                  reject if request to RVM failed
  */
 function requestAppPermissions(configUrl: string): Promise<any> {
-    vlog(configUrl);
+    writeToLog(1, `requestAppPermissions ${configUrl}`, true);
+
     return new Promise((resolve, reject) => {
         if (configUrlPermissionsMap[configUrl]) {
-            vlog(`cached ${configUrl} `);
+            writeToLog(1, 'requestAppPermissions cached', true);
             resolve(configUrlPermissionsMap[configUrl]);
         } else {
             rvmBus.send('application', { action: 'get-desktop-owner-settings', sourceUrl: configUrl }, (rvmResponse: any) => {
-                vlog(`from RVM ${JSON.stringify(rvmResponse)}`);
+                writeToLog(1, 'requestAppPermissions from RVM', true);
                 if (rvmResponse.payload && rvmResponse.payload.success === true &&
                     rvmResponse.payload.payload) {
                     if (rvmResponse.payload.payload.permissions) {
@@ -252,26 +249,22 @@ function requestAppPermissions(configUrl: string): Promise<any> {
                     }
                     resolve(configUrlPermissionsMap[configUrl]);
                 } else {
-                    system.log('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
+                    writeToLog('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
                     reject(rvmResponse);  // false indicates request to RVM failed
                 }
             }, desktopOwnerSettingsTimeout / 1000);
         }
     });
-
-    function vlog(message: string) : void {
-        debugLog('requestAppPermissions', message);
-    }
 }
 
 if (coreState.argo['enable-strict-api-permissions']) {
-    system.log('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
+    writeToLog('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
     getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
     desktopOwnerSettingEnabled = !!coreState.argo[ENABLE_DESKTOP_OWNER_SETTINGS];
-    debugLog('desktopOwnerSettingEnabled', desktopOwnerSettingEnabled);
+    writeToLog('desktopOwnerSettingEnabled', desktopOwnerSettingEnabled, true);
     if (desktopOwnerSettingEnabled === true && coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
         desktopOwnerSettingsTimeout = Number(coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]);
-        debugLog('desktopOwnerSettingsTimeout', desktopOwnerSettingsTimeout);
+        writeToLog('desktopOwnerSettingsTimeout', desktopOwnerSettingsTimeout, true);
     }
 }
 
