@@ -74,7 +74,6 @@ export interface SetShortcutState extends RvmMsgBase {
     action: setShortcutStateAction;
     sourceUrl: string;
     data: any;
-
 }
 
 export interface LaunchedFrom extends RvmMsgBase {
@@ -248,7 +247,6 @@ class RVMMessageBus extends EventEmitter  {
         this.recordCallbackInfo(callback, timeToLive, envelope);
 
         return this.transport.publish(envelope);
-
     };
 
     /**
