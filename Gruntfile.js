@@ -431,16 +431,14 @@ module.exports = (grunt) => {
             // Open-sourced files or new files that are missing a license
             else {
 
-                let squashedFileContent = squash(fileContent);
-
                 // File has commercial license but is not added to the list of commercial files
-                if (squashedFileContent.includes(squash(commercialLic))) {
+                if (fileContent.includes(commercialLic)) {
                     grunt.log.writeln(`Found commercial license in ${filePartPath}, but file is `['yellow'].bold +
                         `not added to Grunt's list of commercial files. Please, add it.`['yellow'].bold);
                 }
 
                 // File is missing any kind of license
-                else if (!squashedFileContent.includes(squash(openSourceLic))) {
+                else if (!fileContent.includes(openSourceLic)) {
 
                     // When calling this task with an 'add' option, it will add open-source license
                     // to all the files that are missing a license and are not specified as commercial
@@ -464,7 +462,3 @@ module.exports = (grunt) => {
         }
     });
 };
-
-function squash(s) {
-    return s.replace(/\s+/g, ' ');
-}
