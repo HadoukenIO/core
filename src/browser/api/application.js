@@ -244,7 +244,11 @@ Application.close = function(identity, force, callback) {
 
     if (!app) {
         log.writeToLog(1, `Could not close app ${identity.uuid}`, true);
-        callback();
+
+        if (typeof callback === 'function') {
+            callback();
+        }
+
         return;
     }
 
