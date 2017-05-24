@@ -36,9 +36,6 @@ export interface APIMessage {
     payload: any;
 }
 
-export type EverTrue = true;
-export type EverFalse = false;
-
 // ToDo following duplicated in ack.ts
 
 export interface APIPayloadAck {

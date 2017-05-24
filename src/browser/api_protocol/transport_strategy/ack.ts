@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 const errors = require('../../../common/errors');
-import { EverTrue, EverFalse } from '../../../shapes';
 
 export class AckMessage {
     public readonly action: string = 'ack';
@@ -26,7 +25,7 @@ export class AckMessage {
 // ToDo following duplicated in src/shapes.ts
 
 export class AckPayload {
-    public success: EverTrue;
+    public success: true;
     public data?: any;
 
     constructor(data: any) {
@@ -35,7 +34,7 @@ export class AckPayload {
 }
 
 export class NackPayload {
-    public success: EverFalse;
+    public success: false;
     public reason?: string = '';
     public error?: Error = null;
 
