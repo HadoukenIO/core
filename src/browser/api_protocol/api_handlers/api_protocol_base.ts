@@ -22,7 +22,7 @@ import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { registerMiddleware as registerMeshMiddleware } from './mesh_middleware';
 import { meshEnabled } from '../../connection_manager';
-import { ApiPath, Actor, EndpointSpec, ActionSpecMap, Endpoint, ActionMap } from '../shapes';
+import { ApiPath, ApiFunc, EndpointSpec, ActionSpecMap, Endpoint, ActionMap } from '../shapes';
 
 export const actionMap: ActionMap = Object.create(null); // no prototype to avoid having to call hasOwnProperty()
 
@@ -51,17 +51,17 @@ export function registerActionMap(
             const spec: EndpointSpec = specs[key];
             let endpoint: Endpoint;
 
-            // resolve `spec` overloads: Actor (function) vs. Endpoint (object containing `actor` function)
+            // resolve `spec` overloads: ApiFunc (function) vs. Endpoint (object containing `apiFunc` function)
             if (typeof spec === 'function') {
-                endpoint = { actor: <Actor>spec };
+                endpoint = { apiFunc: <ApiFunc>spec };
             } else if (typeof spec === 'object') {
                 endpoint = <Endpoint>spec;
             } else {
                 throw new Error(`Expected action spec to be function or object but found ${typeof spec}`);
             }
 
-            if (typeof endpoint.actor !== 'function') {
-                throw new Error(`Expected endpoint.actor to be function but found ${typeof endpoint.actor}`);
+            if (typeof endpoint.apiFunc !== 'function') {
+                throw new Error(`Expected endpoint.apiFunc to be function but found ${typeof endpoint.apiFunc}`);
             }
 
             let apiPath: ApiPath = endpoint.apiPath;
@@ -73,7 +73,7 @@ export function registerActionMap(
                     }
                     apiPath = authorizationPathPrefix + apiPath;
                 } else if (apiPath.indexOf('.') < 0) {
-                    throw new Error('Expected "${apiPath}" to be an actor (starts with dot) or an apiPath (contains dot)');
+                    throw new Error('Expected "${apiPath}" to be an apiFunc (starts with dot) or an apiPath (contains dot)');
                 }
                 endpoint.apiPath = apiPath;
             }

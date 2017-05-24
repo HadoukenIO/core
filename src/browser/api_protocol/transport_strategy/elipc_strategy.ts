@@ -40,7 +40,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
                     if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
-                            .then(() => endpoint.actor(identity, data, ack, nack))
+                            .then(() => endpoint.apiFunc(identity, data, ack, nack))
                             .then(result => {
                                 // older action calls will invoke ack internally, newer ones will return a value
                                 if (result !== undefined) {

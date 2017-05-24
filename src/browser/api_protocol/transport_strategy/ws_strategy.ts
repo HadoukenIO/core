@@ -29,7 +29,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
                 const endpoint: Endpoint = actionMap[data.action];
                 if (endpoint) {
                     Promise.resolve()
-                        .then(() => endpoint.actor(identity, data, ack, nack))
+                        .then(() => endpoint.apiFunc(identity, data, ack, nack))
                         .then(result => {
                             // older action calls will invoke ack internally, newer ones will return a value
                             if (result !== undefined) {

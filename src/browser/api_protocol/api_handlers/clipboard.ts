@@ -20,15 +20,15 @@ import { ActionSpecMap } from '../shapes';
 
 const clipboardApiMap: ActionSpecMap = {
     'clipboard-clear': clipboardClear,
-    'clipboard-read-formats': { actor: clipboardAvailableFormats, apiPath: '.availableFormats' },
-    'clipboard-read-html': { actor: clipboardReadHtml, apiPath: '.readHtml' },
-    'clipboard-read-rtf': { actor: clipboardReadRtf, apiPath: '.readRtf' },
-    'clipboard-read-text': { actor: clipboardReadText, apiPath: '.readText' },
-    'clipboard-write': { actor: clipboardWrite, apiPath: '.write' },
-    'clipboard-write-html': { actor: clipboardWriteHtml, apiPath: '.writeHtml' },
-    'clipboard-write-rtf': { actor: clipboardWriteRtf, apiPath: '.writeRtf' },
-    'clipboard-write-text': { actor: clipboardWriteText, apiPath: '.writeText' },
-    'set-clipboard': { actor: clipboardWriteText, apiPath: 'System.setClipboard' } // support for legacy api
+    'clipboard-read-formats': { apiFunc: clipboardAvailableFormats, apiPath: '.availableFormats' },
+    'clipboard-read-html': { apiFunc: clipboardReadHtml, apiPath: '.readHtml' },
+    'clipboard-read-rtf': { apiFunc: clipboardReadRtf, apiPath: '.readRtf' },
+    'clipboard-read-text': { apiFunc: clipboardReadText, apiPath: '.readText' },
+    'clipboard-write': { apiFunc: clipboardWrite, apiPath: '.write' },
+    'clipboard-write-html': { apiFunc: clipboardWriteHtml, apiPath: '.writeHtml' },
+    'clipboard-write-rtf': { apiFunc: clipboardWriteRtf, apiPath: '.writeRtf' },
+    'clipboard-write-text': { apiFunc: clipboardWriteText, apiPath: '.writeText' },
+    'set-clipboard': { apiFunc: clipboardWriteText, apiPath: 'System.setClipboard' } // support for legacy api
 };
 
 export function init() {

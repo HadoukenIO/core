@@ -19,14 +19,14 @@ limitations under the License.
 import { AckFunc, NackFunc } from './transport_strategy/ack';
 import { Identity, Acker, Nacker } from '../../shapes';
 
-export interface Actor {
+export interface ApiFunc {
     (identity: Identity, data: any, ack?: Acker | AckFunc, nack?: Nacker | NackFunc): void;
 }
 
 export type ApiPath = string; // path in dot notation
 
 export type Endpoint = {
-    actor: Actor;
+    apiFunc: ApiFunc;
     apiPath?: ApiPath;
     // future endpoint properties go here
 };
@@ -35,7 +35,7 @@ export interface ActionMap {
 }
 
 // ActionSpecMap (hash of EndpointSpec) is only for input to `registerActionMap` (outputs an ActionMap)
-export type EndpointSpec = Actor | Endpoint;
+export type EndpointSpec = ApiFunc | Endpoint;
 export interface ActionSpecMap {
     [key: string]: EndpointSpec;
 }

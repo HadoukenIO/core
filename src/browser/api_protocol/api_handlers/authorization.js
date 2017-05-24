@@ -32,7 +32,7 @@ function AuthorizationApiHandler() {
             'request-external-authorization': onRequestExternalAuth,
             'request-authorization': onRequestAuthorization,
             'register-external-connection': {
-                actor: registerExternalConnection,
+                apiFunc: registerExternalConnection,
                 apiPath: 'System.registerExternalConnection'
             }
         };
