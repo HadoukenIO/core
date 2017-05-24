@@ -240,8 +240,15 @@ function closeChildWins(identity) {
 }
 
 Application.close = function(identity, force, callback) {
-    var app = Application.wrap(identity.uuid),
-        mainWin = app.mainWindow;
+    let app = Application.wrap(identity.uuid);
+
+    if (!app) {
+        log.writeToLog(1, `Could not close app ${identity.uuid}`, true);
+        callback();
+        return;
+    }
+
+    let mainWin = app.mainWindow;
 
     if (force) {
         closeChildWins(identity);
