@@ -966,10 +966,11 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
             if (isMainFrame) {
-                if (errorCode === -3) {
+                if (errorCode === -3 || errorCode === 0) {
                     // 304 can trigger net::ERR_ABORTED, ignore it
-                    log.writeToLog(1, `ignoring net error -3 for ${opts.uuid}`, true);
+                    log.writeToLog(1, `ignoring net error ${errorCode} for ${opts.uuid}`, true);
                 } else {
+                    log.writeToLog(1, `receiving net error ${errorCode} for ${opts.uuid}`, true);
                     if (!coreState.argo['noerrdialog'] && configUrl) {
                         // NOTE: don't show this dialog if the app is created via the api
                         const errorMessage = opts.loadErrorMessage || 'There was an error loading the application.';
