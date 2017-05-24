@@ -58,6 +58,7 @@ try {
  */
 const trans2TSFiles = [
     'src/browser/api_protocol/api_handlers/clipboard.ts',
+    'src/browser/api_protocol/shapes.ts',
     'src/browser/transports/base.ts',
     'src/browser/transports/chromium_ipc.ts',
     'src/browser/transports/electron_ipc.ts',
