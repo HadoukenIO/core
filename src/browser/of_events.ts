@@ -42,6 +42,15 @@ class OFEvents extends EventEmitter {
 
         return super.emit(route, ...data);
     }
+
+    public SUBSCRIBER: StringMap = {
+        ADDED: 'subscriber-added',
+        REMOVED: 'subscriber-removed'
+    };
+}
+
+interface StringMap {
+    [key: string]: string;
 }
 
 export default new OFEvents();
