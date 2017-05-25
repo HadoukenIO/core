@@ -38,6 +38,14 @@ const optionalDependencies = [
     'runtime-p2p/**'
 ];
 
+// https://github.com/beautify-web/js-beautify#options
+// (Options in above-linked page are hyphen-separarted but here must be either camelCase or underscore_separated.)
+const beautifierOptions = {
+    js: {
+        braceStyle: 'collapse,preserve-inline'
+    }
+};
+
 try {
     var openfinSign = require('openfin-sign');
 } catch (err) {
@@ -50,6 +58,7 @@ try {
  */
 const trans2TSFiles = [
     'src/browser/api_protocol/api_handlers/clipboard.ts',
+    'src/browser/api_protocol/shapes.ts',
     'src/browser/transports/base.ts',
     'src/browser/transports/chromium_ipc.ts',
     'src/browser/transports/electron_ipc.ts',
@@ -186,13 +195,12 @@ module.exports = (grunt) => {
         },
         jsbeautifier: {
             default: {
-                src: ['src/**/*.js', 'index.js']
+                src: ['src/**/*.js', 'index.js'],
+                options: beautifierOptions
             },
             'git-pre-commit': {
                 src: ['src/**/*.js', 'index.js'],
-                options: {
-                    mode: 'VERIFY_ONLY'
-                }
+                options: Object.assign({ mode: 'VERIFY_ONLY' }, beautifierOptions)
             }
         },
         mochaTest: {

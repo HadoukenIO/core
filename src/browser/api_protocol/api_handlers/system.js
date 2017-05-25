@@ -23,48 +23,48 @@ function SystemApiHandler() {
     };
 
     let SystemApiHandlerMap = {
-        'clear-cache': clearCache,
+        'clear-cache': { apiFunc: clearCache, apiPath: '.clearCache' },
         'convert-options': convertOptions,
-        'delete-cache-request': deleteCacheRequest,
-        'download-asset': downloadAsset,
-        'exit-desktop': exitDesktop,
+        'delete-cache-request': deleteCacheRequest, // apiPath: '.deleteCacheOnRestart' -> deprecated
+        'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset' },
+        'exit-desktop': { apiFunc: exitDesktop, apiPath: '.exitDesktop' },
         'generate-guid': generateGuid,
         'get-all-applications': getAllApplications,
         'get-all-external-applications': getAllExternalApplications,
         'get-all-windows': getAllWindows,
-        'get-command-line-arguments': getCommandLineArguments,
-        'get-config': getConfig,
-        'get-device-id': getDeviceId,
+        'get-command-line-arguments': { apiFunc: getCommandLineArguments, apiPath: '.getCommandLineArguments' },
+        'get-config': { apiFunc: getConfig, apiPath: '.getConfig' },
+        'get-device-id': { apiFunc: getDeviceId, apiPath: '.getDeviceId' },
         'get-device-user-id': getDeviceUserId,
         'get-el-ipc-config': getElIPCConfig,
-        'get-environment-variable': getEnvironmentVariable,
-        'get-host-specs': getHostSpecs,
-        'get-monitor-info': getMonitorInfo,
-        'get-mouse-position': getMousePosition,
+        'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
+        'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
+        'get-monitor-info': getMonitorInfo, // apiPath: '.getMonitorInfo' -> called by js adapter during init so can't be disabled
+        'get-mouse-position': { apiFunc: getMousePosition, apiPath: '.getMousePosition' },
         'get-nearest-display-root': getNearestDisplayRoot,
         'get-proxy-settings': getProxySettings,
-        'get-remote-config': getRemoteConfig,
+        'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
         'get-rvm-info': getRvmInfo,
         'get-version': getVersion,
         'get-websocket-state': getWebSocketState,
-        'launch-external-process': launchExternalProcess,
-        'list-logs': listLogs,
-        'monitor-external-process': monitorExternalProcess,
+        'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
+        'list-logs': { apiFunc: listLogs, apiPath: '.getLogList' },
+        'monitor-external-process': { apiFunc: monitorExternalProcess, apiPath: '.monitorExternalProcess' },
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
         'raise-event': raiseEvent,
-        'release-external-process': releaseExternalProcess,
+        'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
+        //'set-clipboard': setClipboard, -> moved to clipboard.ts
         'set-cookie': setCookie,
         'show-developer-tools': showDeveloperTools,
-        'terminate-external-process': terminateExternalProcess,
+        'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess' },
         'update-proxy': updateProxy,
-        'view-log': viewLog,
+        'view-log': { apiFunc: viewLog, apiPath: '.getLog' },
         'write-to-log': writeToLog
-        //'set-clipboard': setClipboard, this has moved to clipboard_external_api
     };
 
-    apiProtocolBase.registerActionMap(SystemApiHandlerMap);
+    apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
 
     function getDeviceUserId(identity, message, ack) {
         let dataAck = _.clone(successAck);

@@ -57,13 +57,13 @@ function ApplicationApiHandler() {
         'remove-tray-icon': removeTrayIcon,
         'restart-application': restartApplication,
         'run-application': runApplication,
-        'set-shortcuts': setShortcuts,
+        'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
         'set-tray-icon': setTrayIcon,
         'terminate-application': terminateApplication,
         'wait-for-hung-application': waitForHungApplication
     };
 
-    apiProtocolBase.registerActionMap(appExternalApiMap);
+    apiProtocolBase.registerActionMap(appExternalApiMap, 'Application');
 
     function setTrayIcon(identity, rawMessage, ack, nack) {
         let message = JSON.parse(JSON.stringify(rawMessage));
