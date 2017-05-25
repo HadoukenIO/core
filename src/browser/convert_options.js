@@ -129,7 +129,7 @@ function readFile(filePath, done, onError) {
 }
 
 function getURL(url, done, onError) {
-    let fetcher = new ResourceFetcher('string');
+    const fetcher = new ResourceFetcher('string');
 
     fetcher.once('fetch-complete', (object, status, data) => {
         if (status !== 'success') {
@@ -140,14 +140,12 @@ function getURL(url, done, onError) {
         log.writeToLog(1, `Contents from ${url}`, true);
         log.writeToLog(1, data, true);
 
-        let config;
         try {
-            config = JSON.parse(data);
+            const config = JSON.parse(data);
+            done(config);
         } catch (e) {
             onError(new Error(`Error parsing JSON from ${url}`));
-            return;
         }
-        done(config);
     });
 
     log.writeToLog(1, `Fetching ${url}`, true);

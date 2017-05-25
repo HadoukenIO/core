@@ -406,12 +406,12 @@ module.exports.System = {
         };
     },
     getRemoteConfig: function(url, callback, errorCallback) {
-        var fetcher = new ResourceFetcher('string');
+        const fetcher = new ResourceFetcher('string');
 
         fetcher.once('fetch-complete', (obj, status, data) => {
             if (status === 'success') {
                 try {
-                    var res = JSON.parse(data);
+                    const res = JSON.parse(data);
                     callback(res);
                 } catch (e) {
                     errorCallback(e);
