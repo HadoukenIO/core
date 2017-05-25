@@ -28,7 +28,7 @@ export function sendToRVM(opts: SendToRVMOpts): Promise<any> {
             return reject(new Error('Connection with RVM is not established'));
         }
 
-        const messageSent = rvmMessageBus.publish(Object.assign(opts, {timeToLive: 1000}), (rvmResponse: any) => {
+        const messageSent = rvmMessageBus.publish(Object.assign({timeToLive: 1000}, opts), (rvmResponse: any) => {
 
             // Don't do anything here because the message wasn't sent successfully to RVM
             // and we already sent error callback to the client

@@ -51,6 +51,9 @@ import {
     navigationValidator
 } from '../navigation_validation';
 
+import {
+    toSafeInt
+} from '../../common/safe_int';
 
 // locals
 const isWin32 = process.platform === 'win32';
@@ -1181,8 +1184,8 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
     }
 
     let currentBounds = browserWindow.getBounds();
-    let left = (typeof deltaLeft === 'number' ? deltaLeft : 0);
-    let top = (typeof deltaTop === 'number' ? deltaTop : 0);
+    let left = toSafeInt(deltaLeft, 0);
+    let top = toSafeInt(deltaTop, 0);
 
     browserWindow.setBounds({
         x: currentBounds.x + left,
@@ -1194,17 +1197,19 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
 
 
 Window.moveTo = function(identity, x, y) {
-    let browserWindow = getElectronBrowserWindow(identity);
+    const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
     }
 
-    let currentBounds = browserWindow.getBounds();
+    const currentBounds = browserWindow.getBounds();
+    const safeX = toSafeInt(x);
+    const safeY = toSafeInt(y);
 
     browserWindow.setBounds({
-        x,
-        y,
+        x: safeX,
+        y: safeY,
         width: currentBounds.width,
         height: currentBounds.height
     });
@@ -1254,8 +1259,8 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
     }
 
     let currentBounds = browserWindow.getBounds();
-    let newWidth = (typeof deltaWidth === 'number' ? currentBounds.width + deltaWidth : currentBounds.width);
-    let newHeight = (typeof deltaHeight === 'number' ? currentBounds.height + deltaHeight : currentBounds.height);
+    let newWidth = toSafeInt(currentBounds.width + deltaWidth, currentBounds.width);
+    let newHeight = toSafeInt(currentBounds.height + deltaHeight, currentBounds.height);
     let boundsAnchor = calcBoundsAnchor(anchor, newWidth, newHeight, currentBounds);
     browserWindow.setBounds(clipBounds({
         x: boundsAnchor.x,
@@ -1267,20 +1272,22 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
 
 
 Window.resizeTo = function(identity, width, height, anchor) {
-    let browserWindow = getElectronBrowserWindow(identity);
+    const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
     }
 
-    let currentBounds = browserWindow.getBounds();
-    let boundsAnchor = calcBoundsAnchor(anchor, width, height, currentBounds);
+    const currentBounds = browserWindow.getBounds();
+    const safeWidth = toSafeInt(width, currentBounds.width);
+    const safeHeight = toSafeInt(height, currentBounds.height);
+    const boundsAnchor = calcBoundsAnchor(anchor, safeWidth, safeHeight, currentBounds);
 
     browserWindow.setBounds(clipBounds({
         x: boundsAnchor.x,
         y: boundsAnchor.y,
-        width: (typeof width === 'number' ? width : currentBounds.width),
-        height: (typeof height === 'number' ? height : currentBounds.height)
+        width: safeWidth,
+        height: safeHeight
     }, browserWindow));
 };
 
@@ -1313,10 +1320,10 @@ Window.setBounds = function(identity, left, top, width, height) {
     let browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
     let bounds = browserWindow.getBounds();
     browserWindow.setBounds(clipBounds({
-        x: (typeof left === 'number' ? left : bounds.x),
-        y: (typeof top === 'number' ? top : bounds.y),
-        width: (typeof width === 'number' ? width : bounds.width),
-        height: (typeof height === 'number' ? height : bounds.height)
+        x: toSafeInt(left, bounds.x),
+        y: toSafeInt(top, bounds.y),
+        width: toSafeInt(width, bounds.width),
+        height: toSafeInt(height, bounds.height)
     }, browserWindow));
 };
 
@@ -1346,16 +1353,18 @@ Window.showAt = function(identity, left, top, force = false) {
         return;
     }
 
+    const safeLeft = toSafeInt(left);
+    const safeTop = toSafeInt(top);
     let payload = {
-        top,
-        left
+        top: safeTop,
+        left: safeLeft
     };
     let defaultAction = () => {
         let currentBounds = browserWindow.getBounds();
 
         browserWindow.setBounds({
-            x: left,
-            y: top,
+            x: safeLeft,
+            y: safeTop,
             width: currentBounds.width,
             height: currentBounds.height
         });

@@ -9,10 +9,10 @@ import * as apiProtocolBase from './api_protocol_base';
 
 import { ExternalApplication } from '../../api/external_application';
 import { Identity } from '../../../shapes';
-import { ActionMap } from '../transport_strategy/api_transport_base';
+import { ActionSpecMap } from '../shapes';
 
 export class ExternalApplicationApiHandler {
-    private readonly actionMap: ActionMap = {
+    private readonly actionMap: ActionSpecMap = {
         'get-external-application-info': this.getInfo
     };
 

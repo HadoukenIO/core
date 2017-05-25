@@ -5,8 +5,9 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import { AckMessage,  AckFunc, AckPayload, NackPayload } from './ack';
-import { ApiTransportBase, ActionMap, MessagePackage, Identity } from './api_transport_base';
-import {default as RequestHandler} from './base_handler';
+import { ApiTransportBase, MessagePackage, Identity } from './api_transport_base';
+import { default as RequestHandler } from './base_handler';
+import { Endpoint, ActionMap } from '../shapes';
 
 declare var require: any;
 
@@ -20,23 +21,24 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
         super(actionMap, requestHandler);
 
         this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
-
             const {identity, data, ack, nack, strategyName} = mp;
-            const action = this.actionMap[data.action];
 
             if (strategyName !== this.constructor.name) {
                 next();
-            } else if (typeof (action) === 'function') {
-                Promise.resolve()
-                    .then(() => action(identity, data, ack, nack))
-                    .then(result => {
-                        // older action calls will invoke ack internally, newer ones will return a value
-                        if (result !== undefined) {
-                            ack(new AckPayload(result));
-                        }
-                    }).catch(err => {
-                        ack(new NackPayload(err));
-                    });
+            } else {
+                const endpoint: Endpoint = actionMap[data.action];
+                if (endpoint) {
+                    Promise.resolve()
+                        .then(() => endpoint.apiFunc(identity, data, ack, nack))
+                        .then(result => {
+                            // older action calls will invoke ack internally, newer ones will return a value
+                            if (result !== undefined) {
+                                ack(new AckPayload(result));
+                            }
+                        }).catch(err => {
+                            ack(new NackPayload(err));
+                        });
+                }
             }
         });
     }

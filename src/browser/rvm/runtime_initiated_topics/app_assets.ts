@@ -9,8 +9,8 @@ import * as log from '../../log';
 import * as  _ from 'underscore';
 
 interface CallbackObj {
-    successCB: Function;
-    failureCB: Function;
+    successCB: (data: any) => any;
+    failureCB: (data: any) => any;
 }
 
 interface PendingRequestObj {
@@ -21,12 +21,11 @@ interface PendingRequestObj {
 
 /**
  * Module to handle fetching of app assets from RVM
- *
  **/
 class AppAssetsFetcher {
     private pendingRequests: PendingRequestObj = {};
 
-    public fetchAppAsset (sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
+    public fetchAppAsset (sourceUrl: string, assetAlias: string, successCB: (data: any) => any, failureCB: (data: any) => any) {
 
         if (!sourceUrl) {
             log.writeToLog(1, 'sourceUrl is required!', true);
@@ -36,7 +35,9 @@ class AppAssetsFetcher {
             log.writeToLog(1, 'successCB is required!', true);
         } else if (!failureCB) {
             log.writeToLog(1, 'failureCB is required!', true);
-        } else { // Have all mandatory params
+        } else {
+            // Have all mandatory params
+
             const firstRequest = this.addPendingRequest(sourceUrl, assetAlias, successCB, failureCB);
 
             if (firstRequest) {// Ask RVM for this app's assets on 1st request, duplicates get recorded in pending object
@@ -55,13 +56,12 @@ class AppAssetsFetcher {
     };
 
     // Returns bool which indicates whether this is the 1st request for sourceUrl - then we actually need to send it to RVM
-    private addPendingRequest (sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
-        const pendingCBObj = {
-            successCB: successCB,
-            failureCB: failureCB
-        };
+    private addPendingRequest (sourceUrl: string, assetAlias: string, successCB: (data: any) => any, failureCB: (data: any) => any) {
+        const pendingCBObj = { successCB, failureCB };
 
-        if (!(sourceUrl in this.pendingRequests)) { // 1st requester!
+        if (!(sourceUrl in this.pendingRequests)) {
+
+            // 1st requester!
 
             this.pendingRequests[sourceUrl] = {};
             this.pendingRequests[sourceUrl][assetAlias] = [pendingCBObj];
@@ -76,7 +76,6 @@ class AppAssetsFetcher {
 
     /**
      *  High level app assets response handler policy; 1st point of entry upon recepit of RVM Message bus response
-     *
      */
     private responseHandler (dataObj: any) {
         let sourceUrl;
@@ -87,7 +86,7 @@ class AppAssetsFetcher {
             log.writeToLog(1, `Time to live of ${dataObj['time-to-live-expiration']} seconds for app asset request for `
                            + `app config: ${sourceUrl} reached.`, true);
 
-            dataObj.error = 'Unable to determine app asset information for ' + sourceUrl;
+            dataObj.error = `Unable to determine app asset information for ${sourceUrl}`;
         } else {
             log.writeToLog(1, `AppAssetsFetcher received a response from RVM: ${dataObj}`, true);
             if (!this.isResponseValid(dataObj)) {
@@ -104,7 +103,6 @@ class AppAssetsFetcher {
 
     /**
      *  Checks RVM app asset responses for mandatory message attributes
-     *
      */
     private isResponseValid (dataObj: any) {
         const hasSourceUrl = _.has(dataObj, 'appConfig');
@@ -126,7 +124,6 @@ class AppAssetsFetcher {
 
     /**
      *  Determines how to notify observers!(error or info)
-     *
      */
     private notifyObservers (sourceUrl: string, dataObj: any) {
         if (_.has(dataObj, 'error')) {
@@ -138,7 +135,6 @@ class AppAssetsFetcher {
 
     /**
      *  Notifies all observers of sourceUrl of error
-     *
      */
     private handleErrorResponse (sourceUrl: string, dataObj: any) {
         log.writeToLog(1, `Received error for ${sourceUrl}, Error: ${dataObj.error}`);
@@ -149,13 +145,10 @@ class AppAssetsFetcher {
 
     /**
      *  Notifies all observers of relevant alias info! (or lack thereof)
-     *
      */
     private handleInfoResponse (sourceUrl: string, dataObj: any) {
         _.mapObject(this.pendingRequests[sourceUrl], (requestedAliasCallbackArray: any, alias: string) => {
-            const aliasInResponse = _.findWhere(dataObj.result, {
-                'alias': alias
-            });
+            const aliasInResponse = _.findWhere(dataObj.result, { alias });
             if (aliasInResponse) {
                 _.invoke(requestedAliasCallbackArray, 'successCB', aliasInResponse);
             } else {
@@ -165,4 +158,6 @@ class AppAssetsFetcher {
     };
 }
 
-export const appAssetsFetcher = new AppAssetsFetcher();
+const appAssetsFetcher = new AppAssetsFetcher();
+
+export  {appAssetsFetcher};

@@ -13,17 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { NackPayload, AckFunc } from './ack';
+import { NackPayload, AckFunc, NackFunc } from './ack';
 import { default as RequestHandler } from './base_handler';
+import { ActionMap } from '../shapes';
 import { Identity } from '../../../shapes';
 
-declare var require: any;
-
-export interface ActionMap {
-    [key: string]: (identity: Identity, message: any, ack: AckFunc, nack: (err: string | Error) => void) => void;
-}
-
 export { Identity };
+
+declare var require: any;
 
 /**
  * This represents the raw data that comes off the wire as well as the ack and
@@ -33,7 +30,7 @@ export interface MessagePackage {
     identity: Identity; // of the caller
     data: any;
     ack: AckFunc;
-    nack: (err: Error | string) => void;
+    nack: NackFunc;
     e?: any;
     strategyName: any; // ws / elipc
 }
