@@ -329,7 +329,7 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
         .catch(errorCallback);
 };
 
-Application.getInfo = function(identity, callback /*, errorCallback*/ ) {
+Application.getInfo = function(identity, callback) {
     const app = Application.wrap(identity.uuid);
 
     const response = {
@@ -345,17 +345,17 @@ Application.getWindow = function(identity) {
     return Window.wrap(uuid, uuid);
 };
 
-Application.grantAccess = function( /*action, callback, errorCallback*/ ) {
+Application.grantAccess = function() {
     console.warn('Deprecated');
 };
-Application.grantWindowAccess = function( /*action, windowName, callback, errorCallback*/ ) {
+Application.grantWindowAccess = function() {
     console.warn('Deprecated');
 };
-Application.isRunning = function(identity /*, callback, errorCallback*/ ) {
+Application.isRunning = function(identity) {
     let uuid = identity && identity.uuid;
     return uuid && coreState.getAppRunningState(uuid) && !coreState.getAppRestartingState(uuid);
 };
-Application.pingChildWindow = function( /*name, callback, errorCallback*/ ) {
+Application.pingChildWindow = function() {
     console.warn('Deprecated');
 };
 Application.registerCustomData = function(identity, data, callback, errorCallback) {
@@ -385,19 +385,19 @@ Application.registerCustomData = function(identity, data, callback, errorCallbac
 };
 
 //TODO:Ricardo: This should be deprecated.
-Application.removeEventListener = function(identity, type, listener /*, callback, errorCallback*/ ) {
+Application.removeEventListener = function(identity, type, listener) {
     var app = Application.wrap(identity.uuid);
 
     ofEvents.removeListener(eventRoute(app.id, type), listener);
 };
 
-Application.removeTrayIcon = function(identity /*, callback, errorCallback*/ ) {
+Application.removeTrayIcon = function(identity) {
     const app = Application.wrap(identity.uuid);
 
     removeTrayIcon(app);
 };
 
-Application.restart = function(identity /*, callback, errorCallback*/ ) {
+Application.restart = function(identity) {
     let uuid = identity.uuid;
     const appObj = coreState.getAppObjByUuid(uuid);
 
@@ -417,14 +417,17 @@ Application.restart = function(identity /*, callback, errorCallback*/ ) {
         throw err;
     }
 };
-Application.revokeAccess = function( /*action, callback, errorCallback*/ ) {
-    console.warn('Deprecated');
-};
-Application.revokeWindowAccess = function( /*action, windowName, callback, errorCallback*/ ) {
+
+Application.revokeAccess = function() {
     console.warn('Deprecated');
 };
 
-Application.run = function(identity, configUrl = '' /*, callback , errorCallback*/ ) {
+Application.revokeWindowAccess = function() {
+    console.warn('Deprecated');
+};
+
+Application.run = function(identity, configUrl = '') {
+
     if (!identity) {
         return;
     }
@@ -524,6 +527,24 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
             type: 'connected',
             uuid
         });
+
+        // const { parentUuid } = coreState.appByUuid(uuid);
+
+        const parentConfigUrl = coreState.getConfigUrlByUuid;
+
+        // TODO add correct info here..
+        rvmBus.registerLicenseInfo({
+            licenseKey: mainWindowOpts.licenseKey,
+            client: {
+                type: 'js',
+                pid
+            },
+            parentApp: {
+                sourceUrl: parentConfigUrl
+            },
+            sourceUrl
+        });
+
     });
 
     // turn on plugins for the main window
@@ -655,7 +676,7 @@ Application.runWithRVM = function(identity, manifestUrl) {
     });
 };
 
-Application.send = function( /*topic, message*/ ) {
+Application.send = function() {
     console.warn('Deprecated. Please use InterAppBus');
 };
 
@@ -823,7 +844,7 @@ Application.emitRunRequested = function(identity) {
     }
 };
 
-Application.wait = function( /*callback, errorCallback*/ ) {
+Application.wait = function() {
     console.warn('Awaiting native implementation');
 };
 

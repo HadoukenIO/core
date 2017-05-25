@@ -145,6 +145,17 @@ export interface ApplicationEvent extends RvmMsgBase {
     topic: ApplicationEventTopic;
     type: EventType;
     sourceUrl: string;
+
+export interface ExternalLicenseInfo {
+    licenseKey?: string;
+    client?: {
+        type: 'dotnet' | 'java' | 'air' | 'node' | 'js';
+        version: string;
+    };
+    pid?: number;
+    parentApp?: {
+        sourceUrl: string;
+    };
 }
 
 /**
@@ -153,9 +164,10 @@ export interface ApplicationEvent extends RvmMsgBase {
  * 'broadcast' messages received from RVM(RVM initiated) will be broadcasted
  *
  **/
-class RVMMessageBus extends EventEmitter  {
+export class RVMMessageBus extends EventEmitter  {
     private messageIdToCallback: RvmCallbacks; // Tracks functions that we'll notify If a response is received
     private transport: WMCopyData;
+    public static sessionId = App.generateGUID();
 
     constructor() {
         super();
@@ -204,7 +216,7 @@ class RVMMessageBus extends EventEmitter  {
         });
     }
 
-    public publish(msg: RvmMsgBase, callback: Function) {
+    public publish(msg: RvmMsgBase, callback: (x: any) => any = ()  => undefined): boolean {
         const {topic, timeToLive} = msg;
         const payload: any = Object.assign({
             processId: process.pid,
@@ -222,7 +234,6 @@ class RVMMessageBus extends EventEmitter  {
         this.recordCallbackInfo(callback, timeToLive, envelope);
 
         return this.transport.publish(envelope);
-
     }
 
     /**
