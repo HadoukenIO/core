@@ -497,7 +497,8 @@ function initFirstApp(options, configUrl) {
         log.writeToLog(1, error, true);
 
         if (rvmBus) {
-            rvmBus.send('application', {
+            rvmBus.publish({
+                topic: 'application',
                 action: 'hide-splashscreen',
                 sourceUrl: configUrl
             });

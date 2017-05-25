@@ -19,7 +19,7 @@ interface RvmCallbacks {
     [key: string]: Function;
 }
 
-interface RvmMsgBase {
+export interface RvmMsgBase {
     timeToLive?: number;
     topic: string;
 }
@@ -62,6 +62,16 @@ export interface GetDesktopOwnerSettings extends RvmMsgBase {
 type getShortcutStateAction = 'get-shortcut-state';
 type setShortcutStateAction = 'set-shortcut-state';
 type launchedFromAction = 'launched-from';
+type launchAppAction = 'launch-app';
+
+export interface LaunchApp extends RvmMsgBase {
+    topic: applicationTopic;
+    action: launchAppAction;
+    sourceUrl: string;
+    data: {
+        [key: string]: string;
+    };
+}
 
 export interface GetShortcutState extends RvmMsgBase {
     topic: applicationTopic;
@@ -128,6 +138,15 @@ export interface System extends RvmMsgBase {
     sourceUrl: string;
 }
 
+// topic: application-events -----
+type EventType = 'started'| 'closed' | 'ready' | 'run-requested' | 'crashed' | 'error' | 'not-responding' | 'out-of-memory';
+type ApplicationEventTopic = 'application-event';
+export interface ApplicationEvent extends RvmMsgBase {
+    topic: ApplicationEventTopic;
+    type: EventType;
+    sourceUrl: string;
+}
+
 /**
  * Module to facilitate communication with the RVM.
  * A transport can be passed in to be used, otherwise a new WMCopyData transport is used.
@@ -185,50 +204,6 @@ class RVMMessageBus extends EventEmitter  {
         });
     }
 
-    /**
-     * me.send() - Sends a valid JSON message to the RVM, and allows sender to be notified of any responses
-     * topic - Message topic
-     * data - Valid JSON string or object; add in 'messageId' to override id used in main envelope
-     * callback - Optional callback that is notified if a response is received. Called with response JSON object.
-     * timeToLiveInSeconds - Mandatory w/callback, Callback will be called at expirating with obj containing 'time-to-live-expiration'
-     *                       and 'envelope' at expiration
-     *
-     **/
-    // TODO: the type of the data here is to be defined in RUN-2947
-    public send(topic: string, data: any, callback: Function, timeToLiveInSeconds: number) {
-
-        log.writeToLog(1, 'RVM message bus .send is deprecated, please use .publish', true);
-
-        if (!this.areSendParametersValid(topic, data, callback, timeToLiveInSeconds)) {
-            return false;
-        }
-
-        // Our data object that we will add a few fields to before adding to main envelope and sending
-        const dataObj = <any> this.getSendDataObject(data);
-
-        if (!dataObj) {
-            return false;
-        }
-
-        // Used to correlate responses to sender callbacks
-        const messageId = this.chooseMessageId(dataObj);
-
-        // Add in our info
-        dataObj.processId = process.pid;
-
-        dataObj.runtimeVersion = <string> processVersions.openfin;  // eventually switch to App.getVersion()
-
-        const envelope = {
-            topic: topic,
-            messageId: messageId,
-            payload: dataObj
-        };
-
-        this.recordCallbackInfo(callback, timeToLiveInSeconds, envelope);
-
-        return this.transport.publish(envelope);
-    };
-
     public publish(msg: RvmMsgBase, callback: Function) {
         const {topic, timeToLive} = msg;
         const payload: any = Object.assign({
@@ -247,74 +222,8 @@ class RVMMessageBus extends EventEmitter  {
         this.recordCallbackInfo(callback, timeToLive, envelope);
 
         return this.transport.publish(envelope);
-    };
 
-    /**
-     * areSendParametersValid() - Validates params necessary to send() on rvm message bus
-     *
-     **/
-    private areSendParametersValid (topic: string, data: any, callback: Function, timeToLiveInSeconds: number) {
-        if (!topic) {
-            log.writeToLog(1, 'topic is required' , true);
-            return false;
-        } else if (!data) {
-            log.writeToLog(1, 'data is required!', true);
-            return false;
-        } else if (data && !(_.isString(data) || _.isObject(data))) {
-            log.writeToLog(1, 'data must be a JSON string or an object', true);
-            return false;
-        } else if (callback) {
-            if (!_.isFunction(callback)) {
-                log.writeToLog(1, 'callback must be a function!', true);
-                return false;
-            } else if (!_.isNumber(timeToLiveInSeconds)) {
-                log.writeToLog(1, 'You must specify a time to live when specifying a function!', true);
-                return false;
-            }
-        }
-        return true;
-    };
-
-    private getSendDataObject (data: any): object | undefined {
-        let dataObj;
-
-        if (_.isString(data)) {
-            try {
-                dataObj = JSON.parse(data);
-            } catch (e) {
-               log.writeToLog(1, `data must be valid JSON string; Error: ${e.message}`);
-            }
-        } else if (_.isObject(data)) {
-            dataObj = data;
-        }
-        return dataObj;
-    };
-
-    /**
-     * chooseMessageId() - Generates new message id guid or uses one specified by dataObj
-     *
-     **/
-    // TODO: the type of the dataObj here is to be defined in RUN-2947
-    private chooseMessageId  (dataObj: any) {
-        let messageId;
-        const userSpecifiedMessageId = dataObj.messageId;
-
-        if (userSpecifiedMessageId) {
-
-            if (_.isNumber(userSpecifiedMessageId)) {
-                messageId = userSpecifiedMessageId.toString();
-
-            } else if (_.isString(userSpecifiedMessageId)) {
-                messageId = userSpecifiedMessageId;
-            }
-        }
-
-        if (!messageId) {
-            messageId = App.generateGUID();
-        }
-
-        return messageId;
-    };
+    }
 
     /**
      * recordCallbackInfo() - Records callback info based on messageId so we execute callback upon relevant RVM response.

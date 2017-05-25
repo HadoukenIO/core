@@ -9,8 +9,8 @@ import * as log from '../../log';
 import * as  _ from 'underscore';
 
 interface CallbackObj {
-    successCB: Function;
-    failureCB: Function;
+    successCB: (data: any) => any;
+    failureCB: (data: any) => any;
 }
 
 interface PendingRequestObj {
@@ -25,7 +25,7 @@ interface PendingRequestObj {
 class AppAssetsFetcher {
     private pendingRequests: PendingRequestObj = {};
 
-    public fetchAppAsset (sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
+    public fetchAppAsset (sourceUrl: string, assetAlias: string, successCB: (data: any) => any, failureCB: (data: any) => any) {
 
         if (!sourceUrl) {
             log.writeToLog(1, 'sourceUrl is required!', true);
@@ -37,6 +37,7 @@ class AppAssetsFetcher {
             log.writeToLog(1, 'failureCB is required!', true);
         } else {
             // Have all mandatory params
+
             const firstRequest = this.addPendingRequest(sourceUrl, assetAlias, successCB, failureCB);
 
             if (firstRequest) {// Ask RVM for this app's assets on 1st request, duplicates get recorded in pending object
@@ -55,11 +56,8 @@ class AppAssetsFetcher {
     };
 
     // Returns bool which indicates whether this is the 1st request for sourceUrl - then we actually need to send it to RVM
-    private addPendingRequest (sourceUrl: string, assetAlias: string, successCB: Function, failureCB: Function) {
-        const pendingCBObj = {
-            successCB,
-            failureCB
-        };
+    private addPendingRequest (sourceUrl: string, assetAlias: string, successCB: (data: any) => any, failureCB: (data: any) => any) {
+        const pendingCBObj = { successCB, failureCB };
 
         if (!(sourceUrl in this.pendingRequests)) {
 
@@ -150,9 +148,7 @@ class AppAssetsFetcher {
      */
     private handleInfoResponse (sourceUrl: string, dataObj: any) {
         _.mapObject(this.pendingRequests[sourceUrl], (requestedAliasCallbackArray: any, alias: string) => {
-            const aliasInResponse = _.findWhere(dataObj.result, {
-                alias
-            });
+            const aliasInResponse = _.findWhere(dataObj.result, { alias });
             if (aliasInResponse) {
                 _.invoke(requestedAliasCallbackArray, 'successCB', aliasInResponse);
             } else {
