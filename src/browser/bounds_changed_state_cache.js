@@ -118,6 +118,7 @@ BoundsChangedStateCache.prototype.setBoundsFromDiskCache = function setBoundsFro
         var bounds = this.readBoundsFromDiskSync();
 
         if (_this.browserWindow) {
+            // no reason to safety-check these previously vetted coordinates
             _this.browserWindow.setBounds(clipBounds({
                 x: bounds.fx,
                 y: bounds.fy,

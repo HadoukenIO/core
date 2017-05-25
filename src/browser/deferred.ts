@@ -15,6 +15,7 @@ limitations under the License.
 */
 import { BrowserWindow } from 'electron';
 import { WindowBounds } from '../shapes';
+import { toSafeInt } from '../common/safe_int';
 
 export { handleMove };
 
@@ -36,10 +37,10 @@ function handleMove(windowId: string, bounds: Bounds): void {
     if (isWin32 && browserWindow && (browserWindow.isMinimized() || browserWindow.isMaximized())) {
         const oldBounds = browserWindow.getBounds();
         const newBounds: WindowBounds = {
-            x: bounds.x !== undefined ? bounds.x : oldBounds.x,
-            y: bounds.y !== undefined ? bounds.y : oldBounds.y,
-            width: bounds.w !== undefined ? bounds.w : oldBounds.width,
-            height: bounds.h !== undefined ? bounds.h : oldBounds.height
+            x: toSafeInt(bounds.x, oldBounds.x),
+            y: toSafeInt(bounds.y, oldBounds.y),
+            width: toSafeInt(bounds.w, oldBounds.width),
+            height: toSafeInt(bounds.h, oldBounds.height)
         };
 
         browserWindow.setWindowPlacement(newBounds);
