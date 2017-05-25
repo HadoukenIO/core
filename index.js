@@ -61,7 +61,9 @@ import * as log from './src/browser/log';
 let firstApp = null;
 let crashReporterEnabled = false;
 let rvmBus;
-
+let otherInstanceRunning = false;
+let appIsReady = false;
+const deferredLaunches = [];
 const USER_DATA = app.getPath('userData');
 
 
@@ -164,36 +166,52 @@ if (coreState.argo['local-startup-url']) {
     }
 }
 
+const handleDelegatedLaunch = function(commandLine) {
+    let otherInstanceArgo = minimist(commandLine);
+    const socketServerState = coreState.getSocketServerState();
+    const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
+
+    initializeCrashReporter(otherInstanceArgo);
+
+    // delegated args from a second instance
+    launchApp(otherInstanceArgo, false);
+
+    // Will queue if server is not ready.
+    portDiscovery.broadcast(portInfo);
+
+    // command line flag --delete-cache-on-exit
+    rvmCleanup(otherInstanceArgo);
+
+    return true;
+};
+
+app.on('chrome-browser-process-created', function() {
+    otherInstanceRunning = app.makeSingleInstance((commandLine) => {
+        if (appIsReady) {
+            return handleDelegatedLaunch(commandLine);
+        } else {
+            deferredLaunches.push(commandLine);
+            return true;
+        }
+    });
+
+    if (otherInstanceRunning) {
+        if (appIsReady) {
+            deleteProcessLogfile(true);
+        }
+
+        app.commandLine.appendArgument('noerrdialogs');
+        process.argv.push('--noerrdialogs');
+        app.quit();
+
+        return;
+    }
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.on('ready', function() {
-    app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
-    app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
-
-    app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
-
-    rvmBus = require('./src/browser/rvm/rvm_message_bus');
-
-    let otherInstanceRunning = app.makeSingleInstance(function(commandLine) {
-        let otherInstanceArgo = minimist(commandLine);
-        const socketServerState = coreState.getSocketServerState();
-        const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
-
-        initializeCrashReporter(otherInstanceArgo);
-
-        // delegated args from a second instance
-        launchApp(otherInstanceArgo, false);
-
-        // Will queue if server is not ready.
-        portDiscovery.broadcast(portInfo);
-
-        // command line flag --delete-cache-on-exit
-        rvmCleanup(otherInstanceArgo);
-
-        return true;
-    });
-
-    app.allowNTLMCredentialsForAllDomains(true);
+    appIsReady = true;
 
     if (otherInstanceRunning) {
         deleteProcessLogfile(true);
@@ -202,6 +220,16 @@ app.on('ready', function() {
 
         return;
     }
+
+    app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
+    app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
+
+    app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
+
+    rvmBus = require('./src/browser/rvm/rvm_message_bus');
+
+
+    app.allowNTLMCredentialsForAllDomains(true);
 
     if (process.platform === 'win32') {
         let integrityLevel = app.getIntegrityLevel();
@@ -286,6 +314,14 @@ app.on('ready', function() {
             });
         }
     });
+
+    // handle deferred launches
+    deferredLaunches.forEach((commandLine) => {
+        handleDelegatedLaunch(commandLine);
+    });
+
+    deferredLaunches.length = 0;
+
 }); // end app.ready
 
 function staggerPortBroadcast(myPortInfo) {
