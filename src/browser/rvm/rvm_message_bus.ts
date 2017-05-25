@@ -19,6 +19,115 @@ interface RvmCallbacks {
     [key: string]: Function;
 }
 
+interface RvmMsgBase {
+    timeToLive?: number;
+    topic: string;
+}
+
+// topic: application -----
+type applicationTopic = 'application';
+type registerCustomDataAction = 'register-custom-data';
+type hideSplashscreenAction = 'hide-splashscreen';
+type relaunchOnCloseAction = 'relaunch-on-close';
+type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
+
+export interface RegisterCustomData extends RvmMsgBase {
+    topic: applicationTopic;
+    action: registerCustomDataAction;
+    sourceUrl: string;
+    runtimeVersion: string;
+    data: any;
+}
+
+export interface HideSplashscreen extends RvmMsgBase {
+    topic: applicationTopic;
+    action: hideSplashscreenAction;
+    sourceUrl: string;
+}
+
+export interface RelaunchOnClose extends RvmMsgBase {
+    topic: applicationTopic;
+    action: relaunchOnCloseAction;
+    sourceUrl: string;
+    runtimeVersion: string;
+}
+
+export interface GetDesktopOwnerSettings extends RvmMsgBase {
+    topic: applicationTopic;
+    action: getDesktopOwnerSettingsAction;
+    sourceUrl: string;
+}
+
+// topic: application (used only by the utils module)
+type getShortcutStateAction = 'get-shortcut-state';
+type setShortcutStateAction = 'set-shortcut-state';
+type launchedFromAction = 'launched-from';
+
+export interface GetShortcutState extends RvmMsgBase {
+    topic: applicationTopic;
+    action: getShortcutStateAction;
+    sourceUrl: string;
+}
+
+export interface SetShortcutState extends RvmMsgBase {
+    topic: applicationTopic;
+    action: setShortcutStateAction;
+    sourceUrl: string;
+    data: any;
+}
+
+export interface LaunchedFrom extends RvmMsgBase {
+    topic: applicationTopic;
+    action: launchedFromAction;
+    sourceUrl: string;
+}
+
+// topic: app-assets -----
+type appAssetsTopic = 'app-assets';
+type getListType = 'get-list';
+type downloadAssetType =  'download-asset';
+
+export interface AppAssetsGetList extends RvmMsgBase {
+    topic: appAssetsTopic;
+    type: getListType;
+    appConfig: string;
+    timeToLive: number;
+}
+
+export interface AppAssetsDownloadAsset extends RvmMsgBase {
+    topic: appAssetsTopic;
+    type: downloadAssetType;
+    appConfig: string;
+    showRvmProgressDialog: boolean;
+    asset: any;
+    downloadId: string;
+}
+
+// topic: cleanup -----
+type cleanupTopic = 'cleanup';
+
+interface FolderInfo {
+    [key: string]: {
+        name: string;
+        deleteIfEmpty: boolean;
+    };
+}
+
+export interface Cleanup extends RvmMsgBase {
+    topic: cleanupTopic;
+    folders: FolderInfo;
+}
+
+// topic: system -----
+type systemTopic = 'system';
+type getRvmInfoAction = 'get-rvm-info';
+
+export interface System extends RvmMsgBase {
+    topic: systemTopic;
+    action: getRvmInfoAction;
+    sourceUrl: string;
+}
+
 /**
  * Module to facilitate communication with the RVM.
  * A transport can be passed in to be used, otherwise a new WMCopyData transport is used.
@@ -88,6 +197,8 @@ class RVMMessageBus extends EventEmitter  {
     // TODO: the type of the data here is to be defined in RUN-2947
     public send(topic: string, data: any, callback: Function, timeToLiveInSeconds: number) {
 
+        log.writeToLog(1, 'RVM message bus .send is deprecated, please use .publish', true);
+
         if (!this.areSendParametersValid(topic, data, callback, timeToLiveInSeconds)) {
             return false;
         }
@@ -114,6 +225,26 @@ class RVMMessageBus extends EventEmitter  {
         };
 
         this.recordCallbackInfo(callback, timeToLiveInSeconds, envelope);
+
+        return this.transport.publish(envelope);
+    };
+
+    public publish(msg: RvmMsgBase, callback: Function) {
+        const {topic, timeToLive} = msg;
+        const payload: any = Object.assign({
+            processId: process.pid,
+            runtimeVersion: processVersions.openfin
+        }, msg);
+
+        delete payload.topic; // ensure original payload that lacked the topic
+
+        const envelope = {
+            topic: topic,
+            messageId: App.generateGUID(),
+            payload
+        };
+
+        this.recordCallbackInfo(callback, timeToLive, envelope);
 
         return this.transport.publish(envelope);
     };

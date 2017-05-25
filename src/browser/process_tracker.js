@@ -203,8 +203,8 @@ ProcessTracker.prototype.launch = function(identity, options, errDataCallback) {
     // app asset request
     if (options.alias) {
         // Fetch app asset from RVM
-        var AppAssetsFetcher = require('./rvm/runtime_initiated_topics/app_assets.js');
-        AppAssetsFetcher.fetchAppAsset(options.srcUrl, options.alias, (aliasJsonObject) => {
+        var appAssetsFetcher = require('./rvm/runtime_initiated_topics/app_assets').appAssetsFetcher;
+        appAssetsFetcher.fetchAppAsset(options.srcUrl, options.alias, (aliasJsonObject) => {
             var exeArgs = options.arguments || aliasJsonObject.args || '';
             var exePath = path.join(aliasJsonObject.path, (options.target || aliasJsonObject.target)); // launchExternal target takes precedence
             var exeCwd = aliasJsonObject.path || '';

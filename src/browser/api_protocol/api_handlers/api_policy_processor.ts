@@ -10,6 +10,7 @@ const coreState = require('../../core_state');
 import { getDefaultRequestHandler, actionMap } from './api_protocol_base';
 import { ApiPath } from '../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
+import { GetDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
 import { writeToLog } from '../../log';
 
 const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUrl => permission object, retrieved from RVM
@@ -236,8 +237,15 @@ function requestAppPermissions(configUrl: string): Promise<any> {
             writeToLog(1, 'requestAppPermissions cached', true);
             resolve(configUrlPermissionsMap[configUrl]);
         } else {
-            rvmBus.send('application', { action: 'get-desktop-owner-settings', sourceUrl: configUrl }, (rvmResponse: any) => {
-                writeToLog(1, 'requestAppPermissions from RVM', true);
+            const msg: GetDesktopOwnerSettings =  {
+                topic: 'application',
+                action: 'get-desktop-owner-settings',
+                sourceUrl: configUrl
+            };
+
+            rvmBus.publish(msg, (rvmResponse: any) => {
+                writeToLog('info', `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
+
                 if (rvmResponse.payload && rvmResponse.payload.success === true &&
                     rvmResponse.payload.payload) {
                     if (rvmResponse.payload.payload.permissions) {

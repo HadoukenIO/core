@@ -146,7 +146,7 @@ ofEvents.on('external-application/disconnected', payload => {
 });
 
 module.exports.System = {
-    addEventListener: function(type, listener /*, callback, errorCallback */ ) {
+    addEventListener: function(type, listener) {
         ofEvents.on(`system/${type}`, listener);
 
         var unsubscribe = () => {
@@ -208,16 +208,19 @@ module.exports.System = {
         });
     },
     deleteCacheOnExit: function(callback, errorCallback) {
-        let data = {
-            folders: [{
-                name: electronApp.getPath('userData') // deleteIfEmpty defaults to false on RVM side
-            }, {
-                name: electronApp.getPath('userDataRoot'),
-                deleteIfEmpty: true
-            }]
-        };
+        const folders = [{
+            name: electronApp.getPath('userData') // deleteIfEmpty defaults to false on RVM side
+        }, {
+            name: electronApp.getPath('userDataRoot'),
+            deleteIfEmpty: true
+        }];
 
-        if (rvmBus.send('cleanup', JSON.stringify(data))) {
+        const publishSuccess = rvmBus.publish({
+            topic: 'cleanup',
+            folders
+        });
+
+        if (publishSuccess) {
             callback();
         } else {
             errorCallback('Failed to send a message to the RVM.');
@@ -555,6 +558,7 @@ module.exports.System = {
         asset.args = asset.args || '';
 
         const rvmMessage = {
+            topic: 'app-assets',
             type: 'download-asset',
             appConfig: srcUrl,
             showRvmProgressDialog: false,
@@ -562,7 +566,9 @@ module.exports.System = {
             downloadId: downloadId
         };
 
-        if (rvmBus.send('app-assets', JSON.stringify(rvmMessage))) {
+        const publishSuccess = rvmBus.publish(rvmMessage);
+
+        if (publishSuccess) {
             cb(null, downloadId);
 
         } else {

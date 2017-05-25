@@ -77,7 +77,8 @@ const trans2TSFiles = [
     'src/browser/port_discovery.ts',
     'src/browser/api_protocol/**/**.ts',
     'src/browser/rvm/rvm_message_bus.ts',
-    'src/browser/api/**.ts'
+    'src/browser/api/**.ts',
+    'src/browser/rvm/runtime_initiated_topics/app_assets.ts'
 ];
 
 // OpenFin commercial license
@@ -373,8 +374,8 @@ module.exports = (grunt) => {
             'src/browser/api_protocol/api_handlers/mesh_middleware.ts',
             'src/browser/port_discovery.ts',
             'src/browser/rvm/rvm_message_bus.ts',
+            'src/browser/rvm/runtime_initiated_topics/app_assets.ts',
             'src/browser/remote_subscriptions.ts',
-            'src/browser/rvm/runtime_initiated_topics/app_assets.js',
             'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
             'src/browser/rvm/utils.ts',
             'src/browser/external_window_event_adapter.js',
