@@ -46,5 +46,5 @@ function clipBounds(bounds: WindowBounds, browserWindow: BrowserWindow): WindowB
  */
 function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): number {
     max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
-    return Math.min(Math.max(num, Math.max(min, 0)), max);
+    return Math.min(Math.max(num, min, 0), max);
 }

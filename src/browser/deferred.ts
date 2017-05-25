@@ -16,6 +16,7 @@ limitations under the License.
 import { BrowserWindow } from 'electron';
 import { WindowBounds } from '../shapes';
 import { toSafeInt } from '../common/safe_int';
+import clipBounds from './clip_bounds';
 
 export { handleMove };
 
@@ -43,7 +44,7 @@ function handleMove(windowId: string, bounds: Bounds): void {
             height: toSafeInt(bounds.h, oldBounds.height)
         };
 
-        browserWindow.setWindowPlacement(newBounds);
+        browserWindow.setWindowPlacement(clipBounds(newBounds, browserWindow));
 
         // Emitting this event, because Electron doesn't
         // dispatch 'bounds-changed' event on setWindowPlacement

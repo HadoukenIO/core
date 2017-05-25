@@ -229,6 +229,7 @@ function AnimationHandler(desiredInterval) {
                         y = toSafeInt(y + boundsChange.y, y);
                         width = toSafeInt(width + boundsChange.width, width);
                         height = toSafeInt(height + boundsChange.height, height);
+                        const newBounds = clipBounds({ x, y, width, height }, bw);
 
                         if (isWin32) {
                             let hwnd = parseInt(bw.nativeId, 16);
@@ -244,9 +245,10 @@ function AnimationHandler(desiredInterval) {
                                 });
                             }
                             hwndToId[hwnd] = bw.id;
-                            wt.setWindowPos(hwnd, { x, y, w: width, h: height, flags });
+
+                            const { x, y, width: w, height: h } = newBounds;
+                            wt.setWindowPos(hwnd, { x, y, w, h, flags });
                         } else {
-                            const newBounds = clipBounds({ x, y, width, height }, bw);
                             bw.setBounds(newBounds);
                         }
                     }

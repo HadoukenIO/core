@@ -1187,7 +1187,7 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
     let left = toSafeInt(deltaLeft, 0);
     let top = toSafeInt(deltaTop, 0);
 
-    browserWindow.setBounds({
+    browserWindow.setBounds({ // no need to call clipBounds as width and height not changing
         x: currentBounds.x + left,
         y: currentBounds.y + top,
         width: currentBounds.width,
@@ -1207,7 +1207,7 @@ Window.moveTo = function(identity, x, y) {
     const safeX = toSafeInt(x);
     const safeY = toSafeInt(y);
 
-    browserWindow.setBounds({
+    browserWindow.setBounds({ // no need to call clipBounds as width and height not changing
         x: safeX,
         y: safeY,
         width: currentBounds.width,
@@ -1271,7 +1271,7 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
 };
 
 
-Window.resizeTo = function(identity, width, height, anchor) {
+Window.resizeTo = function(identity, newWidth, newHeight, anchor) {
     const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1279,15 +1279,15 @@ Window.resizeTo = function(identity, width, height, anchor) {
     }
 
     const currentBounds = browserWindow.getBounds();
-    const safeWidth = toSafeInt(width, currentBounds.width);
-    const safeHeight = toSafeInt(height, currentBounds.height);
-    const boundsAnchor = calcBoundsAnchor(anchor, safeWidth, safeHeight, currentBounds);
+    newWidth = toSafeInt(newWidth, currentBounds.width);
+    newHeight = toSafeInt(newHeight, currentBounds.height);
+    const boundsAnchor = calcBoundsAnchor(anchor, newWidth, newHeight, currentBounds);
 
     browserWindow.setBounds(clipBounds({
         x: boundsAnchor.x,
         y: boundsAnchor.y,
-        width: safeWidth,
-        height: safeHeight
+        width: newWidth,
+        height: newHeight
     }, browserWindow));
 };
 
@@ -1362,7 +1362,7 @@ Window.showAt = function(identity, left, top, force = false) {
     let defaultAction = () => {
         let currentBounds = browserWindow.getBounds();
 
-        browserWindow.setBounds({
+        browserWindow.setBounds({ // no need to call clipBounds as width and height not changing
             x: safeLeft,
             y: safeTop,
             width: currentBounds.width,

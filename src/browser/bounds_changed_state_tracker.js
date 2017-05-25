@@ -232,6 +232,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                             hwndToId[hwnd] = win.browserWindow.id;
                             wt.setWindowPos(hwnd, { x, y, flags });
                         } else {
+                            // no need to call clipBounds as width and height not changing
                             win.browserWindow.setBounds({ x, y, width, height });
                         }
                     });
