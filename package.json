@@ -20,7 +20,7 @@
   "homepage": "https://github.com/openfin/openfin",
   "optionalDependencies": {
     "openfin-sign": "git+ssh://git@github.com:openfin/openfin-sign.git#caee55ecbe6f81e6ed9630790781fe4d1835cb03",
-    "runtime-p2p": "git@github.com:openfin/runtime-p2p.git#95730ce170fca5fb56b35621923d16faf4f1cb86"
+    "runtime-p2p": "git@github.com:openfin/runtime-p2p.git#91ed159a9e49be32fb794f4be3ef4a9e9f0f01b9"
   },
   "devDependencies": {
     "@types/mocha": "^2.2.39",
