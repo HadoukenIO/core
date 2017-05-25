@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "pretest": "grunt babel && grunt ts",
-    "test": "mocha staging/core/test --recursive",
+    "test": "grunt test",
     "postinstall": "grunt"
   },
   "repository": {
