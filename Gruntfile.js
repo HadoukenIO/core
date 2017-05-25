@@ -38,6 +38,14 @@ const optionalDependencies = [
     'runtime-p2p/**'
 ];
 
+// https://github.com/beautify-web/js-beautify#options
+// (Options in above-linked page are hyphen-separarted but here must be either camelCase or underscore_separated.)
+const beautifierOptions = {
+    js: {
+        braceStyle: 'collapse,preserve-inline'
+    }
+};
+
 try {
     var openfinSign = require('openfin-sign');
 } catch (err) {
@@ -50,6 +58,7 @@ try {
  */
 const trans2TSFiles = [
     'src/browser/api_protocol/api_handlers/clipboard.ts',
+    'src/browser/api_protocol/shapes.ts',
     'src/browser/transports/base.ts',
     'src/browser/transports/chromium_ipc.ts',
     'src/browser/transports/electron_ipc.ts',
@@ -68,7 +77,8 @@ const trans2TSFiles = [
     'src/browser/port_discovery.ts',
     'src/browser/api_protocol/**/**.ts',
     'src/browser/rvm/rvm_message_bus.ts',
-    'src/browser/api/**.ts'
+    'src/browser/api/**.ts',
+    'src/browser/rvm/runtime_initiated_topics/app_assets.ts'
 ];
 
 // OpenFin commercial license
@@ -186,13 +196,12 @@ module.exports = (grunt) => {
         },
         jsbeautifier: {
             default: {
-                src: ['src/**/*.js', 'index.js']
+                src: ['src/**/*.js', 'index.js'],
+                options: beautifierOptions
             },
             'git-pre-commit': {
                 src: ['src/**/*.js', 'index.js'],
-                options: {
-                    mode: 'VERIFY_ONLY'
-                }
+                options: Object.assign({ mode: 'VERIFY_ONLY' }, beautifierOptions)
             }
         },
         mochaTest: {
@@ -228,7 +237,7 @@ module.exports = (grunt) => {
         'ts',
         'mochaTest',
     ]);
-    
+
     grunt.registerTask('build-pac', [
         'license',
         'jshint',
@@ -363,10 +372,10 @@ module.exports = (grunt) => {
             'src/browser/api_protocol/api_handlers/api_policy_processor.ts',
             'src/browser/api_protocol/api_handlers/external_application.ts',
             'src/browser/api_protocol/api_handlers/mesh_middleware.ts',
-            'src/browser/pending_subscriptions.ts',
             'src/browser/port_discovery.ts',
             'src/browser/rvm/rvm_message_bus.ts',
-            'src/browser/rvm/runtime_initiated_topics/app_assets.js',
+            'src/browser/rvm/runtime_initiated_topics/app_assets.ts',
+            'src/browser/remote_subscriptions.ts',
             'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
             'src/browser/rvm/utils.ts',
             'src/browser/external_window_event_adapter.js',

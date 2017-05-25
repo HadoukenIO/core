@@ -183,7 +183,7 @@
             "memberVariableDeclarator"
         ],
         "typedef-whitespace": false,
-        "underscore-consistent-invocation": true,
+        "underscore-consistent-invocation": [true, { "style": "static" }],
         "use-isnan": true,
         "use-named-parameter": true,
         "use-strict": false,

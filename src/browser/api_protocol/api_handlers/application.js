@@ -27,8 +27,8 @@ let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 import {
-    addPendingSubscription
-} from '../../pending_subscriptions';
+    addRemoteSubscription
+} from '../../remote_subscriptions';
 
 function ApplicationApiHandler() {
     let successAck = {
@@ -57,13 +57,13 @@ function ApplicationApiHandler() {
         'remove-tray-icon': removeTrayIcon,
         'restart-application': restartApplication,
         'run-application': runApplication,
-        'set-shortcuts': setShortcuts,
+        'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
         'set-tray-icon': setTrayIcon,
         'terminate-application': terminateApplication,
         'wait-for-hung-application': waitForHungApplication
     };
 
-    apiProtocolBase.registerActionMap(appExternalApiMap);
+    apiProtocolBase.registerActionMap(appExternalApiMap, 'Application');
 
     function setTrayIcon(identity, rawMessage, ack, nack) {
         let message = JSON.parse(JSON.stringify(rawMessage));
@@ -288,7 +288,7 @@ function ApplicationApiHandler() {
         const {
             uuid
         } = appIdentity;
-        let pendingSubscriptionUnSubscribe;
+        let remoteSubscriptionUnSubscribe;
         const remoteSubscription = {
             uuid,
             name: uuid,
@@ -308,14 +308,14 @@ function ApplicationApiHandler() {
                 nack(theErr);
             }
 
-            if (typeof pendingSubscriptionUnSubscribe === 'function') {
-                pendingSubscriptionUnSubscribe();
+            if (typeof remoteSubscriptionUnSubscribe === 'function') {
+                remoteSubscriptionUnSubscribe();
             }
         });
 
         if (manifestUrl) {
-            addPendingSubscription(remoteSubscription).then((unSubscribe) => {
-                pendingSubscriptionUnSubscribe = unSubscribe;
+            addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
+                remoteSubscriptionUnSubscribe = unSubscribe;
                 Application.runWithRVM(identity, manifestUrl).catch(nack);
             });
         } else {

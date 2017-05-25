@@ -26,7 +26,8 @@ const apiMessagesToIgnore: any = {
     'unsubscribe': true,
     'subscriber-added': true,
     'subscriber-removed': true,
-    'subscribe-to-desktop-event': true
+    'subscribe-to-desktop-event': true,
+    'unsubscribe-to-desktop-event': true
 };
 //TODO: This is a workaround for a circular dependency issue in the api handler modules.
 const subscriberTriggeredEvents: any = {
