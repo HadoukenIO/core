@@ -229,6 +229,7 @@ function AnimationHandler(desiredInterval) {
                         y = toSafeInt(y + boundsChange.y, y);
                         width = toSafeInt(width + boundsChange.width, width);
                         height = toSafeInt(height + boundsChange.height, height);
+
                         const newBounds = clipBounds({ x, y, width, height }, bw);
 
                         if (isWin32) {

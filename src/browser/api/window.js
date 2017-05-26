@@ -1187,7 +1187,8 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
     let left = toSafeInt(deltaLeft, 0);
     let top = toSafeInt(deltaTop, 0);
 
-    browserWindow.setBounds({ // no need to call clipBounds as width and height not changing
+    // no need to call clipBounds here because width and height are not changing
+    browserWindow.setBounds({
         x: currentBounds.x + left,
         y: currentBounds.y + top,
         width: currentBounds.width,
@@ -1207,7 +1208,8 @@ Window.moveTo = function(identity, x, y) {
     const safeX = toSafeInt(x);
     const safeY = toSafeInt(y);
 
-    browserWindow.setBounds({ // no need to call clipBounds as width and height not changing
+    // no need to call clipBounds here because width and height are not changing
+    browserWindow.setBounds({
         x: safeX,
         y: safeY,
         width: currentBounds.width,
@@ -1362,7 +1364,8 @@ Window.showAt = function(identity, left, top, force = false) {
     let defaultAction = () => {
         let currentBounds = browserWindow.getBounds();
 
-        browserWindow.setBounds({ // no need to call clipBounds as width and height not changing
+        // no need to call clipBounds here because width and height are not changing
+        browserWindow.setBounds({
             x: safeLeft,
             y: safeTop,
             width: currentBounds.width,
