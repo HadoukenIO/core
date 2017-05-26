@@ -33,6 +33,7 @@ import {
 const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
+import route from '../../common/route';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -77,15 +78,15 @@ electronApp.on('ready', function() {
     rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
 
     MonitorInfo.on('monitor-info-changed', payload => {
-        ofEvents.emit('system/monitor-info-changed', payload);
+        ofEvents.emit(route.system('monitor-info-changed'), payload);
     });
 
     Session.on('session-changed', payload => {
-        ofEvents.emit('system/session-changed', payload);
+        ofEvents.emit(route.system('session-changed'), payload);
     });
 
     Session.on('idle-state-changed', payload => {
-        ofEvents.emit('system/idle-state-changed', payload);
+        ofEvents.emit(route.system('idle-state-changed'), payload);
     });
 
     defaultSession = session.defaultSession;
@@ -94,51 +95,51 @@ electronApp.on('ready', function() {
 electronApp.on('synth-desktop-icon-clicked', payload => {
     payload.topic = 'system';
     payload.type = 'desktop-icon-clicked';
-    ofEvents.emit('system/desktop-icon-clicked', payload);
+    ofEvents.emit(route.system('desktop-icon-clicked'), payload);
 });
 
-ofEvents.on('application/created/*', payload => {
-    ofEvents.emit('system/application-created', {
+ofEvents.on(route.application('created', '*'), payload => {
+    ofEvents.emit(route.system('application-created'), {
         topic: 'system',
         type: 'application-created',
         uuid: payload.source
     });
 });
 
-ofEvents.on('application/started/*', payload => {
-    ofEvents.emit('system/application-started', {
+ofEvents.on(route.application('started', '*'), payload => {
+    ofEvents.emit(route.system('application-started'), {
         topic: 'system',
         type: 'application-started',
         uuid: payload.source
     });
 });
 
-ofEvents.on('application/closed/*', payload => {
-    ofEvents.emit('system/application-closed', {
+ofEvents.on(route.application('closed', '*'), payload => {
+    ofEvents.emit(route.system('application-closed'), {
         topic: 'system',
         type: 'application-closed',
         uuid: payload.source
     });
 });
 
-ofEvents.on('application/crashed/*', payload => {
-    ofEvents.emit('system/application-crashed', {
+ofEvents.on(route.application('crashed', '*'), payload => {
+    ofEvents.emit(route.system('application-crashed'), {
         topic: 'system',
         type: 'application-crashed',
         uuid: payload.source
     });
 });
 
-ofEvents.on('external-application/connected', payload => {
-    ofEvents.emit('system/external-application-connected', {
+ofEvents.on(route.externalApplication('connected'), payload => {
+    ofEvents.emit(route.system('external-application-connected'), {
         topic: 'system',
         type: 'external-application-connected',
         uuid: payload.uuid
     });
 });
 
-ofEvents.on('external-application/disconnected', payload => {
-    ofEvents.emit('system/external-application-disconnected', {
+ofEvents.on(route.externalApplication('disconnected'), payload => {
+    ofEvents.emit(route.system('external-application-disconnected'), {
         topic: 'system',
         type: 'external-application-disconnected',
         uuid: payload.uuid
@@ -147,10 +148,10 @@ ofEvents.on('external-application/disconnected', payload => {
 
 module.exports.System = {
     addEventListener: function(type, listener) {
-        ofEvents.on(`system/${type}`, listener);
+        ofEvents.on(route.system(type), listener);
 
         var unsubscribe = () => {
-            ofEvents.removeListener(`system/${type}`, listener);
+            ofEvents.removeListener(route.system(type), listener);
         };
 
         return unsubscribe;
@@ -465,7 +466,7 @@ module.exports.System = {
         ProcessTracker.release(processUuid);
     },
     removeEventListener: function(type, listener) {
-        ofEvents.removeListener(`system/${type}`, listener);
+        ofEvents.removeListener(route.system(type), listener);
     },
     showDeveloperTools: function(applicationUuid, windowName) {
         let winName, openfinWindow;

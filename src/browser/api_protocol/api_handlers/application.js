@@ -29,6 +29,7 @@ import ofEvents from '../../of_events';
 import {
     addRemoteSubscription
 } from '../../remote_subscriptions';
+import route from '../../../common/route';
 
 function ApplicationApiHandler() {
     let successAck = {
@@ -297,7 +298,7 @@ function ApplicationApiHandler() {
             eventName: 'fire-constructor-callback'
         };
 
-        ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, loadInfo => {
+        ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
             if (loadInfo.success) {
                 const successReturn = _.clone(successAck);
                 successReturn.data = loadInfo.data;
@@ -341,14 +342,14 @@ function ApplicationApiHandler() {
     function deregisterExternalWindow(identity, message, ack) {
         const windowIdentity = apiProtocolBase.getTargetWindowIdentity(message.payload);
 
-        ofEvents.emit(`external-window/close/${windowIdentity.uuid}-${windowIdentity.name}`);
+        ofEvents.emit(route.externalWindow('close', windowIdentity.uuid, windowIdentity.name));
         ack(successAck);
     }
 
     function externalWindowAction(identity, message, ack) {
         /* jshint bitwise: false */
         let payload = message.payload;
-        let uuidname = `${payload.uuid}-${payload.name}`;
+        const emitToExtWin = (type, data) => ofEvents.emit(route.externalWindow(type, payload.uuid, payload.name), data);
 
         const SWP_HIDEWINDOW = 128;
         const SWP_SHOWWINDOW = 64;
@@ -359,27 +360,27 @@ function ApplicationApiHandler() {
         switch (payload.type) {
             case 2:
                 // WM_DESTROY
-                ofEvents.emit(`external-window/close/${uuidname}`);
+                emitToExtWin('close');
                 break;
             case 7:
                 // WM_SETFOCUS
-                ofEvents.emit(`external-window/focus/${uuidname}`);
+                emitToExtWin('focus');
                 break;
             case 8:
                 // WM__KILLFOCUS
-                ofEvents.emit(`external-window/blur/${uuidname}`);
+                emitToExtWin('blur');
                 break;
             case 71:
                 // WM_WINDOWPOSCHANGED
                 let flags = payload.flags;
 
-                ofEvents.emit(`external-window/bounds-changed/${uuidname}`);
+                emitToExtWin('bounds-changed');
 
                 // dispatch show and hide events
                 if (flags & SWP_SHOWWINDOW) {
-                    ofEvents.emit(`external-window/visibility-changed/${uuidname}`, true);
+                    emitToExtWin('visibility-changed', true);
                 } else if (flags & SWP_HIDEWINDOW) {
-                    ofEvents.emit(`external-window/visibility-changed/${uuidname}`, false);
+                    emitToExtWin('visibility-changed', false);
                 }
                 break;
             case 274:
@@ -393,26 +394,26 @@ function ApplicationApiHandler() {
                 /* falls through */
             case 163:
                 // WM_NCLBUTTONDBLCLK
-                ofEvents.emit(`external-window/state-change/${uuidname}`);
+                emitToExtWin('state-change');
                 break;
             case 532:
                 // WM_SIZING
-                ofEvents.emit(`external-window/sizing/${uuidname}`);
+                emitToExtWin('sizing');
                 break;
             case 534:
                 // WM_MOVING
-                ofEvents.emit(`external-window/moving/${uuidname}`);
+                emitToExtWin('moving');
                 break;
             case 561:
                 // WM_ENTERSIZEMOVE
-                ofEvents.emit(`external-window/begin-user-bounds-change/${uuidname}`, {
+                emitToExtWin('begin-user-bounds-change', {
                     x: payload.mouseX,
                     y: payload.mouseY
                 });
                 break;
             case 562:
                 // WM_EXITSIZEMOVE
-                ofEvents.emit(`external-window/end-user-bounds-change/${uuidname}`);
+                emitToExtWin('end-user-bounds-change');
                 break;
             default:
                 // Do nothing

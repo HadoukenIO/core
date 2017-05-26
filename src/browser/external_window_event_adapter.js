@@ -11,13 +11,13 @@ let MonitorInfo;
 electronApp.on('ready', () => {
     MonitorInfo = require('./monitor_info.js');
 });
+import route from '../common/route';
 
 class ExternalWindowEventAdapter {
     constructor(browserWindow) {
         let options = browserWindow && browserWindow._options;
         let uuid = options.uuid;
         let name = options.name;
-        let uuidname = `${uuid}-${name}`;
 
         let disabledFrameState = {
             leftButtonDown: false,
@@ -28,15 +28,17 @@ class ExternalWindowEventAdapter {
 
         let cachedState = null;
 
-        ofEvents.on(`external-window/focus/${uuidname}`, () => {
+        const routeExtWin = type => route.externalWindow(type, uuid, name);
+
+        ofEvents.on(routeExtWin('focus'), () => {
             browserWindow.emit('focus');
         });
 
-        ofEvents.on(`external-window/blur/${uuidname}`, () => {
+        ofEvents.on(routeExtWin('blur'), () => {
             browserWindow.emit('blur');
         });
 
-        ofEvents.on(`external-window/state-change/${uuidname}`, () => {
+        ofEvents.on(routeExtWin('state-change'), () => {
             let prevState = cachedState || 'normal';
 
             let currState = 'normal';
@@ -59,15 +61,15 @@ class ExternalWindowEventAdapter {
             }
         });
 
-        ofEvents.on(`external-window/bounds-changed/${uuidname}`, () => {
+        ofEvents.on(routeExtWin('bounds-changed'), () => {
             browserWindow.emit('bounds-changed');
         });
 
-        ofEvents.on(`external-window/visibility-changed/${uuidname}`, (visibility) => {
+        ofEvents.on(routeExtWin('visibility-changed'), (visibility) => {
             browserWindow.emit('visibility-changed', {}, visibility);
         });
 
-        ofEvents.on(`external-window/begin-user-bounds-change/${uuidname}`, (coordinates) => {
+        ofEvents.on(routeExtWin('begin-user-bounds-change'), (coordinates) => {
             if (!disabledFrameState.leftButtonDown && !browserWindow.isUserMovementEnabled()) {
                 // left mouse button is now in the down position
                 disabledFrameState.leftButtonDown = true;
@@ -84,7 +86,7 @@ class ExternalWindowEventAdapter {
             browserWindow.emit('begin-user-bounds-change');
         });
 
-        ofEvents.on(`external-window/end-user-bounds-change/${uuidname}`, () => {
+        ofEvents.on(routeExtWin('end-user-bounds-change'), () => {
             if (disabledFrameState.leftButtonDown) {
                 if (disabledFrameState.changeType !== -1) {
                     browserWindow.emit('disabled-frame-bounds-changed', {}, browserWindow.getBounds(), disabledFrameState.changeType);
@@ -97,7 +99,7 @@ class ExternalWindowEventAdapter {
             browserWindow.emit('end-user-bounds-change');
         });
 
-        ofEvents.on(`external-window/sizing/${uuidname}`, (bounds) => {
+        ofEvents.on(routeExtWin('sizing'), (bounds) => {
             if (disabledFrameState.leftButtonDown) {
                 // check if the position has also changed by checking whether the origins match up
                 if (disabledFrameState.changeType !== 2) {
@@ -110,7 +112,7 @@ class ExternalWindowEventAdapter {
             }
         });
 
-        ofEvents.on(`external-window/moving/${uuidname}`, () => {
+        ofEvents.on(routeExtWin('moving'), () => {
             if (disabledFrameState.leftButtonDown) {
                 let bounds = browserWindow.getBounds();
                 let mousePosition = MonitorInfo.getMousePosition();
@@ -138,7 +140,7 @@ class ExternalWindowEventAdapter {
             }
         });
 
-        ofEvents.on(`external-window/close/${uuidname}`, () => {
+        ofEvents.on(routeExtWin('close'), () => {
             browserWindow.emit('close');
             browserWindow.close();
             browserWindow.emit('closed');

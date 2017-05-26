@@ -59,6 +59,7 @@ import * as log from './src/browser/log';
 import {
     applyAllRemoteSubscriptions
 } from './src/browser/remote_subscriptions';
+import route from './src/common/route';
 
 // locals
 let firstApp = null;
@@ -231,8 +232,8 @@ app.on('ready', function() {
             name: ofWindow._options.name,
             uuid: ofWindow._options.uuid
         };
-        const windowEvtName = `window/auth-requested/${identity.uuid}-${identity.name}`;
-        const appEvtName = `application/window-auth-requested/${identity.uuid}`;
+        const windowEvtName = route.window('auth-requested', identity.uuid, identity.name);
+        const appEvtName = route.application('window-auth-requested', identity.uuid);
 
         authenticationDelegate.addPendingAuthRequests(identity, authInfo, callback);
         if (ofEvents.listeners(windowEvtName).length < 1 && ofEvents.listeners(appEvtName).length < 1) {
@@ -267,26 +268,26 @@ app.on('ready', function() {
         }
     });
 
-    rvmBus.on('rvm-message-bus/broadcast/download-asset/progress', payload => {
+    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'progress'), payload => {
         if (payload) {
-            ofEvents.emit(`system/asset-download-progress-${payload.downloadId}`, {
+            ofEvents.emit(route.system(`asset-download-progress-${payload.downloadId}`), {
                 totalBytes: payload.totalBytes,
                 downloadedBytes: payload.downloadedBytes
             });
         }
     });
 
-    rvmBus.on('rvm-message-bus/broadcast/download-asset/error', payload => {
+    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'error'), payload => {
         if (payload) {
-            ofEvents.emit(`system/asset-download-error-${payload.downloadId}`, {
+            ofEvents.emit(route.system(`asset-download-error-${payload.downloadId}`), {
                 reason: payload.error,
                 err: errors.errorToPOJO(new Error(payload.error))
             });
         }
     });
-    rvmBus.on('rvm-message-bus/broadcast/download-asset/complete', payload => {
+    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'complete'), payload => {
         if (payload) {
-            ofEvents.emit(`system/asset-download-complete-${payload.downloadId}`, {
+            ofEvents.emit(route.system(`asset-download-complete-${payload.downloadId}`), {
                 path: payload.path
             });
         }

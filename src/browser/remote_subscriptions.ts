@@ -25,6 +25,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import ofEvents from './of_events';
 import connectionManager, { PeerRuntime } from './connection_manager';
 import { Identity } from '../shapes';
+import route from '../common/route';
 
 // id count to generate IDs for subscriptions
 let subscriptionIdCount = 0;
@@ -112,7 +113,9 @@ function applyRemoteSubscription(subscription: RemoteSubscription, runtime: Peer
     const classEventEmitter = getClassEventEmitter(subscription, runtime);
     const runtimeVersion = getRuntimeVersion(runtime);
     const { uuid, name, className, eventName, listenType, unSubscriptions } = subscription;
-    const fullEventName = `${className}/${eventName}/${uuid}${typeof name === 'string' ? `-${name}` : ''}`;
+    const fullEventName = (typeof name === 'string')
+        ? route(className, eventName, uuid, name, true)
+        : route(className, eventName, uuid);
 
     const listener = (data: any) => {
         ofEvents.emit(fullEventName, data);

@@ -7,6 +7,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 let http = require('http');
 let EventEmitter = require('events').EventEmitter;
 let util = require('util');
+import route from '../../common/route';
 
 
 let Server = function() {
@@ -25,7 +26,7 @@ let Server = function() {
 
     httpServer.on('error', function(err) {
         httpServerError = true;
-        me.emit('server/error', err);
+        me.emit(route.server('error'), err);
     });
 
     me.getPort = function() {
@@ -78,12 +79,12 @@ let Server = function() {
                 });
 
             wss.on('headers', function(headers) {
-                me.emit('server/headers', headers);
+                me.emit(route.server('headers'), headers);
             });
 
             wss.on('error', function(err) {
                 httpServerError = true;
-                me.emit('server/error', err);
+                me.emit(route.server('error'), err);
             });
 
             wss.on('connection', function connection(ws) {
@@ -94,33 +95,33 @@ let Server = function() {
                 // pong
 
                 ws.on('error', function(error) {
-                    me.emit('connection/error', id, error);
+                    me.emit(route.connection('error'), id, error);
                 });
 
                 ws.on('close', function( /*code,message*/ ) {
                     delete activeConnections[id];
                     idPool.release(id);
                     ws = null;
-                    me.emit('connection/close', id);
+                    me.emit(route.connection('close'), id);
                 });
 
                 ws.on('open', function( /*open*/ ) {
                     console.log('Opened ', id);
-                    me.emit('connection/open', id);
+                    me.emit(route.connection('open'), id);
                 });
 
                 ws.on('message', function incoming(data, flags) {
-                    me.emit('connection/message', id, JSON.parse(data), flags);
+                    me.emit(route.connection('message'), id, JSON.parse(data), flags);
                 });
             });
 
-            me.emit('server/open', me.getPort());
+            me.emit(route.server('open'), me.getPort());
         });
 
     };
 
     me.connectionAuthenticated = function(id, uuid) {
-        me.emit('connection/authenticated', {
+        me.emit(route.connection('authenticated'), {
             id,
             uuid
         });

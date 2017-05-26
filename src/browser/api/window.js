@@ -50,10 +50,10 @@ import {
     validateNavigation,
     navigationValidator
 } from '../navigation_validation';
-
 import {
     toSafeInt
 } from '../../common/safe_int';
+import route from '../../common/route';
 
 // locals
 const isWin32 = process.platform === 'win32';
@@ -189,7 +189,7 @@ let optionSetters = {
         let name = browserWin._options.name;
         let openfinWindow = Window.wrap(uuid, name);
         let hideOnCloseListener = openfinWindow.hideOnCloseListener;
-        let closeEventString = `window/close-requested/${uuid}-${name}`;
+        let closeEventString = route.window('close-requested', uuid, name);
 
         if (newHideOnCloseBool && !oldHideOnCloseBool) {
             ofEvents.on(closeEventString, hideOnCloseListener);
@@ -338,7 +338,6 @@ Window.create = function(id, opts) {
         uuid
     };
     let baseOpts;
-    let uuidname;
     let browserWindow;
     let _openListeners;
     let webContents;
@@ -412,8 +411,8 @@ Window.create = function(id, opts) {
 
         uuid = _options.uuid;
         name = _options.name;
-        uuidname = `${uuid}-${name}`;
-        const WINDOW_UNLOAD_EVENT = `window/unload/${uuid}/${name}`;
+        const winRoute = (type, hyphenateUuidName) => route.window(type, uuid, name, hyphenateUuidName);
+
         const WINDOW_DOCUMENT_LOADED = 'document-loaded';
 
         browserWindow._options = _options;
@@ -442,21 +441,21 @@ Window.create = function(id, opts) {
             });
 
             //tear down any listeners on external event emitters.
-            ofEvents.removeListener(WINDOW_UNLOAD_EVENT, onDidUnload);
+            ofEvents.removeListener(winRoute('unload', false), onDidUnload);
             webContents.removeListener(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
         };
 
         let windowTeardown = createWindowTearDown(identity, id);
 
         //wire up unload/navigate events for reload.
-        ofEvents.on(WINDOW_UNLOAD_EVENT, onDidUnload);
+        ofEvents.on(winRoute('unload', false), onDidUnload);
         webContents.on(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
 
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
         browserWindow.on('close', (event) => {
             let ofWindow = Window.wrap(uuid, name);
-            let closeEventString = `window/close-requested/${uuidname}`;
+            let closeEventString = winRoute('close-requested');
             let listenerCount = ofEvents.listenerCount(closeEventString);
 
             // here we can only prevent electron windows, not external windows, from closing when the 'x' button is clicked.
@@ -468,7 +467,7 @@ Window.create = function(id, opts) {
                 }
             }
 
-            ofEvents.emit(`window/synth-close/${uuidname}`, {
+            ofEvents.emit(winRoute('synth-close'), {
                 name,
                 uuid,
                 topic: 'window',
@@ -526,14 +525,12 @@ Window.create = function(id, opts) {
                         type: mappedTopic /* May be overridden by decorator */
                     };
 
-                    let eventString = `window/${payload.type}/${uuidname}`;
                     let decoratorFn = mappedMeta.decorator || noOpDecorator;
 
                     // Payload is modified by the decorator and returns true on success
                     if (decoratorFn(payload, arguments)) {
                         // Let the decorator apply changes to the type
-                        eventString = `window/${payload.type}/${uuidname}`;
-                        ofEvents.emit(eventString, payload);
+                        ofEvents.emit(winRoute(payload.type), payload);
                     }
                 };
 
@@ -552,7 +549,7 @@ Window.create = function(id, opts) {
         // hideOnClose is deprecated; treat it as if it's just another
         // listener on the 'close-requested' event
         if (getOptFromBrowserWin('hideOnClose', browserWindow, false)) {
-            let closeEventString = `window/close-requested/${uuidname}`;
+            let closeEventString = winRoute('close-requested');
             ofEvents.on(closeEventString, hideOnCloseListener);
         }
 
@@ -581,8 +578,7 @@ Window.create = function(id, opts) {
                     payload.memberOf = isSource ? 'source' : 'target';
                 }
 
-                var eventString = `window/${payload.type}/${uuidname}`;
-                ofEvents.emit(eventString, payload);
+                ofEvents.emit(winRoute(payload.type), payload);
             }
         };
         let groupChangedUnsubscribe = () => {
@@ -597,7 +593,7 @@ Window.create = function(id, opts) {
         validateNavigation(webContents, identity, navValidator);
 
         let startLoadingSubscribe = (event, url) => {
-            ofEvents.emit(`application/window-start-load/${uuid}`, {
+            ofEvents.emit(route.application('window-start-load', uuid), {
                 name,
                 uuid,
                 url
@@ -612,19 +608,19 @@ Window.create = function(id, opts) {
 
         let documentLoadedSubscribe = (event, isMain, documentName) => {
             if (isMain && uuid === name) { // main window
-                ofEvents.emit(`application/ready/${uuid}`, {
+                ofEvents.emit(route.application('ready', uuid), {
                     type: 'ready',
                     uuid
                 });
             }
-            ofEvents.emit(`application/window-end-load/${uuid}`, {
+            ofEvents.emit(route.application('window-end-load', uuid), {
                 name,
                 uuid,
                 isMain,
                 documentName
             });
 
-            ofEvents.emit(`application/window-end-load`, {
+            ofEvents.emit(route.application('window-end-load'), {
                 name,
                 uuid
             });
@@ -638,7 +634,7 @@ Window.create = function(id, opts) {
 
         // picked up in src/browser/external_connection/interappbus_external_api.js
         // hooks up (un)subscribe listeners
-        ofEvents.emit(`window/init-subscription-listeners`, {
+        ofEvents.emit(route.window('init-subscription-listeners'), {
             name,
             uuid
         });
@@ -656,13 +652,13 @@ Window.create = function(id, opts) {
                 message: `error #${errCode}. See ${chromeErrLink} for details`
             };
 
-            ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
+            ofEvents.emit(winRoute('fire-constructor-callback'), constructorCallbackMessage);
         };
 
         let resourceResponseReceivedHandler, resourceLoadFailedHandler;
 
-        let resourceResponseReceivedEventString = `window/resource-response-received/${uuidname}`;
-        let resourceLoadFailedEventString = `window/resource-load-failed/${uuidname}`;
+        let resourceResponseReceivedEventString = winRoute('resource-response-received');
+        let resourceLoadFailedEventString = winRoute('resource-load-failed');
 
         let httpResponseCode = null;
 
@@ -686,21 +682,21 @@ Window.create = function(id, opts) {
                 constructorCallbackMessage.data = {
                     httpResponseCode
                 };
-                ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
+                ofEvents.emit(winRoute('fire-constructor-callback'), constructorCallbackMessage);
             });
 
         } else {
             ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
             ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
-            ofEvents.once(`window/connected/${uuidname}`, () => {
+            ofEvents.once(winRoute('connected'), () => {
                 constructorCallbackMessage.data = {
                     httpResponseCode,
                     apiInjected: true
                 };
-                ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
+                ofEvents.emit(winRoute('fire-constructor-callback'), constructorCallbackMessage);
             });
-            ofEvents.once(`window/api-injection-failed/${uuidname}`, () => {
-                electronApp.vlog(1, `api-injection-failed ${uuidname}`);
+            ofEvents.once(winRoute('api-injection-failed'), () => {
+                electronApp.vlog(1, `api-injection-failed ${uuid}-${name}`);
                 // can happen if child window has a different domain.   @TODO allow injection for different domains
                 if (_options.autoShow) {
                     browserWindow.show();
@@ -709,7 +705,7 @@ Window.create = function(id, opts) {
                     httpResponseCode,
                     apiInjected: false
                 };
-                ofEvents.emit(`window/fire-constructor-callback/${uuid}-${name}`, constructorCallbackMessage);
+                ofEvents.emit(winRoute('fire-constructor-callback'), constructorCallbackMessage);
             });
         }
 
@@ -744,7 +740,7 @@ Window.create = function(id, opts) {
     if (!coreState.getWinObjById(id)) {
         coreState.setWindowObj(id, winObj);
 
-        ofEvents.emit(`application/window-created/${uuid}`, {
+        ofEvents.emit(route.application('window-created', uuid), {
             topic: 'application',
             type: 'window-created',
             uuid,
@@ -769,11 +765,10 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
     //      leak. perhaps we need a way to unhook when an app disconnects
     //      automatically
 
-    var uuidname = `${targetIdentity.uuid}-${targetIdentity.name}`;
     //should we check that the type is valid, probably...
 
     //should we check that the type is valid, probably...
-    let eventString = `window/${type}/${uuidname}`;
+    let eventString = route.window(type, targetIdentity.uuid, targetIdentity.name);
     let errRegex = /^Attempting to call a function in a renderer window that has been closed or released/;
 
     let unsubscribe, safeListener, browserWinIsDead;
@@ -873,7 +868,7 @@ Window.close = function(identity, force, callback = () => {}) {
         }
     };
 
-    ofEvents.once(`window/closed/${identity.uuid}-${identity.name}`, () => {
+    ofEvents.once(route.window('closed', identity.uuid, identity.name), () => {
         callback();
     });
 
@@ -905,7 +900,7 @@ Window.embed = function(identity, parentHwnd) {
         browserWindow.setMessageObserver(0x0105, parentHwnd); // WM_SYSKEYUP
     }
 
-    ofEvents.emit(`window/embedded/${identity.uuid}-${identity.name}`, {
+    ofEvents.emit(route.window('embedded', identity.uuid, identity.name), {
         topic: 'window',
         type: 'window-embedded',
         name: identity.name,
@@ -1247,7 +1242,7 @@ Window.stopNavigation = function(identity) {
 
 Window.removeEventListener = function(identity, type, listener) {
     let browserWindow = getElectronBrowserWindow(identity, 'remove event listener for');
-    ofEvents.removeListener(`window/${type}/${browserWindow.id}`, listener);
+    ofEvents.removeListener(route.window(type, browserWindow.id), listener);
 };
 
 
@@ -1526,17 +1521,17 @@ Window.setZoomLevel = function(identity, level) {
 };
 
 Window.onUnload = (identity) => {
-    ofEvents.emit(`window/unload/${identity.uuid}/${identity.name}`, identity);
-    ofEvents.emit('window/init-subscription-listeners', identity);
+    ofEvents.emit(route.window('unload', identity.uuid, identity.name, false), identity);
+    ofEvents.emit(route.window('init-subscription-listeners'), identity);
 };
 
 function emitCloseEvents(identity) {
-    ofEvents.emit(`window/closed`, {
+    ofEvents.emit(route.window('closed'), {
         name: identity.name,
         uuid: identity.uuid
     });
 
-    ofEvents.emit(`window/closed/${identity.uuid}-${identity.name}`, {
+    ofEvents.emit(route.window('closed', identity.uuid, identity.name, true), {
         topic: 'window',
         type: 'closed',
         uuid: identity.uuid,
@@ -1545,14 +1540,14 @@ function emitCloseEvents(identity) {
 
     // Need to emit this event because notifications use dashes (-)
     // in their window names
-    ofEvents.emit(`window/closed/${identity.uuid}/${identity.name}`, {
+    ofEvents.emit(route.window('closed', identity.uuid, identity.name, false), {
         topic: 'window',
         type: 'closed',
         uuid: identity.uuid,
         name: identity.name
     });
 
-    ofEvents.emit(`application/window-closed/${identity.uuid}`, {
+    ofEvents.emit(route.application('window-closed', identity.uuid), {
         topic: 'application',
         type: 'window-closed',
         uuid: identity.uuid,
@@ -1566,13 +1561,13 @@ function emitReloadedEvent(identity, url) {
         name
     } = identity;
 
-    ofEvents.emit(`window/reloaded/${uuid}-${name}`, {
+    ofEvents.emit(route.window('reloaded', uuid, name), {
         uuid,
         name,
         url
     });
 
-    ofEvents.emit(`application/window-reloaded/${uuid}`, {
+    ofEvents.emit(route.application('window-reloaded', uuid), {
         topic: 'application',
         type: 'window-reloaded',
         uuid,
@@ -1671,9 +1666,8 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
 
 
 function handleForceActions(identity, force, eventType, eventPayload, defaultAction) {
-    let uuidname = `${identity.uuid}-${identity.name}`;
-    let appEventString = `application/window-${eventType}/${identity.uuid}`;
-    let winEventString = `window/${eventType}/${uuidname}`;
+    let appEventString = route.application(`window-${eventType}`, identity.uuid);
+    let winEventString = route.window(eventType, identity.uuid, identity.name);
     let listenerCount = ofEvents.listenerCount(winEventString);
 
     if (eventType === 'show-requested') {
@@ -2044,7 +2038,7 @@ function handleCustomAlerts(id, opts) {
         if (typeof(e.preventDefault) === 'function') {
             e.preventDefault();
         }
-        ofEvents.emit(`${topic}/${type}/${opts.uuid}`, payload);
+        ofEvents.emit(route(topic, type, opts.uuid), payload);
     }
 
     function unsubscribe() {
