@@ -5,20 +5,20 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 
-type WindowRoute = (
+export type WindowRoute = (
     type: string,
     uuid?: string,
     name?: string,
     hyphenateUuidName?: boolean
 ) => string;
 
-type AbbrRoute = (
+export type AbbrRoute = (
     type: string,
     subtopic?: string,
     subsubtopic?: string
 ) => string;
 
-interface Route {
+export interface Route {
     (
         channel: string,
         topic: string,
