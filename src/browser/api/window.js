@@ -1389,7 +1389,7 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
     if (editable) {
         menuTemplate.push({
             label: 'Cut',
-            click: (menuItem, browserWindow) => {
+            click: () => {
                 browserWindow.webContents.cut();
             },
             accelerator: 'CommandOrControl+X',
@@ -1397,7 +1397,7 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
         });
         menuTemplate.push({
             label: 'Copy',
-            click: (menuItem, browserWindow) => {
+            click: () => {
                 browserWindow.webContents.copy();
             },
             accelerator: 'CommandOrControl+C',
@@ -1405,14 +1405,14 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
         });
         menuTemplate.push({
             label: 'Paste',
-            click: (menuItem, browserWindow) => {
+            click: () => {
                 browserWindow.webContents.paste();
             },
             accelerator: 'CommandOrControl+V'
         });
         menuTemplate.push({
             label: 'Select all',
-            click: (menuItem, browserWindow) => {
+            click: () => {
                 browserWindow.webContents.selectAll();
             },
             accelerator: 'CommandOrControl+A'
@@ -1423,7 +1423,7 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
     }
     menuTemplate.push({
         label: 'Reload',
-        click: (menuItem, browserWindow) => {
+        click: () => {
             browserWindow.webContents.reloadIgnoringCache();
         }
     }, {
@@ -1449,14 +1449,14 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
         type: 'separator'
     }, {
         label: 'Inspect element',
-        click: (menuItem, browserWindow) => {
+        click: () => {
             browserWindow.webContents.inspectElement(x, y);
         },
         accelerator: 'CommandOrControl+Shift+I'
     });
 
     const currentMenu = Menu.buildFromTemplate(menuTemplate);
-    currentMenu.popup();
+    currentMenu.popup(browserWindow);
 };
 
 Window.defineDraggableArea = function() {};
