@@ -40,6 +40,8 @@ describe('rvm message bus', () => {
 
         it('should send the correct payload when all members present', () => {
             const payloadShape: any = {
+                processId: 'test value',
+                runtimeVersion: 'test value',
                 action: 'license-info',
                 sessionId: RVMMessageBus.sessionId,
                 parentApp: {

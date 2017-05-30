@@ -145,6 +145,7 @@ export interface ApplicationEvent extends RvmMsgBase {
     topic: ApplicationEventTopic;
     type: EventType;
     sourceUrl: string;
+}
 
 export interface ExternalLicenseInfo {
     licenseKey?: string;
