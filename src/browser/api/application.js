@@ -86,8 +86,9 @@ electronApp.on('use-plugins-requested', event => {
 });
 
 electronApp.on('ready', function() {
-    log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
     rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
+    log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
+
     MonitorInfo = require('../monitor_info.js');
 
     // listen to and broadcast 'broadcast' messages from RVM as an openfin app event
@@ -115,47 +116,53 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
     let appUrl = opts.url;
+    const { uuid, name } = opts;
+
     if (appUrl === undefined && opts.mainWindowOptions) {
         appUrl = opts.mainWindowOptions.url;
     }
 
     // undefined or '' acceptable here (gets default in createAppObj); or non-empty string
-    let isValidUrl = appUrl === undefined || typeof appUrl === 'string';
+    const isValidUrl = appUrl === undefined || typeof appUrl === 'string';
     if (!isValidUrl) {
         throw new Error(`Invalid application URL: ${appUrl}`);
     }
 
-    let isValidUuid = isNonEmptyString(opts.uuid) && opts.uuid !== '*';
+    const isValidUuid = isNonEmptyString(uuid) && uuid !== '*';
     if (!isValidUuid) {
-        throw new Error(`Invalid application UUID: ${opts.uuid}`);
+        throw new Error(`Invalid application UUID: ${uuid}`);
     }
 
-    let isValidName = isNonEmptyString(opts.name) && opts.name !== '*';
+    const isValidName = isNonEmptyString(name) && name !== '*';
     if (!isValidName) {
-        throw new Error(`Invalid application name: ${opts.name}`);
+        throw new Error(`Invalid application name: ${name}`);
     }
 
-    let isAppRunning = coreState.getAppRunningState(opts.uuid);
+    const isAppRunning = coreState.getAppRunningState(uuid);
     if (isAppRunning) {
-        throw new Error(`Application with specified UUID already exists: ${opts.uuid}`);
+        throw new Error(`Application with specified UUID already exists: ${uuid}`);
     }
 
-    let parentUuid = parentIdentity && parentIdentity.uuid;
-    if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
+    const parentUuid = parentIdentity && parentIdentity.uuid;
+    if (!validateNavigationRules(uuid, appUrl, parentUuid, opts)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
 
-    let existingApp = coreState.appByUuid(opts.uuid);
+    const existingApp = coreState.appByUuid(uuid);
     if (existingApp) {
         coreState.removeApp(existingApp.id);
     }
 
-    let appObj = createAppObj(opts.uuid, opts, configUrl);
+    const appObj = createAppObj(uuid, opts, configUrl);
 
     if (parentIdentity && parentIdentity.uuid) {
-        let app = coreState.appByUuid(opts.uuid);
 
-        app.parentUuid = parentIdentity.uuid;
+        // This a reference to the meta `app` object that is stored in core state,
+        // not the actual `application` object created above. Here we are attaching the parent
+        // indentity to it. 
+        const app = coreState.appByUuid(opts.uuid);
+
+        app.parentUuid = parentUuid;
     }
 
     return appObj;
@@ -514,10 +521,11 @@ Application.run = function(identity, configUrl = '') {
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
 
-        var pid = app.mainWindow.webContents.processId;
+        const pid = app.mainWindow.webContents.processId;
 
         if (pid) {
             app._processInfo = new ProcessInfo(pid);
+
             // Must call once to start measuring CPU usage
             app._processInfo.getCpuUsage();
         }
@@ -528,11 +536,8 @@ Application.run = function(identity, configUrl = '') {
             uuid
         });
 
-        // const { parentUuid } = coreState.appByUuid(uuid);
+        const parentConfigUrl = coreState.getConfigUrlByUuid(uuid);
 
-        const parentConfigUrl = coreState.getConfigUrlByUuid;
-
-        // TODO add correct info here..
         rvmBus.registerLicenseInfo({
             licenseKey: mainWindowOpts.licenseKey,
             client: {

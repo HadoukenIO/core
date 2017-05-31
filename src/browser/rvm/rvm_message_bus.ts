@@ -237,6 +237,26 @@ export class RVMMessageBus extends EventEmitter  {
         return this.transport.publish(envelope);
     }
 
+    public registerLicenseInfo(licInfo: ExternalLicenseInfo): boolean {
+        const payload = Object.assign({
+            action: 'license-info',
+            topic: 'application',
+            sessionId: RVMMessageBus.sessionId,
+            parentApp: {
+                sourceUrl: null
+            },
+            sourceUrl: null,
+            licenseKey: null,
+            client: {
+                type: null,
+                version: null,
+                pid: null
+            }
+        }, licInfo);
+
+        return this.publish(payload);
+    }
+
     /**
      * recordCallbackInfo() - Records callback info based on messageId so we execute callback upon relevant RVM response.
      * Also sets up timetoLive if requested.

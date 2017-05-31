@@ -38,16 +38,17 @@ describe('rvm message bus', () => {
 
     describe('registerLiceneInfo', () => {
 
-        it('should send the correct payload when all members present', () => {
+        it('should send the correct base payload', () => {
             const payloadShape: any = {
-                processId: 'test value',
-                runtimeVersion: 'test value',
+                processId: 'processId',
+                runtimeVersion: 'runtimeVersion',
+
                 action: 'license-info',
                 sessionId: RVMMessageBus.sessionId,
                 parentApp: {
                     sourceUrl: null
                 },
-                sourceUrl: null, // if external conn, this will be the current --config-url as per runtime args
+                sourceUrl: null,
                 licenseKey: null,
                 client: {
                     type: null,
@@ -55,7 +56,49 @@ describe('rvm message bus', () => {
                     pid: null
                 }
             }
-            const {payload} = <any> rvmMessageBus.registerLiceneInfo(<ExternalLicenseInfo>{});
+            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<ExternalLicenseInfo> {
+                processId: 'processId',
+                runtimeVersion: 'runtimeVersion'
+            });
+
+            assert.deepEqual(payloadShape, payload, 'shapes should match hommie');
+        });
+
+        it('should send the correct full payload', () => {
+
+            const payloadShape: any = {
+                processId: 'processId',
+                runtimeVersion: 'runtimeVersion',
+
+                action: 'license-info',
+                sessionId: RVMMessageBus.sessionId,
+                parentApp: {
+                    sourceUrl: 'parentApp.sourceUrl'
+                },
+                sourceUrl: 'sourceUrl',
+                licenseKey: 'licenseKey',
+                client: {
+                    type: 'js',
+                    version: 'version',
+                    pid: 999999999
+                }
+            }
+
+            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<ExternalLicenseInfo> {
+                processId: 'processId',
+                runtimeVersion: 'runtimeVersion',
+                parentApp: {
+                    sourceUrl: 'parentApp.sourceUrl'
+                },
+                sourceUrl: 'sourceUrl',
+                licenseKey: 'licenseKey',
+                client: {
+                    type: 'js',
+                    version: 'version',
+                    pid: 999999999
+                }
+            });
+
             assert.deepEqual(payloadShape, payload, 'shapes should match');
         });
     });
