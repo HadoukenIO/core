@@ -48,7 +48,7 @@ function subscriberEventMiddleware(msg: MessagePackage, next: () => void) {
     if (subscriberTriggeredEvents[data.action] && !identity.runtimeUuid) {
         const { payload: { sourceUuid: sourceUuid, topic: topic, destinationWindowName, sourceWindowName }} = data;
 
-        const forwardedAction = data.action === SUBSCRIBE_ACTION ?  ofEvents.SUBSCRIBER.ADDED : ofEvents.SUBSCRIBER.REMOVED;
+        const forwardedAction = data.action === SUBSCRIBE_ACTION ?  ofEvents.subscriber.ADDED : ofEvents.subscriber.REMOVED;
         const subAddedPayload = {
             senderName: sourceWindowName || sourceUuid,
             senderUuid: sourceUuid,

@@ -119,7 +119,7 @@ function InterApplicationBusApiHandler() {
             payload
         } = message;
 
-        InterApplicationBus.raiseSubscriberEvent(ofEvents.SUBSCRIBER.ADDED, payload);
+        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.ADDED, payload);
         ack(successAck);
     }
 
@@ -128,7 +128,7 @@ function InterApplicationBusApiHandler() {
             payload
         } = message;
 
-        InterApplicationBus.raiseSubscriberEvent(ofEvents.SUBSCRIBER.REMOVED, payload);
+        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.REMOVED, payload);
         ack(successAck);
     }
 
@@ -148,13 +148,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.SUBSCRIBER.ADDED);
+                    sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.ADDED);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.SUBSCRIBER.ADDED);
+                sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.ADDED);
             }
         });
 
@@ -166,13 +166,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.SUBSCRIBER.REMOVED);
+                    sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.REMOVED);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.SUBSCRIBER.REMOVED);
+                sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.REMOVED);
             }
 
         });

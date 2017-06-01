@@ -65,18 +65,18 @@ ofBus = new OFBus();
         topic: topic
     }
  */
-busEventing.on(ofEvents.SUBSCRIBER.ADDED, subInfo => {
+busEventing.on(ofEvents.subscriber.ADDED, subInfo => {
     const subscriptionInfo = JSON.parse(JSON.stringify(subInfo));
 
     subscriptionInfo.topic = decodeURIComponent(subscriptionInfo.topic);
-    busEventing.emit(generateKey([ofEvents.SUBSCRIBER.ADDED], [subInfo.senderUuid, subInfo.senderName]), subscriptionInfo);
+    busEventing.emit(generateKey([ofEvents.subscriber.ADDED], [subInfo.senderUuid, subInfo.senderName]), subscriptionInfo);
 });
 
-busEventing.on(ofEvents.SUBSCRIBER.REMOVED, subInfo => {
+busEventing.on(ofEvents.subscriber.REMOVED, subInfo => {
     const subscriptionInfo = JSON.parse(JSON.stringify(subInfo));
 
     subscriptionInfo.topic = decodeURIComponent(subscriptionInfo.topic);
-    busEventing.emit(generateKey([ofEvents.SUBSCRIBER.REMOVED], [subInfo.senderUuid, subInfo.senderName]), subscriptionInfo);
+    busEventing.emit(generateKey([ofEvents.subscriber.REMOVED], [subInfo.senderUuid, subInfo.senderName]), subscriptionInfo);
 });
 
 
@@ -161,7 +161,7 @@ function subscribe(identity, payload, listener) {
     ofBus.on(keys.toApp, listener);
 
     // for the subscribe listeners:
-    busEventing.emit(ofEvents.SUBSCRIBER.ADDED, eventingPayload);
+    busEventing.emit(ofEvents.subscriber.ADDED, eventingPayload);
 
     //return a function that will unhook the listeners
     var unsubItem = {
@@ -171,7 +171,7 @@ function subscribe(identity, payload, listener) {
             ofBus.removeListener(keys.toWin, listener);
             ofBus.removeListener(keys.toApp, listener);
 
-            busEventing.emit(ofEvents.SUBSCRIBER.REMOVED, eventingPayload);
+            busEventing.emit(ofEvents.subscriber.REMOVED, eventingPayload);
         }
     };
     subScriptionManager.registerSubscription(unsubItem.unsubscribe, identity, payload);
@@ -206,7 +206,7 @@ function unsubscribe(identity, cbId, senderUuid, ...rest) {
 
     delete callbacks['' + cbId];
 
-    busEventing.emit(ofEvents.SUBSCRIBER.REMOVED, {
+    busEventing.emit(ofEvents.subscriber.REMOVED, {
         senderUuid: senderUuid,
         senderName: senderUuid,
         uuid: uuid,
@@ -223,7 +223,7 @@ function subscriberAdded(identity, listener) {
     } = identity;
     let cbId = genCallBackId();
 
-    let listenerStrs = generateListenerKeys(ofEvents.SUBSCRIBER.ADDED, uuid, name);
+    let listenerStrs = generateListenerKeys(ofEvents.subscriber.ADDED, uuid, name);
     let subMgrStr = listenerStrs[0];
 
     let unsubItem;
@@ -259,7 +259,7 @@ function removeSubscriberAdded(identity, cbId) {
         return;
     }
 
-    let listenerStrs = generateListenerKeys(ofEvents.SUBSCRIBER.ADDED, uuid, name);
+    let listenerStrs = generateListenerKeys(ofEvents.subscriber.ADDED, uuid, name);
 
     listenerStrs.forEach(listenerStr => {
         busEventing.removeListener(listenerStr, callback);
@@ -276,7 +276,7 @@ function subscriberRemoved(identity, listener) {
         name
     } = identity;
 
-    let listenerStrs = generateListenerKeys(ofEvents.SUBSCRIBER.REMOVED, uuid, name);
+    let listenerStrs = generateListenerKeys(ofEvents.subscriber.REMOVED, uuid, name);
     let subMgrStr = listenerStrs[0];
 
     let unsubItem;
@@ -311,7 +311,7 @@ function removeSubscriberRemoved(identity, cbId) {
         return;
     }
 
-    let listenerStrs = generateListenerKeys(ofEvents.SUBSCRIBER.REMOVED, uuid, name);
+    let listenerStrs = generateListenerKeys(ofEvents.subscriber.REMOVED, uuid, name);
 
     listenerStrs.forEach(listenerStr => {
         busEventing.removeListener(listenerStr, callback);

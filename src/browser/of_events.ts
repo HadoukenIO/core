@@ -43,7 +43,7 @@ class OFEvents extends EventEmitter {
         return super.emit(route, ...data);
     }
 
-    public SUBSCRIBER: StringMap = {
+    public subscriber: StringMap = {
         ADDED: 'subscriber-added',
         REMOVED: 'subscriber-removed'
     };
