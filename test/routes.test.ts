@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import route, { Route, AbbrRoute, WindowRoute } from '../src/common/route';
+import route, { Route, SimpleRoute, WindowRoute } from '../src/common/route';
 import * as assert from 'assert';
 
 describe('route', () => {
@@ -59,12 +59,12 @@ shouldBeAbbrFunc('runtime');
 shouldBeAbbrFunc('rvmMessageBus', 'rvm-message-bus');
 shouldBeAbbrFunc('rvm-message-bus');
 
-interface AbbrRouteDict extends Route {
-    [funcName: string]: AbbrRoute;
+interface SimpleRouteDict extends Route {
+    [funcName: string]: SimpleRoute;
 }
 
 function shouldBeAbbrFunc(funcName: string, apiName?: string): void {
-    const abbrRoute: AbbrRoute = (<AbbrRouteDict>route)[funcName];
+    const abbrRoute: SimpleRoute = (<SimpleRouteDict>route)[funcName];
 
     apiName = apiName || funcName;
 

@@ -21,7 +21,7 @@ export type WindowRoute = (
     hyphenateUuidName?: boolean
 ) => string;
 
-export type AbbrRoute = (
+export type SimpleRoute = (
     type: string,
     subtopic?: string,
     subsubtopic?: string
@@ -36,21 +36,21 @@ export interface Route {
         hyphenateUuidName?: boolean
     ): string;
 
-    application: AbbrRoute;
-    externalApplication: AbbrRoute;
-    'external-application': AbbrRoute;
+    application: SimpleRoute;
+    externalApplication: SimpleRoute;
+    'external-application': SimpleRoute;
 
     window: WindowRoute;
     externalWindow: WindowRoute;
     'external-window': WindowRoute;
 
-    system: AbbrRoute;
-    server: AbbrRoute;
-    connection: AbbrRoute;
-    runtime: AbbrRoute;
+    system: SimpleRoute;
+    server: SimpleRoute;
+    connection: SimpleRoute;
+    runtime: SimpleRoute;
 
-    rvmMessageBus: AbbrRoute;
-    'rvm-message-bus': AbbrRoute;
+    rvmMessageBus: SimpleRoute;
+    'rvm-message-bus': SimpleRoute;
 }
 
 interface Context { hyphenateUuidName: boolean; }
@@ -88,16 +88,16 @@ function router(
 
 const route: Route = <Route>router.bind(null);
 
-route.application = <AbbrRoute>route.bind(null, 'application');
-route.externalApplication = route['external-application'] = <AbbrRoute>router.bind(null, 'external-application');
+route.application = <SimpleRoute>route.bind(null, 'application');
+route.externalApplication = route['external-application'] = <SimpleRoute>router.bind(null, 'external-application');
 
 route.window = <WindowRoute>router.bind(HYPHEN, 'window');
 route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
 
-route.system = <AbbrRoute>router.bind(null, 'system');
-route.rvmMessageBus = route['rvm-message-bus'] = <AbbrRoute>router.bind(null, 'rvm-message-bus');
-route.server = <AbbrRoute>router.bind(null, 'server');
-route.connection = <AbbrRoute>router.bind(null, 'connection');
-route.runtime = <AbbrRoute>router.bind(null, 'runtime');
+route.system = <SimpleRoute>router.bind(null, 'system');
+route.rvmMessageBus = route['rvm-message-bus'] = <SimpleRoute>router.bind(null, 'rvm-message-bus');
+route.server = <SimpleRoute>router.bind(null, 'server');
+route.connection = <SimpleRoute>router.bind(null, 'connection');
+route.runtime = <SimpleRoute>router.bind(null, 'runtime');
 
 export default route;
