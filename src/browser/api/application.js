@@ -433,7 +433,6 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     createAppObj(identity.uuid, null, configUrl);
 
     let uuid = identity.uuid,
-        emitToApp = type => ofEvents.emit(route.application(type, uuid), { topic: 'application', type, uuid }),
         app = Application.wrap(uuid),
         appState = coreState.appByUuid(uuid),
         mainWindowOpts = _.clone(app._options),
@@ -520,7 +519,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
             app._processInfo.getCpuUsage();
         }
 
-        emitToApp('connected');
+        ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
     });
 
     // turn on plugins for the main window
@@ -543,7 +542,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
         delete fetchingIcon[uuid];
         removeTrayIcon(app);
 
-        emitToApp('closed');
+        ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
 
         eventListenerStrings.forEach(eventString => {
             app.mainWindow.removeAllListeners(eventString);
@@ -592,21 +591,21 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     });
 
     app.mainWindow.webContents.on('crashed', () => {
-        emitToApp('crashed');
-        emitToApp('out-of-memory');
+        ofEvents.emit(route.application('crashed', uuid), { topic: 'application', type: 'crashed', uuid });
+        ofEvents.emit(route.application('out-of-memory', uuid), { topic: 'application', type: 'out-of-memory', uuid });
     });
 
     app.mainWindow.on('responsive', () => {
-        emitToApp('responding');
+        ofEvents.emit(route.application('responding', uuid), { topic: 'application', type: 'responding', uuid });
     });
 
     app.mainWindow.on('unresponsive', () => {
-        emitToApp('not-responding');
+        ofEvents.emit(route.application('not-responding', uuid), { topic: 'application', type: 'not-responding', uuid });
     });
 
     coreState.setAppRunningState(uuid, true);
 
-    emitToApp('started');
+    ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
 };
 
 /**

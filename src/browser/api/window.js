@@ -411,7 +411,6 @@ Window.create = function(id, opts) {
 
         uuid = _options.uuid;
         name = _options.name;
-        const winRoute = (type, hyphenateUuidName) => route.window(type, uuid, name, hyphenateUuidName);
 
         const WINDOW_DOCUMENT_LOADED = 'document-loaded';
 
@@ -441,21 +440,21 @@ Window.create = function(id, opts) {
             });
 
             //tear down any listeners on external event emitters.
-            ofEvents.removeListener(winRoute('unload', false), onDidUnload);
+            ofEvents.removeListener(route.window('unload', uuid, name, false), onDidUnload);
             webContents.removeListener(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
         };
 
         let windowTeardown = createWindowTearDown(identity, id);
 
         //wire up unload/navigate events for reload.
-        ofEvents.on(winRoute('unload', false), onDidUnload);
+        ofEvents.on(route.window('unload', uuid, name, false), onDidUnload);
         webContents.on(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
 
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
         browserWindow.on('close', (event) => {
             let ofWindow = Window.wrap(uuid, name);
-            let closeEventString = winRoute('close-requested');
+            let closeEventString = route.window('close-requested', uuid, name);
             let listenerCount = ofEvents.listenerCount(closeEventString);
 
             // here we can only prevent electron windows, not external windows, from closing when the 'x' button is clicked.
@@ -467,7 +466,7 @@ Window.create = function(id, opts) {
                 }
             }
 
-            ofEvents.emit(winRoute('synth-close'), {
+            ofEvents.emit(route.window('synth-close', uuid, name), {
                 name,
                 uuid,
                 topic: 'window',
@@ -530,7 +529,7 @@ Window.create = function(id, opts) {
                     // Payload is modified by the decorator and returns true on success
                     if (decoratorFn(payload, arguments)) {
                         // Let the decorator apply changes to the type
-                        ofEvents.emit(winRoute(payload.type), payload);
+                        ofEvents.emit(route.window(payload.type, uuid, name), payload);
                     }
                 };
 
@@ -549,7 +548,7 @@ Window.create = function(id, opts) {
         // hideOnClose is deprecated; treat it as if it's just another
         // listener on the 'close-requested' event
         if (getOptFromBrowserWin('hideOnClose', browserWindow, false)) {
-            let closeEventString = winRoute('close-requested');
+            let closeEventString = route.window('close-requested', uuid, name);
             ofEvents.on(closeEventString, hideOnCloseListener);
         }
 
@@ -578,7 +577,7 @@ Window.create = function(id, opts) {
                     payload.memberOf = isSource ? 'source' : 'target';
                 }
 
-                ofEvents.emit(winRoute(payload.type), payload);
+                ofEvents.emit(route.window(payload.type, uuid, name), payload);
             }
         };
         let groupChangedUnsubscribe = () => {
@@ -652,13 +651,13 @@ Window.create = function(id, opts) {
                 message: `error #${errCode}. See ${chromeErrLink} for details`
             };
 
-            ofEvents.emit(winRoute('fire-constructor-callback'), constructorCallbackMessage);
+            ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
         };
 
         let resourceResponseReceivedHandler, resourceLoadFailedHandler;
 
-        let resourceResponseReceivedEventString = winRoute('resource-response-received');
-        let resourceLoadFailedEventString = winRoute('resource-load-failed');
+        let resourceResponseReceivedEventString = route.window('resource-response-received', uuid, name);
+        let resourceLoadFailedEventString = route.window('resource-load-failed', uuid, name);
 
         let httpResponseCode = null;
 
@@ -682,20 +681,20 @@ Window.create = function(id, opts) {
                 constructorCallbackMessage.data = {
                     httpResponseCode
                 };
-                ofEvents.emit(winRoute('fire-constructor-callback'), constructorCallbackMessage);
+                ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
             });
 
         } else {
             ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
             ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
-            ofEvents.once(winRoute('connected'), () => {
+            ofEvents.once(route.window('connected', uuid, name), () => {
                 constructorCallbackMessage.data = {
                     httpResponseCode,
                     apiInjected: true
                 };
-                ofEvents.emit(winRoute('fire-constructor-callback'), constructorCallbackMessage);
+                ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
             });
-            ofEvents.once(winRoute('api-injection-failed'), () => {
+            ofEvents.once(route.window('api-injection-failed', uuid, name), () => {
                 electronApp.vlog(1, `api-injection-failed ${uuid}-${name}`);
                 // can happen if child window has a different domain.   @TODO allow injection for different domains
                 if (_options.autoShow) {
@@ -705,7 +704,7 @@ Window.create = function(id, opts) {
                     httpResponseCode,
                     apiInjected: false
                 };
-                ofEvents.emit(winRoute('fire-constructor-callback'), constructorCallbackMessage);
+                ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
             });
         }
 

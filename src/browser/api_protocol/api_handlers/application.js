@@ -349,7 +349,7 @@ function ApplicationApiHandler() {
     function externalWindowAction(identity, message, ack) {
         /* jshint bitwise: false */
         let payload = message.payload;
-        const emitToExtWin = (type, data) => ofEvents.emit(route.externalWindow(type, payload.uuid, payload.name), data);
+        const { uuid, name } = payload;
 
         const SWP_HIDEWINDOW = 128;
         const SWP_SHOWWINDOW = 64;
@@ -360,27 +360,27 @@ function ApplicationApiHandler() {
         switch (payload.type) {
             case 2:
                 // WM_DESTROY
-                emitToExtWin('close');
+                ofEvents.emit(route.externalWindow('close', uuid, name));
                 break;
             case 7:
                 // WM_SETFOCUS
-                emitToExtWin('focus');
+                ofEvents.emit(route.externalWindow('focus', uuid, name));
                 break;
             case 8:
                 // WM__KILLFOCUS
-                emitToExtWin('blur');
+                ofEvents.emit(route.externalWindow('blur', uuid, name));
                 break;
             case 71:
                 // WM_WINDOWPOSCHANGED
                 let flags = payload.flags;
 
-                emitToExtWin('bounds-changed');
+                ofEvents.emit(route.externalWindow('bounds-changed', uuid, name));
 
                 // dispatch show and hide events
                 if (flags & SWP_SHOWWINDOW) {
-                    emitToExtWin('visibility-changed', true);
+                    ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), true);
                 } else if (flags & SWP_HIDEWINDOW) {
-                    emitToExtWin('visibility-changed', false);
+                    ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), false);
                 }
                 break;
             case 274:
@@ -394,26 +394,26 @@ function ApplicationApiHandler() {
                 /* falls through */
             case 163:
                 // WM_NCLBUTTONDBLCLK
-                emitToExtWin('state-change');
+                ofEvents.emit(route.externalWindow('state-change', uuid, name));
                 break;
             case 532:
                 // WM_SIZING
-                emitToExtWin('sizing');
+                ofEvents.emit(route.externalWindow('sizing', uuid, name));
                 break;
             case 534:
                 // WM_MOVING
-                emitToExtWin('moving');
+                ofEvents.emit(route.externalWindow('moving', uuid, name));
                 break;
             case 561:
                 // WM_ENTERSIZEMOVE
-                emitToExtWin('begin-user-bounds-change', {
+                ofEvents.emit(route.externalWindow('end-user-bounds-change', {
                     x: payload.mouseX,
                     y: payload.mouseY
-                });
+                }));
                 break;
             case 562:
                 // WM_EXITSIZEMOVE
-                emitToExtWin('end-user-bounds-change');
+                ofEvents.emit(route.externalWindow('end-user-bounds-change', uuid, name));
                 break;
             default:
                 // Do nothing
