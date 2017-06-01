@@ -53,9 +53,10 @@ export interface Route {
     'rvm-message-bus': AbbrRoute;
 }
 
-interface Context { hyphenateUuidName: boolean }
+interface Context { hyphenateUuidName: boolean; }
 const HYPHEN: Context = { hyphenateUuidName: true };
 
+// NOTE: Always called bound to a context; see .bind() calls below.
 // returns 'channel/type' if only channel and type given
 // returns 'channel/type/subtopic' in only channel, type, and subtopic given
 // returns 'channel/type/subtopic/subsubtopic' if channel, type, subtopic, subsubtopic given and !(this && this.hyphenateUuidName)
@@ -75,6 +76,7 @@ function router(
 
         if (subsubtopic) {
             if (typeof hyphenateUuidName !== 'boolean') {
+                // tslint:disable-next-line:no-invalid-this (`this` is the bound context)
                 hyphenateUuidName = this && this.hyphenateUuidName;
             }
             result += hyphenateUuidName ? '-' : '/';

@@ -72,12 +72,11 @@ const trans2TSFiles = [
     'src/browser/session.ts',
     'src/browser/transport.ts',
     'src/browser/window_group_transaction_tracker.ts',
-    'src/common/errors.ts',
-    'src/common/regex.ts',
+    'src/common/**/*.ts',
     'src/browser/port_discovery.ts',
-    'src/browser/api_protocol/**/**.ts',
+    'src/browser/api_protocol/**/*.ts',
     'src/browser/rvm/rvm_message_bus.ts',
-    'src/browser/api/**.ts',
+    'src/browser/api/*.ts', // notifications subdirectory excluded due to legacy linting errors
     'src/browser/rvm/runtime_initiated_topics/app_assets.ts'
 ];
 
