@@ -36,10 +36,6 @@ function InterApplicationBusApiHandler() {
             'subscriber-removed': subscriberRemoved
         };
 
-    //TODO: Figure out a way to share these keys beween interappbus api and handler.
-    const SUBSCRIBER_ADDED_EVENT = 'subscriber-added';
-    const SUBSCRIBER_REMOVED_EVENT = 'subscriber-removed';
-
     apiProtocolBase.registerActionMap(interAppBusExternalApiMap);
 
     function unsubscribe(identity, message, ack) {
@@ -123,7 +119,7 @@ function InterApplicationBusApiHandler() {
             payload
         } = message;
 
-        InterApplicationBus.raiseSubscriberEvent(SUBSCRIBER_ADDED_EVENT, payload);
+        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.ADDED, payload);
         ack(successAck);
     }
 
@@ -132,7 +128,7 @@ function InterApplicationBusApiHandler() {
             payload
         } = message;
 
-        InterApplicationBus.raiseSubscriberEvent(SUBSCRIBER_REMOVED_EVENT, payload);
+        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.REMOVED, payload);
         ack(successAck);
     }
 
@@ -152,13 +148,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_ADDED_EVENT);
+                    sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.ADDED);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_ADDED_EVENT);
+                sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.ADDED);
             }
         });
 
@@ -170,13 +166,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_REMOVED_EVENT);
+                    sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.REMOVED);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_REMOVED_EVENT);
+                sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.REMOVED);
             }
 
         });
