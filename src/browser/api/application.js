@@ -458,6 +458,7 @@ Application.run = function(identity, configUrl = '') {
     const mainWindowOpts = _.clone(app._options);
     const hideSplashTopic = route.application('hide-splashscreen', uuid);
     const eventListenerStrings = [];
+    const emitToApp = type => ofEvents.emit(route.application(type, uuid), { topic: 'application', type, uuid });
     const hideSplashListener = () => {
         let rvmPayload = {
             topic: 'application',
@@ -568,7 +569,7 @@ Application.run = function(identity, configUrl = '') {
             app._processInfo.getCpuUsage();
         }
 
-        ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
+        emitToApp('connected');
     });
 
     // turn on plugins for the main window
@@ -591,7 +592,7 @@ Application.run = function(identity, configUrl = '') {
         delete fetchingIcon[uuid];
         removeTrayIcon(app);
 
-        ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
+        emitToApp('closed');
 
         eventListenerStrings.forEach(eventString => {
             app.mainWindow.removeAllListeners(eventString);
@@ -641,21 +642,21 @@ Application.run = function(identity, configUrl = '') {
     });
 
     app.mainWindow.webContents.on('crashed', () => {
-        ofEvents.emit(route.application('crashed', uuid), { topic: 'application', type: 'crashed', uuid });
-        ofEvents.emit(route.application('out-of-memory', uuid), { topic: 'application', type: 'out-of-memory', uuid });
+        emitToApp('crashed');
+        emitToApp('out-of-memory');
     });
 
     app.mainWindow.on('responsive', () => {
-        ofEvents.emit(route.application('responding', uuid), { topic: 'application', type: 'responding', uuid });
+        emitToApp('responding');
     });
 
     app.mainWindow.on('unresponsive', () => {
-        ofEvents.emit(route.application('not-responding', uuid), { topic: 'application', type: 'not-responding', uuid });
+        emitToApp('not-responding');
     });
 
     coreState.setAppRunningState(uuid, true);
 
-    ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+    emitToApp('started');
 };
 
 /**
