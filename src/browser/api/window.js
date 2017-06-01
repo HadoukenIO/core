@@ -1187,6 +1187,7 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
     let left = toSafeInt(deltaLeft, 0);
     let top = toSafeInt(deltaTop, 0);
 
+    // no need to call clipBounds here because width and height are not changing
     browserWindow.setBounds({
         x: currentBounds.x + left,
         y: currentBounds.y + top,
@@ -1207,6 +1208,7 @@ Window.moveTo = function(identity, x, y) {
     const safeX = toSafeInt(x);
     const safeY = toSafeInt(y);
 
+    // no need to call clipBounds here because width and height are not changing
     browserWindow.setBounds({
         x: safeX,
         y: safeY,
@@ -1271,7 +1273,7 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
 };
 
 
-Window.resizeTo = function(identity, width, height, anchor) {
+Window.resizeTo = function(identity, newWidth, newHeight, anchor) {
     const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1279,15 +1281,15 @@ Window.resizeTo = function(identity, width, height, anchor) {
     }
 
     const currentBounds = browserWindow.getBounds();
-    const safeWidth = toSafeInt(width, currentBounds.width);
-    const safeHeight = toSafeInt(height, currentBounds.height);
-    const boundsAnchor = calcBoundsAnchor(anchor, safeWidth, safeHeight, currentBounds);
+    newWidth = toSafeInt(newWidth, currentBounds.width);
+    newHeight = toSafeInt(newHeight, currentBounds.height);
+    const boundsAnchor = calcBoundsAnchor(anchor, newWidth, newHeight, currentBounds);
 
     browserWindow.setBounds(clipBounds({
         x: boundsAnchor.x,
         y: boundsAnchor.y,
-        width: safeWidth,
-        height: safeHeight
+        width: newWidth,
+        height: newHeight
     }, browserWindow));
 };
 
@@ -1362,6 +1364,7 @@ Window.showAt = function(identity, left, top, force = false) {
     let defaultAction = () => {
         let currentBounds = browserWindow.getBounds();
 
+        // no need to call clipBounds here because width and height are not changing
         browserWindow.setBounds({
             x: safeLeft,
             y: safeTop,

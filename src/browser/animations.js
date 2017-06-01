@@ -27,6 +27,9 @@ let windowTransaction = require('electron').windowTransaction;
 let clipBounds = require('./clip_bounds.js').default;
 let Deferred = require('./deferred.js');
 let Tweens = require('./animation/tween.js');
+import {
+    toSafeInt
+} from '../common/safe_int';
 
 const isWin32 = process.platform === 'win32';
 
@@ -72,6 +75,10 @@ function AnimationHandler(desiredInterval) {
         var wt; // window-transaction
         let hwndToId = {};
         var activeWindows = Object.keys(_transitionsPerWindow);
+
+        const { flag: { noZorder, noActivate } } = windowTransaction;
+        const flags = noZorder + noActivate;
+
         activeWindows.forEach((key) => {
             try {
                 var bw = BrowserWindow.fromId(parseInt(key));
@@ -216,16 +223,14 @@ function AnimationHandler(desiredInterval) {
 
                     if (updateBounds) {
                         currentWindowEntry.hadBoundsChange = true;
-                        var newBounds;
-                        /* jshint bitwise:false */
-                        var initialBounds = currentTransition.initialBounds;
-                        newBounds = clipBounds({
-                            x: (initialBounds.x + boundsChange.x) | 0,
-                            y: (initialBounds.y + boundsChange.y) | 0,
-                            width: (initialBounds.width + boundsChange.width) | 0,
-                            height: (initialBounds.height + boundsChange.height) | 0
-                        }, bw);
-                        /* jshint bitwise:true */
+
+                        let { x, y, width, height } = currentTransition.initialBounds;
+                        x = toSafeInt(x + boundsChange.x, x);
+                        y = toSafeInt(y + boundsChange.y, y);
+                        width = toSafeInt(width + boundsChange.width, width);
+                        height = toSafeInt(height + boundsChange.height, height);
+
+                        const newBounds = clipBounds({ x, y, width, height }, bw);
 
                         if (isWin32) {
                             let hwnd = parseInt(bw.nativeId, 16);
@@ -241,13 +246,9 @@ function AnimationHandler(desiredInterval) {
                                 });
                             }
                             hwndToId[hwnd] = bw.id;
-                            wt.setWindowPos(hwnd, {
-                                x: newBounds.x,
-                                y: newBounds.y,
-                                w: newBounds.width,
-                                h: newBounds.height,
-                                flags: windowTransaction.flag.noZorder + windowTransaction.flag.noActivate
-                            });
+
+                            const { x, y, width: w, height: h } = newBounds;
+                            wt.setWindowPos(hwnd, { x, y, w, h, flags });
                         } else {
                             bw.setBounds(newBounds);
                         }
