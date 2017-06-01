@@ -7,6 +7,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import {WMCopyData} from '../transport';
 import {EventEmitter} from 'events';
 import * as log from '../log';
+import route from '../../common/route';
 
 // as to be require as we have added generateGUID, which is not on the ts definitions for app
 // i.e. error TS2339: Property 'generateGUID' does not exist on type 'typeof app'.
@@ -187,7 +188,7 @@ class RVMMessageBus extends EventEmitter  {
                         const action = dataObj.payload.action;
 
                         if (topic && payload && action) {
-                            this.emit('rvm-message-bus/broadcast/' + topic + '/' + action, payload);
+                            this.emit(route.rvmMessageBus('broadcast', topic, action), payload);
                         } else {
                             log.writeToLog(1, `RVMMessageBus received an invalid broadcast message: ${dataObj}`, true);
                         }

@@ -39,6 +39,9 @@ const {sendToIdentity} = require('../../api_protocol/api_handlers/api_protocol_b
 import ofEvents from '../../of_events';
 const {writeToLog} = require('../../log');
 const _ = require('underscore');
+import route from '../../../common/route';
+
+
 const NOTE_APP_UUID = 'service:notifications';
 const MAX_NOTES = 5;
 const positionWindows = _.debounce(positionWindowsImmediate, 300, false);
@@ -77,7 +80,7 @@ ofEvents.once(`notification-service-ready`, () => {
     }
 });
 
-ofEvents.on('window/closed/*', (e: any) => {
+ofEvents.on(route.window('closed', '*'), (e: any) => {
 
     // because we are in the browser, this just ensures that any sync events
     // that happen on the back end of a closed event have time to complete
@@ -121,7 +124,7 @@ is the following:
     ],
 }
 */
-ofEvents.on('application/window-end-load/*', (e: any) => {
+ofEvents.on(route.application('window-end-load', '*'), (e: any) => {
 
     try {
         const { uuid, name} = e.data[0];
@@ -201,14 +204,13 @@ seqs.noteStack
 
 seqs.isAnimating
     .subscribe((animationPayload: Object) => {
-        const topicString = getNoteTopicBase();
         const payload = <NotificationMessage> {
             action: NoteAction.animating,
             data: animationPayload,
             id: {},
         };
 
-        ofEvents.emit(topicString, payload);
+        ofEvents.emit(route('notifications', 'listener/'), payload); // legacy trailing slash; do not remove!
     });
 
 seqs.removes.subscribe((removedOpts: Object) => {
@@ -677,17 +679,9 @@ function cleanPendingNotes(winToExclude: any = false) {
 }
 
 function noteTopicStr(uuid: string, name: string, isGeneral?: boolean): string {
-    let topicStr = getNoteTopicBase();
-
-    if (!isGeneral) {
-        topicStr += `${uuid}-${name}`;
-    }
-
-    return topicStr;
-}
-
-function getNoteTopicBase(): string {
-    return `notifications/listener/`;
+    return isGeneral
+        ? route('notifications', 'listener/') // legacy trailing slash; do not remove!
+        : route('notifications', 'listener', uuid, name, true);
 }
 
 function windowIsNotification(name: string ): boolean {

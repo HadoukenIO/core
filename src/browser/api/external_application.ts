@@ -6,18 +6,15 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 
 import ofEvents from '../of_events';
-
 import { Identity } from '../../shapes';
-
 import * as ProcessTracker from '../process_tracker.js';
+import route from '../../common/route';
 
 const authenticatedConnections: any[] = [];
-const connectedEvent = 'external-application/connected';
-const disconnectedEvent = 'external-application/disconnected';
 
 export module ExternalApplication {
     export function addEventListener(identity: Identity, type: string, listener: Function) {
-        const evt = `external-application/${type}/${identity.uuid}`;
+        const evt = route.externalApplication(type, identity.uuid);
         ofEvents.on(evt, listener);
 
         return () => {
@@ -26,7 +23,7 @@ export module ExternalApplication {
     }
 
     export function removeEventListener(identity: Identity, type: string, listener: Function) {
-        ofEvents.removeListener(`external-application/${type}/${identity.uuid}`, listener);
+        ofEvents.removeListener(route.externalApplication(type, identity.uuid), listener);
     }
 
     export function getInfo(externalApp: Identity): ExternalProcessInfo {
@@ -43,10 +40,10 @@ export module ExternalApplication {
 
         //TODO: compare perf from this and a map.
         authenticatedConnections.push(externalConnObj);
-        ofEvents.emit(`${connectedEvent}/${externalConnObj.uuid}`, {
+        ofEvents.emit(route.externalApplication('connected', externalConnObj.uuid), {
             uuid
         });
-        ofEvents.emit(connectedEvent, {
+        ofEvents.emit(route.externalApplication('connected'), {
             uuid
         });
     }
@@ -66,11 +63,11 @@ export module ExternalApplication {
     export function removeExternalConnection(externalConnection: Identity) {
         authenticatedConnections.splice(authenticatedConnections.indexOf(externalConnection), 1);
 
-        ofEvents.emit(`${disconnectedEvent}/${externalConnection.uuid}`, {
+        ofEvents.emit(route.externalApplication('disconnected', externalConnection.uuid), {
             uuid: externalConnection.uuid
         });
 
-        ofEvents.emit(disconnectedEvent, {
+        ofEvents.emit(route.externalApplication('disconnected'), {
             uuid: externalConnection.uuid
         });
     }
