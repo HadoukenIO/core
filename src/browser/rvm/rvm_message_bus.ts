@@ -147,7 +147,7 @@ export interface ApplicationEvent extends RvmMsgBase {
     sourceUrl: string;
 }
 
-export interface ExternalLicenseInfo {
+export interface LicenseInfo {
     licenseKey?: string;
     client?: {
         type: 'dotnet' | 'java' | 'air' | 'node' | 'js';
@@ -237,7 +237,7 @@ export class RVMMessageBus extends EventEmitter  {
         return this.transport.publish(envelope);
     }
 
-    public registerLicenseInfo(licInfo: ExternalLicenseInfo): boolean {
+    public registerLicenseInfo(licInfo: LicenseInfo): boolean {
         const payload = Object.assign({
             action: 'license-info',
             topic: 'application',

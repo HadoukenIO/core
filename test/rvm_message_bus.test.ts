@@ -32,7 +32,7 @@ const mockWMCopyData  = {
 mockery.registerMock('../transport', mockWMCopyData);
 mockery.enable();
 
-import {rvmMessageBus, RVMMessageBus, ExternalLicenseInfo} from '../src/browser/rvm/rvm_message_bus';
+import {rvmMessageBus, RVMMessageBus, LicenseInfo} from '../src/browser/rvm/rvm_message_bus';
 
 describe('rvm message bus', () => {
 
@@ -56,7 +56,7 @@ describe('rvm message bus', () => {
                     pid: null
                 }
             }
-            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<ExternalLicenseInfo> {
+            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<LicenseInfo> {
                 processId: 'processId',
                 runtimeVersion: 'runtimeVersion'
             });
@@ -84,7 +84,7 @@ describe('rvm message bus', () => {
                 }
             }
 
-            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<ExternalLicenseInfo> {
+            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<LicenseInfo> {
                 processId: 'processId',
                 runtimeVersion: 'runtimeVersion',
                 parentApp: {
