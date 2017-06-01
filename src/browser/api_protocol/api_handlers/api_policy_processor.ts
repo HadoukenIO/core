@@ -269,10 +269,10 @@ if (coreState.argo['enable-strict-api-permissions']) {
     writeToLog('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
     getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
     desktopOwnerSettingEnabled = !!coreState.argo[ENABLE_DESKTOP_OWNER_SETTINGS];
-    writeToLog('desktopOwnerSettingEnabled', desktopOwnerSettingEnabled, true);
+    writeToLog(1, `desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`, true);
     if (desktopOwnerSettingEnabled === true && coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
         desktopOwnerSettingsTimeout = Number(coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]);
-        writeToLog('desktopOwnerSettingsTimeout', desktopOwnerSettingsTimeout, true);
+        writeToLog(1, `desktopOwnerSettingsTimeout ${desktopOwnerSettingsTimeout}`, true);
     }
 }
 
