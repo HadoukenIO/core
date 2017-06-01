@@ -1295,6 +1295,12 @@ Window.restore = function(identity) {
         browserWindow.restore();
     } else if (browserWindow.isMaximized()) {
         browserWindow.unmaximize();
+        let resizable = getOptFromBrowserWin('resizable', browserWindow);
+        if (resizable !== undefined) {
+            resizable = !!resizable;
+            browserWindow.setResizable(resizable);
+            setOptOnBrowserWin('resizable', resizable, browserWindow);
+        }
     } else {
         browserWindow.showInactive();
     }
