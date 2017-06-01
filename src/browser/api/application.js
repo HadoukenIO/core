@@ -86,8 +86,9 @@ electronApp.on('use-plugins-requested', event => {
 });
 
 electronApp.on('ready', function() {
-    log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
     rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
+    log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
+
     MonitorInfo = require('../monitor_info.js');
 
     // listen to and broadcast 'broadcast' messages from RVM as an openfin app event
@@ -115,47 +116,53 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
     let appUrl = opts.url;
+    const { uuid, name } = opts;
+
     if (appUrl === undefined && opts.mainWindowOptions) {
         appUrl = opts.mainWindowOptions.url;
     }
 
     // undefined or '' acceptable here (gets default in createAppObj); or non-empty string
-    let isValidUrl = appUrl === undefined || typeof appUrl === 'string';
+    const isValidUrl = appUrl === undefined || typeof appUrl === 'string';
     if (!isValidUrl) {
         throw new Error(`Invalid application URL: ${appUrl}`);
     }
 
-    let isValidUuid = isNonEmptyString(opts.uuid) && opts.uuid !== '*';
+    const isValidUuid = isNonEmptyString(uuid) && uuid !== '*';
     if (!isValidUuid) {
-        throw new Error(`Invalid application UUID: ${opts.uuid}`);
+        throw new Error(`Invalid application UUID: ${uuid}`);
     }
 
-    let isValidName = isNonEmptyString(opts.name) && opts.name !== '*';
+    const isValidName = isNonEmptyString(name) && name !== '*';
     if (!isValidName) {
-        throw new Error(`Invalid application name: ${opts.name}`);
+        throw new Error(`Invalid application name: ${name}`);
     }
 
-    let isAppRunning = coreState.getAppRunningState(opts.uuid);
+    const isAppRunning = coreState.getAppRunningState(uuid);
     if (isAppRunning) {
-        throw new Error(`Application with specified UUID already exists: ${opts.uuid}`);
+        throw new Error(`Application with specified UUID already exists: ${uuid}`);
     }
 
-    let parentUuid = parentIdentity && parentIdentity.uuid;
-    if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
+    const parentUuid = parentIdentity && parentIdentity.uuid;
+    if (!validateNavigationRules(uuid, appUrl, parentUuid, opts)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
 
-    let existingApp = coreState.appByUuid(opts.uuid);
+    const existingApp = coreState.appByUuid(uuid);
     if (existingApp) {
         coreState.removeApp(existingApp.id);
     }
 
-    let appObj = createAppObj(opts.uuid, opts, configUrl);
+    const appObj = createAppObj(uuid, opts, configUrl);
 
     if (parentIdentity && parentIdentity.uuid) {
-        let app = coreState.appByUuid(opts.uuid);
 
-        app.parentUuid = parentIdentity.uuid;
+        // This a reference to the meta `app` object that is stored in core state,
+        // not the actual `application` object created above. Here we are attaching the parent
+        // indentity to it. 
+        const app = coreState.appByUuid(opts.uuid);
+
+        app.parentUuid = parentUuid;
     }
 
     return appObj;
@@ -329,7 +336,7 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
         .catch(errorCallback);
 };
 
-Application.getInfo = function(identity, callback /*, errorCallback*/ ) {
+Application.getInfo = function(identity, callback) {
     const app = Application.wrap(identity.uuid);
 
     const response = {
@@ -345,17 +352,17 @@ Application.getWindow = function(identity) {
     return Window.wrap(uuid, uuid);
 };
 
-Application.grantAccess = function( /*action, callback, errorCallback*/ ) {
+Application.grantAccess = function() {
     console.warn('Deprecated');
 };
-Application.grantWindowAccess = function( /*action, windowName, callback, errorCallback*/ ) {
+Application.grantWindowAccess = function() {
     console.warn('Deprecated');
 };
-Application.isRunning = function(identity /*, callback, errorCallback*/ ) {
+Application.isRunning = function(identity) {
     let uuid = identity && identity.uuid;
     return uuid && coreState.getAppRunningState(uuid) && !coreState.getAppRestartingState(uuid);
 };
-Application.pingChildWindow = function( /*name, callback, errorCallback*/ ) {
+Application.pingChildWindow = function() {
     console.warn('Deprecated');
 };
 Application.registerCustomData = function(identity, data, callback, errorCallback) {
@@ -385,19 +392,19 @@ Application.registerCustomData = function(identity, data, callback, errorCallbac
 };
 
 //TODO:Ricardo: This should be deprecated.
-Application.removeEventListener = function(identity, type, listener /*, callback, errorCallback*/ ) {
+Application.removeEventListener = function(identity, type, listener) {
     var app = Application.wrap(identity.uuid);
 
     ofEvents.removeListener(eventRoute(app.id, type), listener);
 };
 
-Application.removeTrayIcon = function(identity /*, callback, errorCallback*/ ) {
+Application.removeTrayIcon = function(identity) {
     const app = Application.wrap(identity.uuid);
 
     removeTrayIcon(app);
 };
 
-Application.restart = function(identity /*, callback, errorCallback*/ ) {
+Application.restart = function(identity) {
     let uuid = identity.uuid;
     const appObj = coreState.getAppObjByUuid(uuid);
 
@@ -417,14 +424,17 @@ Application.restart = function(identity /*, callback, errorCallback*/ ) {
         throw err;
     }
 };
-Application.revokeAccess = function( /*action, callback, errorCallback*/ ) {
-    console.warn('Deprecated');
-};
-Application.revokeWindowAccess = function( /*action, windowName, callback, errorCallback*/ ) {
+
+Application.revokeAccess = function() {
     console.warn('Deprecated');
 };
 
-Application.run = function(identity, configUrl = '' /*, callback , errorCallback*/ ) {
+Application.revokeWindowAccess = function() {
+    console.warn('Deprecated');
+};
+
+Application.run = function(identity, configUrl = '') {
+
     if (!identity) {
         return;
     }
@@ -511,10 +521,11 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
 
-        var pid = app.mainWindow.webContents.processId;
+        const pid = app.mainWindow.webContents.processId;
 
         if (pid) {
             app._processInfo = new ProcessInfo(pid);
+
             // Must call once to start measuring CPU usage
             app._processInfo.getCpuUsage();
         }
@@ -524,6 +535,21 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
             type: 'connected',
             uuid
         });
+
+        const parentConfigUrl = coreState.getConfigUrlByUuid(uuid);
+
+        rvmBus.registerLicenseInfo({
+            licenseKey: mainWindowOpts.licenseKey,
+            client: {
+                type: 'js',
+                pid
+            },
+            parentApp: {
+                sourceUrl: parentConfigUrl
+            },
+            sourceUrl
+        });
+
     });
 
     // turn on plugins for the main window
@@ -655,7 +681,7 @@ Application.runWithRVM = function(identity, manifestUrl) {
     });
 };
 
-Application.send = function( /*topic, message*/ ) {
+Application.send = function() {
     console.warn('Deprecated. Please use InterAppBus');
 };
 
@@ -823,7 +849,7 @@ Application.emitRunRequested = function(identity) {
     }
 };
 
-Application.wait = function( /*callback, errorCallback*/ ) {
+Application.wait = function() {
     console.warn('Awaiting native implementation');
 };
 

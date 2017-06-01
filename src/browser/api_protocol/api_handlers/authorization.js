@@ -15,7 +15,7 @@ let _ = require('underscore');
 let log = require('../../log');
 let socketServer = require('../../transports/socket_server').server;
 let ProcessTracker = require('../../process_tracker.js');
-
+const rvmMessageBus = require('../../rvm/rvm_message_bus').rvmMessageBus;
 const successAck = {
     success: true
 };
@@ -96,9 +96,9 @@ function AuthorizationApiHandler() {
     }
 
     function onRequestAuthorization(id, data) {
-        let uuid = data.payload.uuid;
-        let authObj = pendingAuthentications.get(uuid);
-        let externalConnObj = Object.assign({}, data.payload, {
+        const uuid = data.payload.uuid;
+        const authObj = pendingAuthentications.get(uuid);
+        const externalConnObj = Object.assign({}, data.payload, {
             id
         });
 
@@ -111,18 +111,27 @@ function AuthorizationApiHandler() {
                     success: success
                 }
             };
+
             if (!success) {
                 authorizationResponse.payload.reason = error || 'Invalid token or file';
             }
+
             socketServer.send(id, JSON.stringify(authorizationResponse));
 
             ExternalApplication.addExternalConnection(externalConnObj);
             socketServer.connectionAuthenticated(id, uuid);
+
+            rvmMessageBus.registerLicenseInfo({
+                licenseKey: externalConnObj.licenseKey,
+                client: externalConnObj.client
+            });
+
             if (!success) {
                 socketServer.closeConnection(id);
             }
 
             cleanPendingRequest(authObj);
+
         });
     }
 
