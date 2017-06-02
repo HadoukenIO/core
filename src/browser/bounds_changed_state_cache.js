@@ -113,23 +113,16 @@ BoundsChangedStateCache.prototype.readBoundsFromDiskSync = function readBoundsFr
 };
 
 BoundsChangedStateCache.prototype.setBoundsFromDiskCache = function setBoundsFromDiskCache() {
-    var _this = this;
     try {
-        var bounds = this.readBoundsFromDiskSync();
-
-        if (_this.browserWindow) {
-            _this.browserWindow.setBounds(clipBounds({
-                x: bounds.fx,
-                y: bounds.fy,
-                width: bounds.fw,
-                height: bounds.fh
-            }, _this.browserWindow));
+        if (this.browserWindow) {
+            // no need to safety-check these previously vetted coordinates
+            const { fx: x, fy: y, fw: width, fh: height } = this.readBoundsFromDiskSync();
+            this.browserWindow.setBounds(clipBounds({ x, y, width, height }, this.browserWindow));
         }
-        _this.cacheRetreived = true;
     } catch (err) {
         console.log(err);
-        _this.cacheRetreived = true;
     }
+    this.cacheRetreived = true;
 };
 
 BoundsChangedStateCache.prototype.setSaveWindowState = function(value) {
