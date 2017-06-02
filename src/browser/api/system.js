@@ -567,12 +567,15 @@ module.exports.System = {
             downloadId: downloadId
         };
 
-        const publishSuccess = rvmBus.publish(rvmMessage);
+        const publishSuccess = rvmBus.publish(rvmMessage, response => {
+            if (response.error) {
+                cb(new Error(response.error));
+            } else {
+                cb();
+            }
+        });
 
-        if (publishSuccess) {
-            cb(null, downloadId);
-
-        } else {
+        if (!publishSuccess) {
             cb(new Error('RVM Message failed.'));
         }
     },
