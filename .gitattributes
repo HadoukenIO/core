@@ -7,7 +7,6 @@
 .gitattributes  text eol=lf
 .gitignore      text eol=lf
 .jshintrc       text eol=lf
-rcb             text eol=lf
 *.md            text eol=lf
 *.js            text eol=lf
 *.ts            text eol=lf

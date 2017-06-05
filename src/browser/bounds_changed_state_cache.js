@@ -49,17 +49,15 @@ BoundsChangedStateCache.prototype.updateDiskCache = function updateDiskCache() {
 };
 
 BoundsChangedStateCache.prototype.saveBoundToDiskCache = function saveBoundToDiskCache(bounds) {
-
     // The name and UUID will be the same if this is an app and not a child window
     try {
         // We don't want to save the bounds from service:notifications as it is an invisible window.
-        if (this.getSaveWindowState() === false) {
+        if (!this.getSaveWindowState()) {
             this.deleteCache();
             return;
         }
 
         if (coreState.appByUuid(this.uuid).appObj._options.saveWindowState === false && this.name === this.uuid) {
-
             this.deleteCache();
             return;
         }
@@ -139,7 +137,7 @@ BoundsChangedStateCache.prototype.setSaveWindowState = function(value) {
         return;
     }
     this.saveWindowState = value;
-    if (value === false) {
+    if (!value) {
         this.deleteCache();
     }
 };

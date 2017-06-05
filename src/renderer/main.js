@@ -17,9 +17,9 @@ limitations under the License.
 
 let fs = require('fs');
 let path = require('path');
-let me = fs.readFileSync(__dirname + '/api-decorator.js', 'utf8');
+let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
 
-let jsAdapter = fs.readFileSync(path.resolve(path.join(process.resourcesPath, 'adapter.asar/openfin-desktop.js')), 'utf8');
+let jsAdapter = fs.readFileSync(path.join(process.resourcesPath, 'adapter.asar', 'openfin-desktop.js'), 'utf8');
 
 // Remove strict (Prevents, as of now, poorly understood memory lifetime scoping issues with remote module)
 me = me.slice(13);

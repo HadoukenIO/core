@@ -17,14 +17,18 @@ limitations under the License.
     src/browser/convert_options.js
  */
 
+// built-in modules
 let fs = require('fs');
 let path = require('path');
 
-let app = require('electron').app;
 let ResourceFetcher = require('electron').resourceFetcher;
 
+// npm modules
 let _ = require('underscore');
-let parseArgv = require('minimist');
+
+// local modules
+let coreState = require('./core_state.js');
+let log = require('./log');
 let regex = require('../common/regex');
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
@@ -45,6 +49,7 @@ function five0BaseOptions() {
         'alwaysOnTop': false,
         'applicationIcon': '',
         'autoShow': false,
+        'backgroundThrottling': false,
         'contextMenu': true,
         'cornerRounding': {
             'height': 0,
@@ -65,6 +70,7 @@ function five0BaseOptions() {
         'hideWhileChildrenVisible': false,
         'icon': '',
         'launchExternal': '',
+        'loadErrorMessage': '',
         'maxHeight': -1,
         'maxWidth': -1,
         'maximizable': true,
@@ -94,23 +100,22 @@ function five0BaseOptions() {
     };
 }
 
-
 function isInContainer(type) {
     return process && process.versions && process.versions[type];
 }
 
 function readFile(filePath, done, onError) {
-    app.vlog(1, `Requested contents from ${filePath}`);
+    log.writeToLog(1, `Requested contents from ${filePath}`, true);
     let normalizedPath = path.resolve(filePath);
-    app.vlog(1, `Normalized path as ${normalizedPath}`);
+    log.writeToLog(1, `Normalized path as ${normalizedPath}`, true);
     fs.readFile(normalizedPath, 'utf8', (err, data) => {
         if (err) {
             onError(err);
             return;
         }
 
-        app.vlog(1, `Contents from ${normalizedPath}`);
-        app.vlog(1, data);
+        log.writeToLog(1, `Contents from ${normalizedPath}`, true);
+        log.writeToLog(1, data, true);
 
         let config;
         try {
@@ -132,8 +137,8 @@ function getURL(url, done, onError) {
             return;
         }
 
-        app.vlog(1, `Contents from ${url}`);
-        app.vlog(1, data);
+        log.writeToLog(1, `Contents from ${url}`, true);
+        log.writeToLog(1, data, true);
 
         let config;
         try {
@@ -145,7 +150,7 @@ function getURL(url, done, onError) {
         done(config);
     });
 
-    app.vlog(1, `Fetching ${url}`);
+    log.writeToLog(1, `Fetching ${url}`, true);
     fetcher.fetch(url);
 }
 
@@ -178,6 +183,16 @@ function validate(base, user) {
     return options;
 }
 
+function fetchLocalConfig(configUrl, successCallback, errorCallback) {
+    log.writeToLog(1, `Falling back on local-startup-url path: ${configUrl}`, true);
+    readFile(configUrl, configObject => {
+        successCallback({
+            configObject,
+            configUrl
+        });
+    }, errorCallback);
+}
+
 module.exports = {
 
     getWindowOptions: function(appJson) {
@@ -190,50 +205,50 @@ module.exports = {
         let newOptions = validateOptions(options);
 
         if (isInContainer('openfin')) {
-            newOptions['resizable'] = newOptions['resize'] && newOptions['resizable'];
-            newOptions['show'] = newOptions['autoShow'] && !newOptions['waitForPageLoad'];
-            newOptions['skipTaskbar'] = !newOptions['showTaskbarIcon'];
-            newOptions['title'] = newOptions['name'];
+            newOptions.resizable = newOptions.resize && newOptions.resizable;
+            newOptions.show = newOptions.autoShow && !newOptions.waitForPageLoad;
+            newOptions.skipTaskbar = !newOptions.showTaskbarIcon;
+            newOptions.title = newOptions.name;
 
-            let minHeight = newOptions['minHeight'];
-            let maxHeight = newOptions['maxHeight'];
-            let defaultHeight = newOptions['defaultHeight'];
+            let minHeight = newOptions.minHeight;
+            let maxHeight = newOptions.maxHeight;
+            let defaultHeight = newOptions.defaultHeight;
             if (defaultHeight < minHeight) {
-                newOptions['height'] = minHeight;
+                newOptions.height = minHeight;
             } else if (maxHeight !== -1 && defaultHeight > maxHeight) {
-                newOptions['height'] = maxHeight;
+                newOptions.height = maxHeight;
             } else {
-                newOptions['height'] = defaultHeight;
+                newOptions.height = defaultHeight;
             }
 
-            let defaultWidth = newOptions['defaultWidth'];
-            let minWidth = newOptions['minWidth'];
-            let maxWidth = newOptions['maxWidth'];
+            let defaultWidth = newOptions.defaultWidth;
+            let minWidth = newOptions.minWidth;
+            let maxWidth = newOptions.maxWidth;
             if (defaultWidth < minWidth) {
-                newOptions['width'] = minWidth;
+                newOptions.width = minWidth;
             } else if (maxWidth !== -1 && defaultWidth > maxWidth) {
-                newOptions['width'] = maxWidth;
+                newOptions.width = maxWidth;
             } else {
-                newOptions['width'] = defaultWidth;
+                newOptions.width = defaultWidth;
             }
 
-            newOptions['center'] = newOptions['defaultCentered'];
-            if (!newOptions['center']) {
-                newOptions['x'] = newOptions['defaultLeft'];
-                newOptions['y'] = newOptions['defaultTop'];
+            newOptions.center = newOptions.defaultCentered;
+            if (!newOptions.center) {
+                newOptions.x = newOptions.defaultLeft;
+                newOptions.y = newOptions.defaultTop;
             }
         }
 
         // Electron BrowserWindow options
-        newOptions['enableLargerThanScreen'] = true;
+        newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
-        newOptions['webPreferences'] = {
+        newOptions.webPreferences = {
             nodeIntegration: false,
-            plugins: newOptions['plugins']
+            plugins: newOptions.plugins
         };
-        let argv = parseArgv(app.getCommandLineArguments().split(' '));
-        if (argv['disable-web-security'] || newOptions['webSecurity'] === false) {
-            newOptions['webPreferences'].webSecurity = false;
+
+        if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
+            newOptions.webPreferences.webSecurity = false;
         }
 
         if (options.message !== undefined) {
@@ -244,7 +259,14 @@ module.exports = {
             newOptions.customData = options.customData;
         }
 
-        app.vlog(1, JSON.stringify(newOptions));
+        if (options.permissions !== undefined) { // API policy
+            newOptions.permissions = options.permissions;
+        }
+
+        if (options.hasOwnProperty('preload')) {
+            newOptions.preload = options.preload;
+        }
+
         if (returnAsString) {
             return JSON.stringify(newOptions);
         } else {
@@ -252,10 +274,33 @@ module.exports = {
         }
     },
 
-    fetchOptions: function(processArgs, onComplete, onError) {
-        let argv = parseArgv(processArgs);
+    fetchOptions: function(argo, onComplete, onError) {
         // ensure removal of eclosing double-quotes when absolute path.
-        let configUrl = (argv['startup-url'] || argv['config']);
+        let configUrl = (argo['startup-url'] || argo['config']);
+        let localConfigPath = argo['local-startup-url'];
+        let offlineAccess = false;
+        let errorCallback = err => {
+            if (offlineAccess) {
+                fetchLocalConfig(localConfigPath, onComplete, onError);
+            } else {
+                onError(err);
+            }
+        };
+
+        // if local-startup-url is defined and its config specifies offline mode, then
+        // allow fetching from the local-startup-url config
+        if (localConfigPath) {
+            try {
+                let localConfig = JSON.parse(fs.readFileSync(localConfigPath));
+
+                if (localConfig['offlineAccess']) {
+                    offlineAccess = true;
+                }
+            } catch (err) {
+                log.writeToLog(1, err, true);
+            }
+        }
+
         if (typeof configUrl !== 'string') {
             configUrl = '';
         }
@@ -270,22 +315,22 @@ module.exports = {
         }
 
         if (regex.isURL(configUrl)) {
-            return getURL(configUrl, (configObject) => {
+            return getURL(configUrl, configObject => {
                 onComplete({
                     configObject,
                     configUrl
                 });
-            }, onError);
+            }, errorCallback);
         }
 
         let filepath = regex.isURI(configUrl) ? regex.uriToPath(configUrl) : configUrl;
 
-        return readFile(filepath, (configObject) => {
+        return readFile(filepath, configObject => {
             onComplete({
                 configObject,
                 configUrl
             });
-        }, onError);
+        }, errorCallback);
     }
 
 };

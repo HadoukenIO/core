@@ -133,6 +133,7 @@
 </body>
 
 <script>
+    let authEnteredOrCanceled = false;
 
     function getParameterByName(name) {
         let url = window.location.href;
@@ -155,12 +156,14 @@
         let targetWindow = getTargetWindow();
 
         targetWindow.authenticate(userName, password, ()=> fin.desktop.Application.getCurrent().close());
+        authEnteredOrCanceled = true;
     }
 
     function cancel() {
         let targetWindow = getTargetWindow();
 
         targetWindow.authenticate('', '', ()=> fin.desktop.Application.getCurrent().close());
+        authEnteredOrCanceled = true;
     }
 
     function getTargetWindow() {
@@ -178,8 +181,19 @@
     document.addEventListener('DOMContentLoaded', ()=> {
         document.getElementById('username').onkeydown = loginKeyHandler;
         document.getElementById('password').onkeydown = loginKeyHandler;
+
+        const targetWindow = getTargetWindow();
+        targetWindow.addEventListener('closed', ()=> {
+            authEnteredOrCanceled = true;
+            window.close();
+        });
     });
 
+    window.addEventListener('unload', ()=> {
+        if (!authEnteredOrCanceled) {
+            cancel();
+        }
+    }, false);
 
 </script>
 
