@@ -17,16 +17,22 @@ limitations under the License.
   index.js
 */
 
+// built\-in modules
 let fs = require('fs');
 let path = require('path');
+let electron = require('electron');
+let app = electron.app; // Module to control application life.
+let BrowserWindow = electron.BrowserWindow;
+let crashReporter = electron.crashReporter;
+let dialog = electron.dialog;
+let globalShortcut = electron.globalShortcut;
+let ipc = electron.ipcMain;
 
-let app = require('electron').app; // Module to control application life.
-let BrowserWindow = require('electron').BrowserWindow;
-let crashReporter = require('electron').crashReporter;
-let dialog = require('electron').dialog;
-let globalShortcut = require('electron').globalShortcut;
-let ipc = require('electron').ipcMain;
+// npm modules
+let _ = require('underscore');
+let minimist = require('minimist');
 
+// local modules
 let Application = require('./src/browser/api/application.js').Application;
 let System = require('./src/browser/api/system.js').System;
 let Window = require('./src/browser/api/window.js').Window;
@@ -34,22 +40,30 @@ let Window = require('./src/browser/api/window.js').Window;
 let apiProtocol = require('./src/browser/api_protocol');
 let socketServer = require('./src/browser/transports/socket_server').server;
 
-let _ = require('underscore');
 let authenticationDelegate = require('./src/browser/authentication_delegate.js');
 let convertOptions = require('./src/browser/convert_options.js');
 let coreState = require('./src/browser/core_state.js');
 let errors = require('./src/common/errors.js');
 import ofEvents from './src/browser/of_events';
-let parseArgv = require('minimist');
-
-let firstApp = null;
-let splitStartupArgs = parseArgv(process.argv);
-let crashReporterEnabled = false;
 import {
     portDiscovery
 } from './src/browser/port_discovery';
 
+import {
+    default as connectionManager,
+    meshEnabled
+} from './src/browser/connection_manager';
+
+import * as log from './src/browser/log';
+
+
+// locals
+let firstApp = null;
+let crashReporterEnabled = false;
+let rvmBus;
+
 const USER_DATA = app.getPath('userData');
+
 
 app.on('child-window-created', function(parentId, childId, childOptions) {
 
@@ -112,15 +126,34 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
     clientCertDialog.loadURL(path.resolve(__dirname, 'src', 'certificate', 'index.html') + params);
 });
 
+portDiscovery.on('runtime/launched', (portInfo) => {
+    //check if the ports match:
+    const myPortInfo = coreState.getSocketServerState();
+    log.writeToLog('info', `Port discovery message received ${JSON.stringify(portInfo)}`);
+
+    //TODO: Include REALM in the determination.
+    if (meshEnabled && portInfo.port !== myPortInfo.port) {
+
+        connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
+            //one connected we broadcast our port discovery message.
+            staggerPortBroadcast(myPortInfo);
+            log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
+
+        }).catch(err => {
+            log.writeToLog('info', `Failed to connect to runtime ${JSON.stringify(portInfo)}, ${JSON.stringify(errors.errorToPOJO(err))}`);
+        });
+    }
+});
+
 includeFlashPlugin();
 
 // Opt in to launch crash reporter
-initializeCrashReporter(splitStartupArgs);
+initializeCrashReporter(coreState.argo);
 
 // Has a local copy of an app config
-if (splitStartupArgs['local-startup-url']) {
+if (coreState.argo['local-startup-url']) {
     try {
-        let localConfig = JSON.parse(fs.readFileSync(splitStartupArgs['local-startup-url']));
+        let localConfig = JSON.parse(fs.readFileSync(coreState.argo['local-startup-url']));
 
         if (typeof localConfig['devtools_port'] === 'number') {
             console.log('remote-debugging-port:', localConfig['devtools_port']);
@@ -139,25 +172,23 @@ app.on('ready', function() {
 
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
 
-    let argv = app.getCommandLineArguments().split(' ');
-
-    let rvmBus = require('./src/browser/rvm/rvm_message_bus');
+    rvmBus = require('./src/browser/rvm/rvm_message_bus');
 
     let otherInstanceRunning = app.makeSingleInstance(function(commandLine) {
-        let commandLineSwitches = parseArgv(commandLine);
+        let otherInstanceArgo = minimist(commandLine);
         const socketServerState = coreState.getSocketServerState();
-        const portInfo = portDiscovery.getPortInfoByArgs(commandLineSwitches, socketServerState.port);
+        const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
 
-        initializeCrashReporter(commandLineSwitches);
+        initializeCrashReporter(otherInstanceArgo);
 
         // delegated args from a second instance
-        launchApp(commandLine, false);
+        launchApp(otherInstanceArgo, false);
 
         // Will queue if server is not ready.
         portDiscovery.broadcast(portInfo);
 
         // command line flag --delete-cache-on-exit
-        rvmCleanup(commandLine);
+        rvmCleanup(otherInstanceArgo);
 
         return true;
     });
@@ -177,12 +208,12 @@ app.on('ready', function() {
         System.log('info', `Runtime integrity level of the app: ${integrityLevel}`);
     }
 
-    rotateLogs(argv);
+    rotateLogs(coreState.argo);
 
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
-    launchApp(argv, true);
+    launchApp(coreState.argo, true);
 
     registerShortcuts();
 
@@ -222,6 +253,15 @@ app.on('ready', function() {
 
     });
 
+    // native code in AtomRendererClient::ShouldFork
+    app.on('enable-chromium-renderer-fork', event => {
+        // @TODO it should be an option for app, not runtime->arguments
+        if (coreState.argo['enable-chromium-renderer-fork']) {
+            app.vlog(1, 'applying Chromium renderer fork');
+            event.preventDefault();
+        }
+    });
+
     rvmBus.on('rvm-message-bus/broadcast/download-asset/progress', payload => {
         if (payload) {
             ofEvents.emit(`system/asset-download-progress-${payload.downloadId}`, {
@@ -248,6 +288,16 @@ app.on('ready', function() {
     });
 }); // end app.ready
 
+function staggerPortBroadcast(myPortInfo) {
+    setTimeout(() => {
+        try {
+            portDiscovery.broadcast(myPortInfo);
+        } catch (e) {
+            log.writeToLog('info', e);
+        }
+    }, Math.floor(Math.random() * 50));
+}
+
 function includeFlashPlugin() {
     let pluginName;
 
@@ -271,8 +321,8 @@ function includeFlashPlugin() {
     }
 }
 
-function initializeCrashReporter(args) {
-    if (!crashReporterEnabled && args['enable-crash-reporting']) {
+function initializeCrashReporter(argo) {
+    if (!crashReporterEnabled && argo['enable-crash-reporting']) {
         crashReporter.start({
             productName: 'OpenFin',
             companyName: 'OpenFin',
@@ -283,8 +333,8 @@ function initializeCrashReporter(args) {
     }
 }
 
-function rotateLogs(argv) {
-    // only keep the 20 most recent logfiles
+function rotateLogs(argo) {
+    // only keep the 7 most recent logfiles
     System.getLogList((err, files) => {
         if (err) {
             System.log('error', `logfile error: ${err}`);
@@ -293,7 +343,7 @@ function rotateLogs(argv) {
                 return !(file.name === 'debug.log' || file.name.indexOf('debugp') === 0);
             }).sort((a, b) => {
                 return (b.date - a.date);
-            }).slice(19).forEach(file => {
+            }).slice(6).forEach(file => {
                 let filepath = path.join(USER_DATA, file.name);
                 fs.unlink(filepath, err => {
                     if (err) {
@@ -311,7 +361,7 @@ function rotateLogs(argv) {
     // delete debugp????.log file
     deleteProcessLogfile(false);
 
-    rvmCleanup(argv);
+    rvmCleanup(argo);
 }
 
 function deleteProcessLogfile(closeLogfile) {
@@ -319,7 +369,7 @@ function deleteProcessLogfile(closeLogfile) {
 
     if (!filename) {
         System.log('info', 'process logfile name is undefined');
-        System.log('info', splitStartupArgs);
+        System.log('info', coreState.argo);
         return;
     }
 
@@ -337,11 +387,11 @@ function deleteProcessLogfile(closeLogfile) {
     }
 }
 
-function rvmCleanup(argv) {
+function rvmCleanup(argo) {
     let deleteCacheOnExitFlag = 'delete-cache-on-exit';
 
     // notify RVM with necessary information to clean up cache folders on exit when we're called with --delete-cache-on-exit
-    let deleteCacheOnExit = parseArgv(argv)[deleteCacheOnExitFlag];
+    let deleteCacheOnExit = argo[deleteCacheOnExitFlag];
     if (deleteCacheOnExit) {
         System.deleteCacheOnExit(() => {
             console.log('Successfully sent a delete-cache-on-exit message to the RVM.');
@@ -353,8 +403,6 @@ function rvmCleanup(argv) {
 
 function initServer() {
     let attemptedHardcodedPort = false;
-    let argv = app.getCommandLineArguments().split(' ');
-    let commandLineSwitches = parseArgv(argv);
 
     apiProtocol.initApiHandlers();
 
@@ -370,7 +418,7 @@ function initServer() {
 
     socketServer.on('server/open', function(port) {
         console.log('Opened on', port);
-        portDiscovery.broadcast(portDiscovery.getPortInfoByArgs(commandLineSwitches, port));
+        portDiscovery.broadcast(portDiscovery.getPortInfoByArgs(coreState.argo, port));
     });
 
     socketServer.on('connection/message', function(id, message) {
@@ -383,8 +431,8 @@ function initServer() {
 //TODO: this function actually does more than just launch apps, it will initiate the web socket server and
 //is essential for proper runtime startup and adapter connectivity. we want to split into smaller independent parts.
 //please see the discussion on https://github.com/openfin/runtime-core/pull/194
-function launchApp(_argv, startExternalAdapterServer) {
-    convertOptions.fetchOptions(_argv, configuration => {
+function launchApp(argo, startExternalAdapterServer) {
+    convertOptions.fetchOptions(argo, configuration => {
         let {
             configUrl,
             configObject
@@ -416,15 +464,11 @@ function launchApp(_argv, startExternalAdapterServer) {
             tickCount: app.getTickCount()
         });
     }, error => {
-        console.log('Error:' + error.message);
+        log.writeToLog(1, error, true);
 
-        // Synchronous when no callback is passed
-        dialog.showMessageBox(null, {
-            type: 'warning',
-            buttons: ['OK'],
-            title: 'Fatal error',
-            message: error.message
-        });
+        if (!coreState.argo['noerrdialog']) {
+            dialog.showErrorBox('Fatal Error', `${error}`);
+        }
 
         app.quit();
     });
@@ -445,7 +489,25 @@ function initFirstApp(options, configUrl) {
             firstApp = null;
         });
     } catch (error) {
-        console.log(`Error: ${error.message}`);
+        log.writeToLog(1, error, true);
+
+        if (rvmBus) {
+            rvmBus.send('application', {
+                action: 'hide-splashscreen',
+                sourceUrl: configUrl
+            });
+        }
+
+        if (!coreState.argo['noerrdialog']) {
+            const errorMessage = options.loadErrorMessage || 'There was an error loading the application.';
+            dialog.showErrorBox('Fatal Error', errorMessage);
+        }
+
+        if (coreState.shouldCloseRuntime()) {
+            _.defer(() => {
+                app.quit();
+            });
+        }
     }
 }
 

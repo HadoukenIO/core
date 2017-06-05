@@ -22,3 +22,20 @@ export interface WindowBounds {
     width: number;
     height: number;
 }
+
+export interface APIMessage {
+    action: string;
+    messageId: number;
+    payload: any;
+}
+
+export interface APIPayloadAck {
+    success: boolean;
+    data?: any;
+}
+
+export interface APIPayloadNack {
+    success: boolean;
+    error?: Error;
+    reason?: string;
+}

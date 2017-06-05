@@ -31,8 +31,14 @@ function InterApplicationBusApiHandler() {
             'publish-message': publishMessage,
             'send-message': sendMessage,
             'subscribe': subscribe,
-            'unsubscribe': unsubscribe
+            'unsubscribe': unsubscribe,
+            'subscriber-added': subscriberAdded,
+            'subscriber-removed': subscriberRemoved
         };
+
+    //TODO: Figure out a way to share these keys beween interappbus api and handler.
+    const SUBSCRIBER_ADDED_EVENT = 'subscriber-added';
+    const SUBSCRIBER_REMOVED_EVENT = 'subscriber-removed';
 
     apiProtocolBase.registerActionMap(interAppBusExternalApiMap);
 
@@ -54,70 +60,81 @@ function InterApplicationBusApiHandler() {
         let sourceUuid = payload.sourceUuid;
         let sourceWindowName = payload.sourceWindowName || '';
         let {
-            messageKey: acceptedKey
+            messageKey: subscribedMessageKey
         } = payload;
 
-        let subscriptionCallback = function(msgObj) {
-
-            let payload = {
-                sourceUuid: msgObj.identity.uuid,
-                topic: topic,
-                destinationUuid: sourceUuid,
-                message: msgObj.message,
-                directMsg: msgObj.directMsg,
-                sourceWindowName: msgObj.identity.name
-            };
-
+        let subscriptionCallback = function(payload) {
             let {
-                messageKey
-            } = msgObj;
+                messageKey: sentMessageKey
+            } = payload;
 
-            var obj = {
+            var command = {
                 action: 'process-message',
-                payload: Object.assign(msgObj, payload)
+                payload
             };
 
-            // old subscribing to new 
-            if (!acceptedKey && (messageKey === 'messageString')) {
-                obj.payload.message = JSON.parse(msgObj[messageKey]);
+            // old subscribing to new
+            if (!subscribedMessageKey && (sentMessageKey === 'messageString')) {
+                command.payload.message = JSON.parse(payload[sentMessageKey]);
             }
 
-            apiProtocolBase.sendToIdentity(identity, obj);
+            apiProtocolBase.sendToIdentity(identity, command);
         };
-        let subscriptionObj;
 
-        if (apiProtocolBase.subscriptionExists(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE)) {
-            apiProtocolBase.uppSubscriptionRefCount(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE);
+        const subscriptionArgs = [
+            identity,
+            topic,
+            identity.uuid,
+            sourceUuid,
+            sourceWindowName,
+            subScriptionTypes.MESSAGE
+        ];
+
+        if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
+            apiProtocolBase.uppSubscriptionRefCount(...subscriptionArgs);
 
         } else {
 
-            subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
+            const subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
 
-            apiProtocolBase.registerSubscription(subscriptionObj.unsubscribe,
-                identity,
-                topic,
-                identity.uuid,
-                sourceUuid,
-                sourceWindowName,
-                subScriptionTypes.MESSAGE);
+            apiProtocolBase.registerSubscription(subscriptionObj.unsubscribe, ...subscriptionArgs);
+
+            ofEvents.once(`window/unload/${identity.uuid}/${identity.name}`, () => {
+                apiProtocolBase.removeSubscription(...subscriptionArgs);
+            });
         }
 
         ack(successAck);
     }
 
 
-    function sendMessage(identity, payloadFromAdapter, ack) {
-        InterApplicationBus.send(identity, payloadFromAdapter);
+    function sendMessage(identity, message, ack) {
+        InterApplicationBus.send(identity, message.payload);
         ack(successAck);
     }
 
     function publishMessage(identity, message, ack) {
-        var payload = message.payload;
-
-        InterApplicationBus.publish(identity, payload);
+        InterApplicationBus.publish(identity, message.payload);
         ack(successAck);
     }
 
+    function subscriberAdded(identity, message, ack) {
+        const {
+            payload
+        } = message;
+
+        InterApplicationBus.raiseSubscriberEvent(SUBSCRIBER_ADDED_EVENT, payload);
+        ack(successAck);
+    }
+
+    function subscriberRemoved(identity, message, ack) {
+        const {
+            payload
+        } = message;
+
+        InterApplicationBus.raiseSubscriberEvent(SUBSCRIBER_REMOVED_EVENT, payload);
+        ack(successAck);
+    }
 
     function initSubscriptionListeners(connectionIdentity) {
         var iabIdentity = {
@@ -135,13 +152,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, 'subscriber-added');
+                    sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_ADDED_EVENT);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, 'subscriber-added');
+                sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_ADDED_EVENT);
             }
         });
 
@@ -153,13 +170,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, 'subscriber-removed');
+                    sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_REMOVED_EVENT);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, 'subscriber-removed');
+                sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_REMOVED_EVENT);
             }
 
         });

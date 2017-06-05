@@ -5,7 +5,7 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import { AckTemplate,  AckFunc } from './ack';
-import { ApiTransportBase, ActionMap, MessagePackage } from './api_transport_base';
+import { ApiTransportBase, ActionMap, MessagePackage, Identity } from './api_transport_base';
 import {default as RequestHandler} from './base_handler';
 
 declare var require: any;
@@ -19,7 +19,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     constructor(actionMap: ActionMap, requestHandler: RequestHandler<MessagePackage>) {
         super(actionMap, requestHandler);
 
-        this.requestHandler.addHandler((mp: MessagePackage, next: Function) => {
+        this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
 
             const {identity, data, ack, nack, strategyName} = mp;
             const action = this.actionMap[data.action];
@@ -57,13 +57,32 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
         const ack = this.ackDecorator(id, data.messageId);
         const nack = this.nackDecorator(ack);
         const requestingConnection = externalApplication.getExternalConnectionById(id);
-        const identity = requestingConnection ? { uuid: requestingConnection.uuid, name: requestingConnection.uuid } : null;
+        //Identity can have three states, the requestingConnection, originatorIdentity or null.
+        let identity: Identity = null;
+        if (requestingConnection) {
+            if (data.requestingIdentity) {
+                identity = data.requestingIdentity;
+                /*
+                This is a proxy call.
+                identity from proxied runtime mesh calls will be:
+                {
+                    uuid: string,
+                    name: string,
+                    runtime: string
+                }
+                */
+                identity.runtimeUuid = requestingConnection.uuid;
+            } else {
+                identity = { uuid: requestingConnection.uuid, name: requestingConnection.uuid };
+            }
+        }
 
         system.debugLog(1, `received external-adapter <= ${id} ${JSON.stringify(data)}`);
 
         this.requestHandler.handle({
             data, ack, nack,
-            identity: identity || id,
+            //TODO: Auth code expects identity as a number.
+            identity: <any>identity || id,
             strategyName: this.constructor.name
         });
     }

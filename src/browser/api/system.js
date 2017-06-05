@@ -73,28 +73,28 @@ electronApp.on('ready', function() {
     Session = require('../session').default;
     rvmBus = require('../rvm/rvm_message_bus.js');
 
-    MonitorInfo.on('monitor-info-changed', (payload) => {
+    MonitorInfo.on('monitor-info-changed', payload => {
         ofEvents.emit('system/monitor-info-changed', payload);
     });
 
-    Session.on('session-changed', (payload) => {
+    Session.on('session-changed', payload => {
         ofEvents.emit('system/session-changed', payload);
     });
 
-    Session.on('idle-state-changed', (payload) => {
+    Session.on('idle-state-changed', payload => {
         ofEvents.emit('system/idle-state-changed', payload);
     });
 
     defaultSession = session.defaultSession;
 });
 
-electronApp.on('synth-desktop-icon-clicked', (payload) => {
+electronApp.on('synth-desktop-icon-clicked', payload => {
     payload.topic = 'system';
     payload.type = 'desktop-icon-clicked';
     ofEvents.emit('system/desktop-icon-clicked', payload);
 });
 
-ofEvents.on('application/created/*', (payload) => {
+ofEvents.on('application/created/*', payload => {
     ofEvents.emit('system/application-created', {
         topic: 'system',
         type: 'application-created',
@@ -102,7 +102,7 @@ ofEvents.on('application/created/*', (payload) => {
     });
 });
 
-ofEvents.on('application/started/*', (payload) => {
+ofEvents.on('application/started/*', payload => {
     ofEvents.emit('system/application-started', {
         topic: 'system',
         type: 'application-started',
@@ -110,7 +110,7 @@ ofEvents.on('application/started/*', (payload) => {
     });
 });
 
-ofEvents.on('application/closed/*', (payload) => {
+ofEvents.on('application/closed/*', payload => {
     ofEvents.emit('system/application-closed', {
         topic: 'system',
         type: 'application-closed',
@@ -118,7 +118,7 @@ ofEvents.on('application/closed/*', (payload) => {
     });
 });
 
-ofEvents.on('application/crashed/*', (payload) => {
+ofEvents.on('application/crashed/*', payload => {
     ofEvents.emit('system/application-crashed', {
         topic: 'system',
         type: 'application-crashed',
@@ -287,7 +287,7 @@ module.exports.System = {
 
             if (!err) {
                 let pattern = opts.pattern || /^debug+(\w)*\.log$/;
-                var logFiles = _.filter(files, (fileName) => {
+                var logFiles = _.filter(files, fileName => {
                     return pattern.test(fileName);
                 });
 
@@ -545,6 +545,24 @@ module.exports.System = {
                 uuid: eApp.uuid
             };
         });
+    },
+    resolveUuid: function(identity, uuid, cb) {
+        const externalConn = externalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);
+        const app = coreState.getAppObjByUuid(uuid);
+
+        if (externalConn) {
+            cb(null, {
+                type: 'external-app',
+                uuid: externalConn.uuid
+            });
+        } else if (app) {
+            cb(null, {
+                type: 'application',
+                uuid: app.uuid
+            });
+        } else {
+            cb(new Error('uuid not found.'));
+        }
     }
 
 };

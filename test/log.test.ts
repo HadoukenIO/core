@@ -20,7 +20,7 @@ let lastVlogValue = '';
 let lastLogValue = '';
 const mockElectron = {
     app: {
-        vlog: (level: string, val: string) => {
+        vlog: (level: number, val: string) => {
             lastVlogValue = val;
         },
         log: (level: string, val: string) => {
@@ -60,7 +60,7 @@ describe('log', () => {
         it('should use the vlog on debug', () => {
             const str = 'test_vlog';
 
-            log.writeToLog('info', str, true);
+            log.writeToLog(1, str, true);
             assert(lastVlogValue === str);
         });
     });

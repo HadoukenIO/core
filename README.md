@@ -4,10 +4,10 @@
 _The following setup is known to be working well. You can try other versions at your 
 own risk of losing a lot of time._
 * [Visual Studio 2013](https://www.microsoft.com/en-us/download/details.aspx?id=44914) *
-* Node 6.9.0
-* Grunt (grunt-cli 1.2.0)
-* node-inspector 0.12.3 _(problems with 0.12.4 - 0.12.8)_
-* Python 2.7.12 
+* [Node](https://nodejs.org/download/release/v6.9.0/) 6.9.0
+* Grunt (`grunt-cli` 1.2.0)
+* [Python 2.7.12](https://www.python.org/downloads/release/python-2712/)
+* _Optional:_ `node-inspector` 0.12.3 _(problems with 0.12.4 - 0.12.8)_
 
 \_______________
 
@@ -34,7 +34,7 @@ npm install
 npm install -g openfin-cli
 ```
 
-* Create a manifest file [Manifest file docs](http://docsgohere), targeting a valid version [Runtime versions](https://developer.openfin.co/versions/?product=Runtime&version=stabe)
+* Create a manifest file [Manifest file docs](https://openfin.co/application-config/), targeting a valid version [Runtime versions](https://developer.openfin.co/versions/?product=Runtime&version=stabe)
 
 app.json
 ```javascript

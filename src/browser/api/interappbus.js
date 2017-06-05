@@ -18,15 +18,22 @@ limitations under the License.
 
     the general form of the pub/sub is
 
-    `${topic}/${senderUuid}/${senderName}#${destinationUuid}/${destinationName}`
+    `${topic}:${senderUuid}/${senderName}:${destinationUuid}/${destinationName}`
  */
 
 let util = require('util');
 let EventEmitter = require('events').EventEmitter;
-let callbacks = {};
 let subScriptionManager = new require('../subscription_manager.js').SubscriptionManager();
 
+let callbacks = {};
+
 const NO_SUBS_ERR_STR = 'No subscriptions match';
+
+const ANY_UUID = '*';
+const ANY_NAME = '*';
+
+const SUBSCRIBER_ADDED_EVENT = 'subscriber-added';
+const SUBSCRIBER_REMOVED_EVENT = 'subscriber-removed';
 
 // unique identifier to map remote callback functions
 let callbackId = 0;
@@ -60,18 +67,18 @@ ofBus = new OFBus();
         topic: topic
     }
  */
-busEventing.on('subscriber-added', subInfo => {
+busEventing.on(SUBSCRIBER_ADDED_EVENT, subInfo => {
     const subscriptionInfo = JSON.parse(JSON.stringify(subInfo));
 
     subscriptionInfo.topic = decodeURIComponent(subscriptionInfo.topic);
-    busEventing.emit(`subscriber-added/${subInfo.senderUuid}/${subInfo.senderName}`, subscriptionInfo);
+    busEventing.emit(generateKey([SUBSCRIBER_ADDED_EVENT], [subInfo.senderUuid, subInfo.senderName]), subscriptionInfo);
 });
 
-busEventing.on('subscriber-removed', subInfo => {
+busEventing.on(SUBSCRIBER_REMOVED_EVENT, subInfo => {
     const subscriptionInfo = JSON.parse(JSON.stringify(subInfo));
 
     subscriptionInfo.topic = decodeURIComponent(subscriptionInfo.topic);
-    busEventing.emit(`subscriber-removed/${subInfo.senderUuid}/${subInfo.senderName}`, subscriptionInfo);
+    busEventing.emit(generateKey([SUBSCRIBER_REMOVED_EVENT], [subInfo.senderUuid, subInfo.senderName]), subscriptionInfo);
 });
 
 
@@ -79,104 +86,61 @@ function genCallBackId() {
     return ++callbackId;
 }
 
-
-function publish(identity, payloadFromAdapter) {
-
+function publish(identity, payload) {
     let {
-        topic: rawTopic
-    } = payloadFromAdapter;
+        topic
+    } = payload;
 
-    let topic = encodeURIComponent(rawTopic);
-
-    let pubString = `${topic}/${identity.uuid}/${identity.name}`;
-    let uuidNs = `${topic}/${identity.uuid}` + '/*';
-    let generalNs = topic + '/*/*';
-    let payload = Object.assign({
-        identity
-    }, payloadFromAdapter);
-
-    // emit the fully qualified 'topic/uuid/name'
-    ofBus.emit(pubString, payload);
-
-    //emit to the uuid namespace 'topic/uuid/*'
-    ofBus.emit(uuidNs, payload);
-
-    //emit to the general case 'topic/*/*'
-    ofBus.emit(generalNs, payload);
-}
-
-
-function sendToName(identity, topic, destUuid, _destName, payload) {
-    const {
-        uuid,
-        name
-    } = identity;
-    const destName = _destName || '*';
-    const fullyQualified = `${topic}/${uuid}/${name}#${destUuid}/${destName}`;
-    const general = `${topic}/*/*#${destUuid}/${destName}`;
-    const parentToChild = `${topic}/${uuid}/*#${destUuid}/${destName}`;
-
-    if (ofBus.listeners(general).length) {
-        ofBus.emit(general, payload);
-    } else if (ofBus.listeners(parentToChild).length) {
-        ofBus.emit(parentToChild, payload);
-    } else if (ofBus.listeners(fullyQualified).length) {
-        ofBus.emit(fullyQualified, payload);
-    } else {
-        throw new Error(NO_SUBS_ERR_STR);
-    }
-}
-
-
-function sendToApp(identity, topic, destUuid, payload) {
-    const {
-        uuid,
-        name
-    } = identity;
-    const childWinToParent = `${topic}/${uuid}/${name}#${destUuid}/*`;
-    const parentToParent = `${topic}/${uuid}/*#${destUuid}/*`;
-    const anyoneToParent = `${topic}/*/*#${destUuid}/*`;
-
-    if (ofBus.listeners(anyoneToParent).length) {
-        ofBus.emit(anyoneToParent, payload);
-    } else if (ofBus.listeners(parentToParent).length) {
-        ofBus.emit(parentToParent, payload);
-    } else if (ofBus.listeners(childWinToParent).length) {
-        ofBus.emit(childWinToParent, payload);
-    } else {
-        throw new Error(NO_SUBS_ERR_STR);
-    }
-
-}
-
-function send(identity, payloadFromAdapter) {
-    let {
-        payload,
-        payload: {
-            destinationUuid,
-            topic,
-            destinationWindowName
-        }
-    } = payloadFromAdapter;
     let payloadToDeliver = Object.assign({
-        identity
+        sourceUuid: identity.uuid,
+        sourceWindowName: identity.name,
+        destinationUuid: ANY_UUID
     }, payload);
-    let winNameSpecified = destinationWindowName;
 
-    if (winNameSpecified) {
-        sendToName(identity, topic, destinationUuid, destinationWindowName, payloadToDeliver);
+    dispatchToSubscriptions(topic, identity, null, null, payloadToDeliver, true);
+}
 
-    } else {
-        sendToApp(identity, topic, destinationUuid, payloadToDeliver);
+function send(identity, payload) {
+    let {
+        topic,
+        destinationUuid,
+        destinationWindowName
+    } = payload;
+
+    let payloadToDeliver = Object.assign({
+        sourceUuid: identity.uuid,
+        sourceWindowName: identity.name,
+    }, payload);
+
+    if (!dispatchToSubscriptions(topic, identity, destinationUuid, destinationWindowName, payloadToDeliver)) {
+        throw new Error(NO_SUBS_ERR_STR);
     }
 }
+
+function dispatchToSubscriptions(topic, identity, destUuid, destName, payload, sendToAll) {
+    const keys = generateSendKeys(topic, identity, {
+        uuid: destUuid || ANY_UUID,
+        name: destName || ANY_NAME
+    });
+
+    //TODO: sendToAll is a symptom of not knowing the target identity given a set of keys.
+    if (sendToAll) {
+        return ofBus.emit(keys.fromAny, payload) +
+            ofBus.emit(keys.fromApp, payload) +
+            ofBus.emit(keys.fromWin, payload);
+    }
+
+    return ofBus.emit(keys.fromAny, payload) ||
+        ofBus.emit(keys.fromApp, payload) ||
+        ofBus.emit(keys.fromWin, payload);
+}
+
 
 function subscribe(identity, payload, listener) {
+    let topic = payload.topic;
+    let senderUuid = payload.sourceUuid || ANY_UUID;
+    let senderName = payload.sourceWindowName || ANY_NAME;
 
-    let topic = encodeURIComponent(payload.topic);
-    let senderUuid = encodeURIComponent(payload.sourceUuid) || '*';
-    let senderName = encodeURIComponent(payload.sourceWindowName || '*');
-    let onString = `${topic}/${senderUuid}/${senderName}`;
     let cbId = genCallBackId();
     let eventingPayload = {
         senderUuid: senderUuid,
@@ -184,29 +148,32 @@ function subscribe(identity, payload, listener) {
         uuid: identity.uuid,
         name: identity.name,
         topic: topic,
-        directMsg: payload.sourceWindowName !== '*' ? payload.sourceWindowName : false
+        directMsg: payload.sourceWindowName !== ANY_NAME ? payload.sourceWindowName : false
     };
 
     callbacks['' + cbId] = listener;
 
-    ofBus.on(onString, listener);
+    let keys = generateSubscribeKeys(topic, {
+        uuid: senderUuid,
+        name: senderName
+    }, identity);
 
-    // this handles the send case where the sender will send to an app or an app/name combo
-    ofBus.on(onString + '#' + identity.uuid + '/' + identity.name, listener);
-    ofBus.on(onString + '#' + identity.uuid + '/*', listener);
+    ofBus.on(keys.toAny, listener);
+    ofBus.on(keys.toWin, listener);
+    ofBus.on(keys.toApp, listener);
 
     // for the subscribe listeners:
-    busEventing.emit('subscriber-added', eventingPayload);
+    busEventing.emit(SUBSCRIBER_ADDED_EVENT, eventingPayload);
 
     //return a function that will unhook the listeners
     var unsubItem = {
         cbId,
         unsubscribe: () => {
-            ofBus.removeListener(onString, listener);
-            ofBus.removeListener(onString + '#' + identity.uuid + '/' + identity.name, listener);
-            ofBus.removeListener(onString + '#' + identity.uuid + '/*', listener);
+            ofBus.removeListener(keys.toAny, listener);
+            ofBus.removeListener(keys.toWin, listener);
+            ofBus.removeListener(keys.toApp, listener);
 
-            busEventing.emit(`subscriber-removed`, eventingPayload);
+            busEventing.emit(SUBSCRIBER_REMOVED_EVENT, eventingPayload);
         }
     };
     subScriptionManager.registerSubscription(unsubItem.unsubscribe, identity, payload);
@@ -215,30 +182,33 @@ function subscribe(identity, payload, listener) {
 }
 
 
-function unsubscribe(identity, cbId, rawSenderUuid, ...rest) {
+function unsubscribe(identity, cbId, senderUuid, ...rest) {
     let {
         uuid,
         name
     } = identity;
-    let rawSenderName = typeof rest[1] === 'function' ? '*' : rest[0] || '*';
-    let rawTopic = typeof rest[1] === 'function' ? rest[0] : rest[1];
-    let senderName = encodeURIComponent(rawSenderName);
-    let senderUuid = encodeURIComponent(rawSenderUuid) || '*';
-    let topic = encodeURIComponent(rawTopic);
-    let onString = `${topic}/${senderUuid}/${senderName}`;
+
+    let senderName = typeof rest[1] === 'function' ? ANY_NAME : rest[0] || ANY_NAME;
+    let topic = typeof rest[1] === 'function' ? rest[0] : rest[1];
+
     let callback = callbacks['' + cbId];
 
     if (!callback) {
         return;
     }
 
-    ofBus.removeListener(onString, callback);
-    ofBus.removeListener(onString + '#' + uuid + '/' + name, callback);
-    ofBus.removeListener(onString + '#' + uuid + '/*', callback);
+    let keys = generateSubscribeKeys(topic, {
+        uuid: senderUuid,
+        name: senderName
+    }, identity);
+
+    ofBus.removeListener(keys.toAny, callback);
+    ofBus.removeListener(keys.toWin, callback);
+    ofBus.removeListener(keys.toApp, callback);
 
     delete callbacks['' + cbId];
 
-    busEventing.emit(`subscriber-removed`, {
+    busEventing.emit(SUBSCRIBER_REMOVED_EVENT, {
         senderUuid: senderUuid,
         senderName: senderUuid,
         uuid: uuid,
@@ -254,8 +224,10 @@ function subscriberAdded(identity, listener) {
         name
     } = identity;
     let cbId = genCallBackId();
-    let subMgrStr = `subscriber-added/${identity.uuid}/${identity.name}`;
-    let listenerStrs = genListenerStrs('subscriber-added', uuid, name);
+
+    let listenerStrs = generateListenerKeys(SUBSCRIBER_ADDED_EVENT, uuid, name);
+    let subMgrStr = listenerStrs[0];
+
     let unsubItem;
 
     callbacks['' + cbId] = listener;
@@ -284,13 +256,12 @@ function removeSubscriberAdded(identity, cbId) {
         name
     } = identity;
     let callback = callbacks['' + cbId];
-    let listenerStrs;
 
     if (!callback) {
         return;
     }
 
-    listenerStrs = genListenerStrs('subscriber-added', uuid, name);
+    let listenerStrs = generateListenerKeys(SUBSCRIBER_ADDED_EVENT, uuid, name);
 
     listenerStrs.forEach(listenerStr => {
         busEventing.removeListener(listenerStr, callback);
@@ -306,8 +277,10 @@ function subscriberRemoved(identity, listener) {
         uuid,
         name
     } = identity;
-    let listenerStrs = genListenerStrs('subscriber-removed', uuid, name);
-    let subMgrStr = `subscriber-removed/${uuid}/${name}`;
+
+    let listenerStrs = generateListenerKeys(SUBSCRIBER_REMOVED_EVENT, uuid, name);
+    let subMgrStr = listenerStrs[0];
+
     let unsubItem;
 
     listenerStrs.forEach(listenerStr => {
@@ -335,13 +308,12 @@ function removeSubscriberRemoved(identity, cbId) {
         uuid,
         name
     } = identity;
-    let listenerStrs;
 
     if (!callback) {
         return;
     }
 
-    listenerStrs = genListenerStrs('subscriber-removed', uuid, name);
+    let listenerStrs = generateListenerKeys(SUBSCRIBER_REMOVED_EVENT, uuid, name);
 
     listenerStrs.forEach(listenerStr => {
         busEventing.removeListener(listenerStr, callback);
@@ -351,14 +323,41 @@ function removeSubscriberRemoved(identity, cbId) {
 }
 
 
-function genListenerStrs(topic, uuid, name) {
+function generateKey(...args) {
+    return args.map(arg => encodeKeyPart(...arg)).join(':');
+}
+
+function encodeKeyPart(...args) {
+    return args.map(arg => encodeURIComponent(arg)).join('/');
+}
+
+function generateSendKeys(topic, source, dest) {
+    return {
+        fromWin: generateKey([topic], [source.uuid, source.name], [dest.uuid, dest.name]),
+        fromApp: generateKey([topic], [source.uuid, ANY_NAME], [dest.uuid, dest.name]),
+        fromAny: generateKey([topic], [ANY_UUID, ANY_NAME], [dest.uuid, dest.name])
+    };
+}
+
+function generateSubscribeKeys(topic, source, dest) {
+    return {
+        toWin: generateKey([topic], [source.uuid, source.name], [dest.uuid, dest.name]),
+        toApp: generateKey([topic], [source.uuid, source.name], [dest.uuid, ANY_NAME]),
+        toAny: generateKey([topic], [source.uuid, source.name], [ANY_UUID, ANY_NAME])
+    };
+}
+
+function generateListenerKeys(topic, uuid, name) {
     return [
-        `${topic}/${uuid}/${name}`,
-        `${topic}/${uuid}` + '/*',
-        `${topic}` + '/*/*',
+        generateKey([topic], [uuid, name]),
+        generateKey([topic], [uuid, ANY_NAME]),
+        generateKey([topic], [ANY_UUID, ANY_NAME])
     ];
 }
 
+function raiseSubscriberEvent(eventName, evtObj) {
+    busEventing.emit(eventName, evtObj);
+}
 
 module.exports.InterApplicationBus = {
     publish,
@@ -368,5 +367,6 @@ module.exports.InterApplicationBus = {
     subscriberAdded,
     removeSubscriberAdded,
     subscriberRemoved,
-    removeSubscriberRemoved
+    removeSubscriberRemoved,
+    raiseSubscriberEvent
 };

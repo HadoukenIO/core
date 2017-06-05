@@ -22,31 +22,41 @@ limitations under the License.
  *
  */
 
-let nativeBuilder = require('electron-rebuild');
-let wrench = require('wrench');
-let fs = require('fs');
-let asar = require('asar');
-let exec = require('child_process').exec;
-let loadGruntTasks = require('load-grunt-tasks');
-let path = require('path');
-let os = require('os');
+const fs = require('fs');
+const path = require('path');
 
-let dependencies = Object.keys(require('./package.json').dependencies).map(function(dep) {
-        return dep + '/**';
-    });
+const asar = require('asar');
+const nativeBuilder = require('electron-rebuild');
+const wrench = require('wrench');
+
+const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
+const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
+
+//optional dependencies that we ship.
+const optionalDependencies = [
+    'js-adapter/**',
+    'runtime-p2p/**'
+];
+
+try {
+    var openfinSign = require('openfin-sign');
+} catch (err) {
+    openfinSign = function() {};
+}
 
 /**
  * A list of files that have already moved to TypeScript. This list will
  * slowly increase as more and more files are moved to TypeScript
  */
 const trans2TSFiles = [
+    'src/browser/api_protocol/api_handlers/clipboard.ts',
     'src/browser/transports/base.ts',
     'src/browser/transports/chromium_ipc.ts',
     'src/browser/transports/electron_ipc.ts',
     'src/browser/transports/wm_copydata.ts',
     'src/browser/clip_bounds.ts',
     'src/browser/deferred.ts',
-    'src/browser/icon.ts',
+    'src/browser/cached_resource_fetcher.ts',
     'src/browser/int_pool.ts',
     'src/browser/log.ts',
     'src/browser/of_events.ts',
@@ -59,18 +69,42 @@ const trans2TSFiles = [
     'src/browser/api_protocol/**/**.ts'
 ];
 
-module.exports = function(grunt) {
+// OpenFin commercial license
+const commercialLic = `/*
+Copyright 2017 OpenFin Inc.
 
-    grunt.loadNpmTasks('grunt-ts');
-    grunt.loadNpmTasks('grunt-jsbeautifier');
+Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
+Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
+*/
+`;
 
-    let srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
-    let staging = path.resolve(__dirname, 'staging', 'core');
-    let isWindows = os.type().toLowerCase().indexOf('windows') !== -1;
-    let version = grunt.option('of-version') || '6.44.8.55';
-    let eightOrGreater = '\\AppData\\Local\\OpenFin';
-    let dest = process.env['USERPROFILE'] + eightOrGreater + '\\runtime\\' + version + '\\OpenFin\\resources\\default_app';
-    let runner = grunt.option('run') || path.resolve(dest, '../', '../', 'openfin.exe');
+// Open-source license
+const openSourceLic = `/*
+Copyright 2017 OpenFin Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+`;
+
+module.exports = (grunt) => {
+
+    // The default task is to build and and package resulting in an asar file in ./out/
+    grunt.registerTask('default', ['build-pac']);
+    grunt.registerTask('deploy', ['build-dev', 'copy-local']);
+    grunt.registerTask('test', ['mochaTest']);
+
+    // Load all grunt tasks matching the ['grunt-*', '@*/grunt-*'] patterns
+    require('load-grunt-tasks')(grunt);
 
     grunt.initConfig({
         copy: {
@@ -78,7 +112,7 @@ module.exports = function(grunt) {
                 files: [{
                     cwd: './node_modules',
                     expand: true,
-                    src: [dependencies],
+                    src: [dependencies, optionalDependencies],
                     dest: 'staging/core/node_modules'
                 }]
             },
@@ -98,12 +132,6 @@ module.exports = function(grunt) {
                 files: [{
                     src: ['src/certificate/*'],
                     dest: 'staging/core/'
-                }]
-            },
-            rcb: { //copy the rcb - windows only
-                files: [{
-                    src: 'rcb',
-                    dest: path.resolve(dest, '../' + 'rcb')
                 }]
             }
         },
@@ -155,34 +183,71 @@ module.exports = function(grunt) {
                 tasks: ['deploy']
             }
         },
-        jsbeautifier : {
+        jsbeautifier: {
             default: {
-                src : ['src/**/*.js', 'index.js']
+                src: ['src/**/*.js', 'index.js']
             },
             'git-pre-commit': {
-                src : ['src/**/*.js', 'index.js'],
-                options : {
-                   mode:'VERIFY_ONLY'
+                src: ['src/**/*.js', 'index.js'],
+                options: {
+                    mode: 'VERIFY_ONLY'
                 }
             }
         },
         mochaTest: {
             default: {
-                src: 'staging/core/test/**.js'
+                src: ['staging/core/test/**.js']
             }
         }
     });
 
-    /*
-      The default task is to build and and package resulting in an asar file
-      in ./out/
-     */
-
-    grunt.registerTask('build-dev', ['jshint', 'jsbeautifier:default', 'clean', 'babel', 'tslint', 'ts', 'test',  'copy:lib', 'copy:etc', 'copy:login', 'copy:certificate']);
-
-    grunt.registerTask('build-pac', ['jshint', 'jsbeautifier', 'clean', 'babel', 'tslint', 'ts', 'copy', 'build-deploy-modules',
-        'package'
+    grunt.registerTask('build-dev', [
+        'license',
+        'jshint',
+        'jsbeautifier:default',
+        'clean',
+        'babel',
+        'tslint',
+        'ts',
+        'test',
+        'copy:lib',
+        'copy:etc',
+        'copy:login',
+        'copy:certificate',
+        'sign-files'
     ]);
+
+    grunt.registerTask('build-pac', [
+        'license',
+        'jshint',
+        'jsbeautifier',
+        'clean',
+        'babel',
+        'tslint',
+        'ts',
+        'test',
+        'copy',
+        'build-deploy-modules',
+        'sign-files',
+        'package',
+        'sign-asar'
+    ]);
+
+    grunt.registerTask('sign-files', function() {
+        wrench.readdirSyncRecursive('staging/core').forEach(function(filename) {
+            let filepath = path.join('staging', 'core', filename);
+
+            if (!fs.statSync(filepath).isDirectory()) {
+                openfinSign(filepath);
+            }
+        });
+        grunt.log.ok('Finished signing files.');
+    });
+
+    grunt.registerTask('sign-asar', function() {
+        openfinSign('out/app.asar');
+        grunt.log.ok('Finished signing asar.');
+    });
 
     grunt.registerTask('clean', 'clean the out house', function() {
         wrench.rmdirSyncRecursive('staging', true);
@@ -190,27 +255,27 @@ module.exports = function(grunt) {
     });
 
     grunt.registerTask('build-deploy-modules', 'Build native modules', function() {
-        let done = this.async();
-        let nativeModVersion = grunt.option('nmv') || 'v5.10.0';
-        let nodeHeaderVersion = grunt.option('nhv') || 'v0.37.5';
-        let rebuildNativeVersion = grunt.option('rnv') || '0.37.5';
-        let outdir = './staging/core/node_modules';
-        let arch = grunt.option('arch') || 'ia32';
+        const done = this.async();
+        const nativeModVersion = grunt.option('nmv') || 'v5.10.0';
+        const nodeHeaderVersion = grunt.option('nhv') || 'v0.37.5';
+        const rebuildNativeVersion = grunt.option('rnv') || '0.37.5';
+        const outdir = './staging/core/node_modules';
+        const arch = grunt.option('arch') || 'ia32';
 
-        grunt.log.writeln('Checking if must rebuild native modules...').ok();
+        grunt.log.ok('Checking if rebuilding native modules is required.');
         nativeBuilder.shouldRebuildNativeModules(undefined, nativeModVersion).then(function(shouldBuild) {
             if (!shouldBuild) {
-                grunt.log.writeln('Skipping native builds').ok();
+                grunt.log.ok('Skipping native builds.');
                 done();
                 return true;
             }
 
-            grunt.log.writeln('Installing headers...').ok();
+            grunt.log.ok('Installing headers.');
             return nativeBuilder.installNodeHeaders(nodeHeaderVersion, undefined, undefined, 'ia32')
                 .then(function() {
                     // Ensure directory tree exists
                     grunt.file.mkdir(outdir);
-                    grunt.log.writeln('Building native modules...').ok();
+                    grunt.log.ok('Building native modules.');
                     nativeBuilder.rebuildNativeModules(rebuildNativeVersion, outdir, undefined, undefined, arch).then(function() {
                         done();
                     });
@@ -223,197 +288,151 @@ module.exports = function(grunt) {
     });
 
     grunt.registerTask('package', 'Package in an asar', function() {
-
-        let done = this.async();
+        const done = this.async();
 
         asar.createPackage('staging/core', 'out/app.asar', function() {
-            done();
-            grunt.log.writeln('Finished packaging as asar.').ok();
-
+            grunt.log.ok('Finished packaging as asar.');
             wrench.rmdirSyncRecursive('staging', true);
-            grunt.log.writeln('Staging cleaned up.').ok();
+            grunt.log.ok('Cleaned up staging.');
+            done();
         });
-
     });
 
-    grunt.registerTask('dev', 'copy over', function() {
-        let done = this.async();
-        let url = grunt.option('url') || 'https://demoappdirectory.openf.in/desktop/config/apps/OpenFin/HelloOpenFin/alpha-next.json';
+    grunt.registerTask('copy-local', function() {
+        const target = grunt.option('target');
+        const done = this.async();
 
-        if (isWindows) {
-            grunt.task.run(['copy:rcb']);
-
-            wrench.copyDirRecursive(staging, dest, {
-                forceDelete: true
-            }, function() {
-                grunt.log.writeln(runner + ' --debug="5858" --startup-url="' + url + '"');
-                exec(runner + ' --debug="5858" --startup-url="' + url + '"', function() {
-                    done();
-                });
-
-            });
-        }
-    });
-
-    grunt.registerTask('copy-local', function () {
-        let target = grunt.option('target');
-        let done = this.async();
-
-        if(!target) {
-            console.log('No target specified skipping local deploy');
+        if (!target) {
+            grunt.log.ok('No target specified...skipping local deploy.');
             done();
         } else {
-            let asarFile = path.join(target, 'app.asar');
-            let asarFileBk = path.join(target, 'app.asar.bk');
-            let defaultAppFolder = path.join(target, 'default_app');
-            let origin = './staging/core';
+            const asarFile = path.join(target, 'app.asar');
+            const asarFileBk = path.join(target, 'app.asar.bk');
+            const defaultAppFolder = path.join(target, 'default_app');
+            const origin = './staging/core';
+
             if (fs.existsSync(asarFile)) {
                 fs.renameSync(asarFile, asarFileBk);
-                grunt.log.writeln('renamed: ', asarFile, ' to: ', asarFileBk, '\n');
+                grunt.log.ok(`renamed: ${asarFile} to: ${asarFileBk}`);
             }
+
             wrench.copyDirRecursive(origin, defaultAppFolder, {
                 forceDelete: true
             }, function() {
-                grunt.log.writeln('deployed to: ', defaultAppFolder);
+                grunt.log.ok(`Deployed to: ${defaultAppFolder}`);
                 done();
             });
         }
     });
 
-    grunt.registerTask('default', ['build-pac']);
-    grunt.registerTask('deploy', ['build-dev', 'copy-local']);
+    /**
+     * This task goes through the list of all files that need to have
+     * a license and validates that they have proper licenses.
+     * Usage:
+     * 1. grunt license - default
+     * 2. grunt license:add - will add open-source license to all non-commercial files
+     * 3. grunt license:remove - will remove licenses from all files
+     */
+    grunt.registerTask('license', (option) => {
+        let foundLicensingProblem = false;
 
-    grunt.registerTask('test', ['mochaTest']);
+        // List of files that must have OpenFin commercial license
+        const ofLicensedFiles = [
+            'src/browser/api_protocol/external_application.js',
+            'src/browser/api_protocol/transport_strategy/base_handler.ts',
+            'src/browser/api_protocol/transport_strategy/ws_strategy.ts',
+            'src/browser/api_protocol/api_handlers/authorization.js',
+            'src/browser/api_protocol/api_handlers/api_policy_processor.ts',
+            'src/browser/api_protocol/api_handlers/mesh_middleware.ts',
+            'src/browser/port_discovery.ts',
+            'src/browser/rvm/rvm_message_bus.js',
+            'src/browser/rvm/runtime_initiated_topics/app_assets.js',
+            'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
+            'src/browser/rvm/utils.ts',
+            'src/browser/api/external_application.js',
+            'src/browser/external_window_event_adapter.js',
+            'src/browser/connection_manager.ts',
+            'src/browser/transport.ts',
+            'src/browser/transports/socket_server.js',
+            'src/browser/transports/wm_copydata.ts',
+            'src/browser/transports/base.ts',
+            'src/browser/transports/chromium_ipc.ts',
+            'src/browser/transports/electron_ipc.ts'
+        ];
 
-    loadGruntTasks(grunt);
+        // List of files that need to have some kind of license
+        const allFilesForLicense = grunt.file.expand(
+            'src/**/*.ts',
+            'src/**/*.js',
+            'test/**/*.ts',
+            'test/**/*.js',
+            'index.ts',
+            'index.js'
+        );
 
-    grunt.loadNpmTasks('grunt-jsbeautifier');
+        // Goes through all the files and verifies licenses
+        allFilesForLicense.forEach(filePartPath => {
+            const fileFullPath = path.join(__dirname, filePartPath);
+            let fileContent = String(fs.readFileSync(fileFullPath));
 
-    // this will be our commercial lic
-    var commercialLic = `/*
-Copyright 2017 OpenFin Inc.
+            // When given 'remove' option, just remove the license
+            if (option === 'remove') {
+                fileContent = fileContent.replace(openSourceLic, '');
+                fileContent = fileContent.replace(commercialLic, '');
+                fs.writeFileSync(fileFullPath, fileContent);
+                grunt.log.writeln(`Removed license from ${filePartPath}`['yellow'].bold);
+                return;
+            }
 
-Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
-Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
-*/\n`;
+            // OpenFin commercial license file
+            if (ofLicensedFiles.includes(filePartPath)) {
 
-    // this will be the open src
-    var openSourceLic =`/*
-Copyright 2017 OpenFin Inc.
+                // Remove open-source license from a commercial file
+                if (fileContent.includes(openSourceLic)) {
+                    fileContent = fileContent.replace(openSourceLic, '');
+                    fs.writeFileSync(fileFullPath, fileContent);
+                    grunt.log.writeln(`Removed open-source license from OpenFin commercial file ${filePartPath}`['yellow'].bold);
+                }
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+                // Add license if missing
+                if (!fileContent.includes(commercialLic)) {
+                    fileContent = commercialLic + fileContent;
+                    fs.writeFileSync(fileFullPath, fileContent);
+                    grunt.log.writeln(`Added missing OpenFin commercial license to ${filePartPath}`['yellow'].bold);
+                }
+            }
 
-http://www.apache.org/licenses/LICENSE-2.0
+            // Open-sourced files or new files that are missing a license
+            else {
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/\n`;
+                // File has commercial license but is not added to the list of commercial files
+                if (fileContent.includes(commercialLic)) {
+                    grunt.log.writeln(`Found commercial license in ${filePartPath}, but file is `['yellow'].bold +
+                        `not added to Grunt's list of commercial files. Please, add it.`['yellow'].bold);
+                }
 
+                // File is missing any kind of license
+                else if (!fileContent.includes(openSourceLic)) {
 
-    // add files here to give them the of commercial license
-    var ofLicensedFiles = [
-        'src/browser/api_protocol/external_application.js',
-        'src/browser/api_protocol/transport_strategy/ws_strategy.ts',
-        'src/browser/api_protocol/api_handlers/authorization.js',
-        'src/browser/port_discovery.ts',
-        'src/browser/rvm/rvm_message_bus.js',
-        'src/browser/rvm/runtime_initiated_topics/app_assets.js',
-        'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
-        'src/browser/rvm/utils.ts',
-        'src/browser/api/external_application.js',
-        'src/browser/external_window_event_adapter.js',
-        'src/browser/transport.ts',
-        'src/browser/transports/socket_server.js',
-        'src/browser/transports/wm_copydata.ts',
-        'src/browser/transports/base.ts',
-        'src/browser/transports/chromium_ipc.ts',
-        'src/browser/transports/electron_ipc.ts'
-    ];
-
-    function addLic(filepath, lic){
-        var filestr = fs.readFileSync(filepath, 'utf-8');
-        var needsLicBanner = !hasLic(filestr, lic);
-
-        if (needsLicBanner) {
-            fs.writeFileSync(filepath, lic + filestr);
-        }
-    }
-
-    function hasLic(filestr, lic){
-        var licSearchLen = lic.length;
-
-        return filestr.substr(0, licSearchLen) === lic;
-    }
-
-    function remLic(filepath, lic){
-        var filestr = fs.readFileSync(filepath, 'utf-8');
-        var hasLicBanner  = hasLic(filestr, lic);
-
-        if (hasLicBanner) {
-            fs.writeFileSync(filepath, filestr.slice(lic.length));
-        }
-    }
-
-    grunt.registerTask('license', [], function(){
-        var categorizedFiles = categorizeFiles();
-        var ofLic = categorizedFiles.ofLic;
-        var genLic = categorizedFiles.genLic;
-
-        ofLic.forEach(function(file){
-            addLic(path.join(__dirname, file), commercialLic);
-        });
-
-        genLic.forEach(function(file){
-            addLic(path.join(__dirname, file), openSourceLic);
-        });
-
-    });
-
-    grunt.registerTask('remlicense', [], function(){
-
-        var categorizedFiles = categorizeFiles();
-        var ofLic = categorizedFiles.ofLic;
-        var genLic = categorizedFiles.genLic;
-
-        ofLic.forEach(function(file){
-            remLic(path.join(__dirname, file), commercialLic);
-        });
-
-        genLic.forEach(function(file){
-            remLic(path.join(__dirname, file), openSourceLic);
-        });
-
-    });
-
-    grunt.registerTask('lic', ['license']);
-    grunt.registerTask('remlic', ['remlicense']);
-
-
-    function categorizeFiles () {
-        var ofLic = [];
-        var genLic = [];
-
-        // May need to consider file types here, .ico files etc..
-        var gruntSelectedAll = grunt.file.expand('**/*', '!staging/**/*', '!node_modules/**/*', '!*.json', '!*.html', '!*.ico', '!rcb');
-
-        gruntSelectedAll.forEach(function(file){
-            if (!grunt.file.isDir(file)) {
-                if (ofLicensedFiles.indexOf(file) === -1) {
-                    genLic.push(file);
-                } else {
-                    ofLic.push(file);
+                    // When calling this task with an 'add' option, it will add open-source license
+                    // to all the files that are missing a license and are not specified as commercial
+                    if (option === 'add') {
+                        fileContent = openSourceLic + fileContent;
+                        fs.writeFileSync(fileFullPath, fileContent);
+                        grunt.log.writeln(`Added open-source license to ${filePartPath}`['yellow'].bold);
+                    } else {
+                        grunt.log.writeln(`File ${filePartPath} is missing a license`['red'].bold);
+                        foundLicensingProblem = true;
+                    }
                 }
             }
         });
 
-        return {
-            ofLic: ofLic,
-            genLic: genLic
-        };
-    }
+        if (foundLicensingProblem) {
+            // Abort Grunt if there are problems found with licensing
+            grunt.fail.fatal('Aborted due to problems with licensing'['red'].bold);
+        } else {
+            grunt.log.writeln(`Licensing task is done`['green'].bold);
+        }
+    });
 };

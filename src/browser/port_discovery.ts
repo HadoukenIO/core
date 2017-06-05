@@ -1,3 +1,4 @@
+
 /*
 Copyright 2017 OpenFin Inc.
 
@@ -6,9 +7,10 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import { WMCopyData, ChromiumIPC } from './transport';
 import { EventEmitter } from 'events';
+import * as log from './log';
 
 const coreState = require('./core_state');
-const window_class_name = 'OPENFIN_ADAPTER_WINDOW';
+const windowClassName = 'OPENFIN_ADAPTER_WINDOW';
 
 export interface ArgMap {
     [key: string]: string;
@@ -32,11 +34,18 @@ export class PortDiscovery extends EventEmitter {
     private _copyDataTransport: WMCopyData;
 
     private constructCopyDataTransport(): WMCopyData {
+
         // Send and receive messages on the same Window's classname
-        this._copyDataTransport = new WMCopyData(window_class_name, window_class_name);
-        this._copyDataTransport.on('message', (s: any, data: string) => {
-            this.emit('runtime/connected', JSON.parse(data));
-        });
+        if (!this._copyDataTransport) {
+
+            log.writeToLog('info', 'Constructing the copyDataTransport window.');
+
+            this._copyDataTransport = new WMCopyData(windowClassName, windowClassName);
+            this._copyDataTransport.on('message', (s: any, data: string) => {
+                this.emit('runtime/launched', JSON.parse(data));
+            });
+        }
+
         return this._copyDataTransport;
     }
 
