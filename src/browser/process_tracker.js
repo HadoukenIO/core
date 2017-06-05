@@ -21,6 +21,7 @@ let ExternalProcess = require('electron').externalProcess;
 let ProcessMonitor = require('electron').processMonitor;
 
 import ofEvents from './of_events';
+import route from '../common/route';
 
 const isWin32 = (process.platform === 'win32');
 
@@ -45,12 +46,12 @@ function ProcessTracker() {
             processUuid: uuid,
         };
 
-        ofEvents.emit(`external-application/exited/${uuid}`, Object.assign(result, {
+        ofEvents.emit(route.externalApplication('exited', uuid), Object.assign(result, {
             topic: 'external-application',
             type: 'exited'
         }));
 
-        ofEvents.emit(`window/external-process-exited/${winUuid}-${winName}`, Object.assign(result, {
+        ofEvents.emit(route.window('external-process-exited', winUuid, winName), Object.assign(result, {
             uuid: winUuid,
             name: winName,
             topic: 'window',
@@ -60,7 +61,7 @@ function ProcessTracker() {
         this._cleanup(pid, uuid);
     });
 
-    ofEvents.on('window/synth-close/*', payload => {
+    ofEvents.on(route.window('synth-close', '*'), payload => {
         if (this._windowToUuids[payload.source]) {
             let processes = this._windowToUuids[payload.source].slice(0);
             processes.forEach(uuid => {
@@ -79,17 +80,16 @@ ProcessTracker.prototype.launch = function(identity, options, errDataCallback) {
     let success = (data) => {
         var windowUuid = identity.uuid;
         var windowName = identity.name;
-        var windowUuidName = `${windowUuid}-${windowName}`;
 
         errDataCallback(undefined, data);
 
-        ofEvents.emit(`external-application/started/${data.uuid}`, {
+        ofEvents.emit(route.externalApplication('started', data.uuid), {
             uuid: data.uuid,
             topic: 'external-application',
             type: 'started'
         });
 
-        ofEvents.emit(`window/external-process-started/${windowUuidName}`, {
+        ofEvents.emit(route.window('external-process-started', windowUuid, windowName), {
             uuid: windowUuid,
             name: windowName,
             topic: 'window',

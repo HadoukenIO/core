@@ -16,6 +16,7 @@ let log = require('../../log');
 let socketServer = require('../../transports/socket_server').server;
 let ProcessTracker = require('../../process_tracker.js');
 const rvmMessageBus = require('../../rvm/rvm_message_bus').rvmMessageBus;
+import route from '../../../common/route';
 const successAck = {
     success: true
 };
@@ -179,7 +180,7 @@ function AuthorizationApiHandler() {
         }
     }
 
-    socketServer.on('connection/close', id => {
+    socketServer.on(route.connection('close'), id => {
         var keyToDelete,
             externalConnection;
         for (var [key, value] of pendingAuthentications.entries()) {
@@ -193,7 +194,7 @@ function AuthorizationApiHandler() {
         externalConnection = ExternalApplication.getExternalConnectionById(id);
         if (externalConnection) {
             ExternalApplication.removeExternalConnection(externalConnection);
-            ofEvents.emit(`externalconn/closed`, ExternalApplication);
+            ofEvents.emit(route('externalconn', 'closed'), ExternalApplication);
         }
 
         if (coreState.shouldCloseRuntime()) {

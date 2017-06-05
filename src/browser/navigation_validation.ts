@@ -19,6 +19,7 @@ let SubScriptionManager:any = require('./subscription_manager.js').SubscriptionM
 let subScriptionManager:any = new SubScriptionManager();
 
 import ofEvents from "./of_events";
+import route from '../common/route';
 
 export function validateNavigation(webContents: any, identity:any, validator: () => any) {
     let willNavigateString = 'will-navigate';
@@ -61,7 +62,6 @@ export function validateNavigationRules(uuid: string, url: string, parentUuid: s
 }
 
 export function navigationValidator(uuid: string, name:string, id: number) {
-    const uuidname = `${uuid}-${name}`;
     return (event: any, url: string) => {
         let appObject = coreState.getAppObjByUuid(uuid);
         let appMetaInfo = coreState.appByUuid(uuid);
@@ -80,13 +80,13 @@ export function navigationValidator(uuid: string, name:string, id: number) {
                     }
                 }
             }
-            ofEvents.emit(`window/navigation-rejected/${uuidname}`, {
+            ofEvents.emit(route.window('navigation-rejected', uuid, name), {
                 name,
                 uuid,
                 url,
                 sourceName
             });
-            ofEvents.emit(`application/window-navigation-rejected/${uuid}`, {
+            ofEvents.emit(route.application('window-navigation-rejected', uuid), {
                 name,
                 uuid,
                 url,

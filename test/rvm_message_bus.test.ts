@@ -13,98 +13,104 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import * as assert from 'assert';
-import * as mockery from 'mockery';
-import {EventEmitter} from 'events';
-const App = require('electron').app;
+// import * as assert from 'assert';
+// import * as mockery from 'mockery';
+// import {EventEmitter} from 'events';
 
-App.generateGUID = Math.random;
+// const mockWMCopyData  = {
+//     WMCopyData: () => {
+//         return {
+//             on: (x: any) => x,
+//             publish: (x: any ) => x
+//         }
+//     }
+// }
 
-const mockWMCopyData  = {
-    WMCopyData: function(){
-        return {
-            on: (x: any) => x,
-            publish: (x: any ) => x
-        }
-    }
-}
+// const appMock = {
+//     app: {}
+// }
 
-mockery.registerMock('../transport', mockWMCopyData);
-mockery.enable();
+// // mockery.registerMock('../transport', mockWMCopyData);
+// mockery.registerMock('electron', appMock);
 
-import {rvmMessageBus, RVMMessageBus, LicenseInfo} from '../src/browser/rvm/rvm_message_bus';
+// mockery.enable();
 
-describe('rvm message bus', () => {
+// const App = require('electron').app;
+// App.generateGUID = Math.random;
 
-    describe('registerLiceneInfo', () => {
+// import {rvmMessageBus, RVMMessageBus, LicenseInfo} from '../src/browser/rvm/rvm_message_bus';
 
-        it('should send the correct base payload', () => {
-            const payloadShape: any = {
-                processId: 'processId',
-                runtimeVersion: 'runtimeVersion',
+// describe('rvm message bus', () => {
 
-                action: 'license-info',
-                sessionId: RVMMessageBus.sessionId,
-                parentApp: {
-                    sourceUrl: null
-                },
-                sourceUrl: null,
-                licenseKey: null,
-                client: {
-                    type: null,
-                    version: null,
-                    pid: null
-                }
-            }
-            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<LicenseInfo> {
-                processId: 'processId',
-                runtimeVersion: 'runtimeVersion'
-            });
+//     describe('registerLiceneInfo', () => {
 
-            assert.deepEqual(payloadShape, payload, 'shapes should match hommie');
-        });
+//         it('should send the correct base payload', () => {
+//             const payloadShape: any = {
+//                 processId: 'processId',
+//                 runtimeVersion: 'runtimeVersion',
 
-        it('should send the correct full payload', () => {
+//                 action: 'license-info',
+//                 sessionId: RVMMessageBus.sessionId,
+//                 parentApp: {
+//                     sourceUrl: null
+//                 },
+//                 sourceUrl: null,
+//                 licenseKey: null,
+//                 client: {
+//                     type: null,
+//                     version: null,
+//                     pid: null
+//                 }
+//             }
+//             const {payload} = <any> rvmMessageBus.registerLicenseInfo(<LicenseInfo> {
+//                 processId: 'processId',
+//                 runtimeVersion: 'runtimeVersion'
+//             });
 
-            const payloadShape: any = {
-                processId: 'processId',
-                runtimeVersion: 'runtimeVersion',
+//             assert.deepEqual(payloadShape, payload, 'shapes should match');
+//         });
 
-                action: 'license-info',
-                sessionId: RVMMessageBus.sessionId,
-                parentApp: {
-                    sourceUrl: 'parentApp.sourceUrl'
-                },
-                sourceUrl: 'sourceUrl',
-                licenseKey: 'licenseKey',
-                client: {
-                    type: 'js',
-                    version: 'version',
-                    pid: 999999999
-                }
-            }
+//         it('should send the correct full payload', () => {
 
-            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<LicenseInfo> {
-                processId: 'processId',
-                runtimeVersion: 'runtimeVersion',
-                parentApp: {
-                    sourceUrl: 'parentApp.sourceUrl'
-                },
-                sourceUrl: 'sourceUrl',
-                licenseKey: 'licenseKey',
-                client: {
-                    type: 'js',
-                    version: 'version',
-                    pid: 999999999
-                }
-            });
+//             const payloadShape: any = {
+//                 processId: 'processId',
+//                 runtimeVersion: 'runtimeVersion',
 
-            assert.deepEqual(payloadShape, payload, 'shapes should match');
-        });
-    });
-});
+//                 action: 'license-info',
+//                 sessionId: RVMMessageBus.sessionId,
+//                 parentApp: {
+//                     sourceUrl: 'parentApp.sourceUrl'
+//                 },
+//                 sourceUrl: 'sourceUrl',
+//                 licenseKey: 'licenseKey',
+//                 client: {
+//                     type: 'js',
+//                     version: 'version',
+//                     pid: 999999999
+//                 }
+//             }
 
-after(() => {
-    mockery.deregisterAll();
-    mockery.disable();
-});
+//             const {payload} = <any> rvmMessageBus.registerLicenseInfo(<LicenseInfo> {
+//                 processId: 'processId',
+//                 runtimeVersion: 'runtimeVersion',
+//                 parentApp: {
+//                     sourceUrl: 'parentApp.sourceUrl'
+//                 },
+//                 sourceUrl: 'sourceUrl',
+//                 licenseKey: 'licenseKey',
+//                 client: {
+//                     type: 'js',
+//                     version: 'version',
+//                     pid: 999999999
+//                 }
+//             });
+
+//             assert.deepEqual(payloadShape, payload, 'shapes should match');
+//         });
+//     });
+// });
+
+// after(() => {
+//     mockery.deregisterAll();
+//     mockery.disable();
+// });

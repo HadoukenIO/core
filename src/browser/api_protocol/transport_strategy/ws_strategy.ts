@@ -8,6 +8,7 @@ import { AckMessage,  AckFunc, AckPayload, NackPayload } from './ack';
 import { ApiTransportBase, MessagePackage, Identity } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
+import route from '../../../common/route';
 
 declare var require: any;
 
@@ -44,7 +45,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     public registerMessageHandlers(): void {
-        socketServer.on('connection/message', this.onMessage.bind(this));
+        socketServer.on(route.connection('message'), this.onMessage.bind(this));
     }
 
     public send(externalConnection: any, payload: any): void {
@@ -52,11 +53,11 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     public onClientAuthenticated(cb: Function): void {
-        socketServer.on('connection/authenticated', cb);
+        socketServer.on(route.connection('authenticated'), cb);
     }
 
     public onClientDisconnect(cb: Function): void {
-        socketServer.on('connection/close', cb);
+        socketServer.on(route.connection('close'), cb);
     }
 
     protected onMessage(id: number, data: any): void {
