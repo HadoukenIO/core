@@ -18,13 +18,13 @@ limitations under the License.
 */
 
 // built-in modules
-var electronApp = require('electron').app;
+const electronApp = require('electron').app;
 
 // npm modules
-var minimist = require('minimist');
+const minimist = require('minimist');
 
 // local modules
-var externalApplication = require('./api_protocol/external_application.js');
+const externalApplication = require('./api_protocol/external_application.js');
 
 
 // locals
@@ -32,7 +32,7 @@ const args = electronApp.getCommandLineArguments(); // command line string ("s" 
 const argv = electronApp.getCommandLineArgv(); // argument list ("v" for "vector")
 const argo = minimist(argv); // minimist-style object ("o" for "object"; hash of command line options:values; see https://github.com/substack/minimist)
 
-var coreState = {
+const coreState = {
     apps: []
 };
 
@@ -40,7 +40,7 @@ var coreState = {
 var startManifest_ = {};
 
 // TODO: Remove after Dependency Injection refactor
-var manifestProxySettings_ = {
+const manifestProxySettings_ = {
     proxyAddress: '',
     proxyPort: 0,
     type: 'system'
@@ -68,7 +68,7 @@ function setManifestProxySettings(proxySettings) {
     // Proxy settings from a config serve no behavioral purpose in 5.0
     // They are merely a read/write data-store.
     if (typeof proxySettings === 'object') {
-        var type = proxySettings.type;
+        const type = proxySettings.type;
         if (type.indexOf('system') === -1 && type.indexOf('named') === -1) {
             return 'Invalid proxy type. Should be \"system\" or \"named\"';
         }
@@ -85,27 +85,11 @@ function getManifestProxySettings() {
 }
 
 function windowExists(uuid, name) {
-
-    let windowList = getWinList();
-    let matchingWindows = windowList.filter(wrapper => {
-
-        if (!wrapper.openfinWindow) {
-            return false;
-        }
-
-        let uuidMatch = uuid === wrapper.openfinWindow.uuid;
-        let nameMatch = name === wrapper.openfinWindow.name;
-
-        return uuidMatch && nameMatch;
-    });
-
-    let hasMatchingWindows = matchingWindows.length;
-
-    return hasMatchingWindows;
+    return !!getOfWindowByUuidName(uuid, name);
 }
 
 function removeChildById(id) {
-    var app = getAppByWin(id);
+    const app = getAppByWin(id);
 
     if (app) {
         //if this was a child window make sure we clean up as well.
@@ -120,88 +104,54 @@ function removeChildById(id) {
             });
         }
     }
-
 }
 
 function getChildrenByWinId(id) {
-    var win = getWinById(id);
+    const win = getWinById(id);
     return win && win.children;
 }
 
-
-
 function getAppByWin(winId) {
-    return coreState.apps.filter(app => {
-        return app.children.filter(getWinList => {
-            return getWinList.id === winId;
-        }).length;
-    })[0];
+    return coreState.apps.find(app => app.children.find(getWinList => getWinList.id === winId));
 }
 
-
 function getAppById(appId) {
-    return coreState.apps.filter(app => {
-        return app.id === appId;
-    })[0]; //This will hide a leak
+    return coreState.apps.find(app => app.id === appId); //This will hide a leak
 }
 
 function appByUuid(uuid) {
-    return coreState.apps.filter(app => {
-        return uuid === app.uuid;
-    })[0];
+    return coreState.apps.find(app => uuid === app.uuid);
 }
 
 function setAppRunningState(uuid, running) {
-    var app = appByUuid(uuid);
-
-    if (!app) {
-
-        // uuid was not recognized
-        return;
+    const app = appByUuid(uuid);
+    if (app) {
+        app.isRunning = !!running;
     }
-
-    app.isRunning = running;
 }
 
-
 function getAppRunningState(uuid) {
-    var app = appByUuid(uuid);
-
-    if (!app) {
-
-        // uuid was not recognized
-        return;
-    }
-
-    return app.isRunning;
+    const app = appByUuid(uuid);
+    return app && app.isRunning;
 }
 
 function getAppRestartingState(uuid) {
-    var app = appByUuid(uuid);
-
-    if (!app) {
-        return;
-    }
-
-    return app.isRestarting;
+    const app = appByUuid(uuid);
+    return app && app.isRestarting;
 }
 
 function setAppRestartingState(uuid, restarting) {
-    var app = appByUuid(uuid);
-    if (!app) {
-        // uuid was not recognized
-        return;
+    const app = appByUuid(uuid); // check if uuid is recognized
+    if (app) {
+        app.isRestarting = !!restarting;
     }
-    app.isRestarting = restarting;
 }
 
 function setAppId(uuid, id) {
-    var app = appByUuid(uuid);
+    const app = appByUuid(uuid);
 
     if (!app) {
-
         console.warn('setAppId - app not found', arguments);
-        // uuid was not recognized
         return;
     }
 
@@ -215,8 +165,7 @@ function setAppId(uuid, id) {
 
 
 function getAppObjByUuid(uuid) {
-    var app = appByUuid(uuid);
-
+    const app = appByUuid(uuid);
     return app && app.appObj;
 }
 
@@ -225,35 +174,33 @@ function getExternalAppObjByUuid(uuid) {
 }
 
 function getUuidBySourceUrl(sourceUrl) {
-    var app = coreState.apps.filter(app => {
-        var appObj = app.appObj,
-            configUrl = appObj && appObj._configUrl;
-
-        if (configUrl) {
-            return configUrl === sourceUrl;
-        }
-
-        return false;
-    })[0];
+    const app = coreState.apps.find(app => {
+        const configUrl = app.appObj && app.appObj._configUrl;
+        return configUrl && configUrl === sourceUrl;
+    });
 
     return app && app.appObj && app.appObj.uuid;
 }
 
+function getConfigUrlByUuid(uuid) {
+    let app = appByUuid(uuid);
+    while (app && app.appObj && app.appObj.parentUuid) {
+        app = appByUuid(app.appObj.parentUuid);
+    }
+    return app && app._configUrl;
+}
+
 function setAppObj(appId, appObj) {
-    var app = getAppById(appId);
+    const app = getAppById(appId);
 
     if (!app) {
         console.warn('setAppObj - app not found', arguments);
-        return undefined;
-        //throw new Error('setAppObj - app not found');
-
+        return; //throw new Error('setAppObj - app not found');
     }
 
     if (!appObj) {
         console.warn('setAppObj - no app object provided', arguments);
-        return undefined;
-        //throw new Error('setAppObj - no app object provided');
-
+        return; //throw new Error('setAppObj - no app object provided');
     }
 
     app.appObj = appObj;
@@ -263,26 +210,23 @@ function setAppObj(appId, appObj) {
 
 
 function getAppObj(appId) {
-    var app = getAppById(appId);
+    const app = getAppById(appId);
 
     if (!app) {
         console.warn('getAppObj - app not found', arguments);
-        return undefined;
-        //throw new Error('getAppObj - app not found');
-
+        return; //throw new Error('getAppObj - app not found');
     }
 
     return app.appObj;
 }
 
+
 function setAppOptions(opts, configUrl = '') {
-    var app = appByUuid(opts.uuid);
+    const app = appByUuid(opts.uuid);
 
     if (!app) {
         console.warn('setAppOptions - app not found', arguments);
-        return undefined;
-        //throw new Error('setAppObj - app not found');
-
+        return; //throw new Error('setAppObj - app not found');
     }
 
     app._options = opts; // need to save options so app can re-run
@@ -291,65 +235,42 @@ function setAppOptions(opts, configUrl = '') {
     return app;
 }
 
+
 function getWinById(winToFind) {
-    return getWinList().filter(win => {
-        return win.id === winToFind;
-    })[0];
+    return getWinList().find(win => win.id === winToFind);
 }
 
 
 function getChildrenByApp(appId) {
-    let app = getAppById(appId);
-    let nonMainWindows, childOpenfinWindows;
+    const app = getAppById(appId);
 
-    nonMainWindows = app.children.filter(child => {
-        let openfinWindow = child.openfinWindow;
-        let name, uuid, isMainWindow;
+    if (!app) {
+        console.warn('getChildrenByApp - app not found', arguments);
+        return; //throw new Error('getAppObj - app not found');
+    }
 
-        if (!openfinWindow) {
-
-            // openfin window object not present, do not include
-            // in the filtered list
-            return false;
-        }
-
-        name = openfinWindow.name;
-        uuid = openfinWindow.uuid;
-        isMainWindow = name === uuid;
-
-        // do not include the main window, this is 5.0 behavior
-        return !isMainWindow;
-
-    });
-
-    childOpenfinWindows = nonMainWindows.map(child => {
-        return child.openfinWindow;
-    });
-
-    return childOpenfinWindows;
+    // Only return children who have an openfin window object and are not the app's main window (5.0 behavior)
+    return app.children
+        .filter(child => child.openfinWindow && child.openfinWindow.name !== child.openfinWindow.uuid)
+        .map(child => child.openfinWindow);
 }
 
 
 function addChildToWin(parentId, childId) {
-    var app = getAppByWin(parentId),
-        parent;
+    const app = getAppByWin(parentId);
 
     if (!app) {
         console.warn('addChildToWin - parent app not found', arguments);
-        return undefined;
-        //throw new Error('addChildToWin - parent app not found');
-
+        return; //throw new Error('addChildToWin - parent app not found');
     }
 
     // reenable?
     //	if (parentId !== childId) {
-    parent = getWinById(parentId);
+    const parent = getWinById(parentId);
 
     if (!parent) {
         console.warn('addChildToWin - parent window not found', arguments);
-        return undefined;
-        //throw new Error('addChildToWin - parent window not found');
-
+        return; //throw new Error('addChildToWin - parent window not found');
     }
 
     parent.children.push(childId);
@@ -365,12 +286,11 @@ function addChildToWin(parentId, childId) {
 
 
 function getWinObjById(id) {
-    var win = getWinById(id);
+    const win = getWinById(id);
 
     if (!win) {
         console.warn('getWinObjById - window not found', arguments);
-        return undefined;
-        //throw new Error('getWinObjById - window not found');
+        return; //throw new Error('getWinObjById - window not found');
 
     }
 
@@ -399,12 +319,12 @@ function addApp(id, uuid) {
 }
 
 function sentFirstHideSplashScreen(uuid) {
-    let app = appByUuid(uuid);
+    const app = appByUuid(uuid);
     return app && app.sentHideSplashScreen;
 }
 
 function setSentFirstHideSplashScreen(uuid, sent) {
-    let app = appByUuid(uuid);
+    const app = appByUuid(uuid);
     if (app) {
         app.sentHideSplashScreen = sent;
     }
@@ -412,20 +332,16 @@ function setSentFirstHideSplashScreen(uuid, sent) {
 
 // what should the name be?
 function setWindowObj(winId, openfinWindow) {
-    var win = getWinById(winId);
+    const win = getWinById(winId);
 
     if (!win) {
         console.warn('setWindow - window not found', arguments);
-        return undefined;
-        //throw new Error('setWindow - window not found');
-
+        return; //throw new Error('setWindow - window not found');
     }
 
     if (!openfinWindow) {
         console.warn('setWindow - no window object provided', arguments);
-        return undefined;
-        //throw new Error('setWindow - no window object provided');
-
+        return; //throw new Error('setWindow - no window object provided');
     }
 
     win.openfinWindow = openfinWindow;
@@ -434,48 +350,39 @@ function setWindowObj(winId, openfinWindow) {
 }
 
 function removeApp(id) {
-    var toRemove = getAppById(id);
+    const app = getAppById(id);
 
-    if (!toRemove) {
+    if (!app) {
         console.warn('removeApp - app not found', arguments);
-        return undefined;
-        //throw new Error('removeApp - app not found');
-
+        return; //throw new Error('removeApp - app not found');
     }
 
-    delete toRemove.appObj;
+    delete app.appObj;
 
-    toRemove.isRunning = false;
+    app.isRunning = false;
 
-    // coreState.apps = coreState.apps.filter(app => {
-    //     return app.id !== id;
-    // });
+    // coreState.apps = coreState.apps.filter(app => app.id !== id);
 
     // return coreState.apps;
 }
 
 function getWindowOptionsById(id) {
-    let win = getWinById(id),
-        openfinWindow = win.openfinWindow,
-        options = openfinWindow && openfinWindow._options;
-
-    return options;
+    const win = getWinById(id);
+    return win.openfinWindow && win.openfinWindow._options;
 }
 
 
 function getMainWindowOptions(winId) {
-    var app = getAppByWin(winId);
+    const app = getAppByWin(winId);
 
     if (!app) {
-        console.warn('getMainWindowOptions - app not found', winId);
-        return undefined;
-        //throw new Error('getMainWindowOptions - app not found');
+        console.warn('getMainWindowOptions - app not found', arguments);
+        return; //throw new Error('getMainWindowOptions - app not found');
     }
 
     if (!app.appObj) {
-        console.warn('getMainWindowOptions - app opts not found', winId);
-        return undefined;
-        //throw new Error('getMainWindowOptions - app opts not found');
+        console.warn('getMainWindowOptions - app opts not found', arguments);
+        return; //throw new Error('getMainWindowOptions - app opts not found');
     }
 
     // console.log('getMainWindowOptions', app.appObj._options);
@@ -484,32 +391,15 @@ function getMainWindowOptions(winId) {
 
 
 function getWindowByUuidName(uuid, name) {
-    var win = getOfWindowByUuidName(uuid, name);
-
+    const win = getOfWindowByUuidName(uuid, name);
     return win && win.openfinWindow;
 }
 
 function getOfWindowByUuidName(uuid, name) {
-    let win = getWinList().filter(win => {
-        let nameMatches,
-            uuidMatches,
-            bothMatch,
-            openfinWindow = win.openfinWindow;
-
-        if (!openfinWindow) {
-
-            return false;
-        }
-
-        nameMatches = openfinWindow.name === name;
-        uuidMatches = openfinWindow.uuid === uuid;
-        bothMatch = nameMatches && uuidMatches;
-
-        return bothMatch;
-
-    })[0];
-
-    return win;
+    return getWinList().find(win => win.openfinWindow &&
+        win.openfinWindow.uuid === uuid &&
+        win.openfinWindow.name === name
+    );
 }
 
 /**
@@ -518,11 +408,9 @@ function getOfWindowByUuidName(uuid, name) {
  */
 
 function getWinList() {
-    return coreState.apps.map(app => {
-        return app.children;
-    }).reduce((wins, myWins) => {
-        return wins.concat(myWins);
-    }, []);
+    return coreState.apps
+        .map(app => app.children) //with children
+        .reduce((wins, myWins) => wins.concat(myWins), []); //flatten
 }
 
 function getAllApplications() {
@@ -537,97 +425,63 @@ function getAllApplications() {
 
 //TODO: should this function replace getAllApplications ?
 function getAllAppObjects() {
-    //return a copy.
-    return coreState.apps.map(app => {
-        return app.appObj;
-    }).filter(a => {
-        return a;
-    });
+    return coreState.apps
+        .filter(app => app.appObj) //with openfin app object
+        .map(app => app.appObj); //and return same
 }
 
 function getAllWindows() {
-    var Window = require('./api/window.js').Window;
-    let windowList = coreState.apps.map(app => {
-        let childWindows, mainWin;
-
-        childWindows = app.children.filter(win => {
-            return win.openfinWindow && win.id !== app.id;
-        }).map(cWin => {
-
-            let bounds = Window.getBounds({
-                uuid: cWin.openfinWindow.uuid,
-                name: cWin.openfinWindow.name
+    const getBounds = require('./api/window.js').Window.getBounds; // do not move this line!
+    return coreState.apps.map(app => {
+        const windowBounds = app.children
+            .filter(win => win.openfinWindow && win.id !== app.id)
+            .map(win => {
+                const bounds = getBounds({
+                    uuid: win.openfinWindow.uuid,
+                    name: win.openfinWindow.name
+                });
+                bounds.name = win.openfinWindow.name;
+                return bounds;
             });
-            bounds.name = cWin.openfinWindow.name;
-
-            return bounds;
-        }) || [];
-
-        //get the mainWindow info
-        mainWin = app.children.filter(win => {
-            return win.openfinWindow && win.id === app.id;
-        }).map(main => {
-            let bounds = Window.getBounds({
-                uuid: main.openfinWindow.uuid,
-                name: main.openfinWindow.name
-            });
-
-            bounds.name = main.openfinWindow.name;
-
-            return bounds;
-        });
 
         return {
             uuid: app.uuid,
-            childWindows,
-            mainWindow: mainWin[0] || {}
+            childWindows: windowBounds,
+            mainWindow: windowBounds[0] || {}
         };
     });
-
-    return windowList;
 }
 
 function remoteAppPropDecorator(uuid, prop) {
     return function() {
-        var origArgs = Array.prototype.slice.call(arguments, 0);
-
-        var browserInstance = getAppObjByUuid(uuid);
+        const origArgs = Array.prototype.slice.call(arguments, 0);
+        const browserInstance = getAppObjByUuid(uuid);
         browserInstance[prop].apply(browserInstance, origArgs);
-
     };
 }
 
 function anyAppRestarting() {
-    let restartingApps = coreState.apps.filter(app => {
-        return app.isRestarting === true;
-    });
-    return restartingApps.length > 0;
+    return !!coreState.apps.find(app => app.isRestarting);
 }
 
 function shouldCloseRuntime(ignoreArray) {
-    let ignoredApps = ignoreArray || [];
-    let extConnections = externalApplication.getAllExternalConnctions();
-    let connections = extConnections.filter((conn) => {
-        let {
-            nonPersistent
-        } = conn;
-        let nonPersistentUndefined = typeof nonPersistent === 'undefined';
-
-        return nonPersistentUndefined ? true : !nonPersistent;
-    });
+    const ignoredApps = ignoreArray || [];
 
     if (anyAppRestarting()) {
         console.log('not close Runtime during app restart');
         return false;
     } else {
-        let applications = getAllAppObjects().filter(app => {
-            let nonPersistent = app._options.nonPersistent !== undefined ? app._options.nonPersistent : app._options.nonPersistant;
-            let isRunning = getAppRunningState(app.uuid);
-            return (isRunning && app && ignoredApps.indexOf(app.uuid) === -1 && !nonPersistent);
-        });
-        return connections.length === 0 && applications.length === 0;
-    }
+        const extConnections = externalApplication.getAllExternalConnctions();
+        const hasPersistentConnections = extConnections.find(
+            conn => conn.nonPersistent === undefined || !conn.nonPersistent
+        );
 
+        return !hasPersistentConnections && !getAllAppObjects().find(app =>
+            getAppRunningState(app.uuid) && // app is running
+            ignoredApps.indexOf(app.uuid) < 0 && // app is not being ignored
+            !(app._options.nonPersistent !== undefined ? app._options.nonPersistent : app._options.nonPersistant) // app is persistent
+        );
+    }
 }
 
 //TODO: This needs to go go away, pending socket server refactor.
@@ -660,6 +514,7 @@ module.exports = {
     getAppObj,
     getAppObjByUuid,
     getUuidBySourceUrl,
+    getConfigUrlByUuid,
     getAppRunningState,
     getAppRestartingState,
     getChildrenByApp,

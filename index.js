@@ -61,7 +61,9 @@ import * as log from './src/browser/log';
 let firstApp = null;
 let crashReporterEnabled = false;
 let rvmBus;
-
+let otherInstanceRunning = false;
+let appIsReady = false;
+const deferredLaunches = [];
 const USER_DATA = app.getPath('userData');
 
 
@@ -136,11 +138,7 @@ portDiscovery.on('runtime/launched', (portInfo) => {
 
         connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
             //one connected we broadcast our port discovery message.
-            try {
-                portDiscovery.broadcast(myPortInfo);
-            } catch (e) {
-                log.writeToLog('info', e);
-            }
+            staggerPortBroadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
 
         }).catch(err => {
@@ -168,36 +166,52 @@ if (coreState.argo['local-startup-url']) {
     }
 }
 
+const handleDelegatedLaunch = function(commandLine) {
+    let otherInstanceArgo = minimist(commandLine);
+    const socketServerState = coreState.getSocketServerState();
+    const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
+
+    initializeCrashReporter(otherInstanceArgo);
+
+    // delegated args from a second instance
+    launchApp(otherInstanceArgo, false);
+
+    // Will queue if server is not ready.
+    portDiscovery.broadcast(portInfo);
+
+    // command line flag --delete-cache-on-exit
+    rvmCleanup(otherInstanceArgo);
+
+    return true;
+};
+
+app.on('chrome-browser-process-created', function() {
+    otherInstanceRunning = app.makeSingleInstance((commandLine) => {
+        if (appIsReady) {
+            return handleDelegatedLaunch(commandLine);
+        } else {
+            deferredLaunches.push(commandLine);
+            return true;
+        }
+    });
+
+    if (otherInstanceRunning) {
+        if (appIsReady) {
+            deleteProcessLogfile(true);
+        }
+
+        app.commandLine.appendArgument('noerrdialogs');
+        process.argv.push('--noerrdialogs');
+        app.quit();
+
+        return;
+    }
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.on('ready', function() {
-    app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
-    app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
-
-    app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
-
-    rvmBus = require('./src/browser/rvm/rvm_message_bus');
-
-    let otherInstanceRunning = app.makeSingleInstance(function(commandLine) {
-        let otherInstanceArgo = minimist(commandLine);
-        const socketServerState = coreState.getSocketServerState();
-        const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
-
-        initializeCrashReporter(otherInstanceArgo);
-
-        // delegated args from a second instance
-        launchApp(otherInstanceArgo, false);
-
-        // Will queue if server is not ready.
-        portDiscovery.broadcast(portInfo);
-
-        // command line flag --delete-cache-on-exit
-        rvmCleanup(otherInstanceArgo);
-
-        return true;
-    });
-
-    app.allowNTLMCredentialsForAllDomains(true);
+    appIsReady = true;
 
     if (otherInstanceRunning) {
         deleteProcessLogfile(true);
@@ -206,6 +220,16 @@ app.on('ready', function() {
 
         return;
     }
+
+    app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
+    app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
+
+    app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
+
+    rvmBus = require('./src/browser/rvm/rvm_message_bus');
+
+
+    app.allowNTLMCredentialsForAllDomains(true);
 
     if (process.platform === 'win32') {
         let integrityLevel = app.getIntegrityLevel();
@@ -257,6 +281,15 @@ app.on('ready', function() {
 
     });
 
+    // native code in AtomRendererClient::ShouldFork
+    app.on('enable-chromium-renderer-fork', event => {
+        // @TODO it should be an option for app, not runtime->arguments
+        if (coreState.argo['enable-chromium-renderer-fork']) {
+            app.vlog(1, 'applying Chromium renderer fork');
+            event.preventDefault();
+        }
+    });
+
     rvmBus.on('rvm-message-bus/broadcast/download-asset/progress', payload => {
         if (payload) {
             ofEvents.emit(`system/asset-download-progress-${payload.downloadId}`, {
@@ -281,7 +314,25 @@ app.on('ready', function() {
             });
         }
     });
+
+    // handle deferred launches
+    deferredLaunches.forEach((commandLine) => {
+        handleDelegatedLaunch(commandLine);
+    });
+
+    deferredLaunches.length = 0;
+
 }); // end app.ready
+
+function staggerPortBroadcast(myPortInfo) {
+    setTimeout(() => {
+        try {
+            portDiscovery.broadcast(myPortInfo);
+        } catch (e) {
+            log.writeToLog('info', e);
+        }
+    }, Math.floor(Math.random() * 50));
+}
 
 function includeFlashPlugin() {
     let pluginName;
@@ -449,15 +500,11 @@ function launchApp(argo, startExternalAdapterServer) {
             tickCount: app.getTickCount()
         });
     }, error => {
-        console.log('Error:' + error.message);
+        log.writeToLog(1, error, true);
 
-        // Synchronous when no callback is passed
-        dialog.showMessageBox(null, {
-            type: 'warning',
-            buttons: ['OK'],
-            title: 'Fatal error',
-            message: error.message
-        });
+        if (!coreState.argo['noerrdialog']) {
+            dialog.showErrorBox('Fatal Error', `${error}`);
+        }
 
         app.quit();
     });
@@ -478,13 +525,18 @@ function initFirstApp(options, configUrl) {
             firstApp = null;
         });
     } catch (error) {
-        console.log(`Error: ${error.message}`);
+        log.writeToLog(1, error, true);
 
         if (rvmBus) {
             rvmBus.send('application', {
                 action: 'hide-splashscreen',
                 sourceUrl: configUrl
             });
+        }
+
+        if (!coreState.argo['noerrdialog']) {
+            const errorMessage = options.loadErrorMessage || 'There was an error loading the application.';
+            dialog.showErrorBox('Fatal Error', errorMessage);
         }
 
         if (coreState.shouldCloseRuntime()) {

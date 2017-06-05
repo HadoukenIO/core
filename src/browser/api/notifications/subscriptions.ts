@@ -57,6 +57,8 @@ const NOTE_WIDTH = 300;
 const NOTE_PAD_RIGHT = 10;
 const NOTE_WIDTH_AND_PAD = NOTE_WIDTH + NOTE_PAD_RIGHT;
 const POSITION_ANIMATION_DURATION = 400;
+const NOTE_HEIGHT = 90;
+const NOTE_TOP_MARGIN = 70;
 
 let askedFor = 0;
 let created = 0;
@@ -164,22 +166,26 @@ ofEvents.on('application/window-end-load/*', (e: any) => {
 
 seqs.requestNoteClose
     .subscribe((req: NotificationMessage) => {
-        const noteIsOpen = windowIsValid(req.id);
+        try {
+            const noteIsOpen = windowIsValid(req.id);
 
-        if (noteIsOpen) {
-            const ns = getCurrNotes();
-            const mousePos = System.getMousePosition();
-            const monitorInfo = getPrimaryMonitorAvailableRect();
-            const mouseOver = mouseisOverNotes(mousePos, monitorInfo, ns.length);
+            if (noteIsOpen) {
+                const ns = getCurrNotes();
+                const mousePos = System.getMousePosition();
+                const monitorInfo = getPrimaryMonitorAvailableRect();
+                const mouseOver = mouseisOverNotes(mousePos, monitorInfo, ns.length);
 
-            if (!mouseOver || req.data.force) {
-                closeNotification(req);
+                if (!mouseOver || req.data.force) {
+                    closeNotification(req);
 
+                } else {
+                    scheduleNoteClose(req, 1000);
+                }
             } else {
-                scheduleNoteClose(req, 1000);
+                removePendingNote(req.id);
             }
-        } else {
-            removePendingNote(req.id);
+        } catch (e) {
+            writeToLog('info', e);
         }
     });
 
@@ -390,7 +396,7 @@ function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: a
             },
             position: {
                 duration: POSITION_ANIMATION_DURATION,
-                top: (defaultTop - (numNotes - idx) * 90) + 50,
+                top: (defaultTop - (numNotes - idx) * NOTE_HEIGHT) + NOTE_TOP_MARGIN,
             },
         };
         const animationCallback = () => {
@@ -562,6 +568,13 @@ function routeRequest(id: any, msg: NotificationMessage, ack: any) {
 
         case NoteAction.animating:
             seqs.isAnimating.onNext(data);
+            break;
+
+        case NoteAction.qQuery:
+            ack({
+                success: true,
+                data: pendindNotes.length
+            });
             break;
 
         default:

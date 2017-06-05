@@ -21,7 +21,6 @@ limitations under the License.
 let fs = require('fs');
 let path = require('path');
 
-let app = require('electron').app;
 let ResourceFetcher = require('electron').resourceFetcher;
 
 // npm modules
@@ -50,6 +49,7 @@ function five0BaseOptions() {
         'alwaysOnTop': false,
         'applicationIcon': '',
         'autoShow': false,
+        'backgroundThrottling': false,
         'contextMenu': true,
         'cornerRounding': {
             'height': 0,
@@ -70,6 +70,7 @@ function five0BaseOptions() {
         'hideWhileChildrenVisible': false,
         'icon': '',
         'launchExternal': '',
+        'loadErrorMessage': '',
         'maxHeight': -1,
         'maxWidth': -1,
         'maximizable': true,
@@ -98,7 +99,6 @@ function five0BaseOptions() {
         'backgroundColor': '#000'
     };
 }
-
 
 function isInContainer(type) {
     return process && process.versions && process.versions[type];
@@ -205,50 +205,50 @@ module.exports = {
         let newOptions = validateOptions(options);
 
         if (isInContainer('openfin')) {
-            newOptions['resizable'] = newOptions['resize'] && newOptions['resizable'];
-            newOptions['show'] = newOptions['autoShow'] && !newOptions['waitForPageLoad'];
-            newOptions['skipTaskbar'] = !newOptions['showTaskbarIcon'];
-            newOptions['title'] = newOptions['name'];
+            newOptions.resizable = newOptions.resize && newOptions.resizable;
+            newOptions.show = newOptions.autoShow && !newOptions.waitForPageLoad;
+            newOptions.skipTaskbar = !newOptions.showTaskbarIcon;
+            newOptions.title = newOptions.name;
 
-            let minHeight = newOptions['minHeight'];
-            let maxHeight = newOptions['maxHeight'];
-            let defaultHeight = newOptions['defaultHeight'];
+            let minHeight = newOptions.minHeight;
+            let maxHeight = newOptions.maxHeight;
+            let defaultHeight = newOptions.defaultHeight;
             if (defaultHeight < minHeight) {
-                newOptions['height'] = minHeight;
+                newOptions.height = minHeight;
             } else if (maxHeight !== -1 && defaultHeight > maxHeight) {
-                newOptions['height'] = maxHeight;
+                newOptions.height = maxHeight;
             } else {
-                newOptions['height'] = defaultHeight;
+                newOptions.height = defaultHeight;
             }
 
-            let defaultWidth = newOptions['defaultWidth'];
-            let minWidth = newOptions['minWidth'];
-            let maxWidth = newOptions['maxWidth'];
+            let defaultWidth = newOptions.defaultWidth;
+            let minWidth = newOptions.minWidth;
+            let maxWidth = newOptions.maxWidth;
             if (defaultWidth < minWidth) {
-                newOptions['width'] = minWidth;
+                newOptions.width = minWidth;
             } else if (maxWidth !== -1 && defaultWidth > maxWidth) {
-                newOptions['width'] = maxWidth;
+                newOptions.width = maxWidth;
             } else {
-                newOptions['width'] = defaultWidth;
+                newOptions.width = defaultWidth;
             }
 
-            newOptions['center'] = newOptions['defaultCentered'];
-            if (!newOptions['center']) {
-                newOptions['x'] = newOptions['defaultLeft'];
-                newOptions['y'] = newOptions['defaultTop'];
+            newOptions.center = newOptions.defaultCentered;
+            if (!newOptions.center) {
+                newOptions.x = newOptions.defaultLeft;
+                newOptions.y = newOptions.defaultTop;
             }
         }
 
         // Electron BrowserWindow options
-        newOptions['enableLargerThanScreen'] = true;
+        newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
-        newOptions['webPreferences'] = {
+        newOptions.webPreferences = {
             nodeIntegration: false,
-            plugins: newOptions['plugins']
+            plugins: newOptions.plugins
         };
 
-        if (coreState.argo['disable-web-security'] || newOptions['webSecurity'] === false) {
-            newOptions['webPreferences'].webSecurity = false;
+        if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
+            newOptions.webPreferences.webSecurity = false;
         }
 
         if (options.message !== undefined) {
@@ -267,7 +267,6 @@ module.exports = {
             newOptions.preload = options.preload;
         }
 
-        app.vlog(1, JSON.stringify(newOptions));
         if (returnAsString) {
             return JSON.stringify(newOptions);
         } else {
@@ -316,7 +315,7 @@ module.exports = {
         }
 
         if (regex.isURL(configUrl)) {
-            return getURL(configUrl, (configObject) => {
+            return getURL(configUrl, configObject => {
                 onComplete({
                     configObject,
                     configUrl
@@ -326,7 +325,7 @@ module.exports = {
 
         let filepath = regex.isURI(configUrl) ? regex.uriToPath(configUrl) : configUrl;
 
-        return readFile(filepath, (configObject) => {
+        return readFile(filepath, configObject => {
             onComplete({
                 configObject,
                 configUrl

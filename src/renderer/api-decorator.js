@@ -25,6 +25,7 @@ limitations under the License.
 
     let renderFrameId = global.routingId;
     let customData = global.getFrameData(renderFrameId);
+    let isMainRenderFrame = global.isMainFrame;
     let glbl = global;
 
     let rqr = require;
@@ -352,7 +353,13 @@ limitations under the License.
         let winOpts = getWindowOptionsSync();
 
         window.addEventListener('unload', () => {
-            syncApiCall('on-window-unload');
+            ipc.send(renderFrameId, 'of-window-message', {
+                action: 'on-window-unload',
+                payload: {},
+                isSync: false,
+                singleFrameOnly: true,
+                isMainRenderFrame
+            });
         });
 
         showOnReady(glbl, winOpts);
