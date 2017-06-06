@@ -16,6 +16,7 @@ limitations under the License.
 let apiProtocolBase = require('./api_protocol_base.js');
 var InterApplicationBus = require('../../api/interappbus.js').InterApplicationBus;
 import ofEvents from '../../of_events';
+import route from '../../../common/route';
 
 function InterApplicationBusApiHandler() {
 
@@ -99,7 +100,7 @@ function InterApplicationBusApiHandler() {
 
             apiProtocolBase.registerSubscription(subscriptionObj.unsubscribe, ...subscriptionArgs);
 
-            ofEvents.once(`window/unload/${identity.uuid}/${identity.name}`, () => {
+            ofEvents.once(route.window('unload', identity.uuid, identity.name, false), () => {
                 apiProtocolBase.removeSubscription(...subscriptionArgs);
             });
         }
@@ -123,7 +124,7 @@ function InterApplicationBusApiHandler() {
             payload
         } = message;
 
-        InterApplicationBus.raiseSubscriberEvent(SUBSCRIBER_ADDED_EVENT, payload);
+        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.ADDED, payload);
         ack(successAck);
     }
 
@@ -132,7 +133,7 @@ function InterApplicationBusApiHandler() {
             payload
         } = message;
 
-        InterApplicationBus.raiseSubscriberEvent(SUBSCRIBER_REMOVED_EVENT, payload);
+        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.REMOVED, payload);
         ack(successAck);
     }
 
@@ -152,13 +153,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_ADDED_EVENT);
+                    sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.ADDED);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_ADDED_EVENT);
+                sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.ADDED);
             }
         });
 
@@ -170,13 +171,13 @@ function InterApplicationBusApiHandler() {
 
             if (directMsg) {
                 if (directedToId) {
-                    sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_REMOVED_EVENT);
+                    sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.REMOVED);
                 }
 
                 // else msg not directed at this identity, dont send it
 
             } else {
-                sendSubscriberEvent(connectionIdentity, subscriber, SUBSCRIBER_REMOVED_EVENT);
+                sendSubscriberEvent(connectionIdentity, subscriber, ofEvents.subscriber.REMOVED);
             }
 
         });
@@ -198,7 +199,7 @@ function InterApplicationBusApiHandler() {
     // As per 5.0 we blast out the subscriber-added and the subscriber-removed
     // envents. The following 2 hooks ensure that we continue to blast these out
     // for both external connections and js apps
-    ofEvents.on(`window/init-subscription-listeners`, (identity) => {
+    ofEvents.on(route.window('init-subscription-listeners'), (identity) => {
         initSubscriptionListeners(identity);
     });
 

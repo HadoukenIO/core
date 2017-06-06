@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-const externalAppplication = require('../external_application.js');
+import { ExternalApplication } from '../../api/external_application';
 const SubscriptionManager = require('../../subscription_manager.js').SubscriptionManager;
 const WebSocketStrategy = require('../transport_strategy/ws_strategy').WebSocketStrategy;
 const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrategy;
 
 import { default as RequestHandler } from '../transport_strategy/base_handler';
-import { ActionMap, MessagePackage } from '../transport_strategy/api_transport_base';
+import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { registerMiddleware as registerMeshMiddleware } from './mesh_middleware';
 import { meshEnabled } from '../../connection_manager';
+import { ApiPath, ApiFunc, EndpointSpec, ActionSpecMap, Endpoint, ActionMap } from '../shapes';
 
-const actionMap: ActionMap = {};
+export const actionMap: ActionMap = Object.create(null); // no prototype to avoid having to call hasOwnProperty()
+
 const requestHandler = new RequestHandler<MessagePackage>();
 
 if (meshEnabled) {
@@ -35,18 +37,56 @@ const webSocketStrategy = new WebSocketStrategy(actionMap, requestHandler);
 const elipcStrategy = new ElipcStrategy(actionMap, requestHandler);
 const subscriptionManager = new SubscriptionManager();
 
-export function registerActionMap(am: ActionMap) {
-    Object.getOwnPropertyNames(am).forEach(n => {
-        if (actionMap[n] === undefined) {
-            actionMap[n] = am[n];
+// `actionAPINameMap` has been removed in favor of a complex `actionMap`.
+// The API paths previously defined here (as string arrays) have been incorporated into `actionMap`
+// as `ApiPath` types (strings in dot notation) in calls to `registerActionMap`.
+// To see the full list search (globally) for "apiPath:"
+
+export function registerActionMap(
+    specs: ActionSpecMap,
+    authorizationPathPrefix?: string // dot notation
+) {
+    Object.getOwnPropertyNames(specs).forEach((key: string) => {
+        if (!actionMap[key]) {
+            const spec: EndpointSpec = specs[key];
+            let endpoint: Endpoint;
+
+            // resolve `spec` overloads: ApiFunc (function) vs. Endpoint (object containing `apiFunc` function)
+            if (typeof spec === 'function') {
+                endpoint = { apiFunc: <ApiFunc>spec };
+            } else if (typeof spec === 'object') {
+                endpoint = <Endpoint>spec;
+            } else {
+                throw new Error(`Expected action spec to be function or object but found ${typeof spec}`);
+            }
+
+            if (typeof endpoint.apiFunc !== 'function') {
+                throw new Error(`Expected endpoint.apiFunc to be function but found ${typeof endpoint.apiFunc}`);
+            }
+
+            let apiPath: ApiPath = endpoint.apiPath;
+            if (apiPath) {
+                if (apiPath[0] === '.') {
+                    // leading dot appends provided authorization prefix
+                    if (!authorizationPathPrefix) {
+                        throw new Error('Needed authorization prefix not provided on this call to registerActionMap');
+                    }
+                    apiPath = authorizationPathPrefix + apiPath;
+                } else if (apiPath.indexOf('.') < 0) {
+                    throw new Error('Expected "${apiPath}" to be an apiFunc (starts with dot) or an apiPath (contains dot)');
+                }
+                endpoint.apiPath = apiPath;
+            }
+
+            actionMap[key] = endpoint;
         } else {
-            throw new Error(`Key collision ${n} is already registered`);
+            throw new Error(`Key collision "${key}" is already registered`);
         }
     });
 }
 
 export function sendToIdentity(identity: any, payload: any) {
-    const externalConnection = externalAppplication.getExternalConnectionByUuid(identity.uuid);
+    const externalConnection = ExternalApplication.getExternalConnectionByUuid(identity.uuid);
 
     if (externalConnection) {
         // TODO confirm that this will always be an object on the way in here...

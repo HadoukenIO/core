@@ -52,6 +52,7 @@ import {
 } from '../navigation_validation';
 import * as log from '../log';
 let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
+import route from '../../common/route';
 
 // locals
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -86,12 +87,12 @@ electronApp.on('use-plugins-requested', event => {
 });
 
 electronApp.on('ready', function() {
-    console.log('RVM MESSAGE BUS READY');
-    rvmBus = require('../rvm/rvm_message_bus.js');
+    log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
+    rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
     MonitorInfo = require('../monitor_info.js');
 
     // listen to and broadcast 'broadcast' messages from RVM as an openfin app event
-    rvmBus.on('rvm-message-bus/broadcast/application/manifest-changed', payload => {
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'manifest-changed'), payload => {
         const manifests = payload && payload.manifests;
         if (manifests) {
             _.each(manifests, manifestObject => {
@@ -99,19 +100,19 @@ electronApp.on('ready', function() {
                 var json = manifestObject.json;
                 var uuid = coreState.getUuidBySourceUrl(sourceUrl);
                 if (uuid) {
-                    ofEvents.emit(eventRoute(uuid, 'manifest-changed'), sourceUrl, json);
+                    ofEvents.emit(route.application('manifest-changed', uuid), sourceUrl, json);
                 } else {
-                    console.log('Received manifest-changed event from RVM, unable to determine uuid from source url though:', sourceUrl);
+                    log.writeToLog(1, `Received manifest-changed event from RVM, unable to determine uuid from source url though: ${sourceUrl}`, true);
                 }
             });
         } else {
-            console.log('Received manifest-changed event from RVM with invalid data object: ', payload);
+            log.writeToLog(1, `Received manifest-changed event from RVM with invalid data object: ${payload}`, true);
         }
     });
 
 });
 
-Application.create = function(opts, configUrl = '', parentIdentify = {}) {
+Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
     let appUrl = opts.url;
@@ -140,7 +141,7 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
         throw new Error(`Application with specified UUID already exists: ${opts.uuid}`);
     }
 
-    let parentUuid = parentIdentify && parentIdentify.uuid;
+    let parentUuid = parentIdentity && parentIdentity.uuid;
     if (!validateNavigationRules(opts.uuid, appUrl, parentUuid, opts)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
@@ -151,8 +152,11 @@ Application.create = function(opts, configUrl = '', parentIdentify = {}) {
     }
 
     let appObj = createAppObj(opts.uuid, opts, configUrl);
-    if (parentIdentify && parentIdentify.uuid) {
-        appObj.parentUuid = parentIdentify.uuid;
+
+    if (parentIdentity && parentIdentity.uuid) {
+        let app = coreState.appByUuid(opts.uuid);
+
+        app.parentUuid = parentIdentity.uuid;
     }
 
     return appObj;
@@ -187,7 +191,7 @@ Application.addEventListener = function(identity, appEvent, listener) {
     //      automatically
 
     let uuid = identity.uuid;
-    let eventString = eventRoute(uuid, appEvent);
+    let eventString = route.application(appEvent, uuid);
     let errRegex = /^Attempting to call a function in a renderer window that has been closed or released/;
 
     let unsubscribe, safeListener, browserWinIsDead;
@@ -278,29 +282,31 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
 };
 
 
-Application.getManifest = function(identity, callback, errCallback) {
-    let appObject = coreState.getAppObjByUuid(identity.uuid);
-    let manifestUrl = appObject && appObject._configUrl;
-    let fetcher;
+Application.getManifest = function(identity, manifestUrl, callback, errCallback) {
+
+    // When manifest URL is not provided, get the manifest for the current application
+    if (!manifestUrl) {
+        const appObject = coreState.getAppObjByUuid(identity.uuid);
+        manifestUrl = appObject && appObject._configUrl;
+    }
 
     if (manifestUrl) {
-        fetcher = new ResourceFetcher('string');
-        fetcher.on('fetch-complete', (obj, status, data) => {
+        const fetcher = new ResourceFetcher('string');
+
+        fetcher.once('fetch-complete', (obj, status, data) => {
             try {
                 log.writeToLog(1, `application manifest ${manifestUrl}`, true);
                 log.writeToLog(1, data, true);
 
-                let manifest = JSON.parse(data);
+                const manifest = JSON.parse(data);
                 if (typeof callback === 'function') {
                     callback(manifest);
                 }
             } catch (err) {
                 errCallback(new Error(`Error parsing JSON from ${manifestUrl}`));
-            } finally {
-                fetcher.removeAllListeners('fetch-complete');
-                fetcher = null;
             }
         });
+
         // start async fetch
         fetcher.fetch(manifestUrl);
 
@@ -310,10 +316,12 @@ Application.getManifest = function(identity, callback, errCallback) {
 };
 
 Application.getParentApplication = function(identity) {
-    let appObject = coreState.getAppObjByUuid(identity.uuid);
-    if (appObject && appObject.parentUuid) {
-        return appObject.parentUuid;
-    }
+    const app = coreState.appByUuid(identity.uuid);
+    const {
+        parentUuid
+    } = app || {};
+
+    return parentUuid;
 };
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
@@ -372,7 +380,8 @@ Application.registerCustomData = function(identity, data, callback, errorCallbac
     } else if (!data || !data.userId || !data.organization) {
         errorCallback(new Error('\'userId\' and \'organization\' fields are required to send custom data'));
     } else {
-        let success = rvmBus.send('application', {
+        let success = rvmBus.publish({
+            topic: 'application',
             action: 'register-custom-data',
             sourceUrl: app._configUrl,
             runtimeVersion: System.getVersion(),
@@ -391,7 +400,7 @@ Application.registerCustomData = function(identity, data, callback, errorCallbac
 Application.removeEventListener = function(identity, type, listener /*, callback, errorCallback*/ ) {
     var app = Application.wrap(identity.uuid);
 
-    ofEvents.removeListener(eventRoute(app.id, type), listener);
+    ofEvents.removeListener(route.application(type, app.id), listener);
 };
 
 Application.removeTrayIcon = function(identity /*, callback, errorCallback*/ ) {
@@ -409,7 +418,7 @@ Application.restart = function(identity /*, callback, errorCallback*/ ) {
     try {
         Application.close(identity, true, () => {
             Application.run(identity, appObj._configUrl);
-            ofEvents.once(eventRoute(uuid, 'initialized'), function() {
+            ofEvents.once(route.application('initialized', uuid), function() {
                 coreState.setAppRestartingState(uuid, false);
             });
         });
@@ -438,17 +447,18 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
         app = Application.wrap(uuid),
         appState = coreState.appByUuid(uuid),
         mainWindowOpts = _.clone(app._options),
-        hideSplashTopic = eventRoute(uuid, 'hide-splashscreen'),
+        hideSplashTopic = route.application('hide-splashscreen', uuid),
         eventListenerStrings = [],
         sourceUrl = appState.appObj._configUrl,
         hideSplashListener = () => {
             let rvmPayload = {
+                topic: 'application',
                 action: 'hide-splashscreen',
                 sourceUrl
             };
 
             if (rvmBus) {
-                rvmBus.send('application', rvmPayload);
+                rvmBus.publish(rvmPayload);
             }
         },
         appEventsForRVM = ['started', 'closed', 'ready', 'run-requested', 'crashed', 'error', 'not-responding', 'out-of-memory'],
@@ -458,6 +468,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
             }
             let type = appEvent.type,
                 rvmPayload = {
+                    topic: 'application-event',
                     type,
                     sourceUrl
                 };
@@ -477,7 +488,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
             }
 
             if (rvmBus) {
-                rvmBus.send('application-event', JSON.stringify(rvmPayload));
+                rvmBus.publish(JSON.stringify(rvmPayload));
             }
         };
 
@@ -500,7 +511,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     // Set up RVM related listeners for events the RVM cares about
     ofEvents.on(hideSplashTopic, hideSplashListener);
     appEventsForRVM.forEach(appEvent => {
-        ofEvents.on(eventRoute(uuid, appEvent), sendAppsEventsToRVMListener);
+        ofEvents.on(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
     });
 
 
@@ -511,7 +522,6 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
 
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
-
         var pid = app.mainWindow.webContents.processId;
 
         if (pid) {
@@ -520,11 +530,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
             app._processInfo.getCpuUsage();
         }
 
-        ofEvents.emit(eventRoute(uuid, 'connected'), {
-            topic: 'application',
-            type: 'connected',
-            uuid
-        });
+        ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
     });
 
     // turn on plugins for the main window
@@ -543,16 +549,11 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
 
     // If you are the last app to close, take the runtime with you.
     // app will need to consider remote connections shortly...
-    ofEvents.once(`window/closed/${uuid}-${uuid}`, () => {
-
+    ofEvents.once(route.window('closed', uuid, uuid), () => {
         delete fetchingIcon[uuid];
         removeTrayIcon(app);
 
-        ofEvents.emit(eventRoute(uuid, 'closed'), {
-            topic: 'application',
-            type: 'closed',
-            uuid
-        });
+        ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
 
         eventListenerStrings.forEach(eventString => {
             app.mainWindow.removeAllListeners(eventString);
@@ -564,7 +565,7 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
 
         ofEvents.removeAllListeners(hideSplashTopic);
         appEventsForRVM.forEach(appEvent => {
-            ofEvents.removeListener(eventRoute(uuid, appEvent), sendAppsEventsToRVMListener);
+            ofEvents.removeListener(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
         });
 
         coreState.removeApp(app.id);
@@ -580,7 +581,6 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
                         Application.close(a.identity, true);
                     }
                 }
-                rvmBus.closeTransport();
 
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {
@@ -602,41 +602,37 @@ Application.run = function(identity, configUrl = '' /*, callback , errorCallback
     });
 
     app.mainWindow.webContents.on('crashed', () => {
-        ofEvents.emit(eventRoute(uuid, 'crashed'), {
-            topic: 'application',
-            type: 'crashed',
-            uuid
-        });
-
-        ofEvents.emit(eventRoute(uuid, 'out-of-memory'), {
-            topic: 'application',
-            type: 'out-of-memory',
-            uuid
-        });
+        ofEvents.emit(route.application('crashed', uuid), { topic: 'application', type: 'crashed', uuid });
+        ofEvents.emit(route.application('out-of-memory', uuid), { topic: 'application', type: 'out-of-memory', uuid });
     });
 
     app.mainWindow.on('responsive', () => {
-        ofEvents.emit(eventRoute(uuid, 'responding'), {
-            topic: 'application',
-            type: 'responding',
-            uuid
-        });
+        ofEvents.emit(route.application('responding', uuid), { topic: 'application', type: 'responding', uuid });
     });
 
     app.mainWindow.on('unresponsive', () => {
-        ofEvents.emit(eventRoute(uuid, 'not-responding'), {
-            topic: 'application',
-            type: 'not-responding',
-            uuid
-        });
+        ofEvents.emit(route.application('not-responding', uuid), { topic: 'application', type: 'not-responding', uuid });
     });
 
     coreState.setAppRunningState(uuid, true);
 
-    ofEvents.emit(eventRoute(uuid, 'started'), {
+    ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+};
+
+/**
+ * Run an application via RVM
+ */
+Application.runWithRVM = function(identity, manifestUrl) {
+    const ancestor = coreState.getAppAncestor(identity.uuid);
+    const ancestorManifestUrl = ancestor && ancestor._configUrl;
+
+    return sendToRVM({
         topic: 'application',
-        type: 'started',
-        uuid
+        action: 'launch-app',
+        sourceUrl: ancestorManifestUrl,
+        data: {
+            configUrl: manifestUrl
+        }
     });
 };
 
@@ -693,7 +689,7 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
                 const iconImage = nativeImage.createFromPath(iconFilepath);
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
-                const clickedRoute = eventRoute(app.uuid, 'tray-icon-clicked');
+                const clickedRoute = route.application('tray-icon-clicked', app.uuid);
 
                 const getData = (bounds, source) => {
                     const data = {
@@ -714,7 +710,7 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
                 };
 
                 const hoverHandler = (event, bounds) => {
-                    ofEvents.emit(eventRoute(app.uuid, 'tray-icon-hovering'), getData(bounds));
+                    ofEvents.emit(route.application('tray-icon-hovering', app.uuid), getData(bounds));
                 };
 
                 const listenerSignatures = [
@@ -771,7 +767,8 @@ Application.scheduleRestart = function(identity, callback, errorCallback) {
     } else if (!rvmBus) {
         errorCallback(new Error('cannot connect to the RVM'));
     } else {
-        let success = rvmBus.send('application', {
+        let success = rvmBus.publish({
+            topic: 'application',
             action: 'relaunch-on-close',
             sourceUrl: app._configUrl,
             runtimeVersion: System.getVersion()
@@ -792,14 +789,14 @@ Application.terminate = function(identity, callback) {
 Application.emitHideSplashScreen = function(identity) {
     var uuid = identity && identity.uuid;
     if (uuid) {
-        ofEvents.emit(eventRoute(uuid, 'hide-splashscreen'));
+        ofEvents.emit(route.application('hide-splashscreen', uuid));
     }
 };
 
 Application.emitRunRequested = function(identity) {
     var uuid = identity && identity.uuid;
     if (uuid) {
-        ofEvents.emit(eventRoute(uuid, 'run-requested'), {
+        ofEvents.emit(route.application('run-requested', uuid), {
             topic: 'application',
             type: 'run-requested',
             uuid
@@ -874,10 +871,10 @@ function broadcastOnAppConnected(targetIdentity) {
     }
 }
 
-ofEvents.on('window/dom-content-loaded/*', payload => {
+ofEvents.on(route.window('dom-content-loaded', '*'), payload => {
     broadcastAppLoaded(payload.data[0]);
 });
-ofEvents.on('window/connected/*', payload => {
+ofEvents.on(route.window('connected', '*'), payload => {
     broadcastOnAppConnected(payload.data[0]);
 });
 
@@ -908,6 +905,7 @@ function removeTrayIcon(app) {
 function createAppObj(uuid, opts, configUrl = '') {
     let appObj;
     let app = coreState.appByUuid(uuid);
+
     if (app && app.appObj) {
         appObj = app.appObj;
     } else {
@@ -973,7 +971,7 @@ function createAppObj(uuid, opts, configUrl = '') {
                     log.writeToLog(1, `receiving net error ${errorCode} for ${opts.uuid}`, true);
                     if (!coreState.argo['noerrdialog'] && configUrl) {
                         // NOTE: don't show this dialog if the app is created via the api
-                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application.';
+                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application: ${ errorDescription }';
                         dialog.showErrorBox('Fatal Error', errorMessage);
                     }
                     _.defer(() => {
@@ -1025,7 +1023,7 @@ function createAppObj(uuid, opts, configUrl = '') {
         }
         coreState.setAppObj(appObj.id, appObj);
 
-        ofEvents.emit(eventRoute(uuid, 'created'), {
+        ofEvents.emit(route.application('created', uuid), {
             topic: 'application',
             type: 'application-created',
             uuid
@@ -1040,10 +1038,6 @@ function isURI(str) {
 
 function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
-}
-
-function eventRoute(id, name) {
-    return `application/${name}/${id}`;
 }
 
 module.exports.Application = Application;

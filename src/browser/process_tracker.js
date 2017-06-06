@@ -13,21 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-let EventEmitter = require('events').EventEmitter;
 let fs = require('fs');
 let path = require('path');
-let util = require('util');
 
 let eApp = require('electron').app;
 let ExternalProcess = require('electron').externalProcess;
 let ProcessMonitor = require('electron').processMonitor;
 
 import ofEvents from './of_events';
+import route from '../common/route';
 
 const isWin32 = (process.platform === 'win32');
 
 function ProcessTracker() {
-    EventEmitter.call(this);
 
     // map of pids to process objects
     this._processes = {};
@@ -43,15 +41,27 @@ function ProcessTracker() {
         var winName = this._processes[pid].window.name;
         var uuid = this._processes[pid].uuid;
 
-        this.emit(`synth-process-terminated/${winUuid}-${winName}`, {
+        var result = {
             exitCode,
             processUuid: uuid,
-        });
+        };
+
+        ofEvents.emit(route.externalApplication('exited', uuid), Object.assign(result, {
+            topic: 'external-application',
+            type: 'exited'
+        }));
+
+        ofEvents.emit(route.window('external-process-exited', winUuid, winName), Object.assign(result, {
+            uuid: winUuid,
+            name: winName,
+            topic: 'window',
+            type: 'external-process-exited'
+        }));
 
         this._cleanup(pid, uuid);
     });
 
-    ofEvents.on('window/synth-close/*', payload => {
+    ofEvents.on(route.window('synth-close', '*'), payload => {
         if (this._windowToUuids[payload.source]) {
             let processes = this._windowToUuids[payload.source].slice(0);
             processes.forEach(uuid => {
@@ -61,31 +71,49 @@ function ProcessTracker() {
     });
 }
 
-util.inherits(ProcessTracker, EventEmitter);
-
-ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
+ProcessTracker.prototype.launch = function(identity, options, errDataCallback) {
     let eProcess = new ExternalProcess();
     let procObj;
 
-    var uuid = generateUuid();
+    var uuid = options.uuid || generateUuid();
 
-    let error = (msg) => {
-        eApp.vlog(1, msg);
-        resolve(msg);
+    let success = (data) => {
+        var windowUuid = identity.uuid;
+        var windowName = identity.name;
+
+        errDataCallback(undefined, data);
+
+        ofEvents.emit(route.externalApplication('started', data.uuid), {
+            uuid: data.uuid,
+            topic: 'external-application',
+            type: 'started'
+        });
+
+        ofEvents.emit(route.window('external-process-started', windowUuid, windowName), {
+            uuid: windowUuid,
+            name: windowName,
+            topic: 'window',
+            type: 'external-process-started',
+            processUuid: data.uuid
+        });
     };
 
-    let withDefaultCertOptions = (raw) => {
-        let options = raw || {};
-        return {
-            publicKey: options.publicKey || '',
-            serial: options.serial || '',
-            subject: options.subject || '',
-            thumbprint: options.thumbprint || '',
-            trusted: options.trusted || false
-        };
+    let error = (errObj) => {
+        eApp.vlog(1, errObj);
+        errDataCallback(errObj, undefined);
     };
 
-    let validateCertificate = (filePath, options) => {
+    let withDefaultCertOptions = (certOptions) => {
+        return Object.assign({
+            publicKey: '',
+            serial: '',
+            subject: '',
+            thumbprint: '',
+            trusted: false
+        }, certOptions);
+    };
+
+    let validateCertificate = (filePath, certOptions) => {
         let response = {
             publicKey: true,
             serial: true,
@@ -100,7 +128,7 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
             let checkSignatureAndUpdateForError = (nativeSubject, key) => {
                 let valueKey = key || nativeSubject;
                 response[valueKey] = true;
-                let value = options[valueKey];
+                let value = certOptions[valueKey];
                 if (value) {
                     if (!eApp.compareFileSignature(filePath, nativeSubject, value)) {
                         response.error = (response.error || '') + `${valueKey} does not match. `;
@@ -109,7 +137,7 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
                 }
             };
 
-            if (options.trusted) {
+            if (certOptions.trusted) {
                 let result = eApp.verifyFileSignature(filePath, 1, 0x10);
                 if (result !== 'success') {
                     response.trusted = false;
@@ -133,7 +161,7 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
             args = expandEnvironmentVars(args);
             cwd = expandEnvironmentVars(cwd);
 
-            let parentWindowUuidName = getParentWindowUuidName(winIdentity, config.lifetime);
+            let parentWindowUuidName = getParentWindowUuidName(identity, options.lifetime);
 
             procObj = eProcess.launch(fpath, cwd, args, !!parentWindowUuidName);
 
@@ -151,50 +179,44 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
 
             this._processes[procObj.id] = {
                 process: procObj,
-                window: winIdentity,
-                lifetime: config.lifetime,
-                uuid
+                window: identity,
+                lifetime: options.lifetime,
+                uuid,
+                monitor: true
             };
 
             this._uuidToPid[uuid] = procObj.id;
 
-            this.emit(`synth-process-started/${winIdentity.uuid}-${winIdentity.name}`, {
-                processUuid: uuid
-            });
-
-            resolve(undefined, {
+            success({
                 uuid
             });
+
         } else {
             error(certResult.error);
         }
     };
 
+    if (this._uuidToPid[uuid]) {
+        return error(`Process with specified UUID already exists: ${uuid}`);
+    }
+
     // app asset request
-    if (config.alias) {
+    if (options.alias) {
         // Fetch app asset from RVM
-        var AppAssetsFetcher = require('./rvm/runtime_initiated_topics/app_assets.js');
-        AppAssetsFetcher.fetchAppAsset(config.srcUrl, config.alias, (aliasJsonObject) => {
-            var exeArgs = config.arguments || aliasJsonObject.args || '';
-            var exePath = path.join(aliasJsonObject.path, (config.target || aliasJsonObject.target)); // launchExternal target takes precedence
+        var appAssetsFetcher = require('./rvm/runtime_initiated_topics/app_assets').appAssetsFetcher;
+        appAssetsFetcher.fetchAppAsset(options.srcUrl, options.alias, (aliasJsonObject) => {
+            var exeArgs = options.arguments || aliasJsonObject.args || '';
+            var exePath = path.join(aliasJsonObject.path, (options.target || aliasJsonObject.target)); // launchExternal target takes precedence
             var exeCwd = aliasJsonObject.path || '';
 
             // Override manifest values when explicitly provided via the API
-            let configCertOptions = config.certificate || {};
+            let configCertOptions = options.certificate || {};
             let overrideCertOptions = aliasJsonObject.certificate || {};
             Object.keys(configCertOptions).forEach((key) => {
                 overrideCertOptions[key] = configCertOptions[key];
             });
 
             let certificateOptions = withDefaultCertOptions(overrideCertOptions);
-
-            /*var exeOptions = {
-                cwd: aliasJsonObject.path
-            };
-
-            if (aliasJsonObject.variables) {
-                exeOptions.env = aliasJsonObject.variables;
-            }*/
 
             fs.stat(exePath, (err, stats) => {
                 if (err) {
@@ -216,9 +238,9 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
             error('Could not query application assets.');
         });
     } else {
-        let args = config.arguments || '';
-        let filePath = config.target || config.path || '';
-        let certificateOptions = withDefaultCertOptions(config.certificate);
+        let args = options.arguments || '';
+        let filePath = options.target || options.path || '';
+        let certificateOptions = withDefaultCertOptions(options.certificate);
 
         if (filePath) {
             if (path.isAbsolute(filePath)) {
@@ -238,36 +260,57 @@ ProcessTracker.prototype.launch = function(winIdentity, config, resolve) {
     }
 };
 
-ProcessTracker.prototype.monitor = function(winIdentity, pid, lifetime) {
-    if (this._processes[pid]) {
-        throw new Error(`Error monitoring external process, already monitoring pid: '${pid}'`);
+ProcessTracker.prototype.monitor = function(winIdentity, options) {
+    let {
+        pid: pidRequested,
+        uuid: uuidRequested,
+        lifetime,
+        monitor: monitorRequested,
+    } = options;
+
+    let pid = parseInt(pidRequested, 10);
+    let processEntry = this._processes[pid] || {};
+
+    if (isNaN(pid)) {
+        throw new Error(`Error monitoring external process, invalid pid value specified.`);
     }
+
+    if (monitorRequested && processEntry.monitor) {
+        throw new Error(`Error monitoring external process, already monitoring pid: '${pid}'.`);
+    }
+
+    if (uuidRequested && processEntry.uuid && processEntry.uuid !== uuidRequested) {
+        throw new Error(`Error monitoring external process, pid '${pid}' previously assigned a different UUID.`);
+    }
+
+    let uuid = processEntry.uuid || uuidRequested || generateUuid();
+    let monitor = processEntry.monitor || monitorRequested;
 
     let eProcess = new ExternalProcess();
     let parentWindowUuidName = getParentWindowUuidName(winIdentity, lifetime);
     let procObj = eProcess.attach(pid);
-    let uuid = null;
 
-    if (procObj.handle) {
-        uuid = generateUuid();
-
-        if (parentWindowUuidName) {
-            let processes = this._windowToUuids[parentWindowUuidName] || [];
-            processes.push(uuid);
-            this._windowToUuids[parentWindowUuidName] = processes;
-        }
-
-        this._processMonitor.add(procObj);
-
-        this._processes[pid] = {
-            process: procObj,
-            window: winIdentity,
-            lifetime,
-            uuid
-        };
-
-        this._uuidToPid[uuid] = pid;
+    if (!procObj.handle) {
+        return;
     }
+
+    if (parentWindowUuidName) {
+        let processes = this._windowToUuids[parentWindowUuidName] || [];
+        processes.push(uuid);
+        this._windowToUuids[parentWindowUuidName] = processes;
+    }
+
+    this._processMonitor.add(procObj);
+
+    this._processes[pid] = {
+        process: procObj,
+        window: winIdentity,
+        lifetime,
+        uuid,
+        monitor
+    };
+
+    this._uuidToPid[uuid] = pid;
 
     return {
         uuid
@@ -285,8 +328,7 @@ ProcessTracker.prototype.release = function(uuid) {
         throw new Error(`Error releasing external process, cannot release nonpersistent processes`);
     }
 
-    this._processMonitor.remove(this._processes[pid].process);
-    this._cleanup(pid, uuid);
+    this._processes[pid].monitor = false;
 };
 
 ProcessTracker.prototype.terminate = function(uuid, timeout, child) {
@@ -297,6 +339,16 @@ ProcessTracker.prototype.terminate = function(uuid, timeout, child) {
     }
 
     return this._processes[pid].process.terminate(timeout, child);
+};
+
+ProcessTracker.prototype.getProcessByUuid = function(uuid) {
+    var pid = this._uuidToPid[uuid];
+
+    return pid ? this._processes[pid] : null;
+};
+
+ProcessTracker.prototype.getProcessByPid = function(pid) {
+    return this._processes[pid];
 };
 
 ProcessTracker.prototype._cleanup = function(pid, uuid) {

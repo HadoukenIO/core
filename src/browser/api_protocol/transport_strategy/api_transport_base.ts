@@ -13,15 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { NackPayloadTemplate, AckFunc } from './ack';
-import {default as RequestHandler} from './base_handler';
+import { NackPayload, AckFunc, NackFunc } from './ack';
+import { default as RequestHandler } from './base_handler';
+import { ActionMap } from '../shapes';
+import { Identity } from '../../../shapes';
+
+export { Identity };
+
 declare var require: any;
-
-const errors = require('../../../common/errors');
-
-export interface ActionMap {
-    [key: string]: Function;
-}
 
 export interface Identity {
     uuid: string;
@@ -36,8 +35,8 @@ export interface Identity {
 export interface MessagePackage {
     identity: Identity; // of the caller
     data: any;
-    ack: any;
-    nack: any;
+    ack: AckFunc;
+    nack: NackFunc;
     e?: any;
     strategyName: any; // ws / elipc
 }
@@ -66,18 +65,9 @@ export abstract class ApiTransportBase<T> {
 
     protected abstract ackDecoratorSync(e: any, messageId: number): AckFunc;
 
-    protected nackDecorator(ackFunction: AckFunc): AckFunc {
-        return (err: any) => {
-            const payload = new NackPayloadTemplate();
-
-            if (typeof(err) === 'string') {
-                payload.reason = err;
-            } else {
-                const errorObject = errors.errorToPOJO(err);
-                payload.reason = errorObject.toString();
-                payload.error = errorObject;
-            }
-            ackFunction(payload);
+    protected nackDecorator(ackFunction: AckFunc): (err: Error | string) => void {
+        return (err: Error | string) => {
+            ackFunction(new NackPayload(err));
         };
     }
 }

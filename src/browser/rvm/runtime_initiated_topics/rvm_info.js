@@ -4,7 +4,7 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-let RvmMessageBus = require('../rvm_message_bus.js');
+let RvmMessageBus = require('../rvm_message_bus').rvmMessageBus;
 let _ = require('underscore');
 const moduleTopic_ = 'system';
 const moduleAction_ = 'get-rvm-info';
@@ -136,13 +136,16 @@ let RvmInfoFetcher = function() {
         });
 
         if (isFirstRequester) {
+
             let rvmPayload = {
+                topic: moduleTopic_,
                 action: moduleAction_,
+                timeToLive: moduleTimeToLive_,
                 sourceUrl
             };
 
             if (RvmMessageBus) {
-                RvmMessageBus.send(moduleTopic_, rvmPayload, responseHandler, moduleTimeToLive_);
+                RvmMessageBus.publish(rvmPayload, responseHandler);
             }
         }
     };

@@ -56,6 +56,10 @@ import {
 
 import * as log from './src/browser/log';
 
+import {
+    applyAllRemoteSubscriptions
+} from './src/browser/remote_subscriptions';
+import route from './src/common/route';
 
 // locals
 let firstApp = null;
@@ -140,6 +144,8 @@ portDiscovery.on('runtime/launched', (portInfo) => {
             //one connected we broadcast our port discovery message.
             staggerPortBroadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
+
+            applyAllRemoteSubscriptions(runtimePeer);
 
         }).catch(err => {
             log.writeToLog('info', `Failed to connect to runtime ${JSON.stringify(portInfo)}, ${JSON.stringify(errors.errorToPOJO(err))}`);
@@ -254,8 +260,8 @@ app.on('ready', function() {
             name: ofWindow._options.name,
             uuid: ofWindow._options.uuid
         };
-        const windowEvtName = `window/auth-requested/${identity.uuid}-${identity.name}`;
-        const appEvtName = `application/window-auth-requested/${identity.uuid}`;
+        const windowEvtName = route.window('auth-requested', identity.uuid, identity.name);
+        const appEvtName = route.application('window-auth-requested', identity.uuid);
 
         authenticationDelegate.addPendingAuthRequests(identity, authInfo, callback);
         if (ofEvents.listeners(windowEvtName).length < 1 && ofEvents.listeners(appEvtName).length < 1) {
@@ -290,26 +296,26 @@ app.on('ready', function() {
         }
     });
 
-    rvmBus.on('rvm-message-bus/broadcast/download-asset/progress', payload => {
+    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'progress'), payload => {
         if (payload) {
-            ofEvents.emit(`system/asset-download-progress-${payload.downloadId}`, {
+            ofEvents.emit(route.system(`asset-download-progress-${payload.downloadId}`), {
                 totalBytes: payload.totalBytes,
                 downloadedBytes: payload.downloadedBytes
             });
         }
     });
 
-    rvmBus.on('rvm-message-bus/broadcast/download-asset/error', payload => {
+    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'error'), payload => {
         if (payload) {
-            ofEvents.emit(`system/asset-download-error-${payload.downloadId}`, {
+            ofEvents.emit(route.system(`asset-download-error-${payload.downloadId}`), {
                 reason: payload.error,
                 err: errors.errorToPOJO(new Error(payload.error))
             });
         }
     });
-    rvmBus.on('rvm-message-bus/broadcast/download-asset/complete', payload => {
+    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'complete'), payload => {
         if (payload) {
-            ofEvents.emit(`system/asset-download-complete-${payload.downloadId}`, {
+            ofEvents.emit(route.system(`asset-download-complete-${payload.downloadId}`), {
                 path: payload.path
             });
         }
@@ -528,14 +534,17 @@ function initFirstApp(options, configUrl) {
         log.writeToLog(1, error, true);
 
         if (rvmBus) {
-            rvmBus.send('application', {
+            rvmBus.publish({
+                topic: 'application',
                 action: 'hide-splashscreen',
                 sourceUrl: configUrl
             });
         }
 
         if (!coreState.argo['noerrdialog']) {
-            const errorMessage = options.loadErrorMessage || 'There was an error loading the application.';
+            const srcMsg = error ? error.message : '';
+            const errorMessage = options.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
+
             dialog.showErrorBox('Fatal Error', errorMessage);
         }
 

@@ -1,4 +1,4 @@
-# OpenFin Core
+# Hadouken Core
 
 #### Requirements
 _The following setup is known to be working well. You can try other versions at your 
@@ -53,17 +53,17 @@ app.json
 }
 ```
 
-* Launch OpenFin once
+* Launch OpenFin runtime once
 ```bash
 openfin --config app.json --launch 
 ```
 
-* Replace the OpenFin core with a built core
+* Replace the OpenFin core with a built Hadouken core
 ```bash
 grunt deploy --target=C:\Users\[username]\AppData\Local\OpenFin\runtime\[replace this with a version]\OpenFin\resources
 ```
 
-* Now you can re-launch the OpenFin app with the modified OpenFin core.
+* Now you can re-launch the OpenFin runtime with the modified Hadouken core.
 ```bash
 openfin --config app.json --launch 
 ```
@@ -73,7 +73,12 @@ openfin --config app.json --launch
 
 * Set breakpoints and debug using Chrome (check node-inspector's documentation on how do it)
 
+### API Documentation
 
+API Docs for the OpenFin core are available here:
+
+Alpha: (http://cdn.openfin.co/jsdocs/alpha/)
+Stable: (http://cdn.openfin.co/jsdocs/stable/)
 
 ### File Structure Notes
 The contents of `/src/renderer/extended` folder is referenced by the `openfin.asar` (not contained in this project)
