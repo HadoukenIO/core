@@ -54,7 +54,6 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                     }
                 }
             }
-
         });
     }
 

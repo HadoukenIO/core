@@ -37,10 +37,6 @@ function InterApplicationBusApiHandler() {
             'subscriber-removed': subscriberRemoved
         };
 
-    //TODO: Figure out a way to share these keys beween interappbus api and handler.
-    const SUBSCRIBER_ADDED_EVENT = 'subscriber-added';
-    const SUBSCRIBER_REMOVED_EVENT = 'subscriber-removed';
-
     apiProtocolBase.registerActionMap(interAppBusExternalApiMap);
 
     function unsubscribe(identity, message, ack) {

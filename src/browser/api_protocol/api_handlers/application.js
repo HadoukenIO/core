@@ -31,7 +31,6 @@ import {
 } from '../../remote_subscriptions';
 import route from '../../../common/route';
 
-
 function ApplicationApiHandler() {
     let successAck = {
         success: true

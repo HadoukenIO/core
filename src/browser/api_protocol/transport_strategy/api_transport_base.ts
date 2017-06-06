@@ -22,12 +22,6 @@ export { Identity };
 
 declare var require: any;
 
-export interface Identity {
-    uuid: string;
-    name?: string;
-    runtimeUuid?: string;
-}
-
 /**
  * This represents the raw data that comes off the wire as well as the ack and
  * nack functions that get created at the strategy (elipc, ws, etc)
