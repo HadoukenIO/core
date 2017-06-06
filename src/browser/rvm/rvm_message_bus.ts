@@ -255,6 +255,8 @@ export class RVMMessageBus extends EventEmitter  {
             }
         }, licInfo);
 
+        log.writeToLog(1, payload, true);
+
         return this.publish(payload);
     }
 

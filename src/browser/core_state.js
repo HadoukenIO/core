@@ -124,6 +124,8 @@ function appByUuid(uuid) {
     return coreState.apps.find(app => uuid === app.uuid);
 }
 
+const getAppByUuid = appByUuid;
+
 function setAppRunningState(uuid, running) {
     const app = appByUuid(uuid);
     if (app) {
@@ -512,6 +514,30 @@ function getAppAncestor(descendantAppUuid) {
     }
 }
 
+function setLicenseKey(identity, licenseKey) {
+    const { uuid } = identity;
+    const app = getAppByUuid(uuid);
+
+    if (app) {
+        app.licenseKey = licenseKey;
+
+        return licenseKey;
+    } else {
+        return null;
+    }
+}
+
+function getLicenseKey(identity) {
+    const { uuid } = identity;
+    const app = getAppByUuid(uuid);
+
+    if (app) {
+        return app.licenseKey;
+    } else {
+        return null;
+    }
+}
+
 // methods
 module.exports = {
     addApp,
@@ -529,12 +555,14 @@ module.exports = {
     getAppByWin,
     getAppObj,
     getAppObjByUuid,
+    getAppByUuid,
     getUuidBySourceUrl,
     getConfigUrlByUuid,
     getAppRunningState,
     getAppRestartingState,
     getChildrenByApp,
     getChildrenByWinId,
+    getLicenseKey,
     getMainWindowOptions,
     getManifestProxySettings,
     getOfWindowByUuidName,
@@ -553,6 +581,7 @@ module.exports = {
     setAppOptions,
     setAppRunningState,
     setAppRestartingState,
+    setLicenseKey,
     setManifestProxySettings,
     setStartManifest,
     setWindowObj,

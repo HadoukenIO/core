@@ -534,8 +534,21 @@ Application.run = function(identity, configUrl = '') {
 
         const parentConfigUrl = coreState.getConfigUrlByUuid(uuid);
 
+        // First check the local option set for any license info, then check
+        // if any license info was stamped on the meta app obj (this is the case
+        // when the app was manifest launched), finally check the parent's meta
+        // obj. If any is found assign this to the current app's meta object. This
+        // will ensure it is carried forward to and descendant app launches.
+
+        let licenseKey = mainWindowOpts.licenseKey;
+
+        licenseKey = licenseKey || coreState.getLicenseKey({ uuid });
+        licenseKey = licenseKey || coreState.getLicenseKey({ uuid: appState.parentUuid });
+
+        coreState.setLicenseKey({ uuid }, licenseKey);
+
         rvmBus.registerLicenseInfo({
-            licenseKey: mainWindowOpts.licenseKey,
+            licenseKey,
             client: {
                 type: 'js',
                 pid
