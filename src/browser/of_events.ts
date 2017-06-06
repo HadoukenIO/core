@@ -14,14 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { EventEmitter } from 'events';
+import route from '../common/route';
 
 class OFEvents extends EventEmitter {
     constructor() {
         super();
     }
 
-    public emit(route: string, ...data: any[]) {
-        const tokenizedRoute = route.split('/');
+    public emit(routeString: string, ...data: any[]) {
+        const tokenizedRoute = routeString.split('/');
 
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
@@ -29,19 +30,28 @@ class OFEvents extends EventEmitter {
             const envelope = {channel, topic, source, data};
 
             // Wildcard on all topics of a channel (such as on the system channel)
-            super.emit(`${channel}/*`, envelope);
+            super.emit(route(channel, '*'), envelope);
 
             if (source) {
                 // Wildcard on any source of a channel/topic (ex: 'window/bounds-changed/*')
-                super.emit(`${channel}/${topic}/*`, envelope);
+                super.emit(route(channel, topic, '*'), envelope);
 
                 // Wildcard on any channel/topic of a specified source (ex: 'window/*/myUUID-myWindow')
-                super.emit(`${channel}/*/${source}`, envelope);
+                super.emit(route(channel, '*', source), envelope);
             }
         }
 
-        return super.emit(route, ...data);
+        return super.emit(routeString, ...data);
     }
+
+    public subscriber: StringMap = {
+        ADDED: 'subscriber-added',
+        REMOVED: 'subscriber-removed'
+    };
+}
+
+interface StringMap {
+    [key: string]: string;
 }
 
 export default new OFEvents();

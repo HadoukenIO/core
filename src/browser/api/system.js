@@ -13,25 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-let fs = require('fs');
-let os = require('os');
-let path = require('path');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const crypto = require('crypto');
 
-let electronApp = require('electron').app;
-let ResourceFetcher = require('electron').resourceFetcher;
-let session = require('electron').session;
-let shell = require('electron').shell;
+const electronApp = require('electron').app;
+const ResourceFetcher = require('electron').resourceFetcher;
+const session = require('electron').session;
+const shell = require('electron').shell;
 
-let _ = require('underscore');
-let convertOptions = require('../convert_options.js');
-let coreState = require('../core_state.js');
-let electronIPC = require('../transports/electron_ipc.js');
-let externalApplication = require('../api_protocol/external_application.js');
-let log = require('../log.js');
+const _ = require('underscore');
+const convertOptions = require('../convert_options.js');
+const coreState = require('../core_state.js');
+const electronIPC = require('../transports/electron_ipc.js');
+import {
+    ExternalApplication
+} from './external_application';
+const log = require('../log.js');
 import ofEvents from '../of_events';
-let ProcessTracker = require('../process_tracker.js');
+const ProcessTracker = require('../process_tracker.js');
+import route from '../../common/route';
 
-let defaultProc = {
+const defaultProc = {
     getCpuUsage: function() {
         return 0;
     },
@@ -71,18 +75,18 @@ let defaultSession;
 electronApp.on('ready', function() {
     MonitorInfo = require('../monitor_info.js');
     Session = require('../session').default;
-    rvmBus = require('../rvm/rvm_message_bus.js');
+    rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
 
     MonitorInfo.on('monitor-info-changed', payload => {
-        ofEvents.emit('system/monitor-info-changed', payload);
+        ofEvents.emit(route.system('monitor-info-changed'), payload);
     });
 
     Session.on('session-changed', payload => {
-        ofEvents.emit('system/session-changed', payload);
+        ofEvents.emit(route.system('session-changed'), payload);
     });
 
     Session.on('idle-state-changed', payload => {
-        ofEvents.emit('system/idle-state-changed', payload);
+        ofEvents.emit(route.system('idle-state-changed'), payload);
     });
 
     defaultSession = session.defaultSession;
@@ -91,51 +95,51 @@ electronApp.on('ready', function() {
 electronApp.on('synth-desktop-icon-clicked', payload => {
     payload.topic = 'system';
     payload.type = 'desktop-icon-clicked';
-    ofEvents.emit('system/desktop-icon-clicked', payload);
+    ofEvents.emit(route.system('desktop-icon-clicked'), payload);
 });
 
-ofEvents.on('application/created/*', payload => {
-    ofEvents.emit('system/application-created', {
+ofEvents.on(route.application('created', '*'), payload => {
+    ofEvents.emit(route.system('application-created'), {
         topic: 'system',
         type: 'application-created',
         uuid: payload.source
     });
 });
 
-ofEvents.on('application/started/*', payload => {
-    ofEvents.emit('system/application-started', {
+ofEvents.on(route.application('started', '*'), payload => {
+    ofEvents.emit(route.system('application-started'), {
         topic: 'system',
         type: 'application-started',
         uuid: payload.source
     });
 });
 
-ofEvents.on('application/closed/*', payload => {
-    ofEvents.emit('system/application-closed', {
+ofEvents.on(route.application('closed', '*'), payload => {
+    ofEvents.emit(route.system('application-closed'), {
         topic: 'system',
         type: 'application-closed',
         uuid: payload.source
     });
 });
 
-ofEvents.on('application/crashed/*', payload => {
-    ofEvents.emit('system/application-crashed', {
+ofEvents.on(route.application('crashed', '*'), payload => {
+    ofEvents.emit(route.system('application-crashed'), {
         topic: 'system',
         type: 'application-crashed',
         uuid: payload.source
     });
 });
 
-ofEvents.on('externalapplication/connected', payload => {
-    ofEvents.emit('system/external-application-connected', {
+ofEvents.on(route.externalApplication('connected'), payload => {
+    ofEvents.emit(route.system('external-application-connected'), {
         topic: 'system',
         type: 'external-application-connected',
         uuid: payload.uuid
     });
 });
 
-ofEvents.on('externalapplication/disconnected', payload => {
-    ofEvents.emit('system/external-application-disconnected', {
+ofEvents.on(route.externalApplication('disconnected'), payload => {
+    ofEvents.emit(route.system('external-application-disconnected'), {
         topic: 'system',
         type: 'external-application-disconnected',
         uuid: payload.uuid
@@ -143,11 +147,11 @@ ofEvents.on('externalapplication/disconnected', payload => {
 });
 
 module.exports.System = {
-    addEventListener: function(type, listener /*, callback, errorCallback */ ) {
-        ofEvents.on(`system/${type}`, listener);
+    addEventListener: function(type, listener) {
+        ofEvents.on(route.system(type), listener);
 
         var unsubscribe = () => {
-            ofEvents.removeListener(`system/${type}`, listener);
+            ofEvents.removeListener(route.system(type), listener);
         };
 
         return unsubscribe;
@@ -205,40 +209,68 @@ module.exports.System = {
         });
     },
     deleteCacheOnExit: function(callback, errorCallback) {
-        let data = {
-            folders: [{
-                name: electronApp.getPath('userData') // deleteIfEmpty defaults to false on RVM side
-            }, {
-                name: electronApp.getPath('userDataRoot'),
-                deleteIfEmpty: true
-            }]
-        };
+        const folders = [{
+            name: electronApp.getPath('userData') // deleteIfEmpty defaults to false on RVM side
+        }, {
+            name: electronApp.getPath('userDataRoot'),
+            deleteIfEmpty: true
+        }];
 
-        if (rvmBus.send('cleanup', JSON.stringify(data))) {
+        const publishSuccess = rvmBus.publish({
+            topic: 'cleanup',
+            folders
+        });
+
+        if (publishSuccess) {
             callback();
         } else {
             errorCallback('Failed to send a message to the RVM.');
         }
     },
-    exit: function( /*callback*/ ) {
+    exit: function() {
         electronApp.quit();
     },
-    getAllWindows: function( /*callback, errorCallback*/ ) {
+    getAllWindows: function() {
         return coreState.getAllWindows();
     },
-    getAllApplications: function( /*callback , errorCallback*/ ) {
+    getAllApplications: function() {
         return coreState.getAllApplications();
     },
-    getCommandLineArguments: function( /*callback, errorCallback*/ ) {
+    getCommandLineArguments: function() {
         return electronApp.getCommandLineArguments();
     },
-    getConfig: function( /*callback, errorCallback*/ ) {
+    getConfig: function() {
         return coreState.getStartManifest();
     },
-    getDeviceId: function( /*callback, errorCallback*/ ) {
+    getDeviceUserId: function() {
+        const hash = crypto.createHash('sha256');
+
+        let hostToken;
+        let username;
+
+        if (process.platform === 'darwin') {
+            hostToken = os.networkInterfaces().en0[0].mac;
+            username = process.env.USER;
+        } else {
+
+            // assume windows
+            hostToken = electronApp.getHostToken();
+            username = process.env.USERNAME;
+        }
+
+        if (!username || !hostToken) {
+            throw new Error(`One of username (${username}) or host token (${hostToken}) not defined`);
+        }
+
+        hash.update(hostToken);
+        hash.update(username);
+
+        return hash.digest('hex');
+    },
+    getDeviceId: function() {
         return electronApp.getHostToken();
     },
-    getEnvironmentVariable: function(varsToExpand /*, successCallback, errorCallback*/ ) {
+    getEnvironmentVariable: function(varsToExpand) {
         if (Array.isArray(varsToExpand)) {
             return varsToExpand.reduce(function(result, envVar) {
                 result[envVar] = process.env[envVar] || null;
@@ -330,13 +362,13 @@ module.exports.System = {
             }
         });
     },
-    getMonitorInfo: function( /*callback, errorCallback*/ ) {
+    getMonitorInfo: function() {
         return MonitorInfo.getInfo('api-query');
     },
-    getMousePosition: function( /*callback, errorCallback*/ ) {
+    getMousePosition: function() {
         return MonitorInfo.getMousePosition();
     },
-    getProcessList: function( /*callback, errorCallback*/ ) {
+    getProcessList: function() {
 
         let allApps = coreState.getAllApplications();
         let runningAps = allApps.filter(app => {
@@ -368,19 +400,19 @@ module.exports.System = {
         return processList;
     },
 
-    getProxySettings: function( /*callback, errorCallback*/ ) {
+    getProxySettings: function() {
         return {
             config: coreState.getManifestProxySettings(),
             system: session.defaultSession.getProxySettings()
         };
     },
     getRemoteConfig: function(url, callback, errorCallback) {
-        var fetcher = new ResourceFetcher('string');
+        const fetcher = new ResourceFetcher('string');
 
         fetcher.once('fetch-complete', (obj, status, data) => {
             if (status === 'success') {
                 try {
-                    var res = JSON.parse(data);
+                    const res = JSON.parse(data);
                     callback(res);
                 } catch (e) {
                     errorCallback(e);
@@ -392,7 +424,7 @@ module.exports.System = {
 
         fetcher.fetch(url);
     },
-    getVersion: function( /*callback, errorCallback*/ ) {
+    getVersion: function() {
         return process.versions['openfin'];
     },
     getRvmInfo: function(identity, callback, errorCallback) {
@@ -404,22 +436,19 @@ module.exports.System = {
         let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js');
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
     },
-    launchExternalProcess: function(identity, options, callback) {
+    launchExternalProcess: function(identity, options, errDataCallback) { // Node-style callback used here
         var appObject = coreState.getAppObjByUuid(identity.uuid);
         options.srcUrl = (appObject || {})._configUrl;
 
-        ProcessTracker.launch(identity, options, callback);
+        ProcessTracker.launch(identity, options, errDataCallback);
     },
     monitorExternalProcess: function(identity, options, callback, errorCallback) {
-        var pid = parseInt(options.pid);
+        var payload = ProcessTracker.monitor(identity, Object.assign({
+            monitor: true
+        }, options));
 
-        if (!isNaN(pid)) {
-            var payload = ProcessTracker.monitor(identity, pid, options.lifetime);
-            if (payload.uuid) {
-                callback(payload);
-            } else {
-                errorCallback('Error monitoring external process, pid: ' + options.pid);
-            }
+        if (payload) {
+            callback(payload);
         } else {
             errorCallback('Error monitoring external process, pid: ' + options.pid);
         }
@@ -430,14 +459,14 @@ module.exports.System = {
     debugLog: function(level, message) {
         return log.writeToLog(level, message, true);
     },
-    openUrlWithBrowser: function(url /*, callback, errorCallback*/ ) {
+    openUrlWithBrowser: function(url) {
         shell.openExternal(url);
     },
-    releaseExternalProcess: function(processUuid /*, callback, errorCallback*/ ) {
+    releaseExternalProcess: function(processUuid) {
         ProcessTracker.release(processUuid);
     },
-    removeEventListener: function(type, listener /* callback, errorCallback*/ ) {
-        ofEvents.removeListener(`system/${type}`, listener);
+    removeEventListener: function(type, listener) {
+        ofEvents.removeListener(route.system(type), listener);
     },
     showDeveloperTools: function(applicationUuid, windowName) {
         let winName, openfinWindow;
@@ -455,7 +484,7 @@ module.exports.System = {
         }
     },
 
-    showChromeNotificationCenter: function( /*callback, errorCallback*/ ) {},
+    showChromeNotificationCenter: function() {},
     terminateExternalProcess: function(processUuid, timeout = 3000, child = false) {
         let status = ProcessTracker.terminate(processUuid, timeout, child);
 
@@ -522,32 +551,43 @@ module.exports.System = {
         return ofEvents.emit(eventName, eventArgs);
     },
     downloadAsset: function(identity, asset, cb) {
-        let appObject = coreState.getAppObjByUuid(identity.uuid);
-        let srcUrl = (appObject || {})._configUrl;
-        let downloadId = module.exports.System.generateGUID().toString('hex');
-        let rvmMessage = {
+        const appObject = coreState.getAppObjByUuid(identity.uuid);
+        const srcUrl = (appObject || {})._configUrl;
+        const downloadId = asset.downloadId;
+
+        //setup defaults.
+        asset.args = asset.args || '';
+
+        const rvmMessage = {
+            topic: 'app-assets',
             type: 'download-asset',
             appConfig: srcUrl,
             showRvmProgressDialog: false,
             asset: asset,
             downloadId: downloadId
         };
-        if (rvmBus.send('app-assets', JSON.stringify(rvmMessage))) {
-            cb(null, downloadId);
 
-        } else {
+        const publishSuccess = rvmBus.publish(rvmMessage, response => {
+            if (response.error) {
+                cb(new Error(response.error));
+            } else {
+                cb();
+            }
+        });
+
+        if (!publishSuccess) {
             cb(new Error('RVM Message failed.'));
         }
     },
     getAllExternalApplications: function() {
-        return externalApplication.getAllExternalConnctions().map(eApp => {
+        return ExternalApplication.getAllExternalConnctions().map(eApp => {
             return {
                 uuid: eApp.uuid
             };
         });
     },
     resolveUuid: function(identity, uuid, cb) {
-        const externalConn = externalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);
+        const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);
         const app = coreState.getAppObjByUuid(uuid);
 
         if (externalConn) {

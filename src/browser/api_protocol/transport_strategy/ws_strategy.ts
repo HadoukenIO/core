@@ -4,13 +4,15 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-import { AckTemplate,  AckFunc } from './ack';
-import { ApiTransportBase, ActionMap, MessagePackage, Identity } from './api_transport_base';
-import {default as RequestHandler} from './base_handler';
+import { AckMessage,  AckFunc, AckPayload, NackPayload } from './ack';
+import { ApiTransportBase, MessagePackage, Identity } from './api_transport_base';
+import { default as RequestHandler } from './base_handler';
+import { Endpoint, ActionMap } from '../shapes';
+import route from '../../../common/route';
 
 declare var require: any;
 
-const externalApplication = require('../external_application');
+import { ExternalApplication } from '../../api/external_application';
 const socketServer = require('../../transports/socket_server').server;
 const system = require('../../api/system').System;
 
@@ -20,25 +22,30 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
         super(actionMap, requestHandler);
 
         this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
-
             const {identity, data, ack, nack, strategyName} = mp;
-            const action = this.actionMap[data.action];
 
             if (strategyName !== this.constructor.name) {
                 next();
-            } else if (typeof (action) === 'function') {
-
-                try {
-                    action(identity, data, ack, nack);
-                } catch (err) {
-                    nack(err);
+            } else {
+                const endpoint: Endpoint = actionMap[data.action];
+                if (endpoint) {
+                    Promise.resolve()
+                        .then(() => endpoint.apiFunc(identity, data, ack, nack))
+                        .then(result => {
+                            // older action calls will invoke ack internally, newer ones will return a value
+                            if (result !== undefined) {
+                                ack(new AckPayload(result));
+                            }
+                        }).catch(err => {
+                            ack(new NackPayload(err));
+                        });
                 }
             }
         });
     }
 
     public registerMessageHandlers(): void {
-        socketServer.on('connection/message', this.onMessage.bind(this));
+        socketServer.on(route.connection('message'), this.onMessage.bind(this));
     }
 
     public send(externalConnection: any, payload: any): void {
@@ -46,17 +53,17 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     public onClientAuthenticated(cb: Function): void {
-        socketServer.on('connection/authenticated', cb);
+        socketServer.on(route.connection('authenticated'), cb);
     }
 
     public onClientDisconnect(cb: Function): void {
-        socketServer.on('connection/close', cb);
+        socketServer.on(route.connection('close'), cb);
     }
 
     protected onMessage(id: number, data: any): void {
         const ack = this.ackDecorator(id, data.messageId);
         const nack = this.nackDecorator(ack);
-        const requestingConnection = externalApplication.getExternalConnectionById(id);
+        const requestingConnection = ExternalApplication.getExternalConnectionById(id);
         //Identity can have three states, the requestingConnection, originatorIdentity or null.
         let identity: Identity = null;
         if (requestingConnection) {
@@ -88,7 +95,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     protected ackDecorator(id: number, messageId: number): AckFunc {
-        const ackObj = new AckTemplate();
+        const ackObj = new AckMessage();
         return (payload: any) => {
             ackObj.payload = payload;
             ackObj.correlationId = messageId;

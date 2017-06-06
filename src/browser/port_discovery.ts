@@ -8,6 +8,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import { WMCopyData, ChromiumIPC } from './transport';
 import { EventEmitter } from 'events';
 import * as log from './log';
+import route from '../common/route';
 
 const coreState = require('./core_state');
 const windowClassName = 'OPENFIN_ADAPTER_WINDOW';
@@ -42,7 +43,7 @@ export class PortDiscovery extends EventEmitter {
 
             this._copyDataTransport = new WMCopyData(windowClassName, windowClassName);
             this._copyDataTransport.on('message', (s: any, data: string) => {
-                this.emit('runtime/launched', JSON.parse(data));
+                this.emit(route.runtime('launched'), JSON.parse(data));
             });
         }
 

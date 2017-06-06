@@ -25,55 +25,23 @@ let apiProtocolBase = require('./api_protocol_base.js');
 let Window = require('../../api/window.js').Window;
 let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
-let ExternalApplication = require('../../api/external_application.js').ExternalConnections;
+import {
+    ExternalApplication
+} from '../../api/external_application';
 import {
     default as connectionManager
 } from '../../connection_manager';
 const coreState = require('../../core_state');
-import * as log from '../../log';
-import {
-    default as ofEvents
-} from '../../of_events';
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
+
+import {
+    addRemoteSubscription
+} from '../../remote_subscriptions';
 
 // locals
 const successAck = {
     success: true
 };
-
-
-function addRemoteWindowListener(fin, targetWindowIdentity, type) {
-    const topic = 'window';
-    const {
-        uuid,
-        name
-    } = targetWindowIdentity;
-    const remoteWin = fin.Window.wrap(targetWindowIdentity);
-    const handler = (remoteResponse) => {
-        ofEvents.emit(`${topic}/${type}/${uuid}-${name}`, remoteResponse);
-    };
-
-    remoteWin.on(type, handler);
-
-    return remoteWin.removeListener.bind(remoteWin, type, handler);
-}
-
-
-function addRemoteApplicationListener(fin, targetAppIdentity, type) {
-    const topic = 'application';
-    const {
-        uuid
-    } = targetAppIdentity;
-    const remoteApp = fin.Application.wrap(targetAppIdentity);
-    const handler = (remoteResponse) => {
-        ofEvents.emit(`${topic}/${type}/${uuid}`, remoteResponse);
-    };
-
-    remoteApp.on(type, handler);
-
-    return remoteApp.removeListener.bind(remoteApp, type, handler);
-}
-
 
 function isBrowserClient(uuid) {
     return connectionManager.connections.map((conn) => {
@@ -93,76 +61,70 @@ function EventListenerApiHandler() {
         'window': {
             name: 'window',
             subscribe: function(identity, type, payload, cb) {
+                const {
+                    uuid,
+                    name
+                } = payload;
                 const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
                 const targetUuid = windowIdentity.uuid;
                 const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
                 const localUnsub = Window.addEventListener(identity, windowIdentity, type, cb);
-                const remoteUnsubs = [];
+                let remoteUnSub;
                 const isExternalClient = isBrowserClient(identity.uuid);
 
                 if (!islocalWindow && !isExternalClient) {
-                    try {
-                        connectionManager.resolveIdentity({
-                                uuid: targetUuid
-                            })
-                            .then((id) => {
-                                const unsub = addRemoteWindowListener(id.runtime.fin, windowIdentity, type);
-                                remoteUnsubs.push(unsub);
-                            })
-                            .catch(() => {
-                                connectionManager.connections.forEach((conn) => {
-                                    const unsub = addRemoteWindowListener(conn.fin, windowIdentity, type);
-                                    remoteUnsubs.push(unsub);
-                                });
-                            });
-                    } catch (e) {
+                    const subscription = {
+                        uuid,
+                        name,
+                        listenType: 'on',
+                        className: 'window',
+                        eventName: type
+                    };
 
-                        // something failed asking for the remote
-                        log.writeToLog('info', e.message);
-                    }
+                    addRemoteSubscription(subscription).then(unSubscribe => {
+                        remoteUnSub = unSubscribe;
+                    });
                 }
 
                 return () => {
                     localUnsub();
-                    remoteUnsubs.forEach(unsub => unsub());
+                    if (typeof remoteUnSub === 'function') {
+                        remoteUnSub();
+                    }
                 };
             }
         },
         'application': {
             name: 'application',
             subscribe: function(identity, type, payload, cb) {
+                const {
+                    uuid
+                } = payload;
                 const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
                 const targetUuid = appIdentity.uuid;
                 const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
                 const localUnsub = Application.addEventListener(appIdentity, type, cb);
-                const remoteUnsubs = [];
+                let remoteUnSub;
                 const isExternalClient = isBrowserClient(identity.uuid);
 
                 if (!islocalApp && !isExternalClient) {
-                    try {
-                        connectionManager.resolveIdentity({
-                                uuid: targetUuid
-                            })
-                            .then((id) => {
-                                const unsub = addRemoteApplicationListener(id.runtime.fin, appIdentity, type);
-                                remoteUnsubs.push(unsub);
-                            })
-                            .catch(() => {
-                                connectionManager.connections.forEach((conn) => {
-                                    const unsub = addRemoteApplicationListener(conn.fin, appIdentity, type);
-                                    remoteUnsubs.push(unsub);
-                                });
-                            });
-                    } catch (e) {
+                    const subscription = {
+                        uuid,
+                        listenType: 'on',
+                        className: 'application',
+                        eventName: type
+                    };
 
-                        // something failed asking for the remote
-                        log.writeToLog('info', 'error requesting non local application' + e.message);
-                    }
+                    addRemoteSubscription(subscription).then(unSubscribe => {
+                        remoteUnSub = unSubscribe;
+                    });
                 }
 
                 return () => {
                     localUnsub();
-                    remoteUnsubs.forEach(unsub => unsub());
+                    if (typeof remoteUnSub === 'function') {
+                        remoteUnSub();
+                    }
                 };
             }
         },
@@ -178,8 +140,8 @@ function EventListenerApiHandler() {
                 return addNoteListener(identity, type, payload, cb);
             }
         },
-        'externalapplication': {
-            name: 'externalapplication',
+        'external-application': {
+            name: 'external-application',
             subscribe: function(identity, type, payload, cb) {
                 let externalAppIdentity = {
                     uuid: payload.uuid

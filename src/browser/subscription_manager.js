@@ -15,6 +15,7 @@ limitations under the License.
 */
 var _ = require('underscore');
 import ofEvents from './of_events';
+import route from '../common/route';
 
 function SubscriptionManager() {
     var subscriptionList = new Map();
@@ -84,11 +85,11 @@ function SubscriptionManager() {
         subscriptionList.delete(identityKey);
     }
 
-    ofEvents.on(`window/closed`, identity => {
+    ofEvents.on(route.window('closed'), identity => {
         removeAllSubscriptions(identity);
     });
 
-    ofEvents.on(`externalconn/closed`, identity => {
+    ofEvents.on(route('externalconn', 'closed'), identity => {
         removeAllSubscriptions(identity);
     });
 

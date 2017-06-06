@@ -5,11 +5,7 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import { app } from 'electron';
-
-let rvmBus: any;
-app.on('ready', function() {
-    rvmBus = require('../rvm/rvm_message_bus.js');
-});
+import {rvmMessageBus, LaunchApp, GetShortcutState, SetShortcutState, LaunchedFrom, RvmMsgBase} from '../rvm/rvm_message_bus';
 
 /**
  * Interface for [sendToRVM] method
@@ -17,7 +13,7 @@ app.on('ready', function() {
 interface SendToRVMOpts {
     topic: 'application';
     action: string;
-    sourceUrl: string;
+    sourceUrl?: string;
     data?: any;
 }
 
@@ -26,25 +22,13 @@ interface SendToRVMOpts {
  */
 export function sendToRVM(opts: SendToRVMOpts): Promise<any> {
     return new Promise((resolve, reject) => {
-        const {
-            topic,
-            action,
-            sourceUrl, // manifest url
-            data
-        } = opts;
-
-        const payload = {
-            action,
-            sourceUrl,
-            data
-        };
 
         // Make sure there is a connection with RVM
-        if (!rvmBus) {
+        if (!rvmMessageBus) {
             return reject(new Error('Connection with RVM is not established'));
         }
 
-        const messageSent = rvmBus.send(topic, payload, (rvmResponse: any) => {
+        const messageSent = rvmMessageBus.publish(Object.assign({timeToLive: 1000}, opts), (rvmResponse: any) => {
 
             // Don't do anything here because the message wasn't sent successfully to RVM
             // and we already sent error callback to the client
@@ -67,28 +51,23 @@ export function sendToRVM(opts: SendToRVMOpts): Promise<any> {
                 return reject(new Error(rvmResponse.error));
             }
 
-            // Communication error
-            if (!rvmResponse.hasOwnProperty('payload')) {
-                return reject(new Error('Problem communicating with RVM'));
-            }
-
             // Action execution error
-            if (rvmResponse.payload.status === false) {
+            if (rvmResponse.payload && rvmResponse.payload.status === false) {
                 return reject(new Error(rvmResponse.payload.error));
             }
 
             // Prepare a clean response for the user
             let payload = Object.assign({}, rvmResponse.payload);
-            delete payload.action;
-            delete payload.status;
-            delete payload.error;
+            delete payload['action'];
+            delete payload['status'];
+            delete payload['error'];
             if (Object.keys(payload).length === 0) {
                 payload = undefined;
             }
 
             resolve(payload);
 
-        }, 1000);
+        });
 
         if (!messageSent) {
             reject(new Error('Failed to send a message to the RVM'));

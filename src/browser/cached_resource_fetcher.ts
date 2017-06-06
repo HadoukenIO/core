@@ -108,7 +108,7 @@ function generateHash(str: string): string {
 function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
     const fetcher = new resourceFetcher('file');
 
-    fetcher.on('fetch-complete', (event: string, status: string) => {
+    fetcher.once('fetch-complete', (event: string, status: string) => {
         if (status === 'success') {
             callback(null, filePath);
         } else {

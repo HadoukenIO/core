@@ -13,6 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+export interface Identity {
+    uuid: string;
+    name?: string;
+    runtimeUuid?: string;
+}
+
 /**
  * Window bounds
  */
@@ -29,13 +36,17 @@ export interface APIMessage {
     payload: any;
 }
 
+// ToDo following duplicated in ack.ts
+
 export interface APIPayloadAck {
     success: boolean;
     data?: any;
 }
+export type Acker = (payload: APIPayloadAck) => void;
 
 export interface APIPayloadNack {
     success: boolean;
     error?: Error;
     reason?: string;
 }
+export type Nacker = (payload: APIPayloadNack) => void;

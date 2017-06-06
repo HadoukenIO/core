@@ -26,7 +26,10 @@ let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
-
+import {
+    addRemoteSubscription
+} from '../../remote_subscriptions';
+import route from '../../../common/route';
 
 function ApplicationApiHandler() {
     let successAck = {
@@ -55,13 +58,13 @@ function ApplicationApiHandler() {
         'remove-tray-icon': removeTrayIcon,
         'restart-application': restartApplication,
         'run-application': runApplication,
-        'set-shortcuts': setShortcuts,
+        'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
         'set-tray-icon': setTrayIcon,
         'terminate-application': terminateApplication,
         'wait-for-hung-application': waitForHungApplication
     };
 
-    apiProtocolBase.registerActionMap(appExternalApiMap);
+    apiProtocolBase.registerActionMap(appExternalApiMap, 'Application');
 
     function setTrayIcon(identity, rawMessage, ack, nack) {
         let message = JSON.parse(JSON.stringify(rawMessage));
@@ -142,10 +145,16 @@ function ApplicationApiHandler() {
     }
 
     function getApplicationManifest(identity, message, ack, nack) {
+        const payload = message.payload;
         const dataAck = _.clone(successAck);
-        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+        let appIdentity;
 
-        Application.getManifest(appIdentity, manifest => {
+        // When manifest URL is provided, will be retrieving a remote manifest
+        if (!payload.hasOwnProperty('manifestUrl')) {
+            appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+        }
+
+        Application.getManifest(appIdentity, payload.manifestUrl, manifest => {
             dataAck.data = manifest;
             ack(dataAck);
         }, nack);
@@ -270,12 +279,26 @@ function ApplicationApiHandler() {
     }
 
     function runApplication(identity, message, ack, nack) {
-        const payload = message.payload;
-        /*jshint unused:false */
+        const {
+            payload
+        } = message;
+        const {
+            manifestUrl
+        } = payload;
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-        const uuid = appIdentity.uuid;
+        const {
+            uuid
+        } = appIdentity;
+        let remoteSubscriptionUnSubscribe;
+        const remoteSubscription = {
+            uuid,
+            name: uuid,
+            listenType: 'once',
+            className: 'window',
+            eventName: 'fire-constructor-callback'
+        };
 
-        ofEvents.once(`window/fire-constructor-callback/${uuid}-${uuid}`, loadInfo => {
+        ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
             if (loadInfo.success) {
                 const successReturn = _.clone(successAck);
                 successReturn.data = loadInfo.data;
@@ -285,9 +308,20 @@ function ApplicationApiHandler() {
                 theErr.networkErrorCode = loadInfo.data.networkErrorCode;
                 nack(theErr);
             }
+
+            if (typeof remoteSubscriptionUnSubscribe === 'function') {
+                remoteSubscriptionUnSubscribe();
+            }
         });
 
-        Application.run(appIdentity);
+        if (manifestUrl) {
+            addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
+                remoteSubscriptionUnSubscribe = unSubscribe;
+                Application.runWithRVM(identity, manifestUrl).catch(nack);
+            });
+        } else {
+            Application.run(appIdentity);
+        }
     }
 
     function registerExternalWindow(identity, message, ack) {
@@ -308,14 +342,14 @@ function ApplicationApiHandler() {
     function deregisterExternalWindow(identity, message, ack) {
         const windowIdentity = apiProtocolBase.getTargetWindowIdentity(message.payload);
 
-        ofEvents.emit(`external-window/close/${windowIdentity.uuid}-${windowIdentity.name}`);
+        ofEvents.emit(route.externalWindow('close', windowIdentity.uuid, windowIdentity.name));
         ack(successAck);
     }
 
     function externalWindowAction(identity, message, ack) {
         /* jshint bitwise: false */
         let payload = message.payload;
-        let uuidname = `${payload.uuid}-${payload.name}`;
+        const { uuid, name } = payload;
 
         const SWP_HIDEWINDOW = 128;
         const SWP_SHOWWINDOW = 64;
@@ -326,27 +360,27 @@ function ApplicationApiHandler() {
         switch (payload.type) {
             case 2:
                 // WM_DESTROY
-                ofEvents.emit(`external-window/close/${uuidname}`);
+                ofEvents.emit(route.externalWindow('close', uuid, name));
                 break;
             case 7:
                 // WM_SETFOCUS
-                ofEvents.emit(`external-window/focus/${uuidname}`);
+                ofEvents.emit(route.externalWindow('focus', uuid, name));
                 break;
             case 8:
                 // WM__KILLFOCUS
-                ofEvents.emit(`external-window/blur/${uuidname}`);
+                ofEvents.emit(route.externalWindow('blur', uuid, name));
                 break;
             case 71:
                 // WM_WINDOWPOSCHANGED
                 let flags = payload.flags;
 
-                ofEvents.emit(`external-window/bounds-changed/${uuidname}`);
+                ofEvents.emit(route.externalWindow('bounds-changed', uuid, name));
 
                 // dispatch show and hide events
                 if (flags & SWP_SHOWWINDOW) {
-                    ofEvents.emit(`external-window/visibility-changed/${uuidname}`, true);
+                    ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), true);
                 } else if (flags & SWP_HIDEWINDOW) {
-                    ofEvents.emit(`external-window/visibility-changed/${uuidname}`, false);
+                    ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), false);
                 }
                 break;
             case 274:
@@ -360,26 +394,26 @@ function ApplicationApiHandler() {
                 /* falls through */
             case 163:
                 // WM_NCLBUTTONDBLCLK
-                ofEvents.emit(`external-window/state-change/${uuidname}`);
+                ofEvents.emit(route.externalWindow('state-change', uuid, name));
                 break;
             case 532:
                 // WM_SIZING
-                ofEvents.emit(`external-window/sizing/${uuidname}`);
+                ofEvents.emit(route.externalWindow('sizing', uuid, name));
                 break;
             case 534:
                 // WM_MOVING
-                ofEvents.emit(`external-window/moving/${uuidname}`);
+                ofEvents.emit(route.externalWindow('moving', uuid, name));
                 break;
             case 561:
                 // WM_ENTERSIZEMOVE
-                ofEvents.emit(`external-window/begin-user-bounds-change/${uuidname}`, {
+                ofEvents.emit(route.externalWindow('end-user-bounds-change', {
                     x: payload.mouseX,
                     y: payload.mouseY
-                });
+                }));
                 break;
             case 562:
                 // WM_EXITSIZEMOVE
-                ofEvents.emit(`external-window/end-user-bounds-change/${uuidname}`);
+                ofEvents.emit(route.externalWindow('end-user-bounds-change', uuid, name));
                 break;
             default:
                 // Do nothing

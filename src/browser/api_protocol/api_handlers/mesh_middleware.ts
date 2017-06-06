@@ -8,12 +8,10 @@ import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
+import ofEvents from '../../of_events';
 
 const coreState = require('../../core_state');
 
-//TODO: Figure out a way to share these keys beween interappbus api and handler.
-const SUBSCRIBER_ADDED_EVENT = 'subscriber-added';
-const SUBSCRIBER_REMOVED_EVENT = 'subscriber-removed';
 const SUBSCRIBE_ACTION = 'subscribe';
 const PUBLISH_ACTION = 'publish-message';
 const SEND_MESSAGE_ACTION = 'send-message';
@@ -26,7 +24,8 @@ const apiMessagesToIgnore: any = {
     'unsubscribe': true,
     'subscriber-added': true,
     'subscriber-removed': true,
-    'subscribe-to-desktop-event': true
+    'subscribe-to-desktop-event': true,
+    'unsubscribe-to-desktop-event': true
 };
 //TODO: This is a workaround for a circular dependency issue in the api handler modules.
 const subscriberTriggeredEvents: any = {
@@ -49,7 +48,7 @@ function subscriberEventMiddleware(msg: MessagePackage, next: () => void) {
     if (subscriberTriggeredEvents[data.action] && !identity.runtimeUuid) {
         const { payload: { sourceUuid: sourceUuid, topic: topic, destinationWindowName, sourceWindowName }} = data;
 
-        const forwardedAction = data.action === SUBSCRIBE_ACTION ?  SUBSCRIBER_ADDED_EVENT : SUBSCRIBER_REMOVED_EVENT;
+        const forwardedAction = data.action === SUBSCRIBE_ACTION ?  ofEvents.subscriber.ADDED : ofEvents.subscriber.REMOVED;
         const subAddedPayload = {
             senderName: sourceWindowName || sourceUuid,
             senderUuid: sourceUuid,

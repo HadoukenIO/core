@@ -23,47 +23,55 @@ function SystemApiHandler() {
     };
 
     let SystemApiHandlerMap = {
-        'clear-cache': clearCache,
-        'delete-cache-request': deleteCacheRequest,
-        'exit-desktop': exitDesktop,
+        'clear-cache': { apiFunc: clearCache, apiPath: '.clearCache' },
+        'convert-options': convertOptions,
+        'delete-cache-request': deleteCacheRequest, // apiPath: '.deleteCacheOnRestart' -> deprecated
+        'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset' },
+        'exit-desktop': { apiFunc: exitDesktop, apiPath: '.exitDesktop' },
+        'generate-guid': generateGuid,
         'get-all-applications': getAllApplications,
+        'get-all-external-applications': getAllExternalApplications,
         'get-all-windows': getAllWindows,
-        'get-command-line-arguments': getCommandLineArguments,
-        'get-config': getConfig,
-        'get-device-id': getDeviceId,
-        'get-environment-variable': getEnvironmentVariable,
-        'get-host-specs': getHostSpecs,
-        'get-monitor-info': getMonitorInfo,
-        'get-mouse-position': getMousePosition,
+        'get-command-line-arguments': { apiFunc: getCommandLineArguments, apiPath: '.getCommandLineArguments' },
+        'get-config': { apiFunc: getConfig, apiPath: '.getConfig' },
+        'get-device-id': { apiFunc: getDeviceId, apiPath: '.getDeviceId' },
+        'get-device-user-id': getDeviceUserId,
+        'get-el-ipc-config': getElIPCConfig,
+        'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
+        'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
+        'get-monitor-info': getMonitorInfo, // apiPath: '.getMonitorInfo' -> called by js adapter during init so can't be disabled
+        'get-mouse-position': { apiFunc: getMousePosition, apiPath: '.getMousePosition' },
+        'get-nearest-display-root': getNearestDisplayRoot,
         'get-proxy-settings': getProxySettings,
-        'get-remote-config': getRemoteConfig,
+        'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
         'get-rvm-info': getRvmInfo,
         'get-version': getVersion,
-        'launch-external-process': launchExternalProcess,
-        'list-logs': listLogs,
-        'monitor-external-process': monitorExternalProcess,
+        'get-websocket-state': getWebSocketState,
+        'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
+        'list-logs': { apiFunc: listLogs, apiPath: '.getLogList' },
+        'monitor-external-process': { apiFunc: monitorExternalProcess, apiPath: '.monitorExternalProcess' },
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
-        'release-external-process': releaseExternalProcess,
-        //'set-clipboard': setClipboard, this has moved to clipboard_external_api
+        'raise-event': raiseEvent,
+        'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
+        'resolve-uuid': resolveUuid,
+        //'set-clipboard': setClipboard, -> moved to clipboard.ts
         'set-cookie': setCookie,
         'show-developer-tools': showDeveloperTools,
-        'terminate-external-process': terminateExternalProcess,
+        'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess' },
         'update-proxy': updateProxy,
-        'view-log': viewLog,
-        'write-to-log': writeToLog,
-        'get-websocket-state': getWebSocketState,
-        'generate-guid': generateGuid,
-        'convert-options': convertOptions,
-        'get-el-ipc-config': getElIPCConfig,
-        'get-nearest-display-root': getNearestDisplayRoot,
-        'raise-event': raiseEvent,
-        'download-asset': downloadAsset,
-        'get-all-external-applications': getAllExternalApplications,
-        'resolve-uuid': resolveUuid
+        'view-log': { apiFunc: viewLog, apiPath: '.getLog' },
+        'write-to-log': writeToLog
     };
 
-    apiProtocolBase.registerActionMap(SystemApiHandlerMap);
+    apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
+
+    function getDeviceUserId(identity, message, ack) {
+        let dataAck = _.clone(successAck);
+
+        dataAck.data = System.getDeviceUserId();
+        ack(dataAck);
+    }
 
     function getAllExternalApplications(identity, message, ack) {
         let dataAck = _.clone(successAck);

@@ -25,6 +25,7 @@ let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
 let WindowGroups = require('./window_groups.js');
 import WindowGroupTransactionTracker from './window_group_transaction_tracker';
+import { toSafeInt } from '../common/safe_int';
 
 const isWin32 = process.platform === 'win32';
 
@@ -204,11 +205,16 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                     var wt; // window-transaction
                     let hwndToId = {};
 
+                    const { flag: { noZorder, noSize, noActivate } } = windowTransaction;
+                    const flags = noZorder + noSize + noActivate;
+
                     WindowGroups.getGroup(groupUuid).filter((win) => {
                         win.browserWindow.bringToFront();
                         return win.name !== name;
                     }).forEach((win) => {
-                        let winBounds = win.browserWindow.getBounds();
+                        let { x, y, width, height } = win.browserWindow.getBounds();
+                        x = toSafeInt(x + delta.x, x);
+                        y = toSafeInt(y + delta.y, y);
 
                         if (isWin32) {
                             let hwnd = parseInt(win.browserWindow.nativeId, 16);
@@ -224,18 +230,10 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                                 });
                             }
                             hwndToId[hwnd] = win.browserWindow.id;
-                            wt.setWindowPos(hwnd, {
-                                x: winBounds.x + delta.x,
-                                y: winBounds.y + delta.y,
-                                flags: windowTransaction.flag.noZorder + windowTransaction.flag.noSize + windowTransaction.flag.noActivate
-                            });
+                            wt.setWindowPos(hwnd, { x, y, flags });
                         } else {
-                            win.browserWindow.setBounds({
-                                x: winBounds.x + delta.x,
-                                y: winBounds.y + delta.y,
-                                width: winBounds.width,
-                                height: winBounds.height
-                            });
+                            // no need to call clipBounds here because width and height are not changing
+                            win.browserWindow.setBounds({ x, y, width, height });
                         }
                     });
 
