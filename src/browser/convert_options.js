@@ -96,7 +96,8 @@ function five0BaseOptions() {
         'url': 'about:blank',
         'uuid': '',
         'waitForPageLoad': true,
-        'backgroundColor': '#000'
+        'backgroundColor': '#000',
+        'webSecurity': true
     };
 }
 
