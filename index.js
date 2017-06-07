@@ -439,20 +439,22 @@ function initServer() {
 //please see the discussion on https://github.com/openfin/runtime-core/pull/194
 function launchApp(argo, startExternalAdapterServer) {
     convertOptions.fetchOptions(argo, configuration => {
-        let {
+        const {
             configUrl,
-            configObject
+            configObject,
+            configObject: { licenseKey }
         } = configuration;
-        let openfinWinOpts = convertOptions.getWindowOptions(configObject);
-        let startUpApp = configObject.startup_app; /* jshint ignore:line */
-        let uuid = startUpApp && startUpApp.uuid;
-        let ofApp = Application.wrap(uuid);
-        let isRunning = Application.isRunning(ofApp);
+
+        const openfinWinOpts = convertOptions.getWindowOptions(configObject);
+        const startUpApp = configObject.startup_app; /* jshint ignore:line */
+        const uuid = startUpApp && startUpApp.uuid;
+        const ofApp = Application.wrap(uuid);
+        const isRunning = Application.isRunning(ofApp);
 
         if (openfinWinOpts && !isRunning) {
             //making sure that if a window is pressent we set the window name === to the uuid as per 5.0
             openfinWinOpts.name = uuid;
-            initFirstApp(openfinWinOpts, configUrl);
+            initFirstApp(openfinWinOpts, configUrl, licenseKey);
         } else if (uuid) {
             Application.run({
                 uuid,
@@ -481,10 +483,12 @@ function launchApp(argo, startExternalAdapterServer) {
 }
 
 
-function initFirstApp(options, configUrl) {
+function initFirstApp(options, configUrl, licenseKey) {
     try {
         // Needs proper configs
         firstApp = Application.create(options, configUrl);
+
+        coreState.setLicenseKey({ uuid: options.uuid }, licenseKey);
 
         Application.run({
             uuid: firstApp.uuid
