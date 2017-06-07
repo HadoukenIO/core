@@ -21,7 +21,7 @@ const App = require('electron').app;
 App.generateGUID = Math.random;
 
 const mockWMCopyData  = {
-    WMCopyData: function(){
+    WMCopyData: () => {
         return {
             on: (x: any) => x,
             publish: (x: any ) => x
@@ -61,7 +61,7 @@ describe('rvm message bus', () => {
                 runtimeVersion: 'runtimeVersion'
             });
 
-            assert.deepEqual(payloadShape, payload, 'shapes should match hommie');
+            assert.deepEqual(payloadShape, payload, 'shapes should match');
         });
 
         it('should send the correct full payload', () => {
