@@ -16,12 +16,12 @@ limitations under the License.
 import * as assert from 'assert';
 import * as mockery from 'mockery';
 import {EventEmitter} from 'events';
-const App = require('electron').app;
+import { app }  from 'electron';
 
-App.generateGUID = Math.random;
+app.generateGUID = () => '' + Math.random;
 
 const mockWMCopyData  = {
-    WMCopyData: () => {
+    WMCopyData: function () {
         return {
             on: (x: any) => x,
             publish: (x: any ) => x
