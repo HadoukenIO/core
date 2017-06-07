@@ -4,14 +4,12 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-import {WMCopyData} from '../transport';
-import {EventEmitter} from 'events';
+import { WMCopyData } from '../transport';
+import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
 
-// as to be require as we have added generateGUID, which is not on the ts definitions for app
-// i.e. error TS2339: Property 'generateGUID' does not exist on type 'typeof app'.
-const App = require('electron').app;
+import { app }  from 'electron';
 const  _ = require('underscore');
 
 const processVersions = <any> process.versions;
@@ -169,7 +167,7 @@ export interface LicenseInfo {
 export class RVMMessageBus extends EventEmitter  {
     private messageIdToCallback: RvmCallbacks; // Tracks functions that we'll notify If a response is received
     private transport: WMCopyData;
-    public static sessionId = App.generateGUID();
+    public static sessionId = app.generateGUID();
 
     constructor() {
         super();
@@ -229,7 +227,7 @@ export class RVMMessageBus extends EventEmitter  {
 
         const envelope = {
             topic: topic,
-            messageId: App.generateGUID(),
+            messageId: app.generateGUID(),
             payload
         };
 
