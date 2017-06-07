@@ -4,14 +4,12 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-import {WMCopyData} from '../transport';
-import {EventEmitter} from 'events';
+import { WMCopyData } from '../transport';
+import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
 
-// as to be require as we have added generateGUID, which is not on the ts definitions for app
-// i.e. error TS2339: Property 'generateGUID' does not exist on type 'typeof app'.
-const App = require('electron').app;
+import { app }  from 'electron';
 const  _ = require('underscore');
 
 const processVersions = <any> process.versions;
@@ -148,15 +146,28 @@ export interface ApplicationEvent extends RvmMsgBase {
     sourceUrl: string;
 }
 
+export interface LicenseInfo {
+    licenseKey?: string;
+    client?: {
+        type: 'dotnet' | 'java' | 'air' | 'node' | 'js';
+        version: string;
+    };
+    pid?: number;
+    parentApp?: {
+        sourceUrl: string;
+    };
+}
+
 /**
  * Module to facilitate communication with the RVM.
  * A transport can be passed in to be used, otherwise a new WMCopyData transport is used.
  * 'broadcast' messages received from RVM(RVM initiated) will be broadcasted
  *
  **/
-class RVMMessageBus extends EventEmitter  {
+export class RVMMessageBus extends EventEmitter  {
     private messageIdToCallback: RvmCallbacks; // Tracks functions that we'll notify If a response is received
     private transport: WMCopyData;
+    public static sessionId = app.generateGUID();
 
     constructor() {
         super();
@@ -205,7 +216,7 @@ class RVMMessageBus extends EventEmitter  {
         });
     }
 
-    public publish(msg: RvmMsgBase, callback: Function) {
+    public publish(msg: RvmMsgBase, callback: (x: any) => any = ()  => undefined): boolean {
         const {topic, timeToLive} = msg;
         const payload: any = Object.assign({
             processId: process.pid,
@@ -216,14 +227,35 @@ class RVMMessageBus extends EventEmitter  {
 
         const envelope = {
             topic: topic,
-            messageId: App.generateGUID(),
+            messageId: app.generateGUID(),
             payload
         };
 
         this.recordCallbackInfo(callback, timeToLive, envelope);
 
         return this.transport.publish(envelope);
+    }
 
+    public registerLicenseInfo(licInfo: LicenseInfo): boolean {
+        const payload = Object.assign({
+            action: 'license-info',
+            topic: 'application',
+            sessionId: RVMMessageBus.sessionId,
+            parentApp: {
+                sourceUrl: null
+            },
+            sourceUrl: null,
+            licenseKey: null,
+            client: {
+                type: null,
+                version: null,
+                pid: null
+            }
+        }, licInfo);
+
+        log.writeToLog(1, payload, true);
+
+        return this.publish(payload);
     }
 
     /**
