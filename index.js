@@ -451,8 +451,6 @@ function launchApp(argo, startExternalAdapterServer) {
         const ofApp = Application.wrap(uuid);
         const isRunning = Application.isRunning(ofApp);
 
-        coreState.setLicenseKey({ uuid }, licenseKey);
-
         if (openfinWinOpts && !isRunning) {
             //making sure that if a window is pressent we set the window name === to the uuid as per 5.0
             openfinWinOpts.name = uuid;
