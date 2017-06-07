@@ -66,6 +66,7 @@ const trans2TSFiles = [
     'src/browser/clip_bounds.ts',
     'src/browser/deferred.ts',
     'src/browser/cached_resource_fetcher.ts',
+    'src/browser/core_state.ts',
     'src/browser/int_pool.ts',
     'src/browser/log.ts',
     'src/browser/of_events.ts',

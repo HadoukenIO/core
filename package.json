@@ -23,6 +23,7 @@
     "runtime-p2p": "git+ssh://git@github.com:openfin/runtime-p2p.git#2dc7945deac21ee5b632ed2dc8ba55efbbd343cf"
   },
   "devDependencies": {
+    "@types/minimist": "^1.2.0",
     "@types/mocha": "^2.2.39",
     "@types/mockery": "^1.4.29",
     "@types/node": "^6.0.49",
