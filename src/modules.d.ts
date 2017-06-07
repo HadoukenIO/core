@@ -26,6 +26,7 @@ declare module 'electron' {
         export function getPath(str: string): string;
         export function getTickCount(): number;
         export function on(event: string, callback: () => void): void;
+        export function generateGUID(): string;
     }
 
     namespace BrowserWindow {
