@@ -240,8 +240,19 @@ function closeChildWins(identity) {
 }
 
 Application.close = function(identity, force, callback) {
-    var app = Application.wrap(identity.uuid),
-        mainWin = app.mainWindow;
+    let app = Application.wrap(identity.uuid);
+
+    if (!app) {
+        log.writeToLog(1, `Could not close app ${identity.uuid}`, true);
+
+        if (typeof callback === 'function') {
+            callback();
+        }
+
+        return;
+    }
+
+    let mainWin = app.mainWindow;
 
     if (force) {
         closeChildWins(identity);
@@ -938,8 +949,6 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         opts.url = opts.url || 'about:blank';
 
-        opts.url = opts.url || 'about:blank';
-
         if (!regex.isURL(opts.url) && !isURI(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
         }
@@ -957,10 +966,11 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
             if (isMainFrame) {
-                if (errorCode === -3) {
+                if (errorCode === -3 || errorCode === 0) {
                     // 304 can trigger net::ERR_ABORTED, ignore it
-                    log.writeToLog(1, `ignoring net error -3 for ${opts.uuid}`, true);
+                    log.writeToLog(1, `ignoring net error ${errorCode} for ${opts.uuid}`, true);
                 } else {
+                    log.writeToLog(1, `receiving net error ${errorCode} for ${opts.uuid}`, true);
                     if (!coreState.argo['noerrdialog'] && configUrl) {
                         // NOTE: don't show this dialog if the app is created via the api
                         const errorMessage = opts.loadErrorMessage || 'There was an error loading the application.';

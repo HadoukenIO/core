@@ -2035,7 +2035,7 @@ function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
         if (icon.isEmpty()) {
             errorCallback();
         } else {
-            browserWindow.setTaskbarIcon(icon);
+            browserWindow.setIcon(icon);
         }
     }
 }
