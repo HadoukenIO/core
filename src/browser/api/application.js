@@ -498,7 +498,7 @@ Application.run = function(identity, configUrl = '') {
             }
 
             if (rvmBus) {
-                rvmBus.publish(JSON.stringify(rvmPayload));
+                rvmBus.publish(rvmPayload);
             }
         };
 
