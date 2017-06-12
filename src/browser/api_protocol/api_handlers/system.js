@@ -27,6 +27,7 @@ function SystemApiHandler() {
         'convert-options': convertOptions,
         'delete-cache-request': deleteCacheRequest, // apiPath: '.deleteCacheOnRestart' -> deprecated
         'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset' },
+        'download-runtime': { apiFunc: downloadRuntime, apiPath: '.downloadRuntime' },
         'exit-desktop': { apiFunc: exitDesktop, apiPath: '.exitDesktop' },
         'generate-guid': generateGuid,
         'get-all-applications': getAllApplications,
@@ -335,14 +336,24 @@ function SystemApiHandler() {
 
     function downloadAsset(identity, message, ack, errorAck) {
         let dataAck = _.clone(successAck);
-        System.downloadAsset(identity, message.payload, (err, dlId) => {
+        System.downloadAsset(identity, message.payload, (err) => {
             if (!err) {
-                dataAck.data = {
-                    dlId
-                };
                 ack(dataAck);
             } else {
                 errorAck(err);
+            }
+        });
+    }
+
+    function downloadRuntime(identity, message, ack, nack) {
+        const { payload } = message;
+        const dataAck = Object.assign({}, successAck);
+
+        System.downloadRuntime(identity, payload, (err) => {
+            if (err) {
+                nack(err);
+            } else {
+                ack(dataAck);
             }
         });
     }

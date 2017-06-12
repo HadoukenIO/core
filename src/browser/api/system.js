@@ -579,6 +579,14 @@ module.exports.System = {
             cb(new Error('RVM Message failed.'));
         }
     },
+
+    downloadRuntime: function(identity, options, cb) {
+        const appObject = coreState.getAppObjByUuid(identity.uuid);
+
+        options.sourceUrl = (appObject || {})._configUrl;
+        rvmBus.downloadRuntime(options, cb);
+
+    },
     getAllExternalApplications: function() {
         return ExternalApplication.getAllExternalConnctions().map(eApp => {
             return {

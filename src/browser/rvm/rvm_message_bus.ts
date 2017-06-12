@@ -29,6 +29,7 @@ type registerCustomDataAction = 'register-custom-data';
 type hideSplashscreenAction = 'hide-splashscreen';
 type relaunchOnCloseAction = 'relaunch-on-close';
 type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
+type downloadRuntimeAction = 'runtime-download';
 
 export interface RegisterCustomData extends RvmMsgBase {
     topic: applicationTopic;
@@ -55,6 +56,20 @@ export interface GetDesktopOwnerSettings extends RvmMsgBase {
     topic: applicationTopic;
     action: getDesktopOwnerSettingsAction;
     sourceUrl: string;
+}
+
+export interface DownloadRuntimeOptions {
+    downloadId: string;
+    version: string;
+    sourceUrl: string;
+}
+
+interface DownloadRuntimeMsg extends RvmMsgBase {
+    downloadId: string;
+    version: string;
+    sourceUrl: string;
+    action: downloadRuntimeAction;
+
 }
 
 // topic: application (used only by the utils module)
@@ -161,7 +176,7 @@ export interface LicenseInfo {
 /**
  * Module to facilitate communication with the RVM.
  * A transport can be passed in to be used, otherwise a new WMCopyData transport is used.
- * 'broadcast' messages received from RVM(RVM initiated) will be broadcasted
+  * 'broadcast' messages received from RVM(RVM initiated) will be broadcasted
  *
  **/
 export class RVMMessageBus extends EventEmitter  {
@@ -256,6 +271,24 @@ export class RVMMessageBus extends EventEmitter  {
         log.writeToLog(1, payload, true);
 
         return this.publish(payload);
+    }
+
+    public downloadRuntime(options: DownloadRuntimeOptions, callback: (err?: Error) => void): void  {
+        const rvmMessage: DownloadRuntimeMsg = Object.assign({ topic: 'application',
+                                                               action: <downloadRuntimeAction>'runtime-download' }, options);
+
+        const publishSuccess = this.publish(rvmMessage, (response: any) => {
+            const { payload } = response;
+            if (payload.error) {
+                callback(new Error(payload.error));
+            } else {
+                callback();
+            }
+        });
+
+        if (!publishSuccess) {
+            callback(new Error('RVM Message failed.'));
+        }
     }
 
     /**
