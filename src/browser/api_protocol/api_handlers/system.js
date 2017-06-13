@@ -347,7 +347,7 @@ function SystemApiHandler() {
 
     function downloadRuntime(identity, message, ack, nack) {
         const { payload } = message;
-        const dataAck = Object.assign({}, successAck);
+        const dataAck = _.clone(successAck);
 
         System.downloadRuntime(identity, payload, (err) => {
             if (err) {

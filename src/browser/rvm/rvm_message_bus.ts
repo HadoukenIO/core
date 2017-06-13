@@ -176,7 +176,7 @@ export interface LicenseInfo {
 /**
  * Module to facilitate communication with the RVM.
  * A transport can be passed in to be used, otherwise a new WMCopyData transport is used.
-  * 'broadcast' messages received from RVM(RVM initiated) will be broadcasted
+ * 'broadcast' messages received from RVM(RVM initiated) will be broadcasted
  *
  **/
 export class RVMMessageBus extends EventEmitter  {
