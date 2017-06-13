@@ -321,6 +321,29 @@ app.on('ready', function() {
         }
     });
 
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-progress'), payload => {
+        if (payload) {
+            ofEvents.emit(route.system(`runtime-download-progress-${ payload.downloadId }`), payload);
+        }
+    });
+
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-error'), payload => {
+        if (payload) {
+            ofEvents.emit(route.system(`runtime-download-error-${ payload.downloadId }`), {
+                reason: payload.error,
+                err: errors.errorToPOJO(new Error(payload.error))
+            });
+        }
+    });
+
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-complete'), payload => {
+        if (payload) {
+            ofEvents.emit(route.system(`runtime-download-complete-${ payload.downloadId }`), {
+                path: payload.path
+            });
+        }
+    });
+
     // handle deferred launches
     deferredLaunches.forEach((commandLine) => {
         handleDelegatedLaunch(commandLine);
