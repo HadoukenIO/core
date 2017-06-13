@@ -233,6 +233,8 @@ export class RVMMessageBus extends EventEmitter  {
 
         this.recordCallbackInfo(callback, timeToLive, envelope);
 
+        log.writeToLog(1, envelope, true);
+
         return this.transport.publish(envelope);
     }
 
