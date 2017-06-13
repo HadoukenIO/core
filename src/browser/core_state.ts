@@ -41,6 +41,18 @@ interface ProxySettingsArgs {
     type?: string;
 }
 
+interface StrippedApplication {
+    isRunning: boolean;
+    parentUuid: string;
+    uuid: string;
+}
+
+interface StrippedWindow {
+    childWindows: Shapes.BrowserWindow[];
+    mainWindow: Shapes.BrowserWindow;
+    uuid: string;
+}
+
 export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
@@ -48,6 +60,9 @@ export const argo = minimist(argv); // arguments as an object
 const apps: Shapes.App[] = [];
 
 let startManifest = {};
+
+// TODO: This needs to go go away, pending socket server refactor.
+let socketServerState = {};
 
 const manifestProxySettings: Shapes.ProxySettings = {
     proxyAddress: '',
@@ -418,12 +433,6 @@ function getWinList(): Shapes.Window[] {
         .reduce((wins, myWins) => wins.concat(myWins), []); //flatten
 }
 
-interface StrippedApplication {
-    isRunning: boolean;
-    parentUuid: string;
-    uuid: string;
-}
-
 export function getAllApplications(): StrippedApplication[] {
     return apps.map(app => {
         return {
@@ -439,12 +448,6 @@ export function getAllAppObjects(): Shapes.AppObj[] {
     return apps
         .filter(app => app.appObj) //with openfin app object
         .map(app => app.appObj); //and return same
-}
-
-interface StrippedWindow {
-    childWindows: Shapes.BrowserWindow[];
-    mainWindow: Shapes.BrowserWindow;
-    uuid: string;
 }
 
 export function getAllWindows(): StrippedWindow[] {
@@ -492,9 +495,6 @@ export function shouldCloseRuntime(ignoreArray: string[]|undefined): boolean {
         );
     }
 }
-
-//TODO: This needs to go go away, pending socket server refactor.
-let socketServerState = {};
 
 //TODO: This needs to go go away, pending socket server refactor.
 export function setSocketServerState(state: PortInfo) {
