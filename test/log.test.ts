@@ -16,18 +16,7 @@ limitations under the License.
 import * as assert from 'assert';
 import * as mockery from 'mockery';
 
-let lastVlogValue = '';
-let lastLogValue = '';
-const mockElectron = {
-    app: {
-        vlog: (level: number, val: string) => {
-            lastVlogValue = val;
-        },
-        log: (level: string, val: string) => {
-            lastLogValue = val;
-        }
-    }
-};
+import {mockElectron, lastLogValue, lastVlogValue} from './electron';
 
 mockery.registerMock('electron', mockElectron);
 mockery.enable();
