@@ -56,7 +56,7 @@ class AppAssetsFetcher {
     };
 
     // Returns bool which indicates whether this is the 1st request for sourceUrl - then we actually need to send it to RVM
-    private addPendingRequest (sourceUrl: string, assetAlias: string, successCB: (data: any) => any, failureCB: (data: any) => any) {
+    private addPendingRequest = (sourceUrl: string, assetAlias: string, successCB: (data: any) => any, failureCB: (data: any) => any) => {
         const pendingCBObj = { successCB, failureCB };
 
         if (!(sourceUrl in this.pendingRequests)) {
@@ -72,12 +72,12 @@ class AppAssetsFetcher {
             this.pendingRequests[sourceUrl][assetAlias].push(pendingCBObj);
             return false;
         }
-    };
+    }
 
     /**
      *  High level app assets response handler policy; 1st point of entry upon recepit of RVM Message bus response
      */
-    private responseHandler (dataObj: any) {
+    private responseHandler = (dataObj: any) => {
         let sourceUrl;
         const timeToLiveExpired = _.has(dataObj, 'time-to-live-expiration');
 
@@ -99,12 +99,12 @@ class AppAssetsFetcher {
         if (_.isString(sourceUrl)) {
             delete this.pendingRequests[sourceUrl];
         }
-    };
+    }
 
     /**
      *  Checks RVM app asset responses for mandatory message attributes
      */
-    private isResponseValid (dataObj: any) {
+    private isResponseValid  = (dataObj: any) => {
         const hasSourceUrl = _.has(dataObj, 'appConfig');
         const hasResult = _.has(dataObj, 'result');
         const hasError = _.has(dataObj, 'error');
@@ -120,33 +120,33 @@ class AppAssetsFetcher {
             return false;
         }
         return true;
-    };
+    }
 
     /**
      *  Determines how to notify observers!(error or info)
      */
-    private notifyObservers (sourceUrl: string, dataObj: any) {
+    private notifyObservers = (sourceUrl: string, dataObj: any) => {
         if (_.has(dataObj, 'error')) {
             this.handleErrorResponse(sourceUrl, dataObj);
         } else {
             this.handleInfoResponse(sourceUrl, dataObj);
         }
-    };
+    }
 
     /**
      *  Notifies all observers of sourceUrl of error
      */
-    private handleErrorResponse (sourceUrl: string, dataObj: any) {
+    private handleErrorResponse = (sourceUrl: string, dataObj: any) => {
         log.writeToLog(1, `Received error for ${sourceUrl}, Error: ${dataObj.error}`);
         _.each(this.pendingRequests[sourceUrl], (requestedAliasCallbackArray: any) => {
             _.invoke(requestedAliasCallbackArray, 'failureCB', dataObj.error);
         });
-    };
+    }
 
     /**
      *  Notifies all observers of relevant alias info! (or lack thereof)
      */
-    private handleInfoResponse (sourceUrl: string, dataObj: any) {
+    private handleInfoResponse = (sourceUrl: string, dataObj: any) => {
         _.mapObject(this.pendingRequests[sourceUrl], (requestedAliasCallbackArray: any, alias: string) => {
             const aliasInResponse = _.findWhere(dataObj.result, { alias });
             if (aliasInResponse) {
@@ -155,7 +155,7 @@ class AppAssetsFetcher {
                 _.invoke(requestedAliasCallbackArray, 'failureCB', 'Found no information on requested alias ' + alias);
             }
         });
-    };
+    }
 }
 
 const appAssetsFetcher = new AppAssetsFetcher();
