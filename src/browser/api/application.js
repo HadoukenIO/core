@@ -155,6 +155,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     }
 
     const appObj = createAppObj(uuid, opts, configUrl);
+
     if (parentIdentity && parentIdentity.uuid) {
         // This is a reference to the meta `app` object that is stored in core state,
         // not the actual `application` object created above. Here we are attaching the parent
