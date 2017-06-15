@@ -1008,8 +1008,9 @@ function createAppObj(uuid, opts, configUrl = '') {
                 } else {
                     log.writeToLog(1, `receiving net error ${errorCode} for ${opts.uuid}`, true);
                     if (!coreState.argo['noerrdialog'] && configUrl) {
+                        const errorMsgForDialog = errorDescription || `error code ${ errorCode }`;
                         // NOTE: don't show this dialog if the app is created via the api
-                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application: ${ errorDescription }';
+                        const errorMessage = opts.loadErrorMessage || `There was an error loading the application: ${ errorMsgForDialog }`;
                         dialog.showErrorBox('Fatal Error', errorMessage);
                     }
                     _.defer(() => {
