@@ -512,7 +512,7 @@ function registerShortcuts() {
         globalShortcut.register(reloadCtrlShiftRShortcut, reloadIgnoringCache);
     });
 
-    app.on('browser-window-blur', () => {
+    const unhookShortcuts = () => {
         globalShortcut.unregister(resetZoomShortcut);
         globalShortcut.unregister(zoomInShortcut);
         globalShortcut.unregister(zoomInShiftShortcut);
@@ -523,5 +523,8 @@ function registerShortcuts() {
         globalShortcut.unregister(reloadShiftF5Shortcut);
         globalShortcut.unregister(reloadCtrlRShortcut);
         globalShortcut.unregister(reloadCtrlShiftRShortcut);
-    });
+    };
+
+    app.on('browser-window-closed', unhookShortcuts);
+    app.on('browser-window-blur', unhookShortcuts);
 }

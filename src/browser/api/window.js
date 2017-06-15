@@ -1426,6 +1426,8 @@ Window.setZoomLevel = function(identity, level) {
 };
 
 function emitCloseEvents(identity) {
+    electronApp.emit('browser-window-closed');
+
     ofEvents.emit(`window/closed`, {
         name: identity.name,
         uuid: identity.uuid
