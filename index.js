@@ -610,16 +610,30 @@ function registerShortcuts() {
         globalShortcut.register(reloadCtrlShiftRShortcut, reloadIgnoringCache);
     });
 
-    app.on('browser-window-blur', () => {
-        globalShortcut.unregister(resetZoomShortcut);
-        globalShortcut.unregister(zoomInShortcut);
-        globalShortcut.unregister(zoomInShiftShortcut);
-        globalShortcut.unregister(zoomOutShortcut);
-        globalShortcut.unregister(zoomOutShiftShortcut);
-        globalShortcut.unregister(devToolsShortcut);
-        globalShortcut.unregister(reloadF5Shortcut);
-        globalShortcut.unregister(reloadShiftF5Shortcut);
-        globalShortcut.unregister(reloadCtrlRShortcut);
-        globalShortcut.unregister(reloadCtrlShiftRShortcut);
-    });
+    const unhookShortcuts = (event, bw) => {
+        let browserWindow = BrowserWindow.getFocusedWindow();
+        const sourceWindowExists = bw && !bw.isDestroyed();
+        const focusedWindowExists = browserWindow && !browserWindow.isDestroyed();
+        let unhook = !focusedWindowExists;
+
+        if (focusedWindowExists && sourceWindowExists) {
+            unhook = browserWindow.id === bw.id;
+        }
+
+        if (unhook) {
+            globalShortcut.unregister(resetZoomShortcut);
+            globalShortcut.unregister(zoomInShortcut);
+            globalShortcut.unregister(zoomInShiftShortcut);
+            globalShortcut.unregister(zoomOutShortcut);
+            globalShortcut.unregister(zoomOutShiftShortcut);
+            globalShortcut.unregister(devToolsShortcut);
+            globalShortcut.unregister(reloadF5Shortcut);
+            globalShortcut.unregister(reloadShiftF5Shortcut);
+            globalShortcut.unregister(reloadCtrlRShortcut);
+            globalShortcut.unregister(reloadCtrlShiftRShortcut);
+        }
+    };
+
+    app.on('browser-window-closed', unhookShortcuts);
+    app.on('browser-window-blur', unhookShortcuts);
 }
