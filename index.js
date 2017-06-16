@@ -209,13 +209,6 @@ app.on('ready', function() {
         return;
     }
 
-    app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
-    app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
-
-    app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
-
-    rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
-
     if (process.platform === 'win32') {
         let integrityLevel = app.getIntegrityLevel();
         System.log('info', `Runtime integrity level of the app: ${integrityLevel}`);
