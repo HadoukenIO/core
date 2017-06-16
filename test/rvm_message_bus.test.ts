@@ -15,10 +15,13 @@ limitations under the License.
 */
 import * as assert from 'assert';
 import * as mockery from 'mockery';
-import {EventEmitter} from 'events';
-import { app }  from 'electron';
+import { mockElectron }  from './electron';
 
-app.generateGUID = () => '' + Math.random;
+const {app} = mockElectron;
+
+const messageId = app.generateGUID();
+const processId = 9999;
+const runtimeVersion =  'runtimeVersion';
 
 const mockWMCopyData  = {
     WMCopyData: function () {
@@ -27,53 +30,78 @@ const mockWMCopyData  = {
             publish: (x: any ) => x
         }
     }
-}
+};
 
+mockery.registerMock('electron', mockElectron);
 mockery.registerMock('../transport', mockWMCopyData);
 mockery.enable();
 
-import {rvmMessageBus, RVMMessageBus, LicenseInfo} from '../src/browser/rvm/rvm_message_bus';
+import {rvmMessageBus, RVMMessageBus} from '../src/browser/rvm/rvm_message_bus';
 
 describe('rvm message bus', () => {
 
-    describe('registerLiceneInfo', () => {
+    describe('publish', () => {
+
+        it('should not accept a non-object as the message', () => {
+            const result: boolean = (<any>rvmMessageBus).publish();
+            assert(result === false);
+        });
 
         it('should send the correct base payload', () => {
-            const payloadShape: any = {
-                processId: 'processId',
-                runtimeVersion: 'runtimeVersion',
+            const topic = 'test';
 
-                action: 'license-info',
-                sessionId: RVMMessageBus.sessionId,
-                parentApp: {
-                    sourceUrl: null
-                },
-                sourceUrl: null,
-                licenseKey: null,
-                client: {
-                    type: null,
-                    version: null,
-                    pid: null
+            const expectedResult: any = {
+                topic,
+                messageId,
+                payload: {
+                    processId,
+                    runtimeVersion
                 }
-            }
-            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<LicenseInfo> {
-                processId: 'processId',
-                runtimeVersion: 'runtimeVersion'
+            };
+
+            const sentVal = (<any> rvmMessageBus).publish({ topic, processId, runtimeVersion});
+            assert.deepEqual(expectedResult, sentVal, 'should have sent the base payload');
+        });
+    });
+
+    describe('registerLiceneInfo', () => {
+        const baseStartedShape: any = {
+                topic: "application-event",
+                messageId,
+                payload: {
+                    processId,
+                    runtimeVersion,
+                    type: "started",
+                    sourceUrl: null,
+                    sessionId: RVMMessageBus.sessionId,
+                    data: {
+                        licenseKey: null,
+                        uuid: null,
+                        client: {
+                            type: null,
+                            version: null,
+                            pid: null
+                        },
+                        parentApp: {
+                            uuid: null
+                        }
+                    }
+                }
+            };
+
+        it('should send the correct base payload', () => {
+            const  payload  = (<any>rvmMessageBus).registerLicenseInfo({
+                processId,
+                runtimeVersion
             });
 
-            assert.deepEqual(payloadShape, payload, 'shapes should match');
+            assert.deepEqual(baseStartedShape, payload, 'shapes should match');
         });
 
         it('should send the correct full payload', () => {
-
-            const payloadShape: any = {
-                processId: 'processId',
-                runtimeVersion: 'runtimeVersion',
-
-                action: 'license-info',
-                sessionId: RVMMessageBus.sessionId,
+            const startedMsgData = {
                 parentApp: {
-                    sourceUrl: 'parentApp.sourceUrl'
+                    uuid: 'parentApp.sourceUrl'
                 },
                 sourceUrl: 'sourceUrl',
                 licenseKey: 'licenseKey',
@@ -81,25 +109,17 @@ describe('rvm message bus', () => {
                     type: 'js',
                     version: 'version',
                     pid: 999999999
-                }
-            }
-
-            const {payload} = <any> rvmMessageBus.registerLicenseInfo(<LicenseInfo> {
-                processId: 'processId',
-                runtimeVersion: 'runtimeVersion',
-                parentApp: {
-                    sourceUrl: 'parentApp.sourceUrl'
                 },
-                sourceUrl: 'sourceUrl',
-                licenseKey: 'licenseKey',
-                client: {
-                    type: 'js',
-                    version: 'version',
-                    pid: 999999999
-                }
-            });
+                uuid: 'uuid'
+            };
 
-            assert.deepEqual(payloadShape, payload, 'shapes should match');
+            const expectedPayload = Object.assign({}, baseStartedShape);
+
+            expectedPayload.payload.data = startedMsgData;
+
+            const  payload = (<any>rvmMessageBus).registerLicenseInfo({data: startedMsgData, processId, runtimeVersion});
+
+            assert.deepEqual(expectedPayload, payload, 'shapes should match');
         });
     });
 });
