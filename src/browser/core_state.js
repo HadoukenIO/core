@@ -517,9 +517,14 @@ function getAppAncestor(descendantAppUuid) {
 function setLicenseKey(identity, licenseKey) {
     const { uuid } = identity;
     const app = getAppByUuid(uuid);
+    const externalConnection = ExternalApplication.getExternalConnectionByUuid(uuid);
 
     if (app) {
         app.licenseKey = licenseKey;
+
+        return licenseKey;
+    } else if (externalConnection) {
+        externalConnection.licenseKey = licenseKey;
 
         return licenseKey;
     } else {
@@ -530,9 +535,12 @@ function setLicenseKey(identity, licenseKey) {
 function getLicenseKey(identity) {
     const { uuid } = identity;
     const app = getAppByUuid(uuid);
+    const externalConnection = ExternalApplication.getExternalConnectionByUuid(uuid);
 
     if (app) {
         return app.licenseKey;
+    } else if (externalConnection) {
+        return externalConnection.licenseKey;
     } else {
         return null;
     }

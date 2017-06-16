@@ -123,8 +123,14 @@ function AuthorizationApiHandler() {
             socketServer.connectionAuthenticated(id, uuid);
 
             rvmMessageBus.registerLicenseInfo({
-                licenseKey: externalConnObj.licenseKey,
-                client: externalConnObj.client
+                data: {
+                    licenseKey: externalConnObj.licenseKey,
+                    client: externalConnObj.client,
+                    uuid,
+                    parentApp: {
+                        uuid: null
+                    }
+                }
             });
 
             if (!success) {

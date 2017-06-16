@@ -162,14 +162,17 @@ export interface ApplicationEvent extends RvmMsgBase {
 }
 
 export interface LicenseInfo {
-    licenseKey?: string;
-    client?: {
-        type: 'dotnet' | 'java' | 'air' | 'node' | 'js';
-        version: string;
-    };
-    pid?: number;
-    parentApp?: {
-        sourceUrl: string;
+    data: {
+        licenseKey?: string;
+        client?: {
+            type: 'dotnet' | 'java' | 'air' | 'node' | 'js';
+            version: string;
+        };
+        pid?: number;
+        parentApp?: {
+            sourceUrl: string;
+        };
+        uuid?: string;
     };
 }
 
@@ -183,6 +186,16 @@ export class RVMMessageBus extends EventEmitter  {
     private messageIdToCallback: RvmCallbacks; // Tracks functions that we'll notify If a response is received
     private transport: WMCopyData;
     public static sessionId = app.generateGUID();
+    public static readonly events: {
+        STARTED: 'started',
+        CLOSED: 'closed',
+        READY: 'ready',
+        RUN_REQUESTED: 'run-requested',
+        CRASHED: 'crashed',
+        ERROR: 'error',
+        NOT_RESPONDING: 'not-responding',
+        OUT_OF_MEMORY: 'out-of-memory'
+    };
 
     constructor() {
         super();
@@ -231,7 +244,14 @@ export class RVMMessageBus extends EventEmitter  {
         });
     }
 
-    public publish(msg: RvmMsgBase, callback: (x: any) => any = ()  => undefined): boolean {
+    public publish = (msg: RvmMsgBase, callback: (x: any) => any = ()  => undefined): boolean => {
+
+        if (!msg || typeof msg !== 'object') {
+            log.writeToLog('ERROR', 'Argument must be an object');
+
+            return false;
+        }
+
         const {topic, timeToLive} = msg;
         const payload: any = Object.assign({
             processId: process.pid,
@@ -253,24 +273,25 @@ export class RVMMessageBus extends EventEmitter  {
         return this.transport.publish(envelope);
     }
 
-    public registerLicenseInfo(licInfo: LicenseInfo): boolean {
+    public registerLicenseInfo = (licInfo: LicenseInfo, sourceUrl: string = null): boolean => {
         const payload = Object.assign({
-            action: 'license-info',
-            topic: 'application',
+            topic: 'application-event',
+            type: 'started',
+            sourceUrl,
             sessionId: RVMMessageBus.sessionId,
-            parentApp: {
-                sourceUrl: null
-            },
-            sourceUrl: null,
-            licenseKey: null,
-            client: {
-                type: null,
-                version: null,
-                pid: null
+            data: {
+                parentApp: {
+                    uuid: null
+                },
+                licenseKey: null,
+                client: {
+                    type: null,
+                    version: null,
+                    pid: null
+                },
+                uuid: null
             }
         }, licInfo);
-
-        log.writeToLog(1, payload, true);
 
         return this.publish(payload);
     }

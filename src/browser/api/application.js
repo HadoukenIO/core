@@ -162,7 +162,6 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
         // not the actual `application` object created above. Here we are attaching the parent
         // indentity to it.
         const app = coreState.appByUuid(opts.uuid);
-
         app.parentUuid = parentUuid;
     }
 
@@ -442,54 +441,82 @@ Application.run = function(identity, configUrl = '') {
 
     createAppObj(identity.uuid, null, configUrl);
 
-    let uuid = identity.uuid,
-        app = Application.wrap(uuid),
-        appState = coreState.appByUuid(uuid),
-        mainWindowOpts = _.clone(app._options),
-        hideSplashTopic = route.application('hide-splashscreen', uuid),
-        eventListenerStrings = [],
-        sourceUrl = appState.appObj._configUrl,
-        hideSplashListener = () => {
-            let rvmPayload = {
-                topic: 'application',
-                action: 'hide-splashscreen',
+    const uuid = identity.uuid;
+    const app = Application.wrap(uuid);
+    const appState = coreState.appByUuid(uuid);
+    let sourceUrl = appState.appObj._configUrl;
+    const mainWindowOpts = _.clone(app._options);
+    const hideSplashTopic = route.application('hide-splashscreen', uuid);
+    const eventListenerStrings = [];
+    const hideSplashListener = () => {
+        let rvmPayload = {
+            topic: 'application',
+            action: 'hide-splashscreen',
+            sourceUrl
+        };
+
+        if (rvmBus) {
+            rvmBus.publish(rvmPayload);
+        }
+    };
+
+    // First check the local option set for any license info, then check
+    // if any license info was stamped on the meta app obj (this is the case
+    // when the app was manifest launched), finally check the parent's meta
+    // obj. If any is found assign this to the current app's meta object. This
+    // will ensure it is carried forward to and descendant app launches.
+    const genLicensePayload = () => {
+        let licenseKey = mainWindowOpts.licenseKey;
+
+        licenseKey = licenseKey || coreState.getLicenseKey({ uuid });
+        licenseKey = licenseKey || coreState.getLicenseKey({ uuid: appState.parentUuid });
+
+        coreState.setLicenseKey({ uuid }, licenseKey);
+
+        return {
+            licenseKey,
+            uuid,
+            client: {
+                type: 'js'
+            },
+            parentApp: {
+                uuid: appState.parentUuid || null
+            }
+        };
+    };
+    const appEventsForRVM = ['closed', 'ready', 'run-requested', 'crashed', 'error', 'not-responding', 'out-of-memory'];
+    const appStartedHandler = () => {
+        rvmBus.registerLicenseInfo({ data: genLicensePayload() }, sourceUrl);
+    };
+    const sendAppsEventsToRVMListener = (appEvent) => {
+        if (!sourceUrl) {
+            return; // Most likely an adapter, RVM can't do anything with what it didn't load(determined by sourceUrl) so ignore
+        }
+        let type = appEvent.type,
+            rvmPayload = {
+                topic: 'application-event',
+                type,
                 sourceUrl
             };
 
-            if (rvmBus) {
-                rvmBus.publish(rvmPayload);
-            }
-        },
-        appEventsForRVM = ['started', 'closed', 'ready', 'run-requested', 'crashed', 'error', 'not-responding', 'out-of-memory'],
-        sendAppsEventsToRVMListener = (appEvent) => {
-            if (!sourceUrl) {
-                return; // Most likely an adapter, RVM can't do anything with what it didn't load(determined by sourceUrl) so ignore
-            }
-            let type = appEvent.type,
-                rvmPayload = {
-                    topic: 'application-event',
-                    type,
-                    sourceUrl
-                };
+        if (type === 'ready' || type === 'run-requested') {
+            rvmPayload.hideSplashScreenSupported = true;
+        } else if (type === 'closed') {
 
-            if (type === 'ready' || type === 'run-requested') {
-                rvmPayload.hideSplashScreenSupported = true;
-            } else if (type === 'closed') {
-
-                // Don't send 'closed' event to RVM when app is restarting.
-                // This solves the problem of apps not being able to make API
-                // calls that rely on RVM and manifest URL
-                if (appState.isRestarting) {
-                    return;
-                }
-
-                rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
+            // Don't send 'closed' event to RVM when app is restarting.
+            // This solves the problem of apps not being able to make API
+            // calls that rely on RVM and manifest URL
+            if (appState.isRestarting) {
+                return;
             }
 
-            if (rvmBus) {
-                rvmBus.publish(rvmPayload);
-            }
-        };
+            rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
+        }
+
+        if (rvmBus) {
+            rvmBus.publish(rvmPayload);
+        }
+    };
 
     // if the runtime is in offline mode, the RVM still expects the
     // startup-url/config for communication
@@ -509,6 +536,7 @@ Application.run = function(identity, configUrl = '') {
 
     // Set up RVM related listeners for events the RVM cares about
     ofEvents.on(hideSplashTopic, hideSplashListener);
+    ofEvents.on(route.application('started', uuid), appStartedHandler);
     appEventsForRVM.forEach(appEvent => {
         ofEvents.on(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
     });
@@ -531,33 +559,6 @@ Application.run = function(identity, configUrl = '') {
         }
 
         ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
-
-        const parentConfigUrl = coreState.getConfigUrlByUuid(uuid);
-
-        // First check the local option set for any license info, then check
-        // if any license info was stamped on the meta app obj (this is the case
-        // when the app was manifest launched), finally check the parent's meta
-        // obj. If any is found assign this to the current app's meta object. This
-        // will ensure it is carried forward to and descendant app launches.
-
-        let licenseKey = mainWindowOpts.licenseKey;
-
-        licenseKey = licenseKey || coreState.getLicenseKey({ uuid });
-        licenseKey = licenseKey || coreState.getLicenseKey({ uuid: appState.parentUuid });
-
-        coreState.setLicenseKey({ uuid }, licenseKey);
-
-        rvmBus.registerLicenseInfo({
-            licenseKey,
-            client: {
-                type: 'js',
-                pid
-            },
-            parentApp: {
-                sourceUrl: parentConfigUrl
-            },
-            sourceUrl
-        });
     });
 
     // turn on plugins for the main window
@@ -594,6 +595,7 @@ Application.run = function(identity, configUrl = '') {
         appEventsForRVM.forEach(appEvent => {
             ofEvents.removeListener(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
         });
+        ofEvents.removeListener(route.application('started', uuid), appStartedHandler);
 
         coreState.removeApp(app.id);
 
