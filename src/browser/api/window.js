@@ -1561,6 +1561,8 @@ Window.onUnload = (identity) => {
 };
 
 function emitCloseEvents(identity) {
+    electronApp.emit('browser-window-closed', null, getElectronBrowserWindow(identity));
+
     ofEvents.emit(`window/closed`, {
         name: identity.name,
         uuid: identity.uuid
