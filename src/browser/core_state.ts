@@ -41,13 +41,13 @@ interface ProxySettingsArgs {
     type?: string;
 }
 
-interface StrippedApplication {
+interface ApplicationMeta {
     isRunning: boolean;
     parentUuid: string;
     uuid: string;
 }
 
-interface StrippedWindow {
+interface WindowMeta {
     childWindows: Shapes.BrowserWindow[];
     mainWindow: Shapes.BrowserWindow;
     uuid: string;
@@ -433,7 +433,7 @@ function getWinList(): Shapes.Window[] {
         .reduce((wins, myWins) => wins.concat(myWins), []); //flatten
 }
 
-export function getAllApplications(): StrippedApplication[] {
+export function getAllApplications(): ApplicationMeta[] {
     return apps.map(app => {
         return {
             isRunning: app.isRunning,
@@ -450,7 +450,7 @@ export function getAllAppObjects(): Shapes.AppObj[] {
         .map(app => app.appObj); //and return same
 }
 
-export function getAllWindows(): StrippedWindow[] {
+export function getAllWindows(): WindowMeta[] {
     const getBounds = require('./api/window.js').Window.getBounds; // do not move this line!
     return apps.map(app => {
         const windowBounds = app.children
