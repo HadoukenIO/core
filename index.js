@@ -511,7 +511,7 @@ function launchApp(argo, startExternalAdapterServer) {
     }, error => {
         log.writeToLog(1, error, true);
 
-        if (!coreState.argo['noerrdialog']) {
+        if (!coreState.argo['noerrdialogs']) {
             dialog.showErrorBox('Fatal Error', `${error}`);
         }
 
@@ -552,7 +552,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
             });
         }
 
-        if (!coreState.argo['noerrdialog']) {
+        if (!coreState.argo['noerrdialogs']) {
             const srcMsg = error ? error.message : '';
             const errorMessage = options.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
 
