@@ -313,6 +313,7 @@ app.on('ready', function() {
             });
         }
     });
+
     rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'complete'), payload => {
         if (payload) {
             ofEvents.emit(route.system(`asset-download-complete-${payload.downloadId}`), {
@@ -490,7 +491,7 @@ function launchApp(argo, startExternalAdapterServer) {
         if (openfinWinOpts && !isRunning) {
             //making sure that if a window is pressent we set the window name === to the uuid as per 5.0
             openfinWinOpts.name = uuid;
-            initFirstApp(openfinWinOpts, configUrl, licenseKey);
+            initFirstApp(configObject, configUrl, licenseKey);
         } else if (uuid) {
             Application.run({
                 uuid,
@@ -519,8 +520,12 @@ function launchApp(argo, startExternalAdapterServer) {
 }
 
 
-function initFirstApp(options, configUrl, licenseKey) {
+function initFirstApp(configObject, configUrl, licenseKey) {
+    let options;
+
     try {
+        options = convertOptions.getWindowOptions(configObject);
+
         // Needs proper configs
         firstApp = Application.create(options, configUrl);
 
@@ -530,10 +535,12 @@ function initFirstApp(options, configUrl, licenseKey) {
             uuid: firstApp.uuid
         });
 
-        // Emitted when the window is closed.
         firstApp.mainWindow.on('closed', function() {
             firstApp = null;
         });
+
+        socketServer.start(configObject['websocket_port'] || 9696);
+
     } catch (error) {
         log.writeToLog(1, error, true);
 
