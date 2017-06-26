@@ -322,6 +322,29 @@ app.on('ready', function() {
         }
     });
 
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-progress'), payload => {
+        if (payload) {
+            ofEvents.emit(route.system(`runtime-download-progress-${ payload.downloadId }`), payload);
+        }
+    });
+
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-error'), payload => {
+        if (payload) {
+            ofEvents.emit(route.system(`runtime-download-error-${ payload.downloadId }`), {
+                reason: payload.error,
+                err: errors.errorToPOJO(new Error(payload.error))
+            });
+        }
+    });
+
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-complete'), payload => {
+        if (payload) {
+            ofEvents.emit(route.system(`runtime-download-complete-${ payload.downloadId }`), {
+                path: payload.path
+            });
+        }
+    });
+
     // handle deferred launches
     deferredLaunches.forEach((commandLine) => {
         handleDelegatedLaunch(commandLine);
@@ -630,16 +653,30 @@ function registerShortcuts() {
         globalShortcut.register(reloadCtrlShiftRShortcut, reloadIgnoringCache);
     });
 
-    app.on('browser-window-blur', () => {
-        globalShortcut.unregister(resetZoomShortcut);
-        globalShortcut.unregister(zoomInShortcut);
-        globalShortcut.unregister(zoomInShiftShortcut);
-        globalShortcut.unregister(zoomOutShortcut);
-        globalShortcut.unregister(zoomOutShiftShortcut);
-        globalShortcut.unregister(devToolsShortcut);
-        globalShortcut.unregister(reloadF5Shortcut);
-        globalShortcut.unregister(reloadShiftF5Shortcut);
-        globalShortcut.unregister(reloadCtrlRShortcut);
-        globalShortcut.unregister(reloadCtrlShiftRShortcut);
-    });
+    const unhookShortcuts = (event, bw) => {
+        let browserWindow = BrowserWindow.getFocusedWindow();
+        const sourceWindowExists = bw && !bw.isDestroyed();
+        const focusedWindowExists = browserWindow && !browserWindow.isDestroyed();
+        let unhook = !focusedWindowExists;
+
+        if (focusedWindowExists && sourceWindowExists) {
+            unhook = browserWindow.id === bw.id;
+        }
+
+        if (unhook) {
+            globalShortcut.unregister(resetZoomShortcut);
+            globalShortcut.unregister(zoomInShortcut);
+            globalShortcut.unregister(zoomInShiftShortcut);
+            globalShortcut.unregister(zoomOutShortcut);
+            globalShortcut.unregister(zoomOutShiftShortcut);
+            globalShortcut.unregister(devToolsShortcut);
+            globalShortcut.unregister(reloadF5Shortcut);
+            globalShortcut.unregister(reloadShiftF5Shortcut);
+            globalShortcut.unregister(reloadCtrlRShortcut);
+            globalShortcut.unregister(reloadCtrlShiftRShortcut);
+        }
+    };
+
+    app.on('browser-window-closed', unhookShortcuts);
+    app.on('browser-window-blur', unhookShortcuts);
 }

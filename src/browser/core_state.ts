@@ -13,92 +13,110 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 /*
-	src/browser/core_state.js
-*/
+* TODO: Remove these after Dependency Injection refactor:
+* const manifestProxySettings
+* const startManifest
+* function getManifestProxySettings
+* function getStartManifest
+* function setManifestProxySettings
+* function setStartManifest
+* */
 
-// built-in modules
-const electronApp = require('electron').app;
+import * as minimist from 'minimist';
+import { app } from 'electron';
+import { ExternalApplication } from './api/external_application';
+import { PortInfo } from './port_discovery';
+import * as Shapes from '../shapes';
 
-// npm modules
-const minimist = require('minimist');
+export interface StartManifest {
+    data: Shapes.Manifest;
+    url: string;
+}
 
-// local modules
-import {
-    ExternalApplication
-} from './api/external_application';
+interface ProxySettingsArgs {
+    proxyAddress?: string;
+    proxyPort?: number;
+    type?: string;
+}
 
-// locals
-const args = electronApp.getCommandLineArguments(); // command line string ("s" for "string")
-const argv = electronApp.getCommandLineArgv(); // argument list ("v" for "vector")
-const argo = minimist(argv); // minimist-style object ("o" for "object"; hash of command line options:values; see https://github.com/substack/minimist)
+interface ApplicationMeta {
+    isRunning: boolean;
+    parentUuid: string;
+    uuid: string;
+}
 
-const coreState = {
-    apps: []
-};
+interface WindowMeta {
+    childWindows: Shapes.BrowserWindow[];
+    mainWindow: Shapes.BrowserWindow;
+    uuid: string;
+}
 
-// TODO: Remove after Dependency Injection refactor
-var startManifest_ = {};
+export const args = app.getCommandLineArguments(); // arguments as a string
+export const argv = app.getCommandLineArgv(); // arguments as an array
+export const argo = minimist(argv); // arguments as an object
 
-// TODO: Remove after Dependency Injection refactor
-const manifestProxySettings_ = {
+const apps: Shapes.App[] = [];
+
+let startManifest = {};
+
+// TODO: This needs to go go away, pending socket server refactor.
+let socketServerState = {};
+
+const manifestProxySettings: Shapes.ProxySettings = {
     proxyAddress: '',
     proxyPort: 0,
     type: 'system'
 };
 
-
-// TODO: Remove after Dependency Injection refactor
-function setStartManifest(url, data) {
-    startManifest_ = {
-        url: url,
-        data: data
-    };
-
-    setManifestProxySettings((data || {}).proxy);
+export function setStartManifest(url: string, data: Shapes.Manifest): void {
+    startManifest = { url, data };
+    setManifestProxySettings((data && data.proxy) || undefined);
 }
 
-// TODO: Remove after Dependency Injection refactor
-function getStartManifest() {
-    return startManifest_;
+export function getStartManifest(): StartManifest|{} {
+    return startManifest;
 }
 
 // Returns string on error
-// TODO: Remove after Dependency Injection refactor
-function setManifestProxySettings(proxySettings) {
+export function setManifestProxySettings(proxySettings: ProxySettingsArgs): void|string {
+
     // Proxy settings from a config serve no behavioral purpose in 5.0
     // They are merely a read/write data-store.
     if (typeof proxySettings === 'object') {
         const type = proxySettings.type;
-        if (type.indexOf('system') === -1 && type.indexOf('named') === -1) {
-            return 'Invalid proxy type. Should be \"system\" or \"named\"';
+
+        if (!type.includes('system') && !type.includes('named')) {
+            return 'Invalid proxy type. Should be "system" or "named"';
         }
 
-        manifestProxySettings_.proxyAddress = proxySettings.proxyAddress || '';
-        manifestProxySettings_.proxyPort = proxySettings.proxyPort || 0;
-        manifestProxySettings_.type = type;
+        manifestProxySettings.proxyAddress = proxySettings.proxyAddress || '';
+        manifestProxySettings.proxyPort = proxySettings.proxyPort || 0;
+        manifestProxySettings.type = type;
     }
 }
 
-// TODO: Remove after Dependency Injection refactor
-function getManifestProxySettings() {
-    return manifestProxySettings_;
+export function getManifestProxySettings(): Shapes.ProxySettings {
+    return manifestProxySettings;
 }
 
-function windowExists(uuid, name) {
+export function windowExists(uuid: string, name: string): boolean {
     return !!getOfWindowByUuidName(uuid, name);
 }
 
-function removeChildById(id) {
+export function removeChildById(id: number): void {
     const app = getAppByWin(id);
 
     if (app) {
-        //if this was a child window make sure we clean up as well.
+
+        // if this was a child window make sure we clean up as well.
         app.children.forEach(win => {
             win.children = win.children.filter(wChildId => {
                 return wChildId !== id;
             });
         });
+
         if (app && app.children) {
             app.children = app.children.filter(child => {
                 return child.id !== id;
@@ -107,51 +125,56 @@ function removeChildById(id) {
     }
 }
 
-function getChildrenByWinId(id) {
+export function getChildrenByWinId(id: number): boolean|number[] {
     const win = getWinById(id);
     return win && win.children;
 }
 
-function getAppByWin(winId) {
-    return coreState.apps.find(app => app.children.find(getWinList => getWinList.id === winId));
+export function getAppByWin(id: number): Shapes.App|undefined {
+    return apps.find(app => {
+        return !!app.children.find(win => {
+            return win.id === id;
+        });
+    });
 }
 
-function getAppById(appId) {
-    return coreState.apps.find(app => app.id === appId); //This will hide a leak
+function getAppById(id: number): Shapes.App {
+    return apps.find(app => app.id === id); // This will hide a leak
 }
 
-function appByUuid(uuid) {
-    return coreState.apps.find(app => uuid === app.uuid);
+export function appByUuid(uuid: string): Shapes.App {
+    return apps.find(app => uuid === app.uuid);
 }
 
-const getAppByUuid = appByUuid;
+export const getAppByUuid = appByUuid;
 
-function setAppRunningState(uuid, running) {
+export function setAppRunningState(uuid: string, isRunning: boolean): void {
     const app = appByUuid(uuid);
+
     if (app) {
-        app.isRunning = !!running;
+        app.isRunning = isRunning;
     }
 }
 
-function getAppRunningState(uuid) {
+export function getAppRunningState(uuid: string): boolean {
     const app = appByUuid(uuid);
     return app && app.isRunning;
 }
 
-function getAppRestartingState(uuid) {
+export function getAppRestartingState(uuid: string): boolean {
     const app = appByUuid(uuid);
     return app && app.isRestarting;
 }
 
-function setAppRestartingState(uuid, restarting) {
-    const app = appByUuid(uuid); // check if uuid is recognized
+export function setAppRestartingState(uuid: string, isRestarting: boolean): void {
+    const app = appByUuid(uuid);
 
     if (app) {
-        app.isRestarting = !!restarting;
+        app.isRestarting = isRestarting;
     }
 }
 
-function setAppId(uuid, id) {
+export function setAppId(uuid: string, id: number): void {
     const app = appByUuid(uuid);
 
     if (!app) {
@@ -161,24 +184,24 @@ function setAppId(uuid, id) {
 
     app.id = id;
     app.children = [{
+        children: [],
         id: id,
-        openfinWindow: null,
-        children: []
+        openfinWindow: null
     }];
 }
 
-
-function getAppObjByUuid(uuid) {
+export function getAppObjByUuid(uuid: string): Shapes.AppObj|boolean {
     const app = appByUuid(uuid);
     return app && app.appObj;
 }
 
-function getExternalAppObjByUuid(uuid) {
-    return ExternalApplication.getAllExternalConnctions().find(ea => ea.uuid === uuid);
+export function getExternalAppObjByUuid(uuid: string): Shapes.Identity|undefined {
+    const allExternalConnections = ExternalApplication.getAllExternalConnctions();
+    return allExternalConnections.find(ea => ea.uuid === uuid);
 }
 
-function getUuidBySourceUrl(sourceUrl) {
-    const app = coreState.apps.find(app => {
+export function getUuidBySourceUrl(sourceUrl: string): string|boolean {
+    const app = apps.find(app => {
         const configUrl = app.appObj && app.appObj._configUrl;
         return configUrl && configUrl === sourceUrl;
     });
@@ -186,7 +209,7 @@ function getUuidBySourceUrl(sourceUrl) {
     return app && app.appObj && app.appObj.uuid;
 }
 
-function getConfigUrlByUuid(uuid) {
+export function getConfigUrlByUuid(uuid: string): string|boolean {
     let app = appByUuid(uuid);
     while (app && app.appObj && app.appObj.parentUuid) {
         app = appByUuid(app.appObj.parentUuid);
@@ -194,8 +217,8 @@ function getConfigUrlByUuid(uuid) {
     return app && app._configUrl;
 }
 
-function setAppObj(appId, appObj) {
-    const app = getAppById(appId);
+export function setAppObj(id: number, appObj: Shapes.AppObj): Shapes.App|void {
+    const app = getAppById(id);
 
     if (!app) {
         console.warn('setAppObj - app not found', arguments);
@@ -212,9 +235,8 @@ function setAppObj(appId, appObj) {
     return app;
 }
 
-
-function getAppObj(appId) {
-    const app = getAppById(appId);
+export function getAppObj(id: number): Shapes.AppObj|void {
+    const app = getAppById(id);
 
     if (!app) {
         console.warn('getAppObj - app not found', arguments);
@@ -224,8 +246,7 @@ function getAppObj(appId) {
     return app.appObj;
 }
 
-
-function setAppOptions(opts, configUrl = '') {
+export function setAppOptions(opts: Shapes.WindowOptions, configUrl: string = ''): Shapes.App|void {
     const app = appByUuid(opts.uuid);
 
     if (!app) {
@@ -233,20 +254,18 @@ function setAppOptions(opts, configUrl = '') {
         return; //throw new Error('setAppObj - app not found');
     }
 
-    app._options = opts; // need to save options so app can re-run
     app._configUrl = configUrl;
+    app._options = opts; // need to save options so app can re-run
 
     return app;
 }
 
-
-function getWinById(winToFind) {
-    return getWinList().find(win => win.id === winToFind);
+export function getWinById(id: number): Shapes.Window|undefined {
+    return getWinList().find(win => win.id === id);
 }
 
-
-function getChildrenByApp(appId) {
-    const app = getAppById(appId);
+export function getChildrenByApp(id: number): Shapes.OpenFinWindow[]|void {
+    const app = getAppById(id);
 
     if (!app) {
         console.warn('getChildrenByApp - app not found', arguments);
@@ -259,8 +278,7 @@ function getChildrenByApp(appId) {
         .map(child => child.openfinWindow);
 }
 
-
-function addChildToWin(parentId, childId) {
+export function addChildToWin(parentId: number, childId: number): number|void {
     const app = getAppByWin(parentId);
 
     if (!app) {
@@ -281,15 +299,14 @@ function addChildToWin(parentId, childId) {
     //		}
 
     return app.children.push({
+        children: [],
         id: childId,
-        parentId: parentId,
         openfinWindow: null,
-        children: []
+        parentId: parentId
     });
 }
 
-
-function getWinObjById(id) {
+export function getWinObjById(id: number): Shapes.OpenFinWindow|void {
     const win = getWinById(id);
 
     if (!win) {
@@ -302,32 +319,34 @@ function getWinObjById(id) {
     return win.openfinWindow;
 }
 
-
-function addApp(id, uuid) {
+export function addApp(id: number, uuid: string): Shapes.App[] {
     // id is optional
 
-    coreState.apps.push({
-        uuid,
-        id: id,
+    apps.push({
         appObj: null,
-        isRunning: false,
-        sentHideSplashScreen: false, // hide-splashscreen is sent to RVM on 1st window show & immediately on subsequent app launches if already sent once
         children: [{
             id: id,
             openfinWindow: null,
             children: []
-        }]
+        }],
+        id: id,
+        isRunning: false,
+        uuid,
+
+        // hide-splashscreen is sent to RVM on 1st window show &
+        // immediately on subsequent app launches if already sent once
+        sentHideSplashScreen: false
     });
 
-    return coreState.apps;
+    return apps;
 }
 
-function sentFirstHideSplashScreen(uuid) {
+export function sentFirstHideSplashScreen(uuid: string): boolean {
     const app = appByUuid(uuid);
     return app && app.sentHideSplashScreen;
 }
 
-function setSentFirstHideSplashScreen(uuid, sent) {
+export function setSentFirstHideSplashScreen(uuid: string, sent: boolean): void {
     const app = appByUuid(uuid);
     if (app) {
         app.sentHideSplashScreen = sent;
@@ -335,8 +354,8 @@ function setSentFirstHideSplashScreen(uuid, sent) {
 }
 
 // what should the name be?
-function setWindowObj(winId, openfinWindow) {
-    const win = getWinById(winId);
+export function setWindowObj(id: number, openfinWindow: Shapes.OpenFinWindow): Shapes.Window|void {
+    const win = getWinById(id);
 
     if (!win) {
         console.warn('setWindow - window not found', arguments);
@@ -353,7 +372,7 @@ function setWindowObj(winId, openfinWindow) {
     return win;
 }
 
-function removeApp(id) {
+export function removeApp(id: number): void {
     const app = getAppById(id);
 
     if (!app) {
@@ -365,19 +384,18 @@ function removeApp(id) {
 
     app.isRunning = false;
 
-    // coreState.apps = coreState.apps.filter(app => app.id !== id);
+    // apps = apps.filter(app => app.id !== id);
 
-    // return coreState.apps;
+    // return apps;
 }
 
-function getWindowOptionsById(id) {
+export function getWindowOptionsById(id: number): Shapes.WindowOptions|boolean {
     const win = getWinById(id);
     return win.openfinWindow && win.openfinWindow._options;
 }
 
-
-function getMainWindowOptions(winId) {
-    const app = getAppByWin(winId);
+export function getMainWindowOptions(id: number): Shapes.WindowOptions|void {
+    const app = getAppByWin(id);
 
     if (!app) {
         console.warn('getMainWindowOptions - app not found', arguments);
@@ -393,13 +411,12 @@ function getMainWindowOptions(winId) {
     return app.appObj._options;
 }
 
-
-function getWindowByUuidName(uuid, name) {
+export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinWindow|boolean {
     const win = getOfWindowByUuidName(uuid, name);
     return win && win.openfinWindow;
 }
 
-function getOfWindowByUuidName(uuid, name) {
+function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|undefined {
     return getWinList().find(win => win.openfinWindow &&
         win.openfinWindow.uuid === uuid &&
         win.openfinWindow.name === name
@@ -410,69 +427,60 @@ function getOfWindowByUuidName(uuid, name) {
  * returns a list of wrapped window objects
  * TODO flatten this one level
  */
-
-function getWinList() {
-    return coreState.apps
+function getWinList(): Shapes.Window[] {
+    return apps
         .map(app => app.children) //with children
         .reduce((wins, myWins) => wins.concat(myWins), []); //flatten
 }
 
-function getAllApplications() {
-    return coreState.apps.map(app => {
+export function getAllApplications(): ApplicationMeta[] {
+    return apps.map(app => {
         return {
             isRunning: app.isRunning,
-            uuid: app.uuid,
-            parentUuid: app.parentUuid
+            parentUuid: app.parentUuid,
+            uuid: app.uuid
         };
     });
 }
 
 //TODO: should this function replace getAllApplications ?
-function getAllAppObjects() {
-    return coreState.apps
+export function getAllAppObjects(): Shapes.AppObj[] {
+    return apps
         .filter(app => app.appObj) //with openfin app object
         .map(app => app.appObj); //and return same
 }
 
-function getAllWindows() {
+export function getAllWindows(): WindowMeta[] {
     const getBounds = require('./api/window.js').Window.getBounds; // do not move this line!
-    return coreState.apps.map(app => {
+    return apps.map(app => {
         const windowBounds = app.children
             .filter(win => win.openfinWindow && win.id !== app.id)
             .map(win => {
                 const bounds = getBounds({
-                    uuid: win.openfinWindow.uuid,
-                    name: win.openfinWindow.name
+                    name: win.openfinWindow.name,
+                    uuid: win.openfinWindow.uuid
                 });
                 bounds.name = win.openfinWindow.name;
                 return bounds;
             });
 
         return {
-            uuid: app.uuid,
             childWindows: windowBounds,
-            mainWindow: windowBounds[0] || {}
+            mainWindow: windowBounds[0] || {},
+            uuid: app.uuid
         };
     });
 }
 
-function remoteAppPropDecorator(uuid, prop) {
-    return function() {
-        const origArgs = Array.prototype.slice.call(arguments, 0);
-        const browserInstance = getAppObjByUuid(uuid);
-        browserInstance[prop].apply(browserInstance, origArgs);
-    };
+function anyAppRestarting(): boolean {
+    return !!apps.find(app => app.isRestarting);
 }
 
-function anyAppRestarting() {
-    return !!coreState.apps.find(app => app.isRestarting);
-}
-
-function shouldCloseRuntime(ignoreArray) {
+export function shouldCloseRuntime(ignoreArray: string[]|undefined): boolean {
     const ignoredApps = ignoreArray || [];
 
     if (anyAppRestarting()) {
-        console.log('not close Runtime during app restart');
+        console.warn('not close Runtime during app restart');
         return false;
     } else {
         const extConnections = ExternalApplication.getAllExternalConnctions();
@@ -483,28 +491,25 @@ function shouldCloseRuntime(ignoreArray) {
         return !hasPersistentConnections && !getAllAppObjects().find(app =>
             getAppRunningState(app.uuid) && // app is running
             ignoredApps.indexOf(app.uuid) < 0 && // app is not being ignored
-            !(app._options.nonPersistent !== undefined ? app._options.nonPersistent : app._options.nonPersistant) // app is persistent
+            !app._options.nonPersistent // app is persistent
         );
     }
 }
 
 //TODO: This needs to go go away, pending socket server refactor.
-var socketServerState = {};
-
-//TODO: This needs to go go away, pending socket server refactor.
-function setSocketServerState(state) {
+export function setSocketServerState(state: PortInfo) {
     socketServerState = state;
 }
 
 //TODO: This needs to go go away, pending socket server refactor.
-function getSocketServerState() {
+export function getSocketServerState() {
     return socketServerState;
 }
 
 /**
  * Get app's very first ancestor
  */
-function getAppAncestor(descendantAppUuid) {
+export function getAppAncestor(descendantAppUuid: string): Shapes.App {
     const app = appByUuid(descendantAppUuid);
 
     if (app && app.parentUuid) {
@@ -514,12 +519,17 @@ function getAppAncestor(descendantAppUuid) {
     }
 }
 
-function setLicenseKey(identity, licenseKey) {
+export function setLicenseKey(identity: Shapes.Identity, licenseKey: string): string|null {
     const { uuid } = identity;
     const app = getAppByUuid(uuid);
+    const externalConnection = ExternalApplication.getExternalConnectionByUuid(uuid);
 
     if (app) {
         app.licenseKey = licenseKey;
+
+        return licenseKey;
+    } else if (externalConnection) {
+        externalConnection.licenseKey = licenseKey;
 
         return licenseKey;
     } else {
@@ -527,67 +537,16 @@ function setLicenseKey(identity, licenseKey) {
     }
 }
 
-function getLicenseKey(identity) {
+export function getLicenseKey(identity: Shapes.Identity): string|null {
     const { uuid } = identity;
     const app = getAppByUuid(uuid);
+    const externalConnection = ExternalApplication.getExternalConnectionByUuid(uuid);
 
     if (app) {
         return app.licenseKey;
+    } else if (externalConnection) {
+        return externalConnection.licenseKey;
     } else {
         return null;
     }
 }
-
-// methods
-module.exports = {
-    addApp,
-    addChildToWin,
-    argo,
-    args,
-    argv,
-    appByUuid,
-    coreState,
-    getAllApplications,
-    getAllAppObjects,
-    getAllWindows,
-    getAppAncestor,
-    getAppById,
-    getAppByWin,
-    getAppObj,
-    getAppObjByUuid,
-    getAppByUuid,
-    getUuidBySourceUrl,
-    getConfigUrlByUuid,
-    getAppRunningState,
-    getAppRestartingState,
-    getChildrenByApp,
-    getChildrenByWinId,
-    getLicenseKey,
-    getMainWindowOptions,
-    getManifestProxySettings,
-    getOfWindowByUuidName,
-    getSocketServerState,
-    getStartManifest,
-    getWinById,
-    getWindowByUuidName,
-    getWindowOptionsById,
-    getWinObjById,
-    remoteAppPropDecorator,
-    removeApp,
-    removeChildById,
-    sentFirstHideSplashScreen,
-    setAppId,
-    setAppObj,
-    setAppOptions,
-    setAppRunningState,
-    setAppRestartingState,
-    setLicenseKey,
-    setManifestProxySettings,
-    setStartManifest,
-    setWindowObj,
-    setSentFirstHideSplashScreen,
-    setSocketServerState,
-    shouldCloseRuntime,
-    windowExists,
-    getExternalAppObjByUuid
-};
