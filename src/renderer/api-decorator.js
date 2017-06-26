@@ -342,6 +342,16 @@ limitations under the License.
         }, 1);
     }
 
+    rqr('electron').remote.getCurrentWebContents(renderFrameId).once('navigation-entry-commited', () => {
+        ipc.send(renderFrameId, 'of-window-message', {
+            action: 'on-window-unload',
+            payload: {},
+            isSync: false,
+            singleFrameOnly: true,
+            isMainRenderFrame
+        });
+    });
+
     var pendingMainCallbacks = [];
     var currPageHasLoaded = false;
 
@@ -351,16 +361,6 @@ limitations under the License.
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
         let winOpts = getWindowOptionsSync();
-
-        window.addEventListener('unload', () => {
-            ipc.send(renderFrameId, 'of-window-message', {
-                action: 'on-window-unload',
-                payload: {},
-                isSync: false,
-                singleFrameOnly: true,
-                isMainRenderFrame
-            });
-        });
 
         showOnReady(glbl, winOpts);
         wireUpMenu(glbl, winOpts);
