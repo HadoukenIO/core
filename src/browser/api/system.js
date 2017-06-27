@@ -581,11 +581,8 @@ module.exports.System = {
     },
 
     downloadRuntime: function(identity, options, cb) {
-        const appObject = coreState.getAppObjByUuid(identity.uuid);
-
-        options.sourceUrl = (appObject || {})._configUrl;
+        options.sourceUrl = coreState.getConfigUrlByUuid(identity.uuid);
         rvmBus.downloadRuntime(options, cb);
-
     },
     getAllExternalApplications: function() {
         return ExternalApplication.getAllExternalConnctions().map(eApp => {
