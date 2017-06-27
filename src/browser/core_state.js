@@ -188,8 +188,8 @@ function getUuidBySourceUrl(sourceUrl) {
 
 function getConfigUrlByUuid(uuid) {
     let app = appByUuid(uuid);
-    while (app && app.appObj && app.appObj.parentUuid) {
-        app = appByUuid(app.appObj.parentUuid);
+    while (app && app.appObj && app.parentUuid) {
+        app = appByUuid(app.parentUuid);
     }
     return app && app._configUrl;
 }
