@@ -505,15 +505,14 @@ function launchApp(argo, startExternalAdapterServer) {
             configObject: { licenseKey }
         } = configuration;
 
-        const openfinWinOpts = convertOptions.getWindowOptions(configObject);
-        const startUpApp = configObject.startup_app; /* jshint ignore:line */
-        const uuid = startUpApp && startUpApp.uuid;
+        const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
+        const uuid = startupAppOptions && startupAppOptions.uuid;
         const ofApp = Application.wrap(uuid);
         const isRunning = Application.isRunning(ofApp);
 
-        if (openfinWinOpts && !isRunning) {
-            //making sure that if a window is pressent we set the window name === to the uuid as per 5.0
-            openfinWinOpts.name = uuid;
+        if (startupAppOptions && !isRunning) {
+            //making sure that if a window is present we set the window name === to the uuid as per 5.0
+            startupAppOptions.name = uuid;
             initFirstApp(configObject, configUrl, licenseKey);
         } else if (uuid) {
             Application.run({
@@ -544,15 +543,15 @@ function launchApp(argo, startExternalAdapterServer) {
 
 
 function initFirstApp(configObject, configUrl, licenseKey) {
-    let options;
+    let startupAppOptions;
 
     try {
-        options = convertOptions.getWindowOptions(configObject);
+        startupAppOptions = convertOptions.getStartupAppOptions(configObject);
 
         // Needs proper configs
-        firstApp = Application.create(options, configUrl);
+        firstApp = Application.create(startupAppOptions, configUrl);
 
-        coreState.setLicenseKey({ uuid: options.uuid }, licenseKey);
+        coreState.setLicenseKey({ uuid: startupAppOptions.uuid }, licenseKey);
 
         Application.run({
             uuid: firstApp.uuid
@@ -577,7 +576,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
 
         if (!coreState.argo['noerrdialogs']) {
             const srcMsg = error ? error.message : '';
-            const errorMessage = options.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
+            const errorMessage = startupAppOptions.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
 
             dialog.showErrorBox('Fatal Error', errorMessage);
         }

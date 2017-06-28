@@ -194,7 +194,7 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 
 module.exports = {
 
-    getWindowOptions: function(appJson) {
+    getStartupAppOptions: function(appJson) {
         return appJson['startup_app'];
     },
 
