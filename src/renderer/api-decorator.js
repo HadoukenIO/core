@@ -257,6 +257,17 @@ limitations under the License.
                 callback();
             }
 
+            // Fixes the issue where apps created
+            // via the api aren't appearing at the top
+            if (currWindowOpts.name === currWindowOpts.uuid) {
+                fin.desktop.Window.getCurrent().bringToFront();
+            }
+
+            // Refocus when clicked
+            document.addEventListener('click', () => {
+                fin.desktop.Window.getCurrent().focus();
+            });
+
             updateWindowOptionsSync(currWindowOpts.name, currWindowOpts.uuid, {
                 hasLoaded: true
             });
