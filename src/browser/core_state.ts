@@ -1,3 +1,4 @@
+
 /*
 Copyright 2017 OpenFin Inc.
 
@@ -211,7 +212,7 @@ export function getUuidBySourceUrl(sourceUrl: string): string|boolean {
 
 export function getConfigUrlByUuid(uuid: string): string|boolean {
     let app = appByUuid(uuid);
-    while (app && app.appObj && app.parentUuid) {
+    while (app && app.parentUuid) {
         app = appByUuid(app.parentUuid);
     }
     return app && app._configUrl;
