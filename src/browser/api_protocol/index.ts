@@ -15,7 +15,7 @@ limitations under the License.
 */
 declare var require: any;
 
-const ApplicationApiHandler = require('./api_handlers/application').ApplicationApiHandler;
+const initApplicationApiHandler = require('./api_handlers/application').init;
 import { ExternalApplicationApiHandler } from './api_handlers/external_application';
 const AuthorizationApiHandler = require('./api_handlers/authorization').AuthorizationApiHandler;
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
@@ -23,13 +23,13 @@ const EventListenerApiHandler = require('./api_handlers/event_listener').EventLi
 const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
 const SystemApiHandler = require('./api_handlers/system').SystemApiHandler;
-const WindowApiHandler = require('./api_handlers/window').WindowApiHandler;
+const initWindowApiHandler = require('./api_handlers/window').init;
 
 const apiProtocolBase = require('./api_handlers/api_protocol_base.js');
 
 export function initApiHandlers() {
     /* tslint:disable: no-unused-variable */
-    const applicationApiHandler = new ApplicationApiHandler();
+    initApplicationApiHandler();
     const externalApplicationApiHandler = new ExternalApplicationApiHandler();
     const authorizationApiHandler = new AuthorizationApiHandler();
     initClipboardAPIHandler();
@@ -37,7 +37,7 @@ export function initApiHandlers() {
     const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
     const notificationApiHandler = new NotificationApiHandler();
     const systemApiHandler = new SystemApiHandler();
-    const windowApiHandler = new WindowApiHandler();
+    initWindowApiHandler();
 
     apiProtocolBase.init();
 
