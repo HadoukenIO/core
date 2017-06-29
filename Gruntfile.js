@@ -24,7 +24,7 @@ limitations under the License.
 
 const fs = require('fs');
 const path = require('path');
-
+const { execSync } = require('child_process');
 const asar = require('asar');
 const nativeBuilder = require('electron-rebuild');
 const wrench = require('wrench');
@@ -52,34 +52,16 @@ try {
     openfinSign = function() {};
 }
 
-/**
- * A list of files that have already moved to TypeScript. This list will
- * slowly increase as more and more files are moved to TypeScript
- */
-const trans2TSFiles = [
-    'src/browser/api_protocol/api_handlers/clipboard.ts',
-    'src/browser/api_protocol/shapes.ts',
-    'src/browser/transports/base.ts',
-    'src/browser/transports/chromium_ipc.ts',
-    'src/browser/transports/electron_ipc.ts',
-    'src/browser/transports/wm_copydata.ts',
-    'src/browser/clip_bounds.ts',
-    'src/browser/deferred.ts',
-    'src/browser/cached_resource_fetcher.ts',
-    'src/browser/core_state.ts',
-    'src/browser/int_pool.ts',
-    'src/browser/log.ts',
-    'src/browser/of_events.ts',
-    'src/browser/session.ts',
-    'src/browser/transport.ts',
-    'src/browser/window_group_transaction_tracker.ts',
-    'src/common/**/*.ts',
-    'src/browser/port_discovery.ts',
-    'src/browser/api_protocol/**/*.ts',
-    'src/browser/rvm/rvm_message_bus.ts',
-    'src/browser/api/*.ts', // notifications subdirectory excluded due to legacy linting errors
-    'src/browser/rvm/runtime_initiated_topics/app_assets.ts'
-];
+
+// `TSFiles` gets a list of our TypeScript files in ./test and ./src for tslint'ing.
+// Exclude TS declaration files (*.d.ts).
+// Exclude notifications subdirectory due to legacy linting errors.
+const TSFiles = execSync('find src test -type f -name *.ts | grep -v -e "\.d\.ts$" -e "/notifications/"')
+    .toString('utf8')
+    .replace(/\s*$/, '') // remove final newline to avoid an extra (blank) element
+    .split('\n');
+// console.log(TSFiles);
+
 
 // OpenFin commercial license
 const commercialLic = `/*
@@ -164,7 +146,7 @@ module.exports = (grunt) => {
                 force: false
             },
             files: {
-                src: trans2TSFiles
+                src: TSFiles
             }
         },
 

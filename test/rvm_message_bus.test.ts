@@ -15,22 +15,24 @@ limitations under the License.
 */
 import * as assert from 'assert';
 import * as mockery from 'mockery';
-import { mockElectron }  from './electron';
+import { mockElectron } from './electron';
 
 const {app} = mockElectron;
 
+// tslint:disable-next-line:mocha-no-side-effect-code
 const messageId = app.generateGUID();
 const processId = 9999;
-const runtimeVersion =  'runtimeVersion';
+const runtimeVersion = 'runtimeVersion';
 
-const mockWMCopyData  = {
-    WMCopyData: function () {
-        return {
-            on: (x: any) => x,
-            publish: (x: any ) => x
-        }
-    }
+class WMCopyData {
+    public on(x: any): any { return x; }
+    public publish(x: any): any { return x; }
+}
+
+const mockWMCopyData = {
+    WMCopyData
 };
+
 
 mockery.registerMock('electron', mockElectron);
 mockery.registerMock('../transport', mockWMCopyData);
@@ -64,14 +66,14 @@ describe('rvm message bus', () => {
         });
     });
 
-    describe('registerLiceneInfo', () => {
+    describe('registerLicenseInfo', () => {
         const baseStartedShape: any = {
-                topic: "application-event",
+                topic: 'application-event',
                 messageId,
                 payload: {
                     processId,
                     runtimeVersion,
-                    type: "started",
+                    type: 'started',
                     sourceUrl: null,
                     sessionId: RVMMessageBus.sessionId,
                     data: {

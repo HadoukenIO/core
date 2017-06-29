@@ -9,8 +9,8 @@ import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
 
-import { app }  from 'electron';
-const  _ = require('underscore');
+import { app } from 'electron';
+const _ = require('underscore');
 
 const processVersions = <any> process.versions;
 
@@ -333,7 +333,7 @@ export class RVMMessageBus extends EventEmitter  {
                     if (_.has(this.messageIdToCallback, messageId)) {
                         this.messageIdToCallback[messageId]({
                             'time-to-live-expiration': timeToLiveInSeconds,
-                            'envelope': envelope
+                            envelope
                         });
                         delete this.messageIdToCallback[messageId];
                     }

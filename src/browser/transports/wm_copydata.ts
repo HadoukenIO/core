@@ -5,7 +5,6 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import BaseTransport from './base';
-
 const MessageWindow = require('electron').MessageWindow;
 
 class WMCopyDataTransport extends BaseTransport {

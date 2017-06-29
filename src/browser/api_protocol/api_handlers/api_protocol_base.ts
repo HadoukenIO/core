@@ -73,7 +73,7 @@ export function registerActionMap(
                     }
                     apiPath = authorizationPathPrefix + apiPath;
                 } else if (apiPath.indexOf('.') < 0) {
-                    throw new Error('Expected "${apiPath}" to be an apiFunc (starts with dot) or an apiPath (contains dot)');
+                    throw new Error(`Expected "${apiPath}" to be an apiFunc (starts with dot) or an apiPath (contains dot)`);
                 }
                 endpoint.apiPath = apiPath;
             }
