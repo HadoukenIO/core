@@ -1,4 +1,4 @@
-# Hadouken Core
+# Hadouken Core [![Build Status](https://build.openf.in:443/buildStatus/icon?job=runtime-core&style=plastic)]()
 
 #### Requirements
 _The following setup is known to be working well. You can try other versions at your 
