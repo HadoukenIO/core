@@ -31,7 +31,7 @@ class WMCopyDataTransport extends BaseTransport {
         this._messageWindow.on('data', (sender: any, data: any) => {
             this.eventEmitter.emit('message', data.sender,  data.message);
         });
-    };
+    }
 
     public publish(data: any): boolean {
         // on windows x64 platform still returns win32
@@ -46,7 +46,7 @@ class WMCopyDataTransport extends BaseTransport {
             return true;
         }
         return false;
-    };
+    }
 
 }
 

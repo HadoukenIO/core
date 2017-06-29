@@ -340,7 +340,7 @@ export class RVMMessageBus extends EventEmitter  {
                 }, timeToLiveInMS);
             }
         }
-    };
+    }
 }
 
 const rvmMessageBus = new RVMMessageBus();

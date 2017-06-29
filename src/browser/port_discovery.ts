@@ -71,7 +71,7 @@ export class PortDiscovery extends EventEmitter {
     }
 
     public broadcast = (portDiscoveryPayload: PortInfo): void => {
-	//we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
+    //we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
         const _copyDataTransport = this.constructCopyDataTransport();
 
         coreState.setSocketServerState(portDiscoveryPayload);
