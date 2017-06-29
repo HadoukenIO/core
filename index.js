@@ -505,16 +505,15 @@ function launchApp(argo, startExternalAdapterServer) {
             configObject: { licenseKey }
         } = configuration;
 
-        const openfinWinOpts = convertOptions.getWindowOptions(configObject);
-        const startUpApp = configObject.startup_app; /* jshint ignore:line */
-        const uuid = startUpApp && startUpApp.uuid;
+        const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
+        const uuid = startupAppOptions && startupAppOptions.uuid;
         const ofApp = Application.wrap(uuid);
         const isRunning = Application.isRunning(ofApp);
 
-        if (openfinWinOpts && !isRunning) {
-            //making sure that if a window is pressent we set the window name === to the uuid as per 5.0
-            openfinWinOpts.name = uuid;
-            initFirstApp(openfinWinOpts, configUrl, licenseKey);
+        if (startupAppOptions && !isRunning) {
+            //making sure that if a window is present we set the window name === to the uuid as per 5.0
+            startupAppOptions.name = uuid;
+            initFirstApp(configObject, configUrl, licenseKey);
         } else if (uuid) {
             Application.run({
                 uuid,
@@ -534,7 +533,7 @@ function launchApp(argo, startExternalAdapterServer) {
     }, error => {
         log.writeToLog(1, error, true);
 
-        if (!coreState.argo['noerrdialog']) {
+        if (!coreState.argo['noerrdialogs']) {
             dialog.showErrorBox('Fatal Error', `${error}`);
         }
 
@@ -543,21 +542,27 @@ function launchApp(argo, startExternalAdapterServer) {
 }
 
 
-function initFirstApp(options, configUrl, licenseKey) {
-    try {
-        // Needs proper configs
-        firstApp = Application.create(options, configUrl);
+function initFirstApp(configObject, configUrl, licenseKey) {
+    let startupAppOptions;
 
-        coreState.setLicenseKey({ uuid: options.uuid }, licenseKey);
+    try {
+        startupAppOptions = convertOptions.getStartupAppOptions(configObject);
+
+        // Needs proper configs
+        firstApp = Application.create(startupAppOptions, configUrl);
+
+        coreState.setLicenseKey({ uuid: startupAppOptions.uuid }, licenseKey);
 
         Application.run({
             uuid: firstApp.uuid
         });
 
-        // Emitted when the window is closed.
         firstApp.mainWindow.on('closed', function() {
             firstApp = null;
         });
+
+        socketServer.start(configObject['websocket_port'] || 9696);
+
     } catch (error) {
         log.writeToLog(1, error, true);
 
@@ -569,9 +574,9 @@ function initFirstApp(options, configUrl, licenseKey) {
             });
         }
 
-        if (!coreState.argo['noerrdialog']) {
+        if (!coreState.argo['noerrdialogs']) {
             const srcMsg = error ? error.message : '';
-            const errorMessage = options.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
+            const errorMessage = startupAppOptions.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
 
             dialog.showErrorBox('Fatal Error', errorMessage);
         }
