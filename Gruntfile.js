@@ -24,7 +24,6 @@ limitations under the License.
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 const asar = require('asar');
 const nativeBuilder = require('electron-rebuild');
 const wrench = require('wrench');
@@ -53,14 +52,16 @@ try {
 }
 
 
-// `TSFiles` gets a list of our TypeScript files in ./test and ./src for tslint'ing.
-// Exclude TS declaration files (*.d.ts).
-// Exclude notifications subdirectory due to legacy linting errors.
-const TSFiles = execSync('find src test -type f -name *.ts | grep -v -e "\.d\.ts$" -e "/notifications/"')
-    .toString('utf8')
-    .replace(/\s*$/, '') // remove final newline to avoid an extra (blank) element
-    .split('\n');
-// console.log(TSFiles);
+// `TSFiles` is all our TypeScript files in ./test and ./src for tslint'ing;
+// excluding notifications subdirectory due to legacy linting errors;
+// excluding TS declaration files (*.d.ts).
+const TSFiles = [
+    'src/**/*.ts',
+    '!src/browser/api/notifications/*.ts',
+    '!src/**/*.d.ts',
+    'test/**/*.ts',
+    '!test/**/*.d.ts',
+];
 
 
 // OpenFin commercial license
