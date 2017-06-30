@@ -39,7 +39,7 @@ function verifyEntityExistence(msg: MessagePackage, next: () => void): void {
     const name = payload && payload.name;
     const action = data && data.action;
 
-    if (!uuid || apisToIgnore.has(action)) {
+    if (apisToIgnore.has(action)) {
         return next();
     }
 
