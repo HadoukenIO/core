@@ -24,8 +24,13 @@ const InterApplicationBusApiHandler = require('./api_handlers/interappbus').Inte
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
 const SystemApiHandler = require('./api_handlers/system').SystemApiHandler;
 const initWindowApiHandler = require('./api_handlers/window').init;
+import { init as initApiProtocol, getDefaultRequestHandler } from './api_handlers/api_protocol_base';
+import { meshEnabled } from '../connection_manager';
+import { registerMiddleware as registerMeshMiddleware } from './api_handlers/mesh_middleware';
 
-const apiProtocolBase = require('./api_handlers/api_protocol_base.js');
+if (meshEnabled) {
+    registerMeshMiddleware(getDefaultRequestHandler());
+}
 
 export function initApiHandlers() {
     /* tslint:disable: no-unused-variable */
@@ -39,7 +44,7 @@ export function initApiHandlers() {
     const systemApiHandler = new SystemApiHandler();
     initWindowApiHandler();
 
-    apiProtocolBase.init();
+    initApiProtocol();
 
     const apiPolicyProcessor = require('./api_handlers/api_policy_processor');
 }
