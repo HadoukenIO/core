@@ -26,7 +26,10 @@ const SystemApiHandler = require('./api_handlers/system').SystemApiHandler;
 const initWindowApiHandler = require('./api_handlers/window').init;
 import { init as initApiProtocol, getDefaultRequestHandler } from './api_handlers/api_protocol_base';
 import { meshEnabled } from '../connection_manager';
+import { registerMiddleware as registerApiMiddleware } from './api_handlers/api_middleware';
 import { registerMiddleware as registerMeshMiddleware } from './api_handlers/mesh_middleware';
+
+registerApiMiddleware(getDefaultRequestHandler());
 
 if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
