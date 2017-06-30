@@ -211,10 +211,7 @@ export function getUuidBySourceUrl(sourceUrl: string): string|boolean {
 }
 
 export function getConfigUrlByUuid(uuid: string): string|boolean {
-    let app = appByUuid(uuid);
-    while (app && app.parentUuid) {
-        app = appByUuid(app.parentUuid);
-    }
+    const app = getAppAncestor(uuid);
     return app && app._configUrl;
 }
 
