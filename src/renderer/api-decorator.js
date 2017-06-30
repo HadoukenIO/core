@@ -28,9 +28,9 @@ limitations under the License.
     let isMainRenderFrame = global.isMainFrame;
     let glbl = global;
 
-    let electron = require('electron');
-    let webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
-    let ipc = electron.ipcRenderer;
+    const electron = require('electron');
+    const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
+    const ipc = electron.ipcRenderer;
 
     let cachedOptions;
     let childWindowRequestId = 0;
