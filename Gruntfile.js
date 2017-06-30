@@ -52,18 +52,6 @@ try {
 }
 
 
-// `TSFiles` is all our TypeScript files in ./test and ./src for tslint'ing;
-// excluding notifications subdirectory due to legacy linting errors;
-// excluding TS declaration files (*.d.ts).
-const TSFiles = [
-    'src/**/*.ts',
-    '!src/browser/api/notifications/*.ts',
-    '!src/**/*.d.ts',
-    'test/**/*.ts',
-    '!test/**/*.d.ts',
-];
-
-
 // OpenFin commercial license
 const commercialLic = `/*
 Copyright 2017 OpenFin Inc.
@@ -147,7 +135,13 @@ module.exports = (grunt) => {
                 force: false
             },
             files: {
-                src: TSFiles
+                src: [
+                    'src/**/*.ts',
+                    '!src/browser/api/notifications/*.ts',
+                    '!src/**/*.d.ts',
+                    'test/**/*.ts',
+                    '!test/**/*.d.ts',
+                ]
             }
         },
 
