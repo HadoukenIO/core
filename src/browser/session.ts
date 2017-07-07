@@ -129,7 +129,7 @@ class Session extends EventEmitter {
             topic: 'system',
             type: 'idle-state-changed'
         });
-    };
+    }
 }
 
 export default new Session();

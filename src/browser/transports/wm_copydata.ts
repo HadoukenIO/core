@@ -5,7 +5,6 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 import BaseTransport from './base';
-
 const MessageWindow = require('electron').MessageWindow;
 
 class WMCopyDataTransport extends BaseTransport {
@@ -31,7 +30,7 @@ class WMCopyDataTransport extends BaseTransport {
         this._messageWindow.on('data', (sender: any, data: any) => {
             this.eventEmitter.emit('message', data.sender,  data.message);
         });
-    };
+    }
 
     public publish(data: any): boolean {
         // on windows x64 platform still returns win32
@@ -46,7 +45,7 @@ class WMCopyDataTransport extends BaseTransport {
             return true;
         }
         return false;
-    };
+    }
 
 }
 

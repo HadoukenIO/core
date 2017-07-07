@@ -47,7 +47,7 @@ export abstract class ApiTransportBase<T> {
 
     public abstract registerMessageHandlers(): void;
 
-    public abstract send(identity: any, payload: any): void
+    public abstract send(identity: any, payload: any): void;
 
     public abstract onClientAuthenticated(cb: Function): void;
 

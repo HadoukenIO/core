@@ -13,20 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-let coreState = require('./core_state.js');
-let electronApp = require('electron').app;
-let SubScriptionManager:any = require('./subscription_manager.js').SubscriptionManager;
-let subScriptionManager:any = new SubScriptionManager();
+const coreState = require('./core_state');
+const electronApp = require('electron').app;
+const SubScriptionManager: any = require('./subscription_manager.js').SubscriptionManager;
+const subScriptionManager: any = new SubScriptionManager();
 
-import ofEvents from "./of_events";
+import ofEvents from './of_events';
 import route from '../common/route';
 
-export function validateNavigation(webContents: any, identity:any, validator: () => any) {
-    let willNavigateString = 'will-navigate';
+export function validateNavigation(webContents: any, identity: any, validator: () => any) {
+    const willNavigateString = 'will-navigate';
 
     webContents.on(willNavigateString, validator);
 
-    let willNavigateUnsubscribe = () => {
+    const willNavigateUnsubscribe = () => {
         webContents.removeListener(willNavigateString, validator);
     };
     subScriptionManager.registerSubscription(willNavigateUnsubscribe, identity, willNavigateString);
@@ -48,10 +48,10 @@ export function validateNavigationRules(uuid: string, url: string, parentUuid: s
         return false;
     } else if (parentUuid) {
         electronApp.vlog(1, `validateNavigationRules app ${uuid} check parent ${parentUuid}`);
-        let parentObject = coreState.appByUuid(parentUuid);
+        const parentObject = coreState.appByUuid(parentUuid);
         if (parentObject) {
-            let parentOpts = parentObject.appObj._options;
-            isAllowed = validateNavigationRules(uuid, url, parentObject.parentUuid,parentOpts);
+            const parentOpts = parentObject.appObj._options;
+            isAllowed = validateNavigationRules(uuid, url, parentObject.parentUuid, parentOpts);
         } else {
             electronApp.vlog(1, `validateNavigationRules missing parent ${parentUuid}`);
         }
@@ -61,20 +61,20 @@ export function validateNavigationRules(uuid: string, url: string, parentUuid: s
     return isAllowed;
 }
 
-export function navigationValidator(uuid: string, name:string, id: number) {
+export function navigationValidator(uuid: string, name: string, id: number) {
     return (event: any, url: string) => {
-        let appObject = coreState.getAppObjByUuid(uuid);
-        let appMetaInfo = coreState.appByUuid(uuid);
-        let isMailTo = /^mailto:/i.test(url);
-        let allowed = isMailTo || validateNavigationRules(uuid, url, appMetaInfo.parentUuid, appObject._options);
+        const appObject = coreState.getAppObjByUuid(uuid);
+        const appMetaInfo = coreState.appByUuid(uuid);
+        const isMailTo = /^mailto:/i.test(url);
+        const allowed = isMailTo || validateNavigationRules(uuid, url, appMetaInfo.parentUuid, appObject._options);
         if (!allowed) {
-            console.log('Navigation is blocked ' + url);
-            let self = coreState.getWinById(id);
+            electronApp.vlog(1, 'Navigation is blocked ' + url, true);
+            const self = coreState.getWinById(id);
             let sourceName = name;
             if (self.parentId) {
-                let parent = coreState.getWinById(self.parentId);
+                const parent = coreState.getWinById(self.parentId);
                 if (parent) {
-                    let parentOpts = coreState.getWindowOptionsById(parent.id);
+                    const parentOpts = coreState.getWindowOptionsById(parent.id);
                     if (parentOpts) {
                         sourceName = parentOpts.name;
                     }
@@ -93,7 +93,6 @@ export function navigationValidator(uuid: string, name:string, id: number) {
                 sourceName
             });
             event.preventDefault();
-        } else {
         }
     };
 }

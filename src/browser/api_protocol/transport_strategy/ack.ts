@@ -49,10 +49,6 @@ export class NackPayload {
     }
 }
 
-export interface AckFunc {
-    (payload: AckPayload | NackPayload): void;
-}
+export type AckFunc = (payload: AckPayload | NackPayload) => void;
 
-export interface NackFunc {
-    (error: string | Error): void;
-}
+export type NackFunc = (error: string | Error) => void;
