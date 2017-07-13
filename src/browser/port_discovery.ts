@@ -9,8 +9,8 @@ import { WMCopyData, ChromiumIPC } from './transport';
 import { EventEmitter } from 'events';
 import * as log from './log';
 import route from '../common/route';
-
 const coreState = require('./core_state');
+
 const windowClassName = 'OPENFIN_ADAPTER_WINDOW';
 
 export interface ArgMap {
@@ -73,7 +73,7 @@ export class PortDiscovery extends EventEmitter {
     }
 
     public broadcast = (portDiscoveryPayload: PortInfo): void => {
-	//we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
+    //we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
         const _copyDataTransport = this.constructCopyDataTransport();
 
         coreState.setSocketServerState(portDiscoveryPayload);

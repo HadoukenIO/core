@@ -20,17 +20,11 @@ const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrat
 
 import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
-import { registerMiddleware as registerMeshMiddleware } from './mesh_middleware';
-import { meshEnabled } from '../../connection_manager';
 import { ApiPath, ApiFunc, EndpointSpec, ActionSpecMap, Endpoint, ActionMap } from '../shapes';
 
 export const actionMap: ActionMap = Object.create(null); // no prototype to avoid having to call hasOwnProperty()
 
 const requestHandler = new RequestHandler<MessagePackage>();
-
-if (meshEnabled) {
-    registerMeshMiddleware(requestHandler);
-}
 
 // add the handler + create with action map
 const webSocketStrategy = new WebSocketStrategy(actionMap, requestHandler);
@@ -73,7 +67,7 @@ export function registerActionMap(
                     }
                     apiPath = authorizationPathPrefix + apiPath;
                 } else if (apiPath.indexOf('.') < 0) {
-                    throw new Error('Expected "${apiPath}" to be an apiFunc (starts with dot) or an apiPath (contains dot)');
+                    throw new Error(`Expected "${apiPath}" to be an apiFunc (starts with dot) or an apiPath (contains dot)`);
                 }
                 endpoint.apiPath = apiPath;
             }

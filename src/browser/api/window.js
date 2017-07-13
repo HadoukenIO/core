@@ -169,6 +169,9 @@ let optionSetters = {
                 browserWin.setResizeRegion(resizeRegion.size);
                 browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
             });
+        } else {
+            // reapply top-left icon
+            setTaskbar(browserWin, true);
         }
     },
     alphaMask: function(newVal, browserWin) {
@@ -1931,7 +1934,7 @@ function calcBoundsAnchor(anchor, newWidth, newHeight, currBounds) {
     return calcAnchor;
 }
 
-function setTaskbar(browserWindow) {
+function setTaskbar(browserWindow, forceFetch = false) {
     const options = browserWindow._options;
 
     setBlankTaskbarIcon(browserWindow);
@@ -1982,6 +1985,16 @@ function setTaskbar(browserWindow) {
             }
         });
     });
+
+    if (forceFetch) {
+        // try the window icon options first
+        setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {
+            if (!browserWindow.isDestroyed()) {
+                // if not, try using the main window's icon
+                setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
+            }
+        });
+    }
 }
 
 function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {

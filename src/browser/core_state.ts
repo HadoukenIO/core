@@ -210,10 +210,7 @@ export function getUuidBySourceUrl(sourceUrl: string): string|boolean {
 }
 
 export function getConfigUrlByUuid(uuid: string): string|boolean {
-    let app = appByUuid(uuid);
-    while (app && app.appObj && app.appObj.parentUuid) {
-        app = appByUuid(app.appObj.parentUuid);
-    }
+    const app = getAppAncestor(uuid);
     return app && app._configUrl;
 }
 

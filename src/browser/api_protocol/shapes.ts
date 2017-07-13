@@ -19,9 +19,7 @@ limitations under the License.
 import { AckFunc, NackFunc } from './transport_strategy/ack';
 import { Identity, Acker, Nacker } from '../../shapes';
 
-export interface ApiFunc {
-    (identity: Identity, data: any, ack?: Acker | AckFunc, nack?: Nacker | NackFunc): void;
-}
+export type ApiFunc = (identity: Identity, data: any, ack?: Acker | AckFunc, nack?: Nacker | NackFunc) => void;
 
 export type ApiPath = string; // path in dot notation
 

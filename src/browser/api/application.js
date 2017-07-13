@@ -499,34 +499,34 @@ Application.run = function(identity, configUrl = '') {
         rvmBus.registerLicenseInfo({ data: genLicensePayload() }, sourceUrl);
     };
     const sendAppsEventsToRVMListener = (appEvent) => {
-            if (!sourceUrl) {
-                return; // Most likely an adapter, RVM can't do anything with what it didn't load(determined by sourceUrl) so ignore
-            }
-            let type = appEvent.type,
-                rvmPayload = {
-                    topic: 'application-event',
-                    type,
-                    sourceUrl
-                };
+        if (!sourceUrl) {
+            return; // Most likely an adapter, RVM can't do anything with what it didn't load(determined by sourceUrl) so ignore
+        }
+        let type = appEvent.type,
+            rvmPayload = {
+                topic: 'application-event',
+                type,
+                sourceUrl
+            };
 
-            if (type === 'ready' || type === 'run-requested') {
-                rvmPayload.hideSplashScreenSupported = true;
-            } else if (type === 'closed') {
+        if (type === 'ready' || type === 'run-requested') {
+            rvmPayload.hideSplashScreenSupported = true;
+        } else if (type === 'closed') {
 
-                // Don't send 'closed' event to RVM when app is restarting.
-                // This solves the problem of apps not being able to make API
-                // calls that rely on RVM and manifest URL
-                if (appState.isRestarting) {
-                    return;
-                }
-
-                rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
+            // Don't send 'closed' event to RVM when app is restarting.
+            // This solves the problem of apps not being able to make API
+            // calls that rely on RVM and manifest URL
+            if (appState.isRestarting) {
+                return;
             }
 
-            if (rvmBus) {
-                rvmBus.publish(rvmPayload);
-            }
-};
+            rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
+        }
+
+        if (rvmBus) {
+            rvmBus.publish(rvmPayload);
+        }
+    };
 
     // if the runtime is in offline mode, the RVM still expects the
     // startup-url/config for communication
@@ -1008,7 +1008,7 @@ function createAppObj(uuid, opts, configUrl = '') {
                     log.writeToLog(1, `ignoring net error ${errorCode} for ${opts.uuid}`, true);
                 } else {
                     log.writeToLog(1, `receiving net error ${errorCode} for ${opts.uuid}`, true);
-                    if (!coreState.argo['noerrdialog'] && configUrl) {
+                    if (!coreState.argo['noerrdialogs'] && configUrl) {
                         const errorMsgForDialog = errorDescription || `error code ${ errorCode }`;
                         // NOTE: don't show this dialog if the app is created via the api
                         const errorMessage = opts.loadErrorMessage || `There was an error loading the application: ${ errorMsgForDialog }`;

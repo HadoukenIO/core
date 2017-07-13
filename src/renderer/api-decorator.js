@@ -28,9 +28,9 @@ limitations under the License.
     let isMainRenderFrame = global.isMainFrame;
     let glbl = global;
 
-    let rqr = require;
-    let webFrame = rqr('electron').webFrame.createForRenderFrame(renderFrameId);
-    let ipc = rqr('electron').ipcRenderer;
+    const electron = require('electron');
+    const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
+    const ipc = electron.ipcRenderer;
 
     let cachedOptions;
     let childWindowRequestId = 0;
@@ -150,14 +150,14 @@ limitations under the License.
     ///THESE CALLS NEED TO BE DONE WITH REMOTE, AS THEY ARE DONE BEFORE THE CORE HAS ID's
     function getWindowId() {
         if (!windowId) {
-            windowId = rqr('electron').remote.getCurrentWindow(renderFrameId).id;
+            windowId = electron.remote.getCurrentWindow(renderFrameId).id;
         }
         return windowId;
     }
 
     function getWebContentsId() {
         if (!webContentsId) {
-            webContentsId = rqr('electron').remote.getCurrentWebContents(renderFrameId).getId();
+            webContentsId = electron.remote.getCurrentWebContents(renderFrameId).getId();
         }
         return webContentsId;
     }
@@ -262,7 +262,7 @@ limitations under the License.
             });
 
             // Notify WebContent that frame routing can now be counted
-            rqr('electron').remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+            electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
         };
 
         if (currWindowOpts.saveWindowState && !currWindowOpts.hasLoaded) {
@@ -342,6 +342,16 @@ limitations under the License.
         }, 1);
     }
 
+    electron.remote.getCurrentWebContents(renderFrameId).once('navigation-entry-commited', () => {
+        ipc.send(renderFrameId, 'of-window-message', {
+            action: 'on-window-unload',
+            payload: {},
+            isSync: false,
+            singleFrameOnly: true,
+            isMainRenderFrame
+        });
+    });
+
     var pendingMainCallbacks = [];
     var currPageHasLoaded = false;
 
@@ -351,16 +361,6 @@ limitations under the License.
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
         let winOpts = getWindowOptionsSync();
-
-        window.addEventListener('unload', () => {
-            ipc.send(renderFrameId, 'of-window-message', {
-                action: 'on-window-unload',
-                payload: {},
-                isSync: false,
-                singleFrameOnly: true,
-                isMainRenderFrame
-            });
-        });
 
         showOnReady(glbl, winOpts);
         wireUpMenu(glbl, winOpts);

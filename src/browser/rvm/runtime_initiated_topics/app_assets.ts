@@ -53,7 +53,7 @@ class AppAssetsFetcher {
             }
         }
 
-    };
+    }
 
     // Returns bool which indicates whether this is the 1st request for sourceUrl - then we actually need to send it to RVM
     private addPendingRequest = (sourceUrl: string, assetAlias: string, successCB: (data: any) => any, failureCB: (data: any) => any) => {
