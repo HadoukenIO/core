@@ -39,7 +39,10 @@ function verifyEntityExistence(msg: MessagePackage, next: () => void): void {
     const name = payload && payload.name;
     const action = data && data.action;
 
-    if (apisToIgnore.has(action)) {
+    // When the user wraps non-existing application or window and tries to make an API
+    // call on it, uuid in those cases is provided in the payload. So if no UUID found
+    // just ignore checking further and continue
+    if (!uuid || apisToIgnore.has(action)) {
         return next();
     }
 
