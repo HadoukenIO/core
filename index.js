@@ -509,11 +509,12 @@ function launchApp(argo, startExternalAdapterServer) {
         const uuid = startupAppOptions && startupAppOptions.uuid;
         const ofApp = Application.wrap(uuid);
         const isRunning = Application.isRunning(ofApp);
+        let successfulInitialLaunch = false;
 
         if (startupAppOptions && !isRunning) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
-            initFirstApp(configObject, configUrl, licenseKey);
+            successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
         } else if (uuid) {
             Application.run({
                 uuid,
@@ -521,7 +522,7 @@ function launchApp(argo, startExternalAdapterServer) {
             });
         }
 
-        if (startExternalAdapterServer) {
+        if (startExternalAdapterServer && successfulInitialLaunch) {
             coreState.setStartManifest(configUrl, configObject);
             socketServer.start(configObject['websocket_port'] || 9696);
         }
@@ -544,6 +545,7 @@ function launchApp(argo, startExternalAdapterServer) {
 
 function initFirstApp(configObject, configUrl, licenseKey) {
     let startupAppOptions;
+    let successfulLaunch = false;
 
     try {
         startupAppOptions = convertOptions.getStartupAppOptions(configObject);
@@ -561,7 +563,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
             firstApp = null;
         });
 
-        socketServer.start(configObject['websocket_port'] || 9696);
+        successfulLaunch = true;
 
     } catch (error) {
         log.writeToLog(1, error, true);
@@ -587,6 +589,8 @@ function initFirstApp(configObject, configUrl, licenseKey) {
             });
         }
     }
+
+    return successfulLaunch;
 }
 
 function registerShortcuts() {
