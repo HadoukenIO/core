@@ -509,7 +509,9 @@ function launchApp(argo, startExternalAdapterServer) {
         const uuid = startupAppOptions && startupAppOptions.uuid;
         const ofApp = Application.wrap(uuid);
         const isRunning = Application.isRunning(ofApp);
-        let successfulInitialLaunch = false;
+
+        // this ensures that external connections that start the runtime can do so without a main window
+        let successfulInitialLaunch = true;
 
         if (startupAppOptions && !isRunning) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
