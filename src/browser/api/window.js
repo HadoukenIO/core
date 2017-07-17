@@ -373,7 +373,7 @@ Window.create = function(id, opts) {
 
     let _externalWindowEventAdapter;
 
-    // we need to be able to handle the wrapped case, ie. dont try to
+    // we need to be able to handle the wrapped case, ie. don't try to
     // grab the browser window instance because it may not exist, or
     // perhaps just try ...
     if (!opts._noregister) {
@@ -477,7 +477,7 @@ Window.create = function(id, opts) {
             });
 
             // can't unhook when the 'closed' event fires; browserWindow is already destroyed then
-            browserWindow.webContents.removeAllListeners('page-favicon-updated');
+            webContents.removeAllListeners('page-favicon-updated');
 
             // make sure that this uuid/name combo does not have any lingering close-requested subscriptions.
             ofEvents.removeAllListeners(closeEventString);
@@ -502,6 +502,25 @@ Window.create = function(id, opts) {
             }
         });
 
+        var emitToAppAndWin = (...types) => {
+            types.forEach(type => {
+                ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type, uuid, name });
+                ofEvents.emit(route.application(type, uuid), { topic: 'application', type, uuid });
+            });
+        };
+
+        webContents.on('crashed', () => {
+            emitToAppAndWin('crashed', 'out-of-memory');
+        });
+
+        browserWindow.on('responsive', () => {
+            emitToAppAndWin('responding');
+        });
+
+        browserWindow.on('unresponsive', () => {
+            emitToAppAndWin('not-responding');
+        });
+
         let mapEvents = function(eventMap, eventEmitter) {
             // todo this should be on demand, for now just blast them all
             Object.keys(eventMap).forEach(evnt => {
@@ -511,7 +530,7 @@ Window.create = function(id, opts) {
                 var electronEventListener = function( /*event , arg1, ... */ ) {
 
                     // if the window has already been removed from core_state,
-                    // don't propogate anymore events
+                    // don't propagate anymore events
                     if (!Window.wrap(uuid, name)) {
                         return;
                     }
