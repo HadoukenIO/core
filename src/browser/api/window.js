@@ -502,10 +502,13 @@ Window.create = function(id, opts) {
             }
         });
 
-        var emitToAppAndWin = (...types) => {
+        const emitToAppAndWin = (...types) => {
+            let isMainWindow = (uuid === name);
             types.forEach(type => {
                 ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type, uuid, name });
-                ofEvents.emit(route.application(`window-${type}`, uuid), { topic: 'application', type, uuid, name });
+                if (isMainWindow) {
+                    ofEvents.emit(route.application(`window-${type}`, uuid), { topic: 'application', type, uuid, name });
+                }
             });
         };
 
