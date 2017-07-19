@@ -13,6 +13,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 declare let process: any;
 import { EventEmitter } from 'events';
 import { Identity } from './api_protocol/transport_strategy/api_transport_base';
+import { ArgMap, PortInfo } from './port_discovery';
 
 // npm modules
 // (none)
@@ -21,16 +22,13 @@ import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 const coreState = require('./core_state');
 import * as log from './log';
 
-
 //TODO: pre-release flag, this will go away once we release multi runtime.
 const multiRuntimeCommandLineFlag = 'enable-multi-runtime';
 const enableMeshCommandLineFlag = 'enable-mesh';
 const securityRealmFlag = 'security-realm';
 
+//TODO: pre-release flag, this will go away once we release multi runtime
 const multiRuntimeEnabled = coreState.argo[multiRuntimeCommandLineFlag];
-const enableMesh = coreState.argo[enableMeshCommandLineFlag];
-const securityRealm = coreState.argo[securityRealmFlag];
-
 let connectionManager: any;
 let meshEnabled = false;
 
@@ -43,14 +41,6 @@ function startConnectionManager() {
         log.writeToLog('info', 'multi-runtime mode enabled');
     } catch (e) {
       log.writeToLog('info', e.message);
-    }
-}
-
-//TODO: pre-release flag, this will go away once we release multi runtime
-if (multiRuntimeEnabled) {
-
-    if (!securityRealm || enableMesh) {
-        startConnectionManager();
     }
 }
 
@@ -71,6 +61,21 @@ function buildNoopConnectionManager() {
     connectionManager.connections = [];
 }
 
+function isMeshEnabled(args: ArgMap) {
+    let enabled = false;
+    const enableMesh = args[enableMeshCommandLineFlag];
+    const securityRealm = args[securityRealmFlag];
+
+    if (!securityRealm || enableMesh) {
+        enabled = true;
+    }
+
+    return enabled;
+}
+
+if (multiRuntimeEnabled && isMeshEnabled(coreState.argo)) {
+    startConnectionManager();
+}
 
 /*
   Note that these should match the definitions found here:
@@ -90,15 +95,6 @@ interface IdentityAddress {
     identity: Identity;
 }
 
-interface PortInfo {
-    version: any;
-    sslPort: number;
-    port: number;
-    requestedVersion?: string;
-    securityRealm?: string;
-    runtimeInformationChannel?: string;
-}
-
 interface ConnectionManager extends EventEmitter {
     connections: Array<PeerRuntime>;
     connectToRuntime: (uuid: string, portInfo: PortInfo) => Promise<PeerRuntime>;
@@ -107,4 +103,4 @@ interface ConnectionManager extends EventEmitter {
 
 
 export default connectionManager as ConnectionManager;
-export { meshEnabled, PeerRuntime };
+export { meshEnabled, PeerRuntime, isMeshEnabled };
