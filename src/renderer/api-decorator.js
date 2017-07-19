@@ -513,18 +513,31 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const preload = windowOptions.preload;
+        const preloads = windowOptions.preload;
+        let preloadPayloads;
 
-        if (preload) {
-            try {
-                const preloadScriptContent = syncApiCall('get-window-preload-script', {
-                    preload
-                });
-                window.eval(preloadScriptContent); /* jshint ignore:line */
-            } catch (err) {
-                console.error(err);
-            }
+        try {
+            preloadPayloads = syncApiCall('get-window-preload-scripts', { preloads });
+        } catch (err) {
+            console.error(err);
+            return;
         }
+
+        // `preloadPayloads` or `preloadPayload` are locally accessible to eval'd scripts. DO NOT RENAME!
+        preloadPayloads.forEach(preloadPayload => {
+            if (preloadPayload.script) { // ignore undefined preloadPayloads
+                try {
+                    eval(preloadPayload.script); /* jshint ignore:line */
+                    preloadPayload.result = preloadPayload.result || true; // set if not already set by script
+                } catch (err) {
+                    var error = err instanceof Error ? err : new Error(err);
+                    preloadPayload.result = error;
+                    if (!preloadPayload.optional) {
+                        console.error(`Execution failed for ${preloadPayload.description}.`, error);
+                    }
+                }
+            }
+        });
     });
 
 }());

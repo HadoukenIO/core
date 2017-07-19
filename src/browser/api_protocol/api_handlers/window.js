@@ -40,7 +40,7 @@ module.exports.windowApiMap = {
     'get-window-info': getWindowInfo,
     'get-window-native-id': { apiFunc: getWindowNativeId, apiPath: '.getNativeId' },
     'get-window-options': getWindowOptions,
-    'get-window-preload-script': getWindowPreloadScript,
+    'get-window-preload-scripts': getWindowPreloadScripts,
     'get-window-snapshot': { apiFunc: getWindowSnapshot, apiPath: '.getSnapshot' },
     'get-window-state': getWindowState,
     'get-zoom-level': getZoomLevel,
@@ -81,18 +81,16 @@ module.exports.init = function() {
     apiProtocolBase.registerActionMap(module.exports.windowApiMap, 'Window');
 };
 
-function getWindowPreloadScript(identity, message, ack, nack) {
+function getWindowPreloadScripts(identity, message, ack, nack) {
     const payload = message.payload;
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
 
-    Window.getPreloadScript(windowIdentity, payload.preload, (error, preloadScript) => {
-        if (error) {
-            nack(error);
-        } else {
-            const dataAck = _.clone(successAck);
-            dataAck.data = preloadScript;
-            ack(dataAck);
-        }
+    Window.getPreloadScript(windowIdentity, payload.preloads, preloadScripts => {
+        const dataAck = _.clone(successAck);
+        dataAck.data = preloadScripts;
+        ack(dataAck);
+    }, error => {
+        nack(error);
     });
 }
 

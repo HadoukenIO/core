@@ -691,12 +691,12 @@ Window.create = function(id, opts) {
             ofEvents.removeListener(resourceLoadFailedEventString, resourceLoadFailedHandler);
         };
 
-        resourceLoadFailedHandler = (failure) => {
-            if (failure.errorCode === -3) {
+        resourceLoadFailedHandler = (failed) => {
+            if (failed.errorCode === -3) {
                 // 304 can trigger net::ERR_ABORTED, ignore it
-                electronApp.vlog(1, `ignoring net error -3 for ${failure.validatedURL}`);
+                electronApp.vlog(1, `ignoring net error -3 for ${failed.validatedURL}`);
             } else {
-                emitErrMessage(failure.errorCode);
+                emitErrMessage(failed.errorCode);
                 ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
             }
         };
@@ -1075,24 +1075,94 @@ Window.getParentApplication = function() {
 Window.getParentWindow = function() {};
 
 /**
- * Fetches window's preload script and gets its content
+ * Fetches window's preload script(s) to cache and reads in from cache.
+ * ```typescript
+ * type Preload = string | Preloader;
+ * interface Preloader { url:string; optional?:boolean; name?:string; };
+ * interface PreloadPayload extends Preloader { script:string, index:number, description:string };
+ * ```
+ * @param identity {{uuid:string}}
+ * @param preloads {Preload|Preload[]}
+ * @param ack {function(PreloadPayload[])} - Called once with all script successfully fetched & read.
+ * @param nack {function(Error)} - Called on first required fetch or read failed.
  */
-Window.getPreloadScript = function(identity, preloadUrl, callback) {
-    cachedFetch(identity.uuid, preloadUrl, (fetchError, scriptPath) => {
-        if (fetchError) {
-            return callback(new Error(`Failed to fetch preload script from ${preloadUrl}`));
-        }
+Window.getPreloadScript = function(identity, preloads, ack, nack) {
+    if (!preloads || !preloads.length) {
+        return ack([]); //shortstop
+    } else if (!(preloads instanceof Array)) {
+        preloads = [preloads];
+    }
 
-        fs.readFile(scriptPath, 'utf8', (readError, content) => {
-            if (readError) {
-                callback(new Error('Failed to read the content of the preload script'));
-            } else {
-                callback(null, content);
+    let scriptsRemaining = preloads.length;
+    let failed = false;
+
+    // Clone elements of `preloads` into `payloads`, adding an `index` and a `description` prop to each.
+    // Each successfully loaded script is added below in a `script` property.
+    let payloads = preloads.map((preload, index) => {
+        if (typeof preload !== 'object') {
+            preload = { url: preload };
+        }
+        return Object.assign({
+            index,
+            description: `${preload.optional ? 'optional' : 'required'} preload script ${preload.url}`
+        }, preload);
+    });
+
+    payloads.forEach(payload => {
+        cachedFetch(identity.uuid, payload.url, (fetchError, scriptPath) => {
+            if (failed) {
+                return;
             }
+
+            if (fetchError) {
+                scriptsRemaining -= 1;
+                if (!payload.optional) {
+                    //todo: Abort all other fetches-in-progress before nack'ing
+                    failed = true;
+                    nack(new Error(`Failed to fetch ${payload.description} so no preload scripts will be executed.`));
+                } else if (!scriptsRemaining) {
+                    ack(payloads);
+                }
+            } else {
+                fs.readFile(scriptPath, 'utf8', (readError, script) => {
+                    if (!failed) {
+                        scriptsRemaining -= 1;
+
+                        // todo: remove following workaround when RUN-3162 issue fixed
+                        //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
+                        if (!readError) {
+                            if (
+                                !script.indexOf('Cannot GET ') || // 404 message (grunt-opefin)
+                                !script.indexOf('<?xml') // 404 message (test_runner)
+                            ) {
+                                if (!payload.optional) {
+                                    failed = true;
+                                    nack(new Error(`Failed to fetch ${payload.description} so no preload scripts will be executed.`));
+                                } else if (!scriptsRemaining) {
+                                    ack(payloads);
+                                }
+                            }
+                        }
+                        //EMD WORKAROUND
+
+                        if (!readError) {
+                            payload.script = script;
+                            if (!scriptsRemaining) {
+                                ack(payloads);
+                            }
+                        } else if (!payload.optional) {
+                            failed = true;
+                            nack(new Error(`Failed to load cached ${payload.description} so no preload scripts will be executed.`));
+                        } else if (!scriptsRemaining) {
+                            ack(payloads);
+                        }
+                    }
+                });
+            }
+
         });
     });
 };
-
 
 Window.getSnapshot = function(identity, callback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
