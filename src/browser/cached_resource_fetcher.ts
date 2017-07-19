@@ -20,12 +20,20 @@ import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
 import {isURL, isURI, uriToPath} from '../common/regex';
 
+let appQuiting: Boolean = false;
+
+app.on('quit', () => { appQuiting = true; });
+
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
 export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): void {
     if (!fileUrl || typeof fileUrl !== 'string') {
         callback(new Error(`Bad file url: '${fileUrl}'`));
+        return;
+    }
+    if (appQuiting) {
+        callback(new Error('Runtime is exiting'));
         return;
     }
 
@@ -47,17 +55,21 @@ export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: 
     const appCacheDir = getAppCacheDir(appUuid);
     const filePath = getFilePath(appCacheDir, fileUrl);
 
-    stat(filePath, (err: null|Error) => {
+    stat(filePath, (err: null | Error) => {
         if (err) {
-            stat(appCacheDir, (err: null|Error) => {
-                if (err) {
-                    mkdir(appCacheDir, () => {
+            if (!appQuiting) {
+                stat(appCacheDir, (err: null | Error) => {
+                    if (err) {
+                        if (!appQuiting) {
+                            mkdir(appCacheDir, () => {
+                                download(fileUrl, filePath, callback);
+                            });
+                        }
+                    } else {
                         download(fileUrl, filePath, callback);
-                    });
-                } else {
-                    download(fileUrl, filePath, callback);
-                }
-            });
+                    }
+                });
+            }
         } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
             download(fileUrl, filePath, callback);
         } else {
