@@ -505,7 +505,7 @@ Window.create = function(id, opts) {
         var emitToAppAndWin = (...types) => {
             types.forEach(type => {
                 ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type, uuid, name });
-                ofEvents.emit(route.application(type, uuid), { topic: 'application', type, uuid });
+                ofEvents.emit(route.application(`window-${type}`, uuid), { topic: 'application', type, uuid, name });
             });
         };
 
