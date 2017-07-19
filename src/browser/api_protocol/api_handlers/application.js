@@ -408,10 +408,10 @@ function externalWindowAction(identity, message, ack) {
             break;
         case 561:
             // WM_ENTERSIZEMOVE
-            ofEvents.emit(route.externalWindow('end-user-bounds-change', {
+            ofEvents.emit(route.externalWindow('begin-user-bounds-change', uuid, name), {
                 x: payload.mouseX,
                 y: payload.mouseY
-            }));
+            });
             break;
         case 562:
             // WM_EXITSIZEMOVE
