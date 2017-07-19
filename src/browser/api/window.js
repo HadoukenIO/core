@@ -1665,7 +1665,15 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
     } else {
         browserWindow.once('visibility-changed', (event, isVisible) => {
             if (isVisible) {
-                callback();
+                if (browserWindow.isVisible()) {
+                    callback();
+                    // Version 8: Will be visible on the next tick
+                    // TODO: Refactor to also use 'ready-to-show'
+                } else {
+                    setTimeout(() => {
+                        callback();
+                    }, 1);
+                }
             }
         });
     }
