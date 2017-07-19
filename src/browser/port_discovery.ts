@@ -21,6 +21,7 @@ export interface PortInfo {
     version: any;
     sslPort: number;
     port: number;
+    options: ArgMap;
     requestedVersion?: string;
     securityRealm?: string;
     runtimeInformationChannel: string;
@@ -61,10 +62,11 @@ export class PortDiscovery extends EventEmitter {
             version: <string>ver.openfin,
             // tslint:enable
             sslPort: -1,
-            port: port,
+            port,
+            options: args,
             requestedVersion: versionKeyword,
-            securityRealm: securityRealm,
-            runtimeInformationChannel: runtimeInformationChannel
+            securityRealm,
+            runtimeInformationChannel
         };
 
         return portDiscoveryPayload;
