@@ -51,7 +51,8 @@ import {
 
 import {
     default as connectionManager,
-    meshEnabled
+    meshEnabled,
+    isMeshEnabled
 } from './src/browser/connection_manager';
 
 import * as log from './src/browser/log';
@@ -136,7 +137,7 @@ portDiscovery.on('runtime/launched', (portInfo) => {
     log.writeToLog('info', `Port discovery message received ${JSON.stringify(portInfo)}`);
 
     //TODO: Include REALM in the determination.
-    if (meshEnabled && portInfo.port !== myPortInfo.port) {
+    if (meshEnabled && portInfo.port !== myPortInfo.port && isMeshEnabled(portInfo.options)) {
 
         connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
             //one connected we broadcast our port discovery message.
