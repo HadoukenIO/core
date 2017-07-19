@@ -4,9 +4,10 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-let http = require('http');
-let EventEmitter = require('events').EventEmitter;
-let util = require('util');
+const http = require('http');
+const EventEmitter = require('events').EventEmitter;
+const util = require('util');
+const log = require('../log');
 import route from '../../common/route';
 
 
@@ -14,6 +15,7 @@ let Server = function() {
     let me = this;
     EventEmitter.call(this);
 
+    let hasStarted = false;
     let activeConnections = {};
     let idPool = require('../int_pool').default;
     let httpServer = http.createServer(function(req, res) {
@@ -67,6 +69,11 @@ let Server = function() {
     };
 
     me.start = function(port) {
+        if (hasStarted) {
+            log.writeToLog(1, 'socket server already running', true);
+            return;
+        }
+
         httpServer.listen(port, '127.0.0.1', function() {
             if (httpServerError) {
                 httpServerError = false;
@@ -118,6 +125,7 @@ let Server = function() {
             me.emit(route.server('open'), me.getPort());
         });
 
+        hasStarted = true;
     };
 
     me.connectionAuthenticated = function(id, uuid) {
