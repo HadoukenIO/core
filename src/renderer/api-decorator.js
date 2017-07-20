@@ -514,8 +514,13 @@ limitations under the License.
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const preloads = windowOptions.preload;
-        let preloadPayloads;
 
+        // may be a string primitive OR an array; must have length in any case
+        if (!(preloads && preloads.length)) {
+            return;
+        }
+
+        let preloadPayloads;
         try {
             preloadPayloads = syncApiCall('get-window-preload-scripts', { preloads });
         } catch (err) {

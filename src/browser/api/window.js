@@ -1087,25 +1087,23 @@ Window.getParentWindow = function() {};
  * @param nack {function(Error)} - Called on first required fetch or read failed.
  */
 Window.getPreloadScript = function(identity, preloads, ack, nack) {
-    if (!preloads || !preloads.length) {
-        return ack([]); //shortstop
-    } else if (!(preloads instanceof Array)) {
+    if (!(preloads instanceof Array)) {
         preloads = [preloads];
     }
 
     let scriptsRemaining = preloads.length;
     let failed = false;
 
-    // Clone elements of `preloads` into `payloads`, adding an `index` and a `description` prop to each.
+    // Clone `preloads` into `payloads`, adding an `index` and a `description` prop to each element.
     // Each successfully loaded script is added below in a `script` property.
-    let payloads = preloads.map((preload, index) => {
+    const payloads = preloads.map((preload, index) => {
         if (typeof preload !== 'object') {
             preload = { url: preload };
         }
-        return Object.assign({
+        return Object.assign({}, preload, {
             index,
             description: `${preload.optional ? 'optional' : 'required'} preload script ${preload.url}`
-        }, preload);
+        });
     });
 
     payloads.forEach(payload => {
@@ -1125,37 +1123,38 @@ Window.getPreloadScript = function(identity, preloads, ack, nack) {
                 }
             } else {
                 fs.readFile(scriptPath, 'utf8', (readError, script) => {
-                    if (!failed) {
-                        scriptsRemaining -= 1;
+                    if (failed) {
+                        return;
+                    }
 
-                        // todo: remove following workaround when RUN-3162 issue fixed
-                        //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
-                        if (!readError) {
-                            if (
-                                !script.indexOf('Cannot GET ') || // 404 message (grunt-opefin)
-                                !script.indexOf('<?xml') // 404 message (test_runner)
-                            ) {
-                                if (!payload.optional) {
-                                    failed = true;
-                                    nack(new Error(`Failed to fetch ${payload.description} so no preload scripts will be executed.`));
-                                } else if (!scriptsRemaining) {
-                                    ack(payloads);
-                                }
-                            }
-                        }
-                        //EMD WORKAROUND
+                    scriptsRemaining -= 1;
 
-                        if (!readError) {
-                            payload.script = script;
-                            if (!scriptsRemaining) {
+                    // todo: remove following workaround when RUN-3162 issue fixed
+                    //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
+                    if (!readError) {
+                        if (!script.indexOf('Cannot GET ') || // 404 message (grunt-opefin)
+                            !script.indexOf('<?xml') // 404 message (test_runner)
+                        ) {
+                            if (!payload.optional) {
+                                failed = true;
+                                nack(new Error(`Failed to fetch ${payload.description} so no preload scripts will be executed.`));
+                            } else if (!scriptsRemaining) {
                                 ack(payloads);
                             }
-                        } else if (!payload.optional) {
-                            failed = true;
-                            nack(new Error(`Failed to load cached ${payload.description} so no preload scripts will be executed.`));
-                        } else if (!scriptsRemaining) {
+                        }
+                    }
+                    //END WORKAROUND
+
+                    if (!readError) {
+                        payload.script = script;
+                        if (!scriptsRemaining) {
                             ack(payloads);
                         }
+                    } else if (!payload.optional) {
+                        failed = true;
+                        nack(new Error(`Failed to load cached ${payload.description} so no preload scripts will be executed.`));
+                    } else if (!scriptsRemaining) {
+                        ack(payloads);
                     }
                 });
             }
