@@ -520,29 +520,30 @@ limitations under the License.
             return;
         }
 
-        let preloadPayloads;
         try {
-            preloadPayloads = syncApiCall('get-window-preload-scripts', { preloads });
+            fin.preloads = syncApiCall('get-window-preload-scripts', { preloads });
         } catch (err) {
             console.error(err);
             return;
         }
 
-        // `preloadPayloads` or `preloadPayload` are locally accessible to eval'd scripts. DO NOT RENAME!
-        preloadPayloads.forEach(preloadPayload => {
-            if (preloadPayload.script) { // ignore undefined preloadPayloads
+        fin.preloads.forEach(preload => {
+            if (preload.script) { // ignore undefined preloadPayloads
+                fin.preloads.index = preload.index;
                 try {
-                    eval(preloadPayload.script); /* jshint ignore:line */
-                    preloadPayload.result = preloadPayload.result || true; // set if not already set by script
+                    window.eval(preload.script); /* jshint ignore:line */
+                    preload.result = preload.result || true; // set if not already set by script
                 } catch (err) {
                     var error = err instanceof Error ? err : new Error(err);
-                    preloadPayload.result = error;
-                    if (!preloadPayload.optional) {
-                        console.error(`Execution failed for ${preloadPayload.description}.`, error);
+                    preload.result = error;
+                    if (!preload.optional) {
+                        console.error(`Execution failed for ${preload.description}.`, error);
                     }
                 }
             }
         });
+        
+        delete fin.preloads;
     });
 
 }());
