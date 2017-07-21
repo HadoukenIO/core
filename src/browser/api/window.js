@@ -504,10 +504,17 @@ Window.create = function(id, opts) {
 
         const emitToAppAndWin = (...types) => {
             let isMainWindow = (uuid === name);
+
             types.forEach(type => {
+                // Window crashed: inform Window "namespace"
                 ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type, uuid, name });
+
+                // Window crashed: inform Application "namespace" but with "window-" event string prefix
+                ofEvents.emit(route.application(`window-${type}`, uuid), { topic: 'application', type, uuid, name });
+
                 if (isMainWindow) {
-                    ofEvents.emit(route.application(`window-${type}`, uuid), { topic: 'application', type, uuid, name });
+                    // Application crashed: inform Application "namespace"
+                    ofEvents.emit(route.application(type, uuid), { topic: 'application', type, uuid });
                 }
             });
         };
