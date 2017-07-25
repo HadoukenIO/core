@@ -353,9 +353,17 @@ Window.create = function(id, opts) {
         browserWindow.hide();
     };
 
-    function onDidUnload() {
+    const ofUnloadedHandler = (url, isMainFrame) => {
+
+        if (isMainFrame) {
+            ofEvents.emit(route.window('unload', uuid, name, false), identity);
+            ofEvents.emit(route.window('init-subscription-listeners'), identity);
+        } else {
+            log.writeToLog(1, `Ignoring unload for non-main frame ${JSON.stringify(identity)}`, true);
+        }
+
         urlBeforeunload = webContents ? webContents.getURL() : null;
-    }
+    };
 
     function onDocumentLoaded() {
         const url = webContents.getURL();
@@ -413,6 +421,7 @@ Window.create = function(id, opts) {
         name = _options.name;
 
         const WINDOW_DOCUMENT_LOADED = 'document-loaded';
+        const OF_WINDOW_UNLOADED = 'of-window-unloaded';
 
         browserWindow._options = _options;
 
@@ -440,15 +449,15 @@ Window.create = function(id, opts) {
             });
 
             //tear down any listeners on external event emitters.
-            ofEvents.removeListener(route.window('unload', uuid, name, false), onDidUnload);
             webContents.removeListener(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
+            webContents.removeListener(OF_WINDOW_UNLOADED, ofUnloadedHandler);
         };
 
         let windowTeardown = createWindowTearDown(identity, id);
 
         //wire up unload/navigate events for reload.
-        ofEvents.on(route.window('unload', uuid, name, false), onDidUnload);
         webContents.on(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
+        webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
 
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
