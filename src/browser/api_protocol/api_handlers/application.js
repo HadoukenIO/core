@@ -43,6 +43,7 @@ module.exports.applicationApiMap = {
     'external-window-action': externalWindowAction,
     'get-application-groups': getApplicationGroups,
     'get-application-manifest': getApplicationManifest,
+    'get-application-preloads': getApplicationPreloads,
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
@@ -67,6 +68,13 @@ module.exports.applicationApiMap = {
 module.exports.init = function() {
     apiProtocolBase.registerActionMap(module.exports.applicationApiMap, 'Application');
 };
+
+function getApplicationPreloads(identity, message, ack) {
+    const dataAck = _.clone(successAck);
+
+    dataAck.data = Application.getPreloads(identity);
+    ack(dataAck);
+}
 
 function setTrayIcon(identity, rawMessage, ack, nack) {
     let message = JSON.parse(JSON.stringify(rawMessage));

@@ -18,6 +18,7 @@ limitations under the License.
  */
 
 // built-in modules
+let fs = require('fs');
 let path = require('path');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
@@ -346,6 +347,12 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
         .catch(errorCallback);
 };
 
+Application.getPreloads = function(identity) {
+    const app = Application.wrap(identity.uuid);
+
+    return app.preloads;
+};
+
 Application.getInfo = function(identity, callback) {
     const app = Application.wrap(identity.uuid);
 
@@ -555,7 +562,8 @@ Application.run = function(identity, configUrl = '') {
     //for backwards compatibility main window needs to have name === uuid
     mainWindowOpts.name = uuid;
 
-    coreState.setWindowObj(app.id, Window.create(app.id, mainWindowOpts));
+    const win = Window.create(app.id, mainWindowOpts);
+    coreState.setWindowObj(app.id, win);
 
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
@@ -571,78 +579,103 @@ Application.run = function(identity, configUrl = '') {
         ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
     });
 
-    // turn on plugins for the main window
-    hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
+    let preloads = mainWindowOpts.preload;
 
-    // loadUrl will synchronously cause an event to be fired from the native side 'use-plugins-requested'
-    // to determine whether plugins should be enabled. The event is handled at the top of the file
-    app.mainWindow.loadURL(app._options.url);
-
-    // give other windows a chance to not have plugins enabled
-    hasPlugins = false;
-
-    app.mainWindow.on('newListener', (eventString) => {
-        eventListenerStrings.push(eventString);
-    });
-
-    // If you are the last app to close, take the runtime with you.
-    // app will need to consider remote connections shortly...
-    ofEvents.once(route.window('closed', uuid, uuid), () => {
-        delete fetchingIcon[uuid];
-        removeTrayIcon(app);
-
-        ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
-
-        eventListenerStrings.forEach(eventString => {
-            app.mainWindow.removeAllListeners(eventString);
-        });
-        eventListenerStrings.length = 0;
-
-        coreState.setAppRunningState(uuid, false);
-        coreState.setSentFirstHideSplashScreen(uuid, false);
-
-        ofEvents.removeAllListeners(hideSplashTopic);
-        appEventsForRVM.forEach(appEvent => {
-            ofEvents.removeListener(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
-        });
-        ofEvents.removeListener(route.application('started', uuid), appStartedHandler);
-
-        coreState.removeApp(app.id);
-
-        if (!runtimeIsClosing && coreState.shouldCloseRuntime()) {
-            try {
-                runtimeIsClosing = true;
-                let appsToClose = coreState.getAllAppObjects();
-
-                for (var i = appsToClose.length - 1; i >= 0; i--) {
-                    let a = appsToClose[i];
-                    if (a.uuid !== app.uuid) {
-                        Application.close(a.identity, true);
-                    }
-                }
-
-                // Force close any windows that have slipped past core-state
-                BrowserWindow.getAllWindows().forEach(function(window) {
-                    window.close();
-                });
-
-                // Unregister all shortcuts.
-                globalShortcut.unregisterAll();
-
-            } catch (err) {
-                // comma separation seems to fail core side
-                console.error('Error shutting down runtime');
-                console.error(err);
-                console.error(err.stack);
-            } finally {
-                electronApp.exit(0);
-            }
+    if (preloads) {
+        if (typeof preloads === 'string') {
+            preloads = [{ url: preloads }];
+        } else if (!Array.isArray(preloads) || preloads.find(preload => !isPreload(preload))) {
+            log.writeToLog(1, 'Expected `preload` option to contain a string primitive OR an array of objects with `url` props.', true);
         }
-    });
+    }
 
-    coreState.setAppRunningState(uuid, true);
+    if (preloads && preloads.length) {
+        getPreloadScript(identity, preloads, decoratedPreloads => {
+            if (decoratedPreloads instanceof Error) {
+                log.writeToLog(1, decoratedPreloads, true);
+            } else {
+                app.preloads = decoratedPreloads;
+            }
+            finish();
+        });
+    } else {
+        finish();
+    }
 
-    ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+    function finish() {
+        // turn on plugins for the main window
+        hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
+
+        // loadUrl will synchronously cause an event to be fired from the native side 'use-plugins-requested'
+        // to determine whether plugins should be enabled. The event is handled at the top of the file
+        app.mainWindow.loadURL(app._options.url);
+
+        // give other windows a chance to not have plugins enabled
+        hasPlugins = false;
+
+        app.mainWindow.on('newListener', (eventString) => {
+            eventListenerStrings.push(eventString);
+        });
+
+        // If you are the last app to close, take the runtime with you.
+        // app will need to consider remote connections shortly...
+        ofEvents.once(route.window('closed', uuid, uuid), () => {
+            delete fetchingIcon[uuid];
+            removeTrayIcon(app);
+
+            ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
+
+            eventListenerStrings.forEach(eventString => {
+                app.mainWindow.removeAllListeners(eventString);
+            });
+            eventListenerStrings.length = 0;
+
+            coreState.setAppRunningState(uuid, false);
+            coreState.setSentFirstHideSplashScreen(uuid, false);
+
+            ofEvents.removeAllListeners(hideSplashTopic);
+            appEventsForRVM.forEach(appEvent => {
+                ofEvents.removeListener(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
+            });
+            ofEvents.removeListener(route.application('started', uuid), appStartedHandler);
+
+            coreState.removeApp(app.id);
+
+            if (!runtimeIsClosing && coreState.shouldCloseRuntime()) {
+                try {
+                    runtimeIsClosing = true;
+                    let appsToClose = coreState.getAllAppObjects();
+
+                    for (var i = appsToClose.length - 1; i >= 0; i--) {
+                        let a = appsToClose[i];
+                        if (a.uuid !== app.uuid) {
+                            Application.close(a.identity, true);
+                        }
+                    }
+
+                    // Force close any windows that have slipped past core-state
+                    BrowserWindow.getAllWindows().forEach(function(window) {
+                        window.close();
+                    });
+
+                    // Unregister all shortcuts.
+                    globalShortcut.unregisterAll();
+
+                } catch (err) {
+                    // comma separation seems to fail core side
+                    console.error('Error shutting down runtime');
+                    console.error(err);
+                    console.error(err.stack);
+                } finally {
+                    electronApp.exit(0);
+                }
+            }
+        });
+
+        coreState.setAppRunningState(uuid, true);
+
+        ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+    }
 };
 
 /**
@@ -688,9 +721,7 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
 
 
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
-    let {
-        uuid
-    } = identity;
+    let { uuid } = identity;
 
     if (fetchingIcon[uuid]) {
         errorCallback(new Error('currently fetching icon'));
@@ -900,6 +931,7 @@ function broadcastOnAppConnected(targetIdentity) {
 ofEvents.on(route.window('dom-content-loaded', '*'), payload => {
     broadcastAppLoaded(payload.data[0]);
 });
+
 ofEvents.on(route.window('connected', '*'), payload => {
     broadcastOnAppConnected(payload.data[0]);
 });
@@ -908,6 +940,7 @@ Application.notifyOnContentLoaded = function(target, identity) {
     registerAppLoadedListener(target, identity);
     console.warn('Deprecated. Please addEventListener');
 };
+
 Application.notifyOnAppConnected = function(target, identity) {
     registerAppConnectedListener(target, identity);
     console.warn('Deprecated. Please addEventListener');
@@ -915,7 +948,6 @@ Application.notifyOnAppConnected = function(target, identity) {
 
 
 function removeTrayIcon(app) {
-
     if (app && app.tray) {
         try {
             app.tray.destroy();
@@ -1066,5 +1098,93 @@ function isURI(str) {
 function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
 }
+
+// duck-type a possible Preload object
+function isPreload(preload) {
+    return (
+        typeof preload === 'object' &&
+        typeof preload.url === 'string'
+    );
+}
+
+/**
+ * Asynchronously fetches applications's preload script(s) _to_ cache and reads in _from_ cache.
+ * ```typescript
+ * interface Preload { url:string; optional?:boolean; name?:string; };
+ * interface DecoratedPreload extends Preloader { script:string; description:string };
+ * ```
+ * @param identity {{uuid:string}}
+ * @param preloads {Preload[]}
+ * @param callback {function(Error|DecoratedPreload[])} - Called with one of:
+ * * `Error` - on first required fetch or read failure; or
+ * * `DecoratedPreload[]` - on success of all loaded scripts.
+ */
+function getPreloadScript(identity, preloads, callback) {
+    // Clone `preloads` into `payloads`, adding a `description` prop to each element.
+    // Additionally, a `script` property is added below for each successfully loaded script.
+    const payloads = preloads.map((preload) => {
+        const description = `${preload.optional ? 'optional' : 'required'} preload script ${preload.url}`;
+        return Object.assign({}, preload, { description });
+    });
+
+    let filesRemaining = preloads.length;
+    let atLeastOneRequiredFileFailed = false;
+
+    payloads.forEach(cacheAndLoadFile);
+
+    function cacheAndLoadFile(payload) {
+        cachedFetch(identity.uuid, payload.url, fetched);
+
+        function fetched(fetchError, scriptPath) {
+            if (atLeastOneRequiredFileFailed) {
+                return;
+            }
+
+            if (!fetchError) {
+                fs.readFile(scriptPath, 'utf8', loaded);
+            } else if (!payload.optional) {
+                //todo: Abort all other fetches-in-progress
+                atLeastOneRequiredFileFailed = true;
+                callback(new Error(`Failed to fetch ${payload.description}; no preload scripts will be executed.`));
+            } else {
+                filesRemaining -= 1; // include optional fetch failures in the count
+            }
+        }
+
+        function loaded(readError, script) {
+            // todo: remove following workaround when RUN-3162 issue fixed
+            //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
+            if (!readError &&
+                /^(Cannot GET |<\?xml)/.test(script) && // 404 from various user agents (grunt-openfin|test_runner)
+                !payload.optional
+            ) {
+                //todo: Abort all other fetches-in-progress
+                atLeastOneRequiredFileFailed = true;
+                callback(new Error(`Failed to fetch ${payload.description}; no preload scripts will be executed.`));
+                return;
+            }
+            //END WORKAROUND
+
+            if (atLeastOneRequiredFileFailed) {
+                return;
+            }
+
+            filesRemaining -= 1;
+
+            if (!readError) {
+                payload.script = script;
+                if (!filesRemaining) {
+                    // all scripts have either loaded or failed but were optional
+                    callback(payloads);
+                }
+            } else if (!payload.optional) {
+                //todo: Abort all other fetches-in-progress
+                atLeastOneRequiredFileFailed = true;
+                callback(new Error(`Failed to load ${payload.description}; no preload scripts will be executed.`));
+            }
+        }
+    }
+}
+
 
 module.exports.Application = Application;

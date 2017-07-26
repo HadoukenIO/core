@@ -41,8 +41,6 @@ limitations under the License.
         return customData.openerSuccessCalled;
     };
 
-    const windowOptions = getWindowOptionsSync();
-
     // used by the notification service to emit the ready event
     function emitNoteProxyReady() {
         raiseEventSync('notification-service-ready', true);
@@ -513,37 +511,19 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const preloads = windowOptions.preload;
-
-        // may be a string primitive OR an array; must have length in any case
-        if (!(preloads && preloads.length)) {
-            return;
-        }
-
-        try {
-            fin.preloads = syncApiCall('get-window-preload-scripts', { preloads });
-        } catch (err) {
-            console.error(err);
-            return;
-        }
-
-        fin.preloads.forEach(preload => {
-            if (preload.script) { // ignore undefined preloadPayloads
-                fin.preloads.index = preload.index;
-                try {
-                    window.eval(preload.script); /* jshint ignore:line */
-                    preload.result = preload.result || true; // set if not already set by script
-                } catch (err) {
-                    var error = err instanceof Error ? err : new Error(err);
-                    preload.result = error;
-                    if (!preload.optional) {
-                        console.error(`Execution failed for ${preload.description}.`, error);
+        var preloads = syncApiCall('get-application-preloads');
+        if (preloads) {
+            preloads.forEach(preload => {
+                if (preload.script) { // ignore undefined preload scripts (fetch/load failure)
+                    try {
+                        window.eval(preload.script); /* jshint ignore:line */
+                    } catch (err) {
+                        var error = err instanceof Error ? err : new Error(err);
+                        console.error(`Execution failed for ${preload.description}:`, error);
                     }
                 }
-            }
-        });
-        
-        delete fin.preloads;
+            });
+        }
     });
 
 }());

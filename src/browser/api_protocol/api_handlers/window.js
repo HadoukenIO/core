@@ -40,7 +40,6 @@ module.exports.windowApiMap = {
     'get-window-info': getWindowInfo,
     'get-window-native-id': { apiFunc: getWindowNativeId, apiPath: '.getNativeId' },
     'get-window-options': getWindowOptions,
-    'get-window-preload-scripts': getWindowPreloadScripts,
     'get-window-snapshot': { apiFunc: getWindowSnapshot, apiPath: '.getSnapshot' },
     'get-window-state': getWindowState,
     'get-zoom-level': getZoomLevel,
@@ -81,31 +80,11 @@ module.exports.init = function() {
     apiProtocolBase.registerActionMap(module.exports.windowApiMap, 'Window');
 };
 
-function getWindowPreloadScripts(identity, message, ack, nack) {
-    const payload = message.payload;
-    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
-
-    Window.getPreloadScript(windowIdentity, payload.preloads, preloadScripts => {
-        const dataAck = _.clone(successAck);
-        dataAck.data = preloadScripts;
-        ack(dataAck);
-    }, error => {
-        nack(error);
-    });
-}
-
 function windowAuthenticate(identity, message, ack, nack) {
-    let {
-        userName,
-        password,
-        uuid,
-        name
-    } = message.payload;
+    let payload = message.payload,
+        { userName, password } = payload;
 
-    let windowIdentity = {
-        uuid,
-        name
-    };
+    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 
     Window.authenticate(windowIdentity, userName, password, err => {
         if (!err) {
@@ -114,7 +93,6 @@ function windowAuthenticate(identity, message, ack, nack) {
             nack(err);
         }
     });
-
 }
 
 function redirectWindowToUrl(identity, message, ack) {
