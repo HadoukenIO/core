@@ -474,7 +474,7 @@ Window.create = function(id, opts) {
             });
 
             // can't unhook when the 'closed' event fires; browserWindow is already destroyed then
-            webContents.removeAllListeners('page-favicon-updated');
+            browserWindow.webContents.removeAllListeners('page-favicon-updated');
 
             // make sure that this uuid/name combo does not have any lingering close-requested subscriptions.
             ofEvents.removeAllListeners(closeEventString);
