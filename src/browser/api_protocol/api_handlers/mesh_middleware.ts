@@ -78,9 +78,7 @@ function publishMiddleware(msg: MessagePackage, next: () => void) {
     if (data.action === PUBLISH_ACTION && !identity.runtimeUuid) {
 
         connectionManager.connections.forEach((peer: any) => {
-            peer.fin.System.executeOnRemote(identity, data)
-            .then(ack)
-            .catch(nack);
+            peer.fin.System.executeOnRemote(identity, data);
         });
     }
     next();
