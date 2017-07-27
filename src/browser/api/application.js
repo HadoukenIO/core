@@ -451,18 +451,44 @@ Application.revokeWindowAccess = function() {
 };
 
 Application.run = function(identity, configUrl = '') {
-
     if (!identity) {
         return;
     }
 
-    createAppObj(identity.uuid, null, configUrl);
+    const uuid = identity.uuid;
+    const app = createAppObj(uuid, null, configUrl);
+    const mainWindowOpts = _.clone(app._options);
+    let preloads = mainWindowOpts.preload;
 
+    // If preload option define, make sure it is either a string primitive or an array of objects with `url` props.
+    if (preloads) {
+        if (typeof preloads === 'string') {
+            preloads = [{ url: preloads }];
+        } else if (!Array.isArray(preloads) || preloads.find(preload => !isPreload(preload))) {
+            log.writeToLog(1, 'Expected `preload` option to contain a string primitive OR an array of objects with `url` props.', true);
+        }
+    }
+
+    // Make sure all preload scripts, if any, are loaded before calling run()
+    if (preloads && preloads.length) {
+        getPreloadScript(identity, preloads, decoratedPreloads => {
+            if (decoratedPreloads instanceof Error) {
+                log.writeToLog(1, decoratedPreloads, true);
+            } else {
+                app.preloads = decoratedPreloads;
+            }
+            run(identity, mainWindowOpts);
+        });
+    } else {
+        run(identity, mainWindowOpts);
+    }
+};
+
+function run(identity, mainWindowOpts) {
     const uuid = identity.uuid;
     const app = Application.wrap(uuid);
     const appState = coreState.appByUuid(uuid);
     let sourceUrl = appState.appObj._configUrl;
-    const mainWindowOpts = _.clone(app._options);
     const hideSplashTopic = route.application('hide-splashscreen', uuid);
     const eventListenerStrings = [];
     const hideSplashListener = () => {
@@ -579,104 +605,80 @@ Application.run = function(identity, configUrl = '') {
         ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
     });
 
-    let preloads = mainWindowOpts.preload;
+    // function finish() {
+    // turn on plugins for the main window
+    hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
 
-    if (preloads) {
-        if (typeof preloads === 'string') {
-            preloads = [{ url: preloads }];
-        } else if (!Array.isArray(preloads) || preloads.find(preload => !isPreload(preload))) {
-            log.writeToLog(1, 'Expected `preload` option to contain a string primitive OR an array of objects with `url` props.', true);
-        }
-    }
+    // loadUrl will synchronously cause an event to be fired from the native side 'use-plugins-requested'
+    // to determine whether plugins should be enabled. The event is handled at the top of the file
+    app.mainWindow.loadURL(app._options.url);
 
-    if (preloads && preloads.length) {
-        getPreloadScript(identity, preloads, decoratedPreloads => {
-            if (decoratedPreloads instanceof Error) {
-                log.writeToLog(1, decoratedPreloads, true);
-            } else {
-                app.preloads = decoratedPreloads;
-            }
-            finish();
+    // give other windows a chance to not have plugins enabled
+    hasPlugins = false;
+
+    app.mainWindow.on('newListener', (eventString) => {
+        eventListenerStrings.push(eventString);
+    });
+
+    // If you are the last app to close, take the runtime with you.
+    // app will need to consider remote connections shortly...
+    ofEvents.once(route.window('closed', uuid, uuid), () => {
+        delete fetchingIcon[uuid];
+        removeTrayIcon(app);
+
+        ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
+
+        eventListenerStrings.forEach(eventString => {
+            app.mainWindow.removeAllListeners(eventString);
         });
-    } else {
-        finish();
-    }
+        eventListenerStrings.length = 0;
 
-    function finish() {
-        // turn on plugins for the main window
-        hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
+        coreState.setAppRunningState(uuid, false);
+        coreState.setSentFirstHideSplashScreen(uuid, false);
 
-        // loadUrl will synchronously cause an event to be fired from the native side 'use-plugins-requested'
-        // to determine whether plugins should be enabled. The event is handled at the top of the file
-        app.mainWindow.loadURL(app._options.url);
-
-        // give other windows a chance to not have plugins enabled
-        hasPlugins = false;
-
-        app.mainWindow.on('newListener', (eventString) => {
-            eventListenerStrings.push(eventString);
+        ofEvents.removeAllListeners(hideSplashTopic);
+        appEventsForRVM.forEach(appEvent => {
+            ofEvents.removeListener(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
         });
+        ofEvents.removeListener(route.application('started', uuid), appStartedHandler);
 
-        // If you are the last app to close, take the runtime with you.
-        // app will need to consider remote connections shortly...
-        ofEvents.once(route.window('closed', uuid, uuid), () => {
-            delete fetchingIcon[uuid];
-            removeTrayIcon(app);
+        coreState.removeApp(app.id);
 
-            ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
+        if (!runtimeIsClosing && coreState.shouldCloseRuntime()) {
+            try {
+                runtimeIsClosing = true;
+                let appsToClose = coreState.getAllAppObjects();
 
-            eventListenerStrings.forEach(eventString => {
-                app.mainWindow.removeAllListeners(eventString);
-            });
-            eventListenerStrings.length = 0;
-
-            coreState.setAppRunningState(uuid, false);
-            coreState.setSentFirstHideSplashScreen(uuid, false);
-
-            ofEvents.removeAllListeners(hideSplashTopic);
-            appEventsForRVM.forEach(appEvent => {
-                ofEvents.removeListener(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
-            });
-            ofEvents.removeListener(route.application('started', uuid), appStartedHandler);
-
-            coreState.removeApp(app.id);
-
-            if (!runtimeIsClosing && coreState.shouldCloseRuntime()) {
-                try {
-                    runtimeIsClosing = true;
-                    let appsToClose = coreState.getAllAppObjects();
-
-                    for (var i = appsToClose.length - 1; i >= 0; i--) {
-                        let a = appsToClose[i];
-                        if (a.uuid !== app.uuid) {
-                            Application.close(a.identity, true);
-                        }
+                for (var i = appsToClose.length - 1; i >= 0; i--) {
+                    let a = appsToClose[i];
+                    if (a.uuid !== app.uuid) {
+                        Application.close(a.identity, true);
                     }
-
-                    // Force close any windows that have slipped past core-state
-                    BrowserWindow.getAllWindows().forEach(function(window) {
-                        window.close();
-                    });
-
-                    // Unregister all shortcuts.
-                    globalShortcut.unregisterAll();
-
-                } catch (err) {
-                    // comma separation seems to fail core side
-                    console.error('Error shutting down runtime');
-                    console.error(err);
-                    console.error(err.stack);
-                } finally {
-                    electronApp.exit(0);
                 }
+
+                // Force close any windows that have slipped past core-state
+                BrowserWindow.getAllWindows().forEach(function(window) {
+                    window.close();
+                });
+
+                // Unregister all shortcuts.
+                globalShortcut.unregisterAll();
+
+            } catch (err) {
+                // comma separation seems to fail core side
+                console.error('Error shutting down runtime');
+                console.error(err);
+                console.error(err.stack);
+            } finally {
+                electronApp.exit(0);
             }
-        });
+        }
+    });
 
-        coreState.setAppRunningState(uuid, true);
+    coreState.setAppRunningState(uuid, true);
 
-        ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
-    }
-};
+    ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+}
 
 /**
  * Run an application via RVM
