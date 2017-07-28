@@ -410,7 +410,7 @@ Window.create = function(id, opts) {
         uuid = _options.uuid;
         name = _options.name;
 
-        const OF_WINDOW_UNLOADED = 'of-window-unloaded';
+        const OF_WINDOW_UNLOADED = 'of-window-navigation';
 
         browserWindow._options = _options;
 
