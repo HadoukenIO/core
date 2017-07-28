@@ -1743,10 +1743,10 @@ function applyAdditionalOptionsToWindow(browserWindow) {
     }
 
     applyAdditionalOptionsToWindowOnVisible(browserWindow, () => {
-        // set alpha mask if present, otherwise set opacity
+        // set alpha mask if present, otherwise set opacity if present
         if (options.alphaMask.red > -1 && options.alphaMask.green > -1 && options.alphaMask.blue > -1) {
             browserWindow.setAlphaMask(options.alphaMask.red, options.alphaMask.green, options.alphaMask.blue);
-        } else {
+        } else if (options.opacity < 1) {
             browserWindow.setOpacity(options.opacity);
         }
 
