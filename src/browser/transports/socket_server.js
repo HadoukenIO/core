@@ -69,7 +69,7 @@ let Server = function() {
     };
 
     me.start = function(port) {
-        if (hasStarted) {
+        if (hasStarted && !httpServerError) {
             log.writeToLog(1, 'socket server already running', true);
             return;
         }
