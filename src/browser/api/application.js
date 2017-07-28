@@ -160,7 +160,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
 
         // This is a reference to the meta `app` object that is stored in core state,
         // not the actual `application` object created above. Here we are attaching the parent
-        // indentity to it.
+        // identity to it.
         const app = coreState.appByUuid(opts.uuid);
         app.parentUuid = parentUuid;
     }
@@ -628,19 +628,6 @@ Application.run = function(identity, configUrl = '') {
                 electronApp.exit(0);
             }
         }
-    });
-
-    app.mainWindow.webContents.on('crashed', () => {
-        ofEvents.emit(route.application('crashed', uuid), { topic: 'application', type: 'crashed', uuid });
-        ofEvents.emit(route.application('out-of-memory', uuid), { topic: 'application', type: 'out-of-memory', uuid });
-    });
-
-    app.mainWindow.on('responsive', () => {
-        ofEvents.emit(route.application('responding', uuid), { topic: 'application', type: 'responding', uuid });
-    });
-
-    app.mainWindow.on('unresponsive', () => {
-        ofEvents.emit(route.application('not-responding', uuid), { topic: 'application', type: 'not-responding', uuid });
     });
 
     coreState.setAppRunningState(uuid, true);
