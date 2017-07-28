@@ -344,7 +344,6 @@ Window.create = function(id, opts) {
     let _options;
     let _boundsChangedHandler;
     let groupUuid = null; // windows by default don't belong to any groups
-    let urlBeforeunload;
 
     let hideReason = 'hide';
     let hideOnCloseListener = () => {
@@ -353,28 +352,19 @@ Window.create = function(id, opts) {
         browserWindow.hide();
     };
 
-    const ofUnloadedHandler = (url, isMainFrame) => {
+    const ofUnloadedHandler = (eventObj, url, isReload) => {
 
-        if (isMainFrame) {
-            ofEvents.emit(route.window('unload', uuid, name, false), identity);
-            ofEvents.emit(route.window('init-subscription-listeners'), identity);
-        } else {
-            log.writeToLog(1, `Ignoring unload for non-main frame ${JSON.stringify(identity)}`, true);
-        }
-
-        urlBeforeunload = webContents ? webContents.getURL() : null;
-    };
-
-    function onDocumentLoaded() {
-        const url = webContents.getURL();
-        if (url === urlBeforeunload) {
+        if (isReload) {
             emitReloadedEvent({
                 uuid,
                 name
             }, url);
         }
-        urlBeforeunload = '';
-    }
+
+        ofEvents.emit(route.window('unload', uuid, name, false), identity);
+        ofEvents.emit(route.window('init-subscription-listeners'), identity);
+        ofEvents.emit(route.window('openfin-diagnostic/unload', uuid, name, true), url);
+    };
 
     let _externalWindowEventAdapter;
 
@@ -420,7 +410,6 @@ Window.create = function(id, opts) {
         uuid = _options.uuid;
         name = _options.name;
 
-        const WINDOW_DOCUMENT_LOADED = 'document-loaded';
         const OF_WINDOW_UNLOADED = 'of-window-unloaded';
 
         browserWindow._options = _options;
@@ -449,15 +438,10 @@ Window.create = function(id, opts) {
             });
 
             //tear down any listeners on external event emitters.
-            webContents.removeListener(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
             webContents.removeListener(OF_WINDOW_UNLOADED, ofUnloadedHandler);
         };
 
         let windowTeardown = createWindowTearDown(identity, id);
-
-        //wire up unload/navigate events for reload.
-        webContents.on(WINDOW_DOCUMENT_LOADED, onDocumentLoaded);
-        webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
 
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
@@ -687,6 +671,7 @@ Window.create = function(id, opts) {
 
         if (opts.url === 'about:blank') {
             webContents.once('did-finish-load', () => {
+                webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
                 constructorCallbackMessage.data = {
                     httpResponseCode
                 };
@@ -697,6 +682,7 @@ Window.create = function(id, opts) {
             ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
             ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
             ofEvents.once(route.window('connected', uuid, name), () => {
+                webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
                 constructorCallbackMessage.data = {
                     httpResponseCode,
                     apiInjected: true
@@ -1537,35 +1523,41 @@ Window.onUnload = (identity) => {
 };
 
 function emitCloseEvents(identity) {
+    const { uuid, name } = identity;
+
     electronApp.emit('browser-window-closed', null, getElectronBrowserWindow(identity));
 
     ofEvents.emit(route.window('closed'), {
-        name: identity.name,
-        uuid: identity.uuid
+        name,
+        uuid
     });
 
-    ofEvents.emit(route.window('closed', identity.uuid, identity.name, true), {
+    ofEvents.emit(route.window('closed', uuid, name, true), {
         topic: 'window',
         type: 'closed',
-        uuid: identity.uuid,
-        name: identity.name
+        uuid,
+        name
     });
 
     // Need to emit this event because notifications use dashes (-)
     // in their window names
-    ofEvents.emit(route.window('closed', identity.uuid, identity.name, false), {
+    ofEvents.emit(route.window('closed', uuid, name, false), {
         topic: 'window',
         type: 'closed',
-        uuid: identity.uuid,
-        name: identity.name
+        uuid,
+        name
     });
 
-    ofEvents.emit(route.application('window-closed', identity.uuid), {
+    ofEvents.emit(route.application('window-closed', uuid), {
         topic: 'application',
         type: 'window-closed',
-        uuid: identity.uuid,
-        name: identity.name
+        uuid,
+        name
     });
+
+    ofEvents.emit(route.window('unload', uuid, name, false), identity);
+    ofEvents.emit(route.window('openfin-diagnostic/unload', uuid, name, true), identity);
+    ofEvents.emit(route.window('init-subscription-listeners'), identity);
 }
 
 function emitReloadedEvent(identity, url) {
