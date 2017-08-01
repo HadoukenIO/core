@@ -17,7 +17,6 @@ const apiProtocolBase = require('./api_protocol_base');
 const Window = require('../../api/window').Window;
 const Application = require('../../api/application').Application;
 const _ = require('underscore');
-const log = require('../../log');
 
 function WindowApiHandler() {
     let successAck = {
@@ -59,7 +58,6 @@ function WindowApiHandler() {
         'navigate-window-forward': navigateWindowForward,
         'stop-window-navigation': stopWindowNavigation,
         'reload-window': reloadWindow,
-        'on-window-unload': onWindowUnload, // Fires as window unloads its content and resources; reloading a window or navigating away will fire this event
         'redirect-window-to-url': redirectWindowToUrl, // Deprecated
         'resize-window': resizeWindow,
         'resize-window-by': resizeWindowBy,
@@ -564,15 +562,6 @@ function WindowApiHandler() {
         let level = payload.level;
 
         Window.setZoomLevel(windowIdentity, level);
-        ack(successAck);
-    }
-
-    function onWindowUnload(identity, message, ack) {
-        if (message.isMainRenderFrame === true) {
-            Window.onUnload(identity);
-        } else {
-            log.writeToLog(1, `Ignoring unload for non-main frame ${JSON.stringify(identity)}`, true);
-        }
         ack(successAck);
     }
 
