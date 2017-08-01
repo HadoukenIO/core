@@ -464,12 +464,13 @@ Application.run = function(identity, configUrl = '') {
     if (preloads) {
         if (typeof preloads === 'string') {
             preloads = [{ url: preloads }];
-        } else if (!Array.isArray(preloads) || preloads.find(preload => !isPreload(preload))) {
+        } else if (!isPreloads()) {
+            preloads = undefined;
             log.writeToLog(1, 'Expected `preload` option to contain a string primitive OR an array of objects with `url` props.', true);
         }
     }
 
-    // Make sure all preload scripts, if any, are loaded before calling run()
+    // Load all preload scripts, if any, before calling run()
     if (preloads && preloads.length) {
         getPreloadScript(identity, preloads, decoratedPreloads => {
             if (decoratedPreloads instanceof Error) {
@@ -1099,6 +1100,11 @@ function isURI(str) {
 
 function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
+}
+
+// duck-type a possible array of Preload objects
+function isPreloads(preloads) {
+    return Array.isArray(preloads) && preloads.every(isPreload);
 }
 
 // duck-type a possible Preload object
