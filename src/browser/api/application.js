@@ -464,7 +464,7 @@ Application.run = function(identity, configUrl = '') {
     if (preloads) {
         if (typeof preloads === 'string') {
             preloads = [{ url: preloads }];
-        } else if (!isPreloads()) {
+        } else if (!isPreloads(preloads)) {
             preloads = undefined;
             log.writeToLog(1, 'Expected `preload` option to contain a string primitive OR an array of objects with `url` props.', true);
         }
