@@ -124,6 +124,13 @@ export interface AppObj {
     uuid: string;
 }
 
+export type WebRequestHeader = {[key: string]: string};
+
+export type WebRequestHeaderOption = {
+        urlList: string[],
+        headers: WebRequestHeader[]  // key=value is added to headers
+};
+
 export interface WindowOptions {
     accelerator?: {
         devtools: boolean;
@@ -152,6 +159,7 @@ export interface WindowOptions {
         width: number;
     };
     customData?: string;
+    customRequestHeaders?: WebRequestHeaderOption[];
     defaultCentered?: boolean;
     defaultHeight?: number;
     defaultLeft?: number;
