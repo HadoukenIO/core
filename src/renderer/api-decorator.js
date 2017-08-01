@@ -25,7 +25,6 @@ limitations under the License.
 
     let renderFrameId = global.routingId;
     let customData = global.getFrameData(renderFrameId);
-    let isMainRenderFrame = global.isMainFrame;
     let glbl = global;
 
     const electron = require('electron');
@@ -341,16 +340,6 @@ limitations under the License.
             }
         }, 1);
     }
-
-    electron.remote.getCurrentWebContents(renderFrameId).once('navigation-entry-commited', () => {
-        ipc.send(renderFrameId, 'of-window-message', {
-            action: 'on-window-unload',
-            payload: {},
-            isSync: false,
-            singleFrameOnly: true,
-            isMainRenderFrame
-        });
-    });
 
     var pendingMainCallbacks = [];
     var currPageHasLoaded = false;
