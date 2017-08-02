@@ -266,6 +266,10 @@ module.exports = {
             newOptions.preload = options.preload;
         }
 
+        if (options.hasOwnProperty('preloads')) {
+            newOptions.preloads = options.preloads;
+        }
+
         if (returnAsString) {
             return JSON.stringify(newOptions);
         } else {

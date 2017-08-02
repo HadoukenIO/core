@@ -418,7 +418,7 @@ limitations under the License.
         let webContentsId = getWebContentsId();
         // Reset state machine values that are set through synchronous handshake between native WebContent lifecycle observers and JS
         options.openfin = true;
-
+        options.preload = options.preload || winOpts.preload;
         options.uuid = winOpts.uuid;
         let responseChannel = `${frameName}-created`;
         ipc.once(responseChannel, () => {
@@ -444,10 +444,17 @@ limitations under the License.
             }, 1);
         });
 
-        setTimeout(() => {
+        fin.__internal_.downloadPreloadScripts(options.preload, (preloads) => {
+            options.preloads = preloads;
             // PLEASE NOTE: Must stringify options object
-            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId, requestId, JSON.stringify(convertOptionsToElectronSync(options)));
-        }, 1);
+            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
+                requestId, JSON.stringify(convertOptionsToElectronSync(options)));
+        }, err => {
+            //TODO Capture errors here
+            console.log(err);
+            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
+                requestId, JSON.stringify(convertOptionsToElectronSync(options)));
+        });
     }
 
     global.chrome = global.chrome || {};
@@ -511,7 +518,7 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        var preloads = syncApiCall('get-application-preloads');
+        const { preloads } = getWindowOptionsSync();
         if (preloads) {
             preloads.forEach(preload => {
                 if (preload.script) { // ignore undefined preload scripts (fetch/load failure)
