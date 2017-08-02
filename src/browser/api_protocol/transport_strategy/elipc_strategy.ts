@@ -94,14 +94,10 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             };
 
             /* tslint:disable: max-line-length */
-            if (data.action === 'publish-message') {
-                //message payload might contain sensitive data, mask it.
-                system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, this.payloadReplacer)}`);
-            } else {
-                system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data)}`);
-            }
+            //message payload might contain sensitive data, mask it.
+            const replacer = data.action === 'publish-message' ? this.payloadReplacer : null;
+            system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, replacer)}`);
             /* tslint:enable: max-line-length */
-
 
             this.requestHandler.handle({
                 identity, data, ack, nack, e,
