@@ -519,7 +519,7 @@ limitations under the License.
                         window.eval(preload.script); /* jshint ignore:line */
                     } catch (err) {
                         var error = err instanceof Error ? err : new Error(err);
-                        console.error(`Execution failed for ${preload.description}:`, error);
+                        console.error(`Execution failed for preload script ${preload.url}:`, error);
                     }
                 }
             });

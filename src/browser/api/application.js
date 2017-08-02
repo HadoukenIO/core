@@ -18,7 +18,6 @@ limitations under the License.
  */
 
 // built-in modules
-let fs = require('fs');
 let path = require('path');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
@@ -39,21 +38,16 @@ let Window = require('./window.js').Window;
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
-import {
-    cachedFetch
-} from '../cached_resource_fetcher';
+import { cachedFetch } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
-import {
-    sendToRVM
-} from '../rvm/utils';
-import {
-    validateNavigationRules
-} from '../navigation_validation';
+import { sendToRVM } from '../rvm/utils';
+import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
 import route from '../../common/route';
+import { fetchAndLoadPromise } from '../fetch_load';
 
 // locals
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -466,20 +460,22 @@ Application.run = function(identity, configUrl = '') {
             preloads = [{ url: preloads }];
         } else if (!isPreloads(preloads)) {
             preloads = undefined;
-            log.writeToLog(1, 'Expected `preload` option to contain a string primitive OR an array of objects with `url` props.', true);
+            log.writeToLog(1, 'Expected `preload` option to be a string primitive OR an array of objects with `url` props.', true);
         }
     }
 
     // Load all preload scripts, if any, before calling run()
     if (preloads && preloads.length) {
-        getPreloadScript(identity, preloads, decoratedPreloads => {
-            if (decoratedPreloads instanceof Error) {
-                log.writeToLog(1, decoratedPreloads, true);
-            } else {
-                app.preloads = decoratedPreloads;
-            }
-            run(identity, mainWindowOpts);
-        });
+        const preloadPromises = preloads.map(preload => fetchAndLoadPromise(identity, preload));
+        Promise.all(preloadPromises)
+            .catch(err => {
+                log.writeToLog(1, err, true);
+                run(identity, mainWindowOpts);
+            })
+            .then(preloadsWithUrlAndScript => {
+                app.preloads = preloadsWithUrlAndScript;
+                run(identity, mainWindowOpts);
+            });
     } else {
         run(identity, mainWindowOpts);
     }
@@ -1114,85 +1110,5 @@ function isPreload(preload) {
         typeof preload.url === 'string'
     );
 }
-
-/**
- * Asynchronously fetches applications's preload script(s) _to_ cache and reads in _from_ cache.
- * ```typescript
- * interface Preload { url:string; optional?:boolean; name?:string; };
- * interface DecoratedPreload extends Preloader { script:string; description:string };
- * ```
- * @param identity {{uuid:string}}
- * @param preloads {Preload[]}
- * @param callback {function(Error|DecoratedPreload[])} - Called with one of:
- * * `Error` - on first required fetch or read failure; or
- * * `DecoratedPreload[]` - on success of all loaded scripts.
- */
-function getPreloadScript(identity, preloads, callback) {
-    // Clone `preloads` into `payloads`, adding a `description` prop to each element.
-    // Additionally, a `script` property is added below for each successfully loaded script.
-    const payloads = preloads.map((preload) => {
-        const description = `${preload.optional ? 'optional' : 'required'} preload script ${preload.url}`;
-        return Object.assign({}, preload, { description });
-    });
-
-    let filesRemaining = preloads.length;
-    let atLeastOneRequiredFileFailed = false;
-
-    payloads.forEach(cacheAndLoadFile);
-
-    function cacheAndLoadFile(payload) {
-        cachedFetch(identity.uuid, payload.url, fetched);
-
-        function fetched(fetchError, scriptPath) {
-            if (atLeastOneRequiredFileFailed) {
-                return;
-            }
-
-            if (!fetchError) {
-                fs.readFile(scriptPath, 'utf8', loaded);
-            } else if (!payload.optional) {
-                //todo: Abort all other fetches-in-progress
-                atLeastOneRequiredFileFailed = true;
-                callback(new Error(`Failed to fetch ${payload.description}; no preload scripts will be executed.`));
-            } else {
-                filesRemaining -= 1; // include optional fetch failures in the count
-            }
-        }
-
-        function loaded(readError, script) {
-            // todo: remove following workaround when RUN-3162 issue fixed
-            //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
-            if (!readError &&
-                /^(Cannot GET |<\?xml)/.test(script) && // 404 from various user agents (grunt-openfin|test_runner)
-                !payload.optional
-            ) {
-                //todo: Abort all other fetches-in-progress
-                atLeastOneRequiredFileFailed = true;
-                callback(new Error(`Failed to fetch ${payload.description}; no preload scripts will be executed.`));
-                return;
-            }
-            //END WORKAROUND
-
-            if (atLeastOneRequiredFileFailed) {
-                return;
-            }
-
-            filesRemaining -= 1;
-
-            if (!readError) {
-                payload.script = script;
-                if (!filesRemaining) {
-                    // all scripts have either loaded or failed but were optional
-                    callback(payloads);
-                }
-            } else if (!payload.optional) {
-                //todo: Abort all other fetches-in-progress
-                atLeastOneRequiredFileFailed = true;
-                callback(new Error(`Failed to load ${payload.description}; no preload scripts will be executed.`));
-            }
-        }
-    }
-}
-
 
 module.exports.Application = Application;
