@@ -78,14 +78,6 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         throw new Error('Not implemented');
     }
 
-    protected payloadReplacer(key: string, value: any): any {
-        if (key && key === 'payload') {
-            return '***masked payload***';
-        } else {
-            return value;
-        }
-    }
-
     protected onMessage(e: any, rawData: any): void {
 
         try {
