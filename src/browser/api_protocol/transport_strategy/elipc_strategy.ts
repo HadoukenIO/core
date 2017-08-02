@@ -94,7 +94,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             };
 
             /* tslint:disable: max-line-length */
-            if (data.action && data.action === 'publish-message') {
+            if (data.action === 'publish-message') {
                 //message payload might contain sensitive data, mask it.
                 system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, this.payloadReplacer)}`);
             } else {

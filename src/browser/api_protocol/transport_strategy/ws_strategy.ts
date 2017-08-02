@@ -84,7 +84,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
             }
         }
 
-        if (data.action && data.action === 'publish-message') {
+        if (data.action === 'publish-message') {
             //message payload might contain sensitive data, mask it.
             system.debugLog(1, `received external-adapter <= ${id} ${JSON.stringify(data, this.payloadReplacer)}`);
         } else {

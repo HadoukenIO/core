@@ -66,7 +66,7 @@ export abstract class ApiTransportBase<T> {
     }
 
     protected payloadReplacer(key: string, value: any): any {
-        if (key && key === 'payload') {
+        if (key === 'payload') {
             return '***masked payload***';
         } else {
             return value;
