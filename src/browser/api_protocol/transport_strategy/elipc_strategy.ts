@@ -78,6 +78,14 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         throw new Error('Not implemented');
     }
 
+    protected payloadReplacer(key: string, value: any): any {
+        if (key && key === 'payload') {
+            return '***masked payload***';
+        } else {
+            return value;
+        }
+    }
+
     protected onMessage(e: any, rawData: any): void {
 
         try {
@@ -94,8 +102,14 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             };
 
             /* tslint:disable: max-line-length */
-            system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data)}`);
+            if (data.action && data.action === 'publish-message') {
+                //message payload might contain sensitive data, mask it.
+                system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, this.payloadReplacer)}`);
+            } else {
+                system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data)}`);
+            }
             /* tslint:enable: max-line-length */
+
 
             this.requestHandler.handle({
                 identity, data, ack, nack, e,
