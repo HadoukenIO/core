@@ -62,10 +62,28 @@ function SystemApiHandler() {
         'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess' },
         'update-proxy': updateProxy,
         'view-log': { apiFunc: viewLog, apiPath: '.getLog' },
-        'write-to-log': writeToLog
+        'write-to-log': writeToLog,
+        'download-preload-scripts': downloadPreloadScripts //internal function
     };
 
+
+
     apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
+
+    function downloadPreloadScripts(identity, message, ack, nack) {
+        let { payload: { scripts } } = message;
+        let dataAck = _.clone(successAck);
+
+        System.downloadPreloadScripts(identity, scripts, (err, scripts) => {
+            if (!err) {
+                dataAck.data = scripts;
+
+                ack(dataAck);
+            } else {
+                nack(err);
+            }
+        });
+    }
 
     function getDeviceUserId(identity, message, ack) {
         let dataAck = _.clone(successAck);

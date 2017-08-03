@@ -54,7 +54,6 @@ import {
     toSafeInt
 } from '../../common/safe_int';
 import route from '../../common/route';
-import { fetchAndLoadPromise } from '../fetch_load';
 
 // locals
 const isWin32 = process.platform === 'win32';
@@ -1534,16 +1533,6 @@ Window.setZoomLevel = function(identity, level) {
 Window.onUnload = (identity) => {
     ofEvents.emit(route.window('unload', identity.uuid, identity.name, false), identity);
     ofEvents.emit(route.window('init-subscription-listeners'), identity);
-};
-
-Window.downloadPreloadScripts = (identity, scripts, cb) => {
-    if (typeof scripts === 'string') {
-        scripts = [{ url: scripts }];
-    }
-    const preloadPromises = scripts.map(preload => fetchAndLoadPromise(identity, preload));
-    Promise.all(preloadPromises).then(downloadedScripts => {
-        cb(null, downloadedScripts);
-    }).catch(cb);
 };
 
 function emitCloseEvents(identity) {

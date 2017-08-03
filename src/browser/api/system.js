@@ -68,6 +68,8 @@ const defaultProc = {
     }
 };
 
+import { fetchAndLoadPromise } from '../fetch_load';
+
 let MonitorInfo;
 let Session;
 let rvmBus;
@@ -609,6 +611,17 @@ module.exports.System = {
         } else {
             cb(new Error('uuid not found.'));
         }
+    },
+
+    downloadPreloadScripts: function(identity, scripts, cb) {
+        if (typeof scripts === 'string') {
+            scripts = [{ url: scripts }];
+        }
+        const preloadPromises = scripts.map(preload => fetchAndLoadPromise(identity, preload));
+
+        Promise.all(preloadPromises).then(downloadedScripts => {
+            cb(null, downloadedScripts);
+        }).catch(cb);
     }
 
 };

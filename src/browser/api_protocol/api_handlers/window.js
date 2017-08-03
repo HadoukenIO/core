@@ -73,28 +73,12 @@ module.exports.windowApiMap = {
     'window-embedded': windowEmbedded,
     'window-exists': windowExists,
     'window-get-cached-bounds': getCachedBounds,
-    'window-authenticate': windowAuthenticate,
-    'window-download-preload-scripts': windowDownloadPreloadScripts
+    'window-authenticate': windowAuthenticate
 };
 
 module.exports.init = function() {
     apiProtocolBase.registerActionMap(module.exports.windowApiMap, 'Window');
 };
-
-function windowDownloadPreloadScripts(identity, message, ack, nack) {
-    let { payload: { scripts } } = message;
-    let dataAck = _.clone(successAck);
-
-    Window.downloadPreloadScripts(identity, scripts, (err, scripts) => {
-        if (!err) {
-            dataAck.data = scripts;
-
-            ack(dataAck);
-        } else {
-            nack(err);
-        }
-    });
-}
 
 function windowAuthenticate(identity, message, ack, nack) {
     let payload = message.payload,
