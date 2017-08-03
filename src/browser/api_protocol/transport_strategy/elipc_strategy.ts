@@ -95,7 +95,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
             /* tslint:disable: max-line-length */
             //message payload might contain sensitive data, mask it.
-            const replacer = data.action === 'publish-message' ? this.payloadReplacer : null;
+            const replacer = (!opts.disableIabSecureLogging && data.action === 'publish-message') ? this.payloadReplacer : null;
             system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, replacer)}`);
             /* tslint:enable: max-line-length */
 
