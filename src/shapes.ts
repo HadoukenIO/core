@@ -159,7 +159,7 @@ export interface WindowOptions {
     defaultWidth?: number;
     delay_connection?: boolean;
     description?: string;
-    disableIabSecureLogging ?: boolean;
+    disableIabSecureLogging?: boolean;
     draggable?: boolean;
     'enable-plugins'?: boolean;
     enableLargerThanScreen?: boolean;
