@@ -59,10 +59,10 @@ function SubscriptionManager() {
     }
 
     function removeSubscription(identity, ...args) {
-        let key = genSubscriptionKey.apply(null, args);
-        let identityKey = identityToKey(identity);
-        let subscriptionId = subscriptionList.get(identityKey);
-        let subscription = subscriptionId && subscriptionId.get(key);
+        const key = genSubscriptionKey.apply(null, args);
+        const identityKey = identityToKey(identity);
+        const subscriptionId = subscriptionList.get(identityKey);
+        const subscription = subscriptionId && subscriptionId.get(key);
 
         if (!subscription) {
             return;
