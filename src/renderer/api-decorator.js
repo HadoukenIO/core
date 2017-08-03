@@ -518,15 +518,15 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const { preloads } = getWindowOptionsSync();
-        if (preloads) {
-            preloads.forEach(preload => {
-                if (preload.script) { // ignore undefined preload scripts (fetch/load failure)
+        var loadedPreloads = syncApiCall('get-loaded-preload-scripts');
+        if (loadedPreloads) {
+            loadedPreloads.forEach(loadedPreload => {
+                if (loadedPreload.scriptText) { // ignore undefined loadedPreload scripts (fetch/load failure)
                     try {
-                        window.eval(preload.script); /* jshint ignore:line */
+                        window.eval(loadedPreload.scriptText); /* jshint ignore:line */
                     } catch (err) {
                         var error = err instanceof Error ? err : new Error(err);
-                        console.error(`Execution failed for preload script ${preload.url}:`, error);
+                        console.error(`Execution failed for preload script ${loadedPreload.url}:`, error);
                     }
                 }
             });

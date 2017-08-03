@@ -43,7 +43,7 @@ module.exports.applicationApiMap = {
     'external-window-action': externalWindowAction,
     'get-application-groups': getApplicationGroups,
     'get-application-manifest': getApplicationManifest,
-    'get-application-preloads': getApplicationPreloads,
+    'get-loaded-preload-scripts': getLoadedPreloadScripts,
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
@@ -69,10 +69,10 @@ module.exports.init = function() {
     apiProtocolBase.registerActionMap(module.exports.applicationApiMap, 'Application');
 };
 
-function getApplicationPreloads(identity, message, ack) {
+function getLoadedPreloadScripts(identity, message, ack) {
     const dataAck = _.clone(successAck);
 
-    dataAck.data = Application.getPreloads(identity);
+    dataAck.data = Application.getLoadedPreloadScripts(identity);
     ack(dataAck);
 }
 

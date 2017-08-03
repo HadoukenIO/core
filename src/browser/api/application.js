@@ -47,7 +47,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
 import route from '../../common/route';
-import { fetchAndLoadPromise } from '../fetch_load';
+import { fetchAndLoadPreloadScripts } from '../preload_scripts';
 
 // locals
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -341,10 +341,10 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
         .catch(errorCallback);
 };
 
-Application.getPreloads = function(identity) {
+Application.getLoadedPreloadScripts = function(identity) {
     const app = Application.wrap(identity.uuid);
 
-    return app.preloads;
+    return app.loadedPreloads;
 };
 
 Application.getInfo = function(identity, callback) {
@@ -449,36 +449,16 @@ Application.run = function(identity, configUrl = '') {
         return;
     }
 
-    const uuid = identity.uuid;
-    const app = createAppObj(uuid, null, configUrl);
+    const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = _.clone(app._options);
-    let preloads = mainWindowOpts.preload;
+    const proceed = () => run(identity, mainWindowOpts);
 
-    // If preload option define, make sure it is either a string primitive or an array of objects with `url` props.
-    if (preloads) {
-        if (typeof preloads === 'string') {
-            preloads = [{ url: preloads }];
-        } else if (!isPreloads(preloads)) {
-            preloads = undefined;
-            log.writeToLog(1, 'Expected `preload` option to be a string primitive OR an array of objects with `url` props.', true);
-        }
-    }
-
-    // Load all preload scripts, if any, before calling run()
-    if (preloads && preloads.length) {
-        const preloadPromises = preloads.map(preload => fetchAndLoadPromise(identity, preload));
-        Promise.all(preloadPromises)
-            .catch(err => {
-                log.writeToLog(1, err, true);
-                run(identity, mainWindowOpts);
-            })
-            .then(preloadsWithUrlAndScript => {
-                app.preloads = preloadsWithUrlAndScript;
-                run(identity, mainWindowOpts);
-            });
-    } else {
-        run(identity, mainWindowOpts);
-    }
+    fetchAndLoadPreloadScripts(identity, mainWindowOpts.preload)
+        .catch(proceed) // no preloads, or a required preload failed
+        .then(loadedPreloads => {
+            app.loadedPreloads = loadedPreloads; // preload options, each decorated with `script` property (script text)
+            proceed();
+        });
 };
 
 function run(identity, mainWindowOpts) {
@@ -1096,19 +1076,6 @@ function isURI(str) {
 
 function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
-}
-
-// duck-type a possible array of Preload objects
-function isPreloads(preloads) {
-    return Array.isArray(preloads) && preloads.every(isPreload);
-}
-
-// duck-type a possible Preload object
-function isPreload(preload) {
-    return (
-        typeof preload === 'object' &&
-        typeof preload.url === 'string'
-    );
 }
 
 module.exports.Application = Application;
