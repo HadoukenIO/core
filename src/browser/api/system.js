@@ -13,27 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// built-in modules
 const fs = require('fs');
 const os = require('os');
+const electron = require('electron');
+const electronApp = electron.app;
+const ResourceFetcher = electron.resourceFetcher;
+const session = electron.session;
+const shell = electron.shell;
+
+// npm modules
 const path = require('path');
 const crypto = require('crypto');
-
-const electronApp = require('electron').app;
-const ResourceFetcher = require('electron').resourceFetcher;
-const session = require('electron').session;
-const shell = require('electron').shell;
-
 const _ = require('underscore');
+
+// local modules
 const convertOptions = require('../convert_options.js');
 const coreState = require('../core_state.js');
 const electronIPC = require('../transports/electron_ipc.js');
-import {
-    ExternalApplication
-} from './external_application';
+import { ExternalApplication } from './external_application';
 const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
+import { fetchAndLoadPreloadScripts } from '../preload_scripts';
+
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -68,8 +73,7 @@ const defaultProc = {
     }
 };
 
-import { fetchAndLoadPromise } from '../fetch_load';
-const preloadScripts = {};
+const preloadScriptsCache = {};
 
 let MonitorInfo;
 let Session;
@@ -614,32 +618,33 @@ exports.System = {
         }
     },
 
-    downloadPreloadScripts: function(identity, scripts, cb) {
-        if (typeof scripts === 'string') {
-            scripts = [{ url: scripts }];
-        }
-        const preloadPromises = scripts.map(preload => fetchAndLoadPromise(identity, preload));
-
-        Promise.all(preloadPromises).then(downloadedScripts => {
-            cb(null, downloadedScripts);
-        }).catch(cb);
+    downloadPreloadScripts: function(identity, preloadOption, cb) {
+        fetchAndLoadPreloadScripts(identity, preloadOption, () => {
+            cb(null);
+        });
     },
 
     setPreloadScript: function(url, scriptText) {
-        preloadScripts[url] = scriptText;
+        preloadScriptsCache[url] = scriptText;
     },
+
+    getPreloadScript: function(url) {
+        return preloadScriptsCache[url];
+    },
+
     getSelectedPreloadScripts: function(preloadOption) {
         const response = {};
 
         const missingRequiredScripts = preloadOption.reduce((urls, preload) => {
-            if (!preload.optional && !(preload.url in preloadScripts)) {
+            if (!preload.optional && !(preload.url in preloadScriptsCache)) {
                 urls.push(preload.url);
             }
             return urls;
         }, []);
 
         if (!missingRequiredScripts.length) {
-            response.scripts = preloadOption.map(preload => preloadScripts[preload.url] || ''); // '' represents missing optional script
+            const missingOptionalScript = '';
+            response.scripts = preloadOption.map(preload => preloadScriptsCache[preload.url] || missingOptionalScript);
         } else {
             response.error = `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
         }

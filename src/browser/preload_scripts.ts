@@ -50,7 +50,15 @@ export function fetchAndLoadPreloadScripts(
         const message = 'Expected `preload` option to be a string primitive OR an array of objects with `url` props.';
         allLoaded = Promise.reject(new Error(message));
     } else {
-        const loadedScripts: Promise<undefined>[] = preload.map((preload: PreloadInstance) => fetch(identity, preload).then(load));
+        const loadedScripts: Promise<undefined>[] = preload.map((preload: PreloadInstance) => {
+            if (System.getPreloadScript(preload.url)) {
+                // previously downloaded
+                return Promise.resolve();
+            } else {
+                // not previously downloaded *OR* previous downloaded failed
+                return fetch(identity, preload).then(load);
+            }
+        });
         allLoaded = Promise.all(loadedScripts);
     }
 

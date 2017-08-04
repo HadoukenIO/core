@@ -444,17 +444,17 @@ limitations under the License.
             }, 1);
         });
 
-        fin.__internal_.downloadPreloadScripts(options.preload, (preloads) => {
-            options.preloads = preloads;
+        var convertedOpts = convertOptionsToElectronSync(options);
+        fin.__internal_.downloadPreloadScripts(convertedOpts.preload, () => {
             // PLEASE NOTE: Must stringify options object
             ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
-                requestId, JSON.stringify(convertOptionsToElectronSync(options)));
-        }, err => {
-            //TODO Capture errors here
-            console.log(err);
+                requestId, JSON.stringify(convertedOpts));
+        }, ( /*reason, error*/ ) => {
             ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
-                requestId, JSON.stringify(convertOptionsToElectronSync(options)));
+                requestId, JSON.stringify(convertedOpts));
         });
+
+
     }
 
     global.chrome = global.chrome || {};
