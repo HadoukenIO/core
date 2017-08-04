@@ -519,7 +519,7 @@ limitations under the License.
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const winOpts = getWindowOptionsSync();
-        const preloadOption = winOpts.preload;
+        const preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
         const response = syncApiCall('get-selected-preload-scripts', preloadOption);
 
         if (response.error) {

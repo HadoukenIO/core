@@ -38,19 +38,41 @@ type Resolver = (value?: any) => void;
 type Rejector = (reason?: Error) => void;
 
 
-// Returns a Promise when all preload scripts, if any, have been loaded, resolving with array of `PreloadInstance` objects
+/** Returns a `Promise` once all preload scripts have been fetched and loaded or have failed to fetch or load.
+ *
+ * @param {object} identity
+ * @param {string|object[]} preloadOption
+ * @param {function} [proceed] - If supplied, both `catch` and `then` are called on it.
+ *
+ * If you don't supply `proceed`, call both `catch` and `then` on your own to proceed as appropriate.
+ *
+ * Notes:
+ * 4. There is only one `catch`able error, bad preload option type, which has already been logged for you.
+ * 1. The promise otherwise always resolves; fetch/load failures are not errors.
+ * 2. Successfully loaded scripts are cached via `System.setPreloadScript`,
+ * to be eval'd later by api_decorator as windows spin up.
+ * 3. No resolve values are available to `then`; to access loaded scripts,
+ * call `System.getPreloadScript` or `System.getSelectedPreloadScripts`.
+ */
+
 export function fetchAndLoadPreloadScripts(
     identity: Identity,
-    preload: PreloadOption,
-    proceed: () => void
-): void {
+    preloadOption: PreloadOption,
+    proceed?: () => void
+): Promise<undefined> {
     let allLoaded: Promise<undefined>;
 
-    if (!isPreloadOption(preload)) {
+    // convert legacy `preloadOption` option into modern `preloadOption` option
+    if (typeof preloadOption === 'string') {
+        preloadOption = [<PreloadInstance>{ url: preloadOption }];
+    }
+
+    if (!isPreloadOption(preloadOption)) {
         const message = 'Expected `preload` option to be a string primitive OR an array of objects with `url` props.';
-        allLoaded = Promise.reject(new Error(message));
+        const err = new Error(message);
+        allLoaded = Promise.reject(err);
     } else {
-        const loadedScripts: Promise<undefined>[] = preload.map((preload: PreloadInstance) => {
+        const loadedScripts: Promise<undefined>[] = preloadOption.map((preload: PreloadInstance) => {
             if (System.getPreloadScript(preload.url)) {
                 // previously downloaded
                 return Promise.resolve();
@@ -59,11 +81,20 @@ export function fetchAndLoadPreloadScripts(
                 return fetch(identity, preload).then(load);
             }
         });
+
+        // wait for them all to resolve
         allLoaded = Promise.all(loadedScripts);
     }
 
-    // wait for them all to resolve and then proceed
-    allLoaded.catch(proceed).then(proceed);
+    allLoaded.catch(err => {
+        log.writeToLog(1, err, true);
+    });
+
+    if (proceed) {
+        allLoaded.catch(proceed).then(proceed);
+    }
+
+    return allLoaded;
 }
 
 

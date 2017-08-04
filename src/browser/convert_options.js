@@ -263,13 +263,7 @@ module.exports = {
         }
 
         if (options.hasOwnProperty('preload')) {
-            const { preload } = options;
-            const legacyPreloadOption = typeof preload === 'string';
-            newOptions.preload = legacyPreloadOption ? [{ url: preload }] : preload;
-        }
-
-        if (options.hasOwnProperty('preloads')) {
-            newOptions.preloads = options.preloads;
+            newOptions.preload = options.preload;
         }
 
         if (returnAsString) {
