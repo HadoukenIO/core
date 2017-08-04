@@ -69,6 +69,7 @@ const defaultProc = {
 };
 
 import { fetchAndLoadPromise } from '../fetch_load';
+const preloadScripts = {};
 
 let MonitorInfo;
 let Session;
@@ -148,7 +149,7 @@ ofEvents.on(route.externalApplication('disconnected'), payload => {
     });
 });
 
-module.exports.System = {
+exports.System = {
     addEventListener: function(type, listener) {
         ofEvents.on(route.system(type), listener);
 
@@ -622,6 +623,27 @@ module.exports.System = {
         Promise.all(preloadPromises).then(downloadedScripts => {
             cb(null, downloadedScripts);
         }).catch(cb);
-    }
+    },
 
+    setPreloadScript: function(url, scriptText) {
+        preloadScripts[url] = scriptText;
+    },
+    getSelectedPreloadScripts: function(preloadOption) {
+        const response = {};
+
+        const missingRequiredScripts = preloadOption.reduce((urls, preload) => {
+            if (!preload.optional && !(preload.url in preloadScripts)) {
+                urls.push(preload.url);
+            }
+            return urls;
+        }, []);
+
+        if (!missingRequiredScripts.length) {
+            response.scripts = preloadOption.map(preload => preloadScripts[preload.url] || ''); // '' represents missing optional script
+        } else {
+            response.error = `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
+        }
+
+        return response;
+    }
 };

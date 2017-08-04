@@ -341,12 +341,6 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
         .catch(errorCallback);
 };
 
-Application.getLoadedPreloadScripts = function(identity) {
-    const app = Application.wrap(identity.uuid);
-
-    return app.loadedPreloads;
-};
-
 Application.getInfo = function(identity, callback) {
     const app = Application.wrap(identity.uuid);
 
@@ -453,12 +447,7 @@ Application.run = function(identity, configUrl = '') {
     const mainWindowOpts = _.clone(app._options);
     const proceed = () => run(identity, mainWindowOpts);
 
-    fetchAndLoadPreloadScripts(identity, mainWindowOpts.preload)
-        .catch(proceed) // no preloads, or a required preload failed
-        .then(loadedPreloads => {
-            app.loadedPreloads = loadedPreloads; // preload options, each decorated with `script` property (script text)
-            proceed();
-        });
+    fetchAndLoadPreloadScripts(identity, mainWindowOpts.preload, proceed);
 };
 
 function run(identity, mainWindowOpts) {

@@ -518,16 +518,20 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        var loadedPreloads = syncApiCall('get-loaded-preload-scripts');
-        if (loadedPreloads) {
-            loadedPreloads.forEach(loadedPreload => {
-                if (loadedPreload.scriptText) { // ignore undefined loadedPreload scripts (fetch/load failure)
-                    try {
-                        window.eval(loadedPreload.scriptText); /* jshint ignore:line */
-                    } catch (err) {
-                        var error = err instanceof Error ? err : new Error(err);
-                        console.error(`Execution failed for preload script ${loadedPreload.url}:`, error);
-                    }
+        const winOpts = getWindowOptionsSync();
+        const preloadOption = winOpts.preload;
+        const response = syncApiCall('get-selected-preload-scripts', preloadOption);
+
+        if (response.error) {
+            console.error(response.error);
+        } else {
+            response.scripts.find((script, index) => {
+                try {
+                    window.eval(script); /* jshint ignore:line */
+                } catch (err) {
+                    const { url, mustSucceed } = preloadOption[index];
+                    console.error(`Execution failed for preload script "${url}"; remaining scripts canceled.`, err);
+                    return mustSucceed; // aborts .find() when a must-succeed script fails
                 }
             });
         }

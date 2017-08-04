@@ -46,6 +46,7 @@ function SystemApiHandler() {
         'get-proxy-settings': getProxySettings,
         'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
         'get-rvm-info': getRvmInfo,
+        'get-selected-preload-scripts': getSelectedPreloadScripts,
         'get-version': getVersion,
         'get-websocket-state': getWebSocketState,
         'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
@@ -382,10 +383,10 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
-    function resolveUuid(idenity, message, ack, nack) {
+    function resolveUuid(identity, message, ack, nack) {
         let dataAck = _.clone(successAck);
 
-        System.resolveUuid(idenity, message.payload.entityKey, (err, entity) => {
+        System.resolveUuid(identity, message.payload.entityKey, (err, entity) => {
             if (err) {
                 nack(err);
             } else {
@@ -393,7 +394,13 @@ function SystemApiHandler() {
                 ack(dataAck);
             }
         });
+    }
 
+    function getSelectedPreloadScripts(identity, message, ack, nack) {
+        const { payload } = message;
+        const dataAck = _.clone(successAck);
+        dataAck.data = System.getSelectedPreloadScripts(payload, ack, nack);
+        ack(dataAck);
     }
 }
 
