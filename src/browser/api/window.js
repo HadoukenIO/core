@@ -763,6 +763,14 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
+    // Set initial preload state if window has preload script
+    if (_options.preload) {
+        winObj.preloadState = {
+            src: _options.preload,
+            state: 'idle'
+        };
+    }
+
     if (!coreState.getWinObjById(id)) {
         coreState.setWindowObj(id, winObj);
 

@@ -91,6 +91,16 @@ export interface OpenFinWindow {
     id: number;
     name: string;
     uuid: string;
+    preloadState?: { // set if window has a preload script
+        src: String;
+        state:
+            'idle'| // initial state, not emitted, really here for internal use
+            'load-started'| // started loading/downloading the script file
+            'load-failed'| // failed to load/download the script file
+            'load-succeeded'| // preload script's content is loaded and ready to be eval'ed
+            'failed'| // preload script failed to eval
+            'succeeded'; // preload script eval'ed successfully
+    }[];
 }
 
 export interface BrowserWindow {
