@@ -17,7 +17,10 @@ declare var require: any;
 
 const initApplicationApiHandler = require('./api_handlers/application').init;
 import { ExternalApplicationApiHandler } from './api_handlers/external_application';
-const AuthorizationApiHandler = require('./api_handlers/authorization').AuthorizationApiHandler;
+import {
+    init as initAuthorizationApiHandler,
+    registerMiddleware as registerExternalConnAuthMiddleware
+} from './api_handlers/authorization';
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
 const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
@@ -29,17 +32,18 @@ import { meshEnabled } from '../connection_manager';
 import { registerMiddleware as registerEntityExistenceMiddleware } from './api_handlers/middleware_entity_existence';
 import { registerMiddleware as registerMeshMiddleware } from './api_handlers/mesh_middleware';
 
+// Middleware registration. The order is important.
 registerEntityExistenceMiddleware(getDefaultRequestHandler());
-
 if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
 }
+registerExternalConnAuthMiddleware(getDefaultRequestHandler());
 
 export function initApiHandlers() {
     /* tslint:disable: no-unused-variable */
     initApplicationApiHandler();
     const externalApplicationApiHandler = new ExternalApplicationApiHandler();
-    const authorizationApiHandler = new AuthorizationApiHandler();
+    initAuthorizationApiHandler();
     initClipboardAPIHandler();
     const eventListenerApiHandler = new EventListenerApiHandler();
     const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
