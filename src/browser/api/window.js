@@ -691,12 +691,12 @@ Window.create = function(id, opts) {
             ofEvents.removeListener(resourceLoadFailedEventString, resourceLoadFailedHandler);
         };
 
-        resourceLoadFailedHandler = (failure) => {
-            if (failure.errorCode === -3) {
+        resourceLoadFailedHandler = (failed) => {
+            if (failed.errorCode === -3) {
                 // 304 can trigger net::ERR_ABORTED, ignore it
-                electronApp.vlog(1, `ignoring net error -3 for ${failure.validatedURL}`);
+                electronApp.vlog(1, `ignoring net error -3 for ${failed.validatedURL}`);
             } else {
-                emitErrMessage(failure.errorCode);
+                emitErrMessage(failed.errorCode);
                 ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
             }
         };
@@ -1073,25 +1073,6 @@ Window.getParentApplication = function() {
 
 
 Window.getParentWindow = function() {};
-
-/**
- * Fetches window's preload script and gets its content
- */
-Window.getPreloadScript = function(identity, preloadUrl, callback) {
-    cachedFetch(identity.uuid, preloadUrl, (fetchError, scriptPath) => {
-        if (fetchError) {
-            return callback(new Error(`Failed to fetch preload script from ${preloadUrl}`));
-        }
-
-        fs.readFile(scriptPath, 'utf8', (readError, content) => {
-            if (readError) {
-                callback(new Error('Failed to read the content of the preload script'));
-            } else {
-                callback(null, content);
-            }
-        });
-    });
-};
 
 
 Window.getSnapshot = function(identity, callback = () => {}) {

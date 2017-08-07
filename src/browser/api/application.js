@@ -38,21 +38,16 @@ let Window = require('./window.js').Window;
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
-import {
-    cachedFetch
-} from '../cached_resource_fetcher';
+import { cachedFetch } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
-import {
-    sendToRVM
-} from '../rvm/utils';
-import {
-    validateNavigationRules
-} from '../navigation_validation';
+import { sendToRVM } from '../rvm/utils';
+import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
 import route from '../../common/route';
+import { fetchAndLoadPreloadScripts } from '../preload_scripts';
 
 // locals
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -444,18 +439,22 @@ Application.revokeWindowAccess = function() {
 };
 
 Application.run = function(identity, configUrl = '') {
-
     if (!identity) {
         return;
     }
 
-    createAppObj(identity.uuid, null, configUrl);
+    const app = createAppObj(identity.uuid, null, configUrl);
+    const mainWindowOpts = _.clone(app._options);
+    const proceed = () => run(identity, mainWindowOpts);
 
+    fetchAndLoadPreloadScripts(identity, mainWindowOpts.preload, proceed);
+};
+
+function run(identity, mainWindowOpts) {
     const uuid = identity.uuid;
     const app = Application.wrap(uuid);
     const appState = coreState.appByUuid(uuid);
     let sourceUrl = appState.appObj._configUrl;
-    const mainWindowOpts = _.clone(app._options);
     const hideSplashTopic = route.application('hide-splashscreen', uuid);
     const eventListenerStrings = [];
     const hideSplashListener = () => {
@@ -555,7 +554,8 @@ Application.run = function(identity, configUrl = '') {
     //for backwards compatibility main window needs to have name === uuid
     mainWindowOpts.name = uuid;
 
-    coreState.setWindowObj(app.id, Window.create(app.id, mainWindowOpts));
+    const win = Window.create(app.id, mainWindowOpts);
+    coreState.setWindowObj(app.id, win);
 
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
@@ -571,6 +571,7 @@ Application.run = function(identity, configUrl = '') {
         ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
     });
 
+    // function finish() {
     // turn on plugins for the main window
     hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
 
@@ -643,7 +644,7 @@ Application.run = function(identity, configUrl = '') {
     coreState.setAppRunningState(uuid, true);
 
     ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
-};
+}
 
 /**
  * Run an application via RVM
@@ -688,9 +689,7 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
 
 
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
-    let {
-        uuid
-    } = identity;
+    let { uuid } = identity;
 
     if (fetchingIcon[uuid]) {
         errorCallback(new Error('currently fetching icon'));
@@ -900,6 +899,7 @@ function broadcastOnAppConnected(targetIdentity) {
 ofEvents.on(route.window('dom-content-loaded', '*'), payload => {
     broadcastAppLoaded(payload.data[0]);
 });
+
 ofEvents.on(route.window('connected', '*'), payload => {
     broadcastOnAppConnected(payload.data[0]);
 });
@@ -908,6 +908,7 @@ Application.notifyOnContentLoaded = function(target, identity) {
     registerAppLoadedListener(target, identity);
     console.warn('Deprecated. Please addEventListener');
 };
+
 Application.notifyOnAppConnected = function(target, identity) {
     registerAppConnectedListener(target, identity);
     console.warn('Deprecated. Please addEventListener');
@@ -915,7 +916,6 @@ Application.notifyOnAppConnected = function(target, identity) {
 
 
 function removeTrayIcon(app) {
-
     if (app && app.tray) {
         try {
             app.tray.destroy();

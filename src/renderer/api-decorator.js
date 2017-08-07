@@ -41,8 +41,6 @@ limitations under the License.
         return customData.openerSuccessCalled;
     };
 
-    const windowOptions = getWindowOptionsSync();
-
     // used by the notification service to emit the ready event
     function emitNoteProxyReady() {
         raiseEventSync('notification-service-ready', true);
@@ -420,7 +418,7 @@ limitations under the License.
         let webContentsId = getWebContentsId();
         // Reset state machine values that are set through synchronous handshake between native WebContent lifecycle observers and JS
         options.openfin = true;
-
+        options.preload = options.preload || winOpts.preload;
         options.uuid = winOpts.uuid;
         let responseChannel = `${frameName}-created`;
         ipc.once(responseChannel, () => {
@@ -446,10 +444,17 @@ limitations under the License.
             }, 1);
         });
 
-        setTimeout(() => {
+        var convertedOpts = convertOptionsToElectronSync(options);
+        fin.__internal_.downloadPreloadScripts(convertedOpts.preload, () => {
             // PLEASE NOTE: Must stringify options object
-            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId, requestId, JSON.stringify(convertOptionsToElectronSync(options)));
-        }, 1);
+            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
+                requestId, JSON.stringify(convertedOpts));
+        }, ( /*reason, error*/ ) => {
+            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
+                requestId, JSON.stringify(convertedOpts));
+        });
+
+
     }
 
     global.chrome = global.chrome || {};
@@ -513,17 +518,22 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const preload = windowOptions.preload;
+        const winOpts = getWindowOptionsSync();
+        const preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
+        const response = syncApiCall('get-selected-preload-scripts', preloadOption);
 
-        if (preload) {
-            try {
-                const preloadScriptContent = syncApiCall('get-window-preload-script', {
-                    preload
-                });
-                window.eval(preloadScriptContent); /* jshint ignore:line */
-            } catch (err) {
-                console.error(err);
-            }
+        if (response.error) {
+            console.error(response.error);
+        } else {
+            response.scripts.find((script, index) => {
+                try {
+                    window.eval(script); /* jshint ignore:line */
+                } catch (err) {
+                    const { url, mustSucceed } = preloadOption[index];
+                    console.error(`Execution failed for preload script "${url}"; remaining scripts canceled.`, err);
+                    return mustSucceed; // aborts .find() when a must-succeed script fails
+                }
+            });
         }
     });
 
