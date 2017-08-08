@@ -446,8 +446,12 @@ Application.run = function(identity, configUrl = '') {
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = _.clone(app._options);
     const proceed = () => run(identity, mainWindowOpts);
+    const windowIdentity = {
+        uuid: mainWindowOpts.uuid,
+        name: mainWindowOpts.name
+    };
 
-    fetchAndLoadPreloadScripts(identity, mainWindowOpts.preload, proceed);
+    fetchAndLoadPreloadScripts(windowIdentity, mainWindowOpts.preload, proceed);
 };
 
 function run(identity, mainWindowOpts) {

@@ -72,10 +72,12 @@ function SystemApiHandler() {
     apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
 
     function downloadPreloadScripts(identity, message, ack, nack) {
-        let { payload: { scripts } } = message;
-        let dataAck = _.clone(successAck);
+        const { payload } = message;
+        const { uuid, name, scripts } = payload;
+        const windowIdentity = { uuid, name };
+        const dataAck = _.clone(successAck);
 
-        System.downloadPreloadScripts(identity, scripts, (err, scripts) => {
+        System.downloadPreloadScripts(windowIdentity, scripts, (err, scripts) => {
             if (!err) {
                 dataAck.data = scripts;
 

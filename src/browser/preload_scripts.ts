@@ -22,6 +22,8 @@ import { System } from './api/system.js';
 import { cachedFetch } from './cached_resource_fetcher';
 import * as log from './log';
 import { Identity } from '../shapes';
+import ofEvents from './of_events';
+import route from '../common/route';
 
 
 // some local type definitions
@@ -33,10 +35,19 @@ interface PreloadInstance {
 interface PreloadFetched extends PreloadInstance {
     scriptPath: string; // location on disc of cached fetch
 }
-type FetchResolver = (value: PreloadInstance | PreloadFetched) => void;
+type FetchResolver = (value: PreloadInstance | PreloadFetched | FetchResponse) => void;
 type Resolver = (value?: any) => void;
 type Rejector = (reason?: Error) => void;
 
+// Preload scripts' states are stored here. Example:
+// 'http://path.com/to/script': 'load-succeeded'
+const preloadStates = new Map();
+
+interface FetchResponse {
+    identity: Identity;
+    preloadScript: PreloadInstance;
+    scriptPath: string;
+}
 
 /** Returns a `Promise` once all preload scripts have been fetched and loaded or have failed to fetch or load.
  *
@@ -73,8 +84,11 @@ export function fetchAndLoadPreloadScripts(
         allLoaded = Promise.reject(err);
     } else {
         const loadedScripts: Promise<undefined>[] = preloadOption.map((preload: PreloadInstance) => {
+            updatePreloadState(identity, preload, 'load-started');
+
             if (System.getPreloadScript(preload.url)) {
                 // previously downloaded
+                updatePreloadState(identity, preload, 'load-succeeded');
                 return Promise.resolve();
             } else {
                 // not previously downloaded *OR* previous downloaded failed
@@ -100,12 +114,13 @@ export function fetchAndLoadPreloadScripts(
 
 // resolves to type `PreloadFetched` on success
 // resolves to the input (type `PreloadInstance`) when asset fails to be cached
-function fetch(identity: Identity, preloadScript: PreloadInstance): Promise<PreloadFetched> {
+function fetch(identity: Identity, preloadScript: PreloadInstance): Promise<FetchResponse> {
     return new Promise((resolve: FetchResolver, reject: Rejector) => {
         cachedFetch(identity.uuid, preloadScript.url, (fetchError: null | Error, scriptPath: string | undefined) => {
             if (!fetchError) {
-                resolve(<PreloadFetched>Object.assign({}, preloadScript, { scriptPath }));
+                resolve({identity, preloadScript, scriptPath});
             } else {
+                updatePreloadState(identity, preloadScript, 'load-failed');
                 reject();
             }
         });
@@ -114,24 +129,30 @@ function fetch(identity: Identity, preloadScript: PreloadInstance): Promise<Prel
 
 // resolves to type `PreloadLoaded` on success
 // resolves to the input (type `PreloadFetched`) when fetched asset fails to load (can't be read from cache)
-function load(fetched: PreloadFetched): Promise<undefined> {
+function load(opts: FetchResponse): Promise<undefined> {
     return new Promise((resolve: Resolver, reject: Rejector) => {
-        if (!fetched.scriptPath) {
-            resolve(fetched); // bad fetch but we only get this far if script was optional so resolve
+        const {identity, preloadScript, scriptPath} = opts;
+
+        if (!scriptPath) {
+            resolve(); // bad fetch but we only get this far if script was optional so resolve
         } else {
-            fs.readFile(fetched.scriptPath, 'utf8', (readError: null | Error, scriptText: string | undefined) => {
+            fs.readFile(scriptPath, 'utf8', (readError: null | Error, scriptText: string | undefined) => {
 
                 // todo: remove following workaround when RUN-3162 issue fixed
                 //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
                 if (!readError && /^(Cannot GET |<\?xml)/.test(scriptText)) {
                     // got a 404 but response was cached as a file
+                    updatePreloadState(identity, preloadScript, 'load-failed');
                     resolve();
                     return;
                 }
                 //END WORKAROUND
 
                 if (!readError) {
-                    System.setPreloadScript(fetched.url, scriptText);
+                    updatePreloadState(identity, preloadScript, 'load-succeeded');
+                    System.setPreloadScript(preloadScript.url, scriptText);
+                } else {
+                    updatePreloadState(identity, preloadScript, 'load-failed');
                 }
 
                 resolve();
@@ -157,3 +178,17 @@ function isPreloadScript(preloadScript: PreloadInstance): preloadScript is Prelo
         typeof preloadScript.url === 'string'
     );
 }
+
+const updatePreloadState = (identity: Identity, preloadScript: PreloadInstance, state: string): void => {
+    const {uuid, name} = identity;
+    const eventRoute = route.window('preload-state-changing', uuid, name);
+    const preloadState = Object.assign({}, preloadScript, {state});
+
+    preloadStates.set(preloadScript.url, state);
+
+    ofEvents.emit(eventRoute, {name, uuid, preloadState});
+};
+
+export const getPreloadScriptState = (url: string): string => {
+    return preloadStates.get(url);
+};

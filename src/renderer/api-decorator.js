@@ -46,6 +46,15 @@ limitations under the License.
         raiseEventSync('notification-service-ready', true);
     }
 
+    function asyncApiCall(action, payload = {}) {
+        ipc.send(renderFrameId, 'of-window-message', {
+            action,
+            payload,
+            isSync: false,
+            singleFrameOnly: true
+        });
+    }
+
     function syncApiCall(action, payload, singleFrameOnly = true, channel = 'of-window-message') {
         let apiPackage = {
             action: action,
@@ -444,8 +453,14 @@ limitations under the License.
             }, 1);
         });
 
-        var convertedOpts = convertOptionsToElectronSync(options);
-        fin.__internal_.downloadPreloadScripts(convertedOpts.preload, () => {
+        const convertedOpts = convertOptionsToElectronSync(options);
+        const preloadScriptsPayload = {
+            uuid: options.uuid,
+            name: options.name,
+            scripts: convertedOpts.preload
+        };
+
+        fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, () => {
             // PLEASE NOTE: Must stringify options object
             ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
                 requestId, JSON.stringify(convertedOpts));
@@ -521,20 +536,26 @@ limitations under the License.
         const winOpts = getWindowOptionsSync();
         const preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
         const response = syncApiCall('get-selected-preload-scripts', preloadOption);
+        const action = 'set-window-preload-state';
 
         if (response.error) {
             console.error(response.error);
         } else {
             response.scripts.find((script, index) => {
+                const { url, mustSucceed } = preloadOption[index];
+
                 try {
                     window.eval(script); /* jshint ignore:line */
+                    asyncApiCall(action, { url, state: 'succeeded' });
                 } catch (err) {
-                    const { url, mustSucceed } = preloadOption[index];
                     console.error(`Execution failed for preload script "${url}"; remaining scripts canceled.`, err);
+                    asyncApiCall(action, { url, state: 'failed' });
                     return mustSucceed; // aborts .find() when a must-succeed script fails
                 }
             });
         }
+
+        asyncApiCall(action, { allDone: true });
     });
 
 }());

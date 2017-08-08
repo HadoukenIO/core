@@ -262,8 +262,10 @@ module.exports = {
             newOptions.permissions = options.permissions;
         }
 
-        if (options.hasOwnProperty('preload')) {
-            newOptions.preload = options.preload;
+        if (typeof options.preload === 'string') {
+            newOptions.preload = [{ url: options.preload }];
+        } else {
+            newOptions.preload = options.preload || [];
         }
 
         if (returnAsString) {
