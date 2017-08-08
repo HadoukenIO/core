@@ -266,6 +266,10 @@ module.exports = {
             newOptions.preload = options.preload;
         }
 
+        if (options.customRequestHeaders !== undefined) {
+            newOptions.customRequestHeaders = options.customRequestHeaders;
+        }
+
         if (returnAsString) {
             return JSON.stringify(newOptions);
         } else {
