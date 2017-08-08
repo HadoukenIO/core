@@ -131,8 +131,8 @@ export interface AppObj {
 
 export type WebRequestHeader = {[key: string]: string};
 
-export type WebRequestHeaderOption = {
-        urlList: string[],
+export type WebRequestHeaderConfig = {
+        urlPatterns: string[],
         headers: WebRequestHeader[]  // key=value is added to headers
 };
 
@@ -156,7 +156,8 @@ export interface WindowOptions {
     backgroundThrottling?: boolean;
     center?: boolean;
     contentNavigation?: null|{
-        whitelist: string[];
+        whitelist?: string[];
+        blacklist?: string[];
     };
     contextMenu?: boolean;
     cornerRounding?: {
@@ -164,7 +165,7 @@ export interface WindowOptions {
         width: number;
     };
     customData?: string;
-    customRequestHeaders?: WebRequestHeaderOption[];
+    customRequestHeaders?: WebRequestHeaderConfig[];
     defaultCentered?: boolean;
     defaultHeight?: number;
     defaultLeft?: number;

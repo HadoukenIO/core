@@ -23,8 +23,7 @@ limitations under the License.
 
 const coreState = require('./core_state');
 const electronApp = require('electron').app;
-const {session} = require('electron');
-const System = require('./api/system.js').System;
+const {session, webContents} = require('electron');
 
 import * as Shapes from '../shapes';
 
@@ -37,6 +36,8 @@ interface RequestDetails {
     method: string;
     resourceType: string;
     requestHeaders: any;
+    renderProcessId?: number; // not set if the request is not associated with a window
+    renderFrameId?: number;
 }
 
 // passed to callback of webRequest.onBeforeSendHeaders
@@ -46,7 +47,7 @@ interface HeadersResponse {
 }
 
 interface AppUuidFilterUrlMap {
-    [uuid: string]: Shapes.WebRequestHeaderOption[];  // app UUID => custom header settings
+    [uuid: string]: Shapes.WebRequestHeaderConfig[];  // app UUID => custom header settings
 }
 const filterMap: AppUuidFilterUrlMap = {};
 
@@ -55,21 +56,49 @@ interface UrlHeaderMap {
 }
 let headerMap: UrlHeaderMap = {};  // reset for every app started and closed
 
+function matchUrlPatterns(url: string, config: Shapes.WebRequestHeaderConfig): boolean {
+    let match: boolean = false;
+    if (config.urlPatterns && config.urlPatterns.length > 0) {
+            match = electronApp.matchesURL(url, config.urlPatterns);
+    }
+    return match;
+}
+
+function applyHeaders(requestHeaders: any, config: Shapes.WebRequestHeaderConfig): void {
+    if (config.headers && config.headers.length > 0) {
+        config.headers.forEach((header) => {
+            Object.keys(header).forEach(key => {
+                requestHeaders[key] = header[key];
+                electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler setting ${key} = ${header[key]}`);
+            });
+        });
+    }
+}
+
 function beforeSendHeadersHandler(details: RequestDetails, callback: (response: HeadersResponse) => void): void {
-    electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler for ${details.url} to ${details.method}`);
+    electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler for ${JSON.stringify(details)}`);
     let headerAdded: boolean = false;
-    Object.keys(headerMap).forEach(urlPattern => {
-        if (electronApp.matchesURL(details.url, [urlPattern])) {
-            const headers: Shapes.WebRequestHeader[] = headerMap[urlPattern];
-            for (const item of headers) {
-                Object.keys(item).forEach(key => {
-                    details.requestHeaders[key] = item[key];
-                    electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler setting ${key} = ${item[key]}`);
-                    headerAdded = true;
-                });
+
+    if (details.renderProcessId && details.renderFrameId) {
+        const wc = webContents.fromProcessAndFrameIds(details.renderProcessId, details.renderFrameId);
+        if (wc) {
+            electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler got webcontents ${wc.id}`);
+            const bw = wc.getOwnerBrowserWindow();
+            const opts: Shapes.WindowOptions = coreState.getWindowOptionsById(bw.id);
+            electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts ${JSON.stringify(opts)}`);
+            if (opts.customRequestHeaders) {
+                for (const rhItem of opts.customRequestHeaders) {
+                    if (matchUrlPatterns(details.url, rhItem)) {
+                        applyHeaders(details.requestHeaders, rhItem);
+                        headerAdded = true;
+                    }
+                }
             }
+        } else {
+            electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler missing webContent`);
         }
-    });
+    }
+
     if (headerAdded) {
         callback({cancel: false, requestHeaders: details.requestHeaders});
     } else {
@@ -90,11 +119,11 @@ function updateHeaderFilter(): void {
     electronApp.vlog(1, `${moduleName}:updateHeaderFilter for ${JSON.stringify(filterMap)}`);
 
     Object.keys(filterMap).forEach(uuid => {
-        const options: Shapes.WebRequestHeaderOption[] = filterMap[uuid];
+        const options: Shapes.WebRequestHeaderConfig[] = filterMap[uuid];
         for (const opt of options) {
             electronApp.vlog(1, `${moduleName}:updateHeaderFilter2 for ${JSON.stringify(opt)}`);
-            urls = urls.concat(opt.urlList);
-            for (const url of opt.urlList) {
+            urls = urls.concat(opt.urlPatterns);
+            for (const url of opt.urlPatterns) {
                 if (!headerMap[url]) {
                     headerMap[url] = [];
                 }
@@ -104,7 +133,6 @@ function updateHeaderFilter(): void {
     });
     const filers = {urls: JSON.stringify(urls)};
     electronApp.vlog(1, `${moduleName}:updateHeaderFilter for ${JSON.stringify(filers)} headers ${JSON.stringify(headerMap)}`);
-    session.defaultSession.webRequest.onBeforeSendHeaders(filers, beforeSendHeadersHandler);
 }
 
 function onAppCreated(event: AppCreatedEvent): void {
@@ -136,7 +164,5 @@ function onAppClosed(event: AppCreatedEvent): void {
 export function initHandlers(): void {
     electronApp.vlog(1, `init ${moduleName}`);
 
-    // listen to started and closed so custom header map can be reset
-    System.addEventListener('application-created', onAppCreated);
-    System.addEventListener('application-closed', onAppClosed);
+    session.defaultSession.webRequest.onBeforeSendHeaders(beforeSendHeadersHandler);
 }
