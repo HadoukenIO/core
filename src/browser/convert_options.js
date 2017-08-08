@@ -62,6 +62,7 @@ function five0BaseOptions() {
         'defaultWidth': 800,
         'delay_connection': false,
         'draggable': false,
+        'disableIabSecureLogging': false,
         'exitOnClose': false,
         'frame': true,
         'frameConnect': '',
