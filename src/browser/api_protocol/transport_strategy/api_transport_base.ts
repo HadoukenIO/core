@@ -64,4 +64,14 @@ export abstract class ApiTransportBase<T> {
             ackFunction(new NackPayload(err));
         };
     }
+
+    protected payloadReplacer(key: string, value: any): any {
+        if (key === 'payload') {
+            return '***masked payload***';
+        } else {
+            return value;
+        }
+    }
+
+
 }
