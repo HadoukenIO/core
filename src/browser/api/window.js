@@ -1557,9 +1557,6 @@ Window.onUnload = (identity) => {
 function emitCloseEvents(identity) {
     const { uuid, name } = identity;
 
-    ofEvents.emit(route.window('unload', uuid, name, false), identity);
-    ofEvents.emit(route.window('openfin-diagnostic/unload', uuid, name, true), identity);
-
     electronApp.emit('browser-window-closed', null, getElectronBrowserWindow(identity));
 
     ofEvents.emit(route.window('closed'), {
@@ -1590,6 +1587,8 @@ function emitCloseEvents(identity) {
         name
     });
 
+    ofEvents.emit(route.window('unload', uuid, name, false), identity);
+    ofEvents.emit(route.window('openfin-diagnostic/unload', uuid, name, true), identity);
     ofEvents.emit(route.window('init-subscription-listeners'), identity);
 }
 
