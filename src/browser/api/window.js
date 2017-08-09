@@ -1036,15 +1036,18 @@ Window.getGroup = function(identity) {
 
 
 Window.getWindowInfo = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    let webContents = browserWindow.webContents;
-
-    return {
-        url: webContents.getURL(),
-        title: webContents.getTitle(),
+    const browserWindow = getElectronBrowserWindow(identity, 'get info for');
+    const openfinWindow = Window.wrap(identity.uuid, identity.name);
+    const webContents = browserWindow.webContents;
+    const windowInfo = {
+        canNavigateBack: webContents.canGoBack(),
         canNavigateForward: webContents.canGoForward(),
-        canNavigateBack: webContents.canGoBack()
+        preloadState: openfinWindow.preloadState,
+        title: webContents.getTitle(),
+        url: webContents.getURL()
     };
+
+    return windowInfo;
 };
 
 
