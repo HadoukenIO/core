@@ -91,6 +91,11 @@ export interface OpenFinWindow {
     id: number;
     name: string;
     uuid: string;
+    preloadState: {
+        optional?: boolean;
+        state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
+        url: string;
+    }[];
 }
 
 export interface BrowserWindow {

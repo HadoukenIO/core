@@ -54,6 +54,7 @@ import {
     toSafeInt
 } from '../../common/safe_int';
 import route from '../../common/route';
+import { getPreloadScriptState } from '../preload_scripts';
 
 // locals
 const isWin32 = process.platform === 'win32';
@@ -763,6 +764,12 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
+    // Set preload scripts' final loading states
+    winObj.preloadState = _options.preload.map((preload) => {
+        preload.state = getPreloadScriptState(preload.url);
+        return preload;
+    });
+
     if (!coreState.getWinObjById(id)) {
         coreState.setWindowObj(id, winObj);
 
@@ -1074,6 +1081,28 @@ Window.getParentApplication = function() {
 
 Window.getParentWindow = function() {};
 
+/**
+ * Sets/updates window's preload script state and emits relevant events
+ */
+Window.setWindowPreloadState = function(identity, payload) {
+    const { uuid, name } = identity;
+    const { url, state, allDone } = payload;
+    const openfinWindow = Window.wrap(uuid, name);
+    let preloadState = openfinWindow.preloadState;
+    const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
+
+    // Single preload script state change
+    if (!allDone) {
+        preloadState = preloadState.find(e => e.url === url);
+        preloadState.state = state;
+    }
+
+    ofEvents.emit(route.window(preloadStateUpdateTopic, uuid, name), {
+        name,
+        uuid,
+        preloadState
+    });
+};
 
 Window.getSnapshot = function(identity, callback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
