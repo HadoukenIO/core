@@ -95,9 +95,11 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
             /* tslint:disable: max-line-length */
             //message payload might contain sensitive data, mask it.
-            const replacer = (!opts.disableIabSecureLogging && (data.action === 'publish-message' || data.action === 'send-message')) ? this.payloadReplacer : null;
+            const disableIabSecureLogging = coreState.getAppObjByUuid(opts.uuid)._options.disableIabSecureLogging;
+            const replacer = (!disableIabSecureLogging && (data.action === 'publish-message' || data.action === 'send-message')) ? this.payloadReplacer : null;
             system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, replacer)}`);
             /* tslint:enable: max-line-length */
+
 
             this.requestHandler.handle({
                 identity, data, ack, nack, e,
