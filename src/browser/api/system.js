@@ -497,7 +497,7 @@ exports.System = {
 
     showChromeNotificationCenter: function() {},
     startCrashReporter: function(identity, options) {
-        const configUrl = coreState.argo['startup-url'];
+        const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
         const reporterOptions = Object.assign({ configUrl }, options);
         crashReporter.startOFCrashReporter(reporterOptions);
 
