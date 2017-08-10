@@ -388,9 +388,9 @@ function includeFlashPlugin() {
 }
 
 function initializeCrashReporter(argo) {
-    const enableCrashReporting = argo['enable-crash-reporting'];
-    const diagnosticMode = argo['diagnostics'] || false;
     const configUrl = argo['startup-url'];
+    const diagnosticMode = argo['diagnostics'] || false;
+    const enableCrashReporting = argo['enable-crash-reporting'];
     const shouldStartCrashReporter = enableCrashReporting || diagnosticMode;
 
     if (shouldStartCrashReporter) {

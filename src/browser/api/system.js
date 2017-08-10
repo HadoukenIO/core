@@ -22,7 +22,7 @@ const electronApp = electron.app;
 const ResourceFetcher = electron.resourceFetcher;
 const session = electron.session;
 const shell = electron.shell;
-const crashReporter = require('electron').crashReporter;
+const { crashReporter } = electron;
 
 // npm modules
 const path = require('path');
@@ -498,8 +498,9 @@ exports.System = {
     showChromeNotificationCenter: function() {},
     startCrashReporter: function(identity, options) {
         const configUrl = coreState.argo['startup-url'];
+        const reporterOptions = Object.assign({ configUrl }, options);
+        crashReporter.startOFCrashReporter(reporterOptions);
 
-        crashReporter.startOFCrashReporter(Object.assign({ configUrl }, options));
         return crashReporter.crashReporterState();
     },
     terminateExternalProcess: function(processUuid, timeout = 3000, child = false) {

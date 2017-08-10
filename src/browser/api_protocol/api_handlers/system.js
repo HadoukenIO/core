@@ -72,14 +72,14 @@ function SystemApiHandler() {
     apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
 
     function startCrashReporter(identity, message, ack) {
-        let dataAck = _.clone(successAck);
+        const dataAck = _.clone(successAck);
         const { payload } = message;
         dataAck.data = System.startCrashReporter(identity, payload, false);
         ack(dataAck);
     }
 
     function getCrashReporterState(identity, message, ack) {
-        let dataAck = _.clone(successAck);
+        const dataAck = _.clone(successAck);
         dataAck.data = System.getCrashReporterState();
         ack(dataAck);
     }
