@@ -22,6 +22,7 @@ const electronApp = electron.app;
 const ResourceFetcher = electron.resourceFetcher;
 const session = electron.session;
 const shell = electron.shell;
+const { crashReporter } = electron;
 
 // npm modules
 const path = require('path');
@@ -248,6 +249,9 @@ exports.System = {
     },
     getConfig: function() {
         return coreState.getStartManifest();
+    },
+    getCrashReporterState: function() {
+        return crashReporter.crashReporterState();
     },
     getDeviceUserId: function() {
         const hash = crypto.createHash('sha256');
@@ -492,6 +496,13 @@ exports.System = {
     },
 
     showChromeNotificationCenter: function() {},
+    startCrashReporter: function(identity, options) {
+        const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
+        const reporterOptions = Object.assign({ configUrl }, options);
+        crashReporter.startOFCrashReporter(reporterOptions);
+
+        return crashReporter.crashReporterState();
+    },
     terminateExternalProcess: function(processUuid, timeout = 3000, child = false) {
         let status = ProcessTracker.terminate(processUuid, timeout, child);
 

@@ -64,7 +64,6 @@ import route from './src/common/route';
 
 // locals
 let firstApp = null;
-let crashReporterEnabled = false;
 let rvmBus;
 let otherInstanceRunning = false;
 let appIsReady = false;
@@ -389,14 +388,13 @@ function includeFlashPlugin() {
 }
 
 function initializeCrashReporter(argo) {
-    if (!crashReporterEnabled && argo['enable-crash-reporting']) {
-        crashReporter.start({
-            productName: 'OpenFin',
-            companyName: 'OpenFin',
-            submitURL: 'https://dl.openfin.co/services/crash-report',
-            autoSubmit: true
-        });
-        crashReporterEnabled = true;
+    const configUrl = argo['startup-url'] || argo['config'];
+    const diagnosticMode = argo['diagnostics'] || false;
+    const enableCrashReporting = argo['enable-crash-reporting'];
+    const shouldStartCrashReporter = enableCrashReporting || diagnosticMode;
+
+    if (shouldStartCrashReporter) {
+        crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
     }
 }
 
