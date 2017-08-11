@@ -630,9 +630,7 @@ exports.System = {
     },
 
     downloadPreloadScripts: function(identity, preloadOption, cb) {
-        fetchAndLoadPreloadScripts(identity, preloadOption, () => {
-            cb(null);
-        });
+        fetchAndLoadPreloadScripts(identity, preloadOption, cb);
     },
 
     setPreloadScript: function(url, scriptText) {
