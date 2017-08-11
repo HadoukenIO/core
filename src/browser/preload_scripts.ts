@@ -35,7 +35,7 @@ interface PreloadInstance {
 interface PreloadFetched extends PreloadInstance {
     scriptPath: string; // location on disc of cached fetch
 }
-type FetchResolver = (value: PreloadInstance | PreloadFetched | FetchResponse) => void;
+type FetchResolver = (value?: PreloadInstance | PreloadFetched | FetchResponse) => void;
 type Resolver = (value?: any) => void;
 type Rejector = (reason?: Error) => void;
 
@@ -113,7 +113,7 @@ export function fetchAndLoadPreloadScripts(
 
 
 // resolves to type `PreloadFetched` on success
-// resolves to the input (type `PreloadInstance`) when asset fails to be cached
+// resolves to `undefined` when fetch fails to download asset to Chromium cache
 function fetch(identity: Identity, preloadScript: PreloadInstance): Promise<FetchResponse> {
     return new Promise((resolve: FetchResolver, reject: Rejector) => {
         cachedFetch(identity.uuid, preloadScript.url, (fetchError: null | Error, scriptPath: string | undefined) => {
@@ -121,21 +121,21 @@ function fetch(identity: Identity, preloadScript: PreloadInstance): Promise<Fetc
                 resolve({identity, preloadScript, scriptPath});
             } else {
                 updatePreloadState(identity, preloadScript, 'load-failed');
-                reject();
+                resolve();
             }
         });
     });
 }
 
 // resolves to type `PreloadLoaded` on success
-// resolves to the input (type `PreloadFetched`) when fetched asset fails to load (can't be read from cache)
+// resolves to `undefined` when above fetch failed or when successfully fetched asset fails to load from Chromium cache
 function load(opts: FetchResponse): Promise<undefined> {
     return new Promise((resolve: Resolver, reject: Rejector) => {
-        const {identity, preloadScript, scriptPath} = opts;
-
-        if (!scriptPath) {
-            resolve(); // bad fetch but we only get this far if script was optional so resolve
+        if (!opts || !opts.scriptPath) {
+            resolve(); // got fetchError above OR no error but no scriptPath either; in any case don't attempt to load
         } else {
+            const {identity, preloadScript, scriptPath} = opts;
+
             fs.readFile(scriptPath, 'utf8', (readError: null | Error, scriptText: string | undefined) => {
 
                 // todo: remove following workaround when RUN-3162 issue fixed
