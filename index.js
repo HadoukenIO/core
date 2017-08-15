@@ -515,11 +515,21 @@ function launchApp(argo, startExternalAdapterServer) {
         if (startupAppOptions && !isRunning) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
+            // Modify configObject.url to have argo.rightthing
+            // --user-app-config-args
+            log.writeToLog('info', '*****index.js - argo: ');
+            log.writeToLog('info', argo);
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
         } else if (uuid) {
+            // TODO: dont send all of argo
+            // Modify run to accept 2nd argument
+            log.writeToLog('info', '*****index.js - argo: ');
+            log.writeToLog('info', argo);
             Application.run({
                 uuid,
                 name: uuid
+            }, {
+                args: argo
             });
         }
 
