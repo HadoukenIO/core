@@ -243,6 +243,12 @@ exports.System = {
     getAllApplications: function() {
         return coreState.getAllApplications();
     },
+    getAppAssetInfo: function(identity, options, callback, errorCallback) {
+        var appObject = coreState.getAppObjByUuid(identity.uuid);
+        options.srcUrl = (appObject || {})._configUrl;
+        var appAssetsFetcher = require('../rvm/runtime_initiated_topics/app_assets').appAssetsFetcher;
+        appAssetsFetcher.fetchAppAsset(options.srcUrl, options.alias, callback, errorCallback);
+    },
     getCommandLineArguments: function() {
         return electronApp.getCommandLineArguments();
     },

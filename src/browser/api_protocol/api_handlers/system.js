@@ -33,6 +33,7 @@ function SystemApiHandler() {
         'get-all-applications': getAllApplications,
         'get-all-external-applications': getAllExternalApplications,
         'get-all-windows': getAllWindows,
+        'get-app-asset-info': getAppAssetInfo,
         'get-command-line-arguments': { apiFunc: getCommandLineArguments, apiPath: '.getCommandLineArguments' },
         'get-config': { apiFunc: getConfig, apiPath: '.getConfig' },
         'get-device-id': { apiFunc: getDeviceId, apiPath: '.getDeviceId' },
@@ -85,6 +86,18 @@ function SystemApiHandler() {
             } else {
                 nack(err);
             }
+        });
+    }
+
+    function getAppAssetInfo(identity, message, ack, nack) {
+        let options = message.payload;
+
+        System.getAppAssetInfo(identity, options, function(data) {
+            let dataAck = _.clone(successAck);
+            dataAck.data = data;
+            ack(dataAck);
+        }, function(err) {
+            nack(err);
         });
     }
 
