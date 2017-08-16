@@ -263,10 +263,15 @@ module.exports = {
             newOptions.permissions = options.permissions;
         }
 
-        if (typeof options.preload === 'string') {
-            newOptions.preload = [{ url: options.preload }];
+        const preload = options.preload;
+        if (!preload) {
+            newOptions.preload = []; // for all falsy values
         } else {
-            newOptions.preload = options.preload || [];
+            if (typeof preload === 'string') {
+                newOptions.preload = [{ url: preload }]; // backward compatibility
+            } else {
+                newOptions.preload = preload;
+            }
         }
 
         if (returnAsString) {
