@@ -828,7 +828,8 @@ Application.emitRunRequested = function(identity) {
         ofEvents.emit(route.application('run-requested', uuid), {
             topic: 'application',
             type: 'run-requested',
-            uuid
+            uuid,
+            userAppConfigArgs: identity.userAppConfigArgs
         });
     }
 };
