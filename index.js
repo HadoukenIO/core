@@ -505,7 +505,6 @@ function launchApp(argo, startExternalAdapterServer) {
         } = configuration;
 
         configObject['startup_app'].url = `${configObject['startup_app'].url}?${argo['user-app-config-args']}`;
-        // configObject.url = `${configObject.url}/${argo['user-app-config-args']}`;
 
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
         const uuid = startupAppOptions && startupAppOptions.uuid;
@@ -519,11 +518,7 @@ function launchApp(argo, startExternalAdapterServer) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
-            log.writeToLog(1, '***config object', true);
-            log.writeToLog(1, configObject, true);
         } else if (uuid) {
-            // log.writeToLog(1, '***config object... already running');
-            // log.writeToLog(1, configObject);
             Application.run({
                 uuid,
                 name: uuid,
