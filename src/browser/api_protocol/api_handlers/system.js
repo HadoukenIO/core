@@ -96,9 +96,7 @@ function SystemApiHandler() {
             let dataAck = _.clone(successAck);
             dataAck.data = data;
             ack(dataAck);
-        }, function(err) {
-            nack(err);
-        });
+        }, nack);
     }
 
     function getDeviceUserId(identity, message, ack) {
