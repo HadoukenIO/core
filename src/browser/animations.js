@@ -246,6 +246,9 @@ function AnimationHandler(desiredInterval) {
                                 });
                             }
                             hwndToId[hwnd] = bw.id;
+                            if (bw.isMaximized()) {
+                                bw.unmaximize();
+                            }
 
                             const { x, y, width: w, height: h } = newBounds;
                             wt.setWindowPos(hwnd, { x, y, w, h, flags });

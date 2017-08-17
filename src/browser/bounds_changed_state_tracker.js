@@ -230,6 +230,9 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                                 });
                             }
                             hwndToId[hwnd] = win.browserWindow.id;
+                            if (win.browserWindow.isMaximized()) {
+                                win.browserWindow.unmaximize();
+                            }
                             wt.setWindowPos(hwnd, { x, y, flags });
                         } else {
                             // no need to call clipBounds here because width and height are not changing
