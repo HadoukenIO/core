@@ -131,6 +131,8 @@ function readFile(filePath, done, onError) {
 }
 
 function getURL(url, done, onError) {
+    log.writeToLog(1, '***getUrl START of function', true);
+    log.writeToLog(1, url, true);
     const fetcher = new ResourceFetcher('string');
 
     fetcher.once('fetch-complete', (object, status, data) => {
@@ -152,6 +154,9 @@ function getURL(url, done, onError) {
 
     log.writeToLog(1, `Fetching ${url}`, true);
     fetcher.fetch(url);
+
+    log.writeToLog(1, '***getUrl END of function', true);
+    log.writeToLog(1, url, true);
 }
 
 function validateOptions(options) {
