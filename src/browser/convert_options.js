@@ -90,6 +90,7 @@ function five0BaseOptions() {
         'saveWindowState': true,
         'shadow': false,
         'showTaskbarIcon': true,
+        'smallWindow': false,
         'state': 'normal',
         'taskbarIcon': '',
         'taskbarIconGroup': '',
