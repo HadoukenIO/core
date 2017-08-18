@@ -265,13 +265,13 @@ module.exports = {
 
         const preload = options.preload;
         if (!preload) {
-            newOptions.preload = []; // for all falsy values
+            // for all falsy values
+            newOptions.preload = [];
+        } else if (typeof preload === 'string') {
+            // backward compatibility
+            newOptions.preload = [{ url: preload }];
         } else {
-            if (typeof preload === 'string') {
-                newOptions.preload = [{ url: preload }]; // backward compatibility
-            } else {
-                newOptions.preload = preload;
-            }
+            newOptions.preload = preload;
         }
 
         if (returnAsString) {
