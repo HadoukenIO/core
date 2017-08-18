@@ -398,17 +398,6 @@ function initializeCrashReporter(argo) {
     }
 }
 
-let nums = 0;
-setInterval(() => {
-    log.writeToLog(1, nums++, true);
-}, 4000);
-
-// setTimeout(() => {
-//     log.writeToLog(1, 'NOW', true);
-//     app.SetMinLogLevel(0);
-//     log.writeToLog(1, 'THEN', true);
-// }, 10000);
-
 function rotateLogs(argo) {
     // only keep the 7 most recent logfiles
     System.getLogList((err, files) => {
