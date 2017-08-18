@@ -94,6 +94,8 @@ function SystemApiHandler() {
 
         System.getAppAssetInfo(identity, options, function(data) {
             let dataAck = _.clone(successAck);
+            //remove path due to security concern
+            delete data.path;
             dataAck.data = data;
             ack(dataAck);
         }, nack);
