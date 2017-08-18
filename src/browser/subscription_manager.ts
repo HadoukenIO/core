@@ -46,22 +46,22 @@ export default class SubscriptionManager {
         return encodeURIComponent(stringArgs);
     }
 
-    public subscriptionExists(identity: Identity, ...args: any[]): boolean {
+    public subscriptionExists = (identity: Identity, ...args: any[]): boolean => {
         const key = this.genSubscriptionKey.apply(null, args);
         const identityKey = this.identityToKey(identity);
         const identitySubs = this.subscriptionList.get(identityKey);
 
         return !!identitySubs && identitySubs.has(key);
-    }
+    };
 
-    public uppSubscriptionRefCount(identity: Identity, ...args: any[]): void {
+    public uppSubscriptionRefCount = (identity: Identity, ...args: any[]): void => {
         const key = this.genSubscriptionKey.apply(null, args);
         const identityKey = this.identityToKey(identity);
 
         this.subscriptionList.get(identityKey).get(key).refCount++;
-    }
+    };
 
-    public registerSubscription(fn: () => void, identity: Identity, ...args: any[]): void {
+    public registerSubscription = (fn: () => void, identity: Identity, ...args: any[]): void => {
         const key = this.genSubscriptionKey.apply(null, args);
         const identityKey = this.identityToKey(identity);
 
@@ -70,9 +70,9 @@ export default class SubscriptionManager {
         }
 
         this.subscriptionList.get(identityKey).set(key, {fn, refCount: 1});
-    }
+    };
 
-    public removeSubscription(identity: Identity, ...args: any[]): void {
+    public removeSubscription = (identity: Identity, ...args: any[]): void => {
         const key = this.genSubscriptionKey.apply(null, args);
         const identityKey = this.identityToKey(identity);
         const identitySubs = this.subscriptionList.get(identityKey);
@@ -88,9 +88,9 @@ export default class SubscriptionManager {
             subscription.fn();
             identitySubs.delete(key);
         }
-    }
+    };
 
-    public removeAllSubscriptions(identity: Identity): void {
+    public removeAllSubscriptions = (identity: Identity): void => {
         const identityKey = this.identityToKey(identity);
         const identitySubs = this.subscriptionList.get(identityKey);
 
@@ -103,5 +103,5 @@ export default class SubscriptionManager {
         }
 
         this.subscriptionList.delete(identityKey);
-    }
+    };
 }

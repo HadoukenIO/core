@@ -25,27 +25,42 @@ describe('Subscription manager', () => {
     });
 
     it('has all predefined methods', () => {
-        let hasAllMethods = true;
-        const methods = Object.getOwnPropertyNames(SubscriptionManager.prototype);
-        const knownMethods = [
-            'constructor',
-            'identityToKey',
-            'genSubscriptionKey',
+        let hasAllInstanceMethods = true;
+        let hasAllPrototypeMethods = true;
+        const instanceMethods = Object.getOwnPropertyNames(subscriptionManager);
+        const prototypeMethods = Object.getOwnPropertyNames(SubscriptionManager.prototype);
+        const knownInstanceMethods = [
+            'subscriptionList',
             'subscriptionExists',
             'uppSubscriptionRefCount',
             'registerSubscription',
             'removeSubscription',
             'removeAllSubscriptions'
         ];
+        const knownPrototypeMethods = [
+            'constructor',
+            'identityToKey',
+            'genSubscriptionKey'
+        ];
 
-        methods.forEach(method => {
-            if (!knownMethods.find(e => e === method)) {
-                hasAllMethods = false;
+        // Check instance methods
+        instanceMethods.forEach(method => {
+            if (!knownInstanceMethods.find(e => e === method)) {
+                hasAllInstanceMethods = false;
             }
         });
 
-        assert(methods.length === knownMethods.length, 'different quantity');
-        assert(hasAllMethods, 'has missing methods');
+        // Check prototype methods
+        prototypeMethods.forEach(method => {
+            if (!knownPrototypeMethods.find(e => e === method)) {
+                hasAllPrototypeMethods = false;
+            }
+        });
+
+        assert(instanceMethods.length === knownInstanceMethods.length, 'different quantity of instance methods');
+        assert(prototypeMethods.length === knownPrototypeMethods.length, 'different quantity of prototype methods');
+        assert(hasAllInstanceMethods, 'has missing instance methods');
+        assert(hasAllPrototypeMethods, 'has missing prototype methods');
     });
 
     it('registers a subscription', () => {
