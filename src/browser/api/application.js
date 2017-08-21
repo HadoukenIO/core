@@ -417,7 +417,7 @@ Application.restart = function(identity) {
 
     try {
         Application.close(identity, true, () => {
-            Application.run(identity, appObj._configUrl);
+            Application.run(identity, undefined, appObj._configUrl);
             ofEvents.once(route.application('initialized', uuid), function() {
                 coreState.setAppRestartingState(uuid, false);
             });
