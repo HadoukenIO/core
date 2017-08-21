@@ -505,7 +505,9 @@ function launchApp(argo, startExternalAdapterServer) {
         } = configuration;
 
         if (argo['user-app-config-args']) {
-            configObject['startup_app'].url = `${configObject['startup_app'].url}?${argo['user-app-config-args']}`;
+            let tempUrl = configObject['startup_app'].url;
+            let delimiter = tempUrl.indexOf('?') < 0 ? '?' : '&';
+            configObject['startup_app'].url = `${tempUrl}${delimiter}${argo['user-app-config-args']}`;
         }
 
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
