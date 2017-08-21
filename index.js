@@ -504,7 +504,9 @@ function launchApp(argo, startExternalAdapterServer) {
             configObject: { licenseKey }
         } = configuration;
 
-        configObject['startup_app'].url = `${configObject['startup_app'].url}?${argo['user-app-config-args']}`;
+        if (argo['user-app-config-args']) {
+            configObject['startup_app'].url = `${configObject['startup_app'].url}?${argo['user-app-config-args']}`;
+        }
 
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
         const uuid = startupAppOptions && startupAppOptions.uuid;
