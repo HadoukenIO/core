@@ -525,6 +525,7 @@ function launchApp(argo, startExternalAdapterServer) {
                     uuid,
                     name: uuid
                 },
+                '',
                 argo['user-app-config-args']
             );
         }

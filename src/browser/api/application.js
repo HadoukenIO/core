@@ -417,7 +417,7 @@ Application.restart = function(identity) {
 
     try {
         Application.close(identity, true, () => {
-            Application.run(identity, undefined, appObj._configUrl);
+            Application.run(identity, appObj._configUrl);
             ofEvents.once(route.application('initialized', uuid), function() {
                 coreState.setAppRestartingState(uuid, false);
             });
@@ -438,7 +438,7 @@ Application.revokeWindowAccess = function() {
     console.warn('Deprecated');
 };
 
-Application.run = function(identity, userAppConfigArgs, configUrl = '') {
+Application.run = function(identity, configUrl = '', userAppConfigArgs = undefined) {
     if (!identity) {
         return;
     }
