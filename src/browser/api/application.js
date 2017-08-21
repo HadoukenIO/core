@@ -438,14 +438,14 @@ Application.revokeWindowAccess = function() {
     console.warn('Deprecated');
 };
 
-Application.run = function(identity, configUrl = '') {
+Application.run = function(identity, userAppConfigArgs, configUrl = '') {
     if (!identity) {
         return;
     }
 
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = _.clone(app._options);
-    const proceed = () => run(identity, mainWindowOpts);
+    const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
     const windowIdentity = {
         uuid: mainWindowOpts.uuid,
         name: mainWindowOpts.name
@@ -454,7 +454,7 @@ Application.run = function(identity, configUrl = '') {
     fetchAndLoadPreloadScripts(windowIdentity, mainWindowOpts.preload, proceed);
 };
 
-function run(identity, mainWindowOpts) {
+function run(identity, mainWindowOpts, userAppConfigArgs) {
     const uuid = identity.uuid;
     const app = Application.wrap(uuid);
     const appState = coreState.appByUuid(uuid);
@@ -543,7 +543,7 @@ function run(identity, mainWindowOpts) {
             // only resend if we've sent once before(meaning 1 window has shown)
             Application.emitHideSplashScreen(identity);
         }
-        Application.emitRunRequested(identity);
+        Application.emitRunRequested(identity, userAppConfigArgs);
         return;
     }
 
@@ -822,14 +822,14 @@ Application.emitHideSplashScreen = function(identity) {
     }
 };
 
-Application.emitRunRequested = function(identity) {
+Application.emitRunRequested = function(identity, userAppConfigArgs) {
     var uuid = identity && identity.uuid;
     if (uuid) {
         ofEvents.emit(route.application('run-requested', uuid), {
             topic: 'application',
             type: 'run-requested',
             uuid,
-            userAppConfigArgs: identity.userAppConfigArgs
+            userAppConfigArgs: userAppConfigArgs
         });
     }
 };

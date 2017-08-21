@@ -522,10 +522,11 @@ function launchApp(argo, startExternalAdapterServer) {
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
         } else if (uuid) {
             Application.run({
-                uuid,
-                name: uuid,
-                userAppConfigArgs: argo['user-app-config-args']
-            });
+                    uuid,
+                    name: uuid
+                },
+                argo['user-app-config-args']
+            );
         }
 
         if (startExternalAdapterServer && successfulInitialLaunch) {
