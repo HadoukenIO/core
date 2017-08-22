@@ -215,15 +215,16 @@ module.exports.init = function() {
 
 const isConnectionAuthenticated = (msg, next) => {
     const { data, nack, identity, strategyName } = msg;
-    const { uuid } = identity;
+    const { runtimeUuid, uuid } = identity;
     const action = data && data.action;
+    const uuidToCheck = runtimeUuid || uuid; //determine if the msg came as a forwarded action from a peer runtime.
 
     // Prevent all API calls from unauthenticated external connections,
     // except for authentication APIs
     if (
         strategyName === 'WebSocketStrategy' && // external connection
         !authenticationApiMap.hasOwnProperty(action) && // not an authentication action
-        !ExternalApplication.getExternalConnectionByUuid(uuid) // connection not authenticated
+        !ExternalApplication.getExternalConnectionByUuid(uuidToCheck) // connection not authenticated
     ) {
         return nack(new Error('This connection must be authenticated first'));
     }
