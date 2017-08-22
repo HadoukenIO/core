@@ -427,7 +427,7 @@ limitations under the License.
         let webContentsId = getWebContentsId();
         // Reset state machine values that are set through synchronous handshake between native WebContent lifecycle observers and JS
         options.openfin = true;
-        options.preload = options.preload || winOpts.preload;
+        options.preload = 'preload' in options ? options.preload : winOpts.preload;
         options.uuid = winOpts.uuid;
         let responseChannel = `${frameName}-created`;
         ipc.once(responseChannel, () => {
