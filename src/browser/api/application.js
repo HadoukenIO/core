@@ -45,11 +45,11 @@ let WindowGroups = require('../window_groups.js');
 import { sendToRVM } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
-let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
+import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts } from '../preload_scripts';
 
-// locals
+const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
 let runtimeIsClosing = false;
 let hasPlugins = false;

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { ExternalApplication } from '../../api/external_application';
-const SubscriptionManager = require('../../subscription_manager.js').SubscriptionManager;
+import SubscriptionManager from '../../subscription_manager';
 const WebSocketStrategy = require('../transport_strategy/ws_strategy').WebSocketStrategy;
 const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrategy;
 

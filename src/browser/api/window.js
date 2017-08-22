@@ -44,7 +44,7 @@ import {
 let log = require('../log');
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
-let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
+import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
 import {
     validateNavigation,
@@ -56,7 +56,7 @@ import {
 import route from '../../common/route';
 import { getPreloadScriptState } from '../preload_scripts';
 
-// locals
+const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
 const userCache = electronApp.getPath('userCache');

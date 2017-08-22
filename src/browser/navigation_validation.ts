@@ -15,11 +15,11 @@ limitations under the License.
 */
 const coreState = require('./core_state');
 const electronApp = require('electron').app;
-const SubScriptionManager: any = require('./subscription_manager.js').SubscriptionManager;
-const subScriptionManager: any = new SubScriptionManager();
-
+import SubscriptionManager from './subscription_manager';
 import ofEvents from './of_events';
 import route from '../common/route';
+
+const subscriptionManager = new SubscriptionManager();
 
 export function validateNavigation(webContents: any, identity: any, validator: () => any) {
     const willNavigateString = 'will-navigate';
@@ -29,7 +29,7 @@ export function validateNavigation(webContents: any, identity: any, validator: (
     const willNavigateUnsubscribe = () => {
         webContents.removeListener(willNavigateString, validator);
     };
-    subScriptionManager.registerSubscription(willNavigateUnsubscribe, identity, willNavigateString);
+    subscriptionManager.registerSubscription(willNavigateUnsubscribe, identity, willNavigateString);
 }
 
 // check rules for all ancestors. returns false if rejected by any ancestor's rules
