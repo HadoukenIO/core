@@ -541,16 +541,15 @@ limitations under the License.
         if (response.error) {
             console.error(response.error);
         } else {
-            response.scripts.find((script, index) => {
-                const { url, mustSucceed } = preloadOption[index];
+            response.scripts.forEach((script, index) => {
+                const { url } = preloadOption[index];
 
                 try {
                     window.eval(script); /* jshint ignore:line */
                     asyncApiCall(action, { url, state: 'succeeded' });
                 } catch (err) {
-                    console.error(`Execution failed for preload script "${url}"; remaining scripts canceled.`, err);
+                    console.error(`Execution failed for preload script "${url}".`, err);
                     asyncApiCall(action, { url, state: 'failed' });
-                    return mustSucceed; // aborts .find() when a must-succeed script fails
                 }
             });
         }
