@@ -33,6 +33,7 @@ function SystemApiHandler() {
         'get-all-applications': getAllApplications,
         'get-all-external-applications': getAllExternalApplications,
         'get-all-windows': getAllWindows,
+        'get-app-asset-info': getAppAssetInfo,
         'get-command-line-arguments': { apiFunc: getCommandLineArguments, apiPath: '.getCommandLineArguments' },
         'get-config': { apiFunc: getConfig, apiPath: '.getConfig' },
         'get-crash-reporter-state': getCrashReporterState,
@@ -97,6 +98,18 @@ function SystemApiHandler() {
                 nack(err);
             }
         });
+    }
+
+    function getAppAssetInfo(identity, message, ack, nack) {
+        let options = message.payload;
+
+        System.getAppAssetInfo(identity, options, function(data) {
+            let dataAck = _.clone(successAck);
+            //remove path due to security concern
+            delete data.path;
+            dataAck.data = data;
+            ack(dataAck);
+        }, nack);
     }
 
     function getDeviceUserId(identity, message, ack) {

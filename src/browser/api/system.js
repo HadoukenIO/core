@@ -244,6 +244,13 @@ exports.System = {
     getAllApplications: function() {
         return coreState.getAllApplications();
     },
+    getAppAssetInfo: function(identity, options, callback, errorCallback) {
+        options.srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
+        // TODO: Move this require to the top of file during future 'dependency injection refactor'
+        // Must require here otherwise runtime error Cannot create browser window before app is ready
+        var appAssetsFetcher = require('../rvm/runtime_initiated_topics/app_assets').appAssetsFetcher;
+        appAssetsFetcher.fetchAppAsset(options.srcUrl, options.alias, callback, errorCallback);
+    },
     getCommandLineArguments: function() {
         return electronApp.getCommandLineArguments();
     },
