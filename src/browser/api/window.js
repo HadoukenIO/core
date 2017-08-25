@@ -1720,14 +1720,14 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
     } else {
         browserWindow.once('visibility-changed', (event, isVisible) => {
             if (isVisible) {
-                if (browserWindow.isVisible()) {
+                if (browserWindow._readyToShowFiredAlready) {
                     callback();
-                    // Version 8: Will be visible on the next tick
-                    // TODO: Refactor to also use 'ready-to-show'
                 } else {
-                    setTimeout(() => {
+                    // Version 8: Will be visible on the next tick
+                    browserWindow.once('ready-to-show', () => {
+                        browserWindow._readyToShowFiredAlready = true;
                         callback();
-                    }, 1);
+                    });
                 }
             }
         });
