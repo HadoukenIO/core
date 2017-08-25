@@ -274,6 +274,10 @@ module.exports = {
             newOptions.preload = preload;
         }
 
+        if (newOptions.transparent) {
+            newOptions.backgroundColor = '#0FFF';
+        }
+
         if (returnAsString) {
             return JSON.stringify(newOptions);
         } else {
