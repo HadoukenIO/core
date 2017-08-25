@@ -244,8 +244,7 @@ exports.System = {
         return coreState.getAllApplications();
     },
     getAppAssetInfo: function(identity, options, callback, errorCallback) {
-        var appObject = coreState.getAppObjByUuid(identity.uuid);
-        options.srcUrl = (appObject || {})._configUrl;
+        options.srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
         var appAssetsFetcher = require('../rvm/runtime_initiated_topics/app_assets').appAssetsFetcher;
         appAssetsFetcher.fetchAppAsset(options.srcUrl, options.alias, callback, errorCallback);
     },
