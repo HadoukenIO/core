@@ -88,12 +88,10 @@ function SystemApiHandler() {
         const { payload } = message;
         const { uuid, name, scripts } = payload;
         const windowIdentity = { uuid, name };
-        const dataAck = _.clone(successAck);
 
-        System.downloadPreloadScripts(windowIdentity, scripts, (err, scripts) => {
+        System.downloadPreloadScripts(windowIdentity, scripts, err => {
             if (!err) {
-                dataAck.data = scripts;
-
+                const dataAck = _.clone(successAck);
                 ack(dataAck);
             } else {
                 nack(err);

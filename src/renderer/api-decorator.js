@@ -460,16 +460,17 @@ limitations under the License.
             scripts: convertedOpts.preload
         };
 
-        fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, () => {
+        if (!convertedOpts.preload.length) { // short-circuit
+            proceed();
+        } else {
+            fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, proceed, proceed);
+        }
+
+        function proceed() {
             // PLEASE NOTE: Must stringify options object
             ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
                 requestId, JSON.stringify(convertedOpts));
-        }, ( /*reason, error*/ ) => {
-            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
-                requestId, JSON.stringify(convertedOpts));
-        });
-
-
+        }
     }
 
     global.chrome = global.chrome || {};
@@ -535,23 +536,26 @@ limitations under the License.
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const winOpts = getWindowOptionsSync();
         const preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
-        const response = syncApiCall('get-selected-preload-scripts', preloadOption);
         const action = 'set-window-preload-state';
 
-        if (response.error) {
-            console.error(response.error);
-        } else {
-            response.scripts.forEach((script, index) => {
-                const { url } = preloadOption[index];
+        if (preloadOption.length) { // short-circuit
+            const response = syncApiCall('get-selected-preload-scripts', preloadOption);
 
-                try {
-                    window.eval(script); /* jshint ignore:line */
-                    asyncApiCall(action, { url, state: 'succeeded' });
-                } catch (err) {
-                    console.error(`Execution failed for preload script "${url}".`, err);
-                    asyncApiCall(action, { url, state: 'failed' });
-                }
-            });
+            if (response.error) {
+                console.error(response.error);
+            } else {
+                response.scripts.forEach((script, index) => {
+                    const {url} = preloadOption[index];
+
+                    try {
+                        window.eval(script); /* jshint ignore:line */
+                        asyncApiCall(action, {url, state: 'succeeded'});
+                    } catch (err) {
+                        console.error(`Execution failed for preload script "${url}".`, err);
+                        asyncApiCall(action, {url, state: 'failed'});
+                    }
+                });
+            }
         }
 
         asyncApiCall(action, { allDone: true });
