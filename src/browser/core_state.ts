@@ -211,7 +211,12 @@ export function getUuidBySourceUrl(sourceUrl: string): string|boolean {
 
 export function getConfigUrlByUuid(uuid: string): string|boolean {
     const app = getAppAncestor(uuid);
-    return app && app._configUrl;
+    if  (app && app._configUrl) {
+        return app._configUrl;
+    } else {
+        const externalApp = getExternalAncestor(uuid);
+        return externalApp && externalApp.configUrl;
+    }
 }
 
 export function setAppObj(id: number, appObj: Shapes.AppObj): Shapes.App|void {
@@ -513,6 +518,15 @@ export function getAppAncestor(descendantAppUuid: string): Shapes.App {
         return getAppAncestor(app.parentUuid);
     } else {
         return app;
+    }
+}
+
+function getExternalAncestor(descendantAppUuid: string): any {
+    const app = appByUuid(descendantAppUuid);
+    if (app && app.parentUuid) {
+        return getExternalAncestor(app.parentUuid);
+    } else {
+        return ExternalApplication.getExternalConnectionByUuid(descendantAppUuid);
     }
 }
 

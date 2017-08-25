@@ -448,13 +448,12 @@ exports.System = {
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
     },
     launchExternalProcess: function(identity, options, errDataCallback) { // Node-style callback used here
-        var appObject = coreState.getAppObjByUuid(identity.uuid);
-        options.srcUrl = (appObject || {})._configUrl;
+        options.srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
 
         ProcessTracker.launch(identity, options, errDataCallback);
     },
     monitorExternalProcess: function(identity, options, callback, errorCallback) {
-        var payload = ProcessTracker.monitor(identity, Object.assign({
+        const payload = ProcessTracker.monitor(identity, Object.assign({
             monitor: true
         }, options));
 
@@ -569,8 +568,7 @@ exports.System = {
         return ofEvents.emit(eventName, eventArgs);
     },
     downloadAsset: function(identity, asset, cb) {
-        const appObject = coreState.getAppObjByUuid(identity.uuid);
-        const srcUrl = (appObject || {})._configUrl;
+        const srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
         const downloadId = asset.downloadId;
 
         //setup defaults.

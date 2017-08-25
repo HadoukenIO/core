@@ -46,7 +46,7 @@ function registerExternalConnection(identity, message, ack) {
         token
     };
 
-    addPendingAuthentication(uuidToRegister, token, null, identity);
+    addPendingAuthentication(uuidToRegister, token, null, identity, null);
     ack(dataAck);
 }
 
@@ -74,7 +74,7 @@ function onRequestExternalAuth(id, message) {
     }
 
     // UUID assignment priority: mapped process, client-requested, then auto-generated
-    var uuid = (extProcess || {}).uuid || uuidRequested || electronApp.generateGUID();
+    const uuid = (extProcess || {}).uuid || uuidRequested || electronApp.generateGUID();
 
     if (pendingAuthentications.has(uuid)) {
         return;
@@ -83,7 +83,7 @@ function onRequestExternalAuth(id, message) {
     file = getAuthFile();
     token = electronApp.generateGUID();
 
-    addPendingAuthentication(uuid, token, file);
+    addPendingAuthentication(uuid, token, file, null, message.payload);
 
     socketServer.send(id, JSON.stringify({
         action: 'external-authorization-response',
@@ -99,7 +99,8 @@ function onRequestAuthorization(id, data) {
     const uuid = data.payload.uuid;
     const authObj = pendingAuthentications.get(uuid);
     const externalConnObj = Object.assign({}, data.payload, {
-        id
+        id,
+        configUrl: authObj.authReqPayload && authObj.authReqPayload.configUrl
     });
 
     //Check if the file and token were written.
@@ -123,14 +124,14 @@ function onRequestAuthorization(id, data) {
 
         rvmMessageBus.registerLicenseInfo({
             data: {
-                licenseKey: externalConnObj.licenseKey,
-                client: externalConnObj.client,
+                licenseKey: authObj.authReqPayload && authObj.authReqPayload.licenseKey,
+                client: authObj.authReqPayload && authObj.authReqPayload.client,
                 uuid,
                 parentApp: {
                     uuid: null
                 }
             }
-        });
+        }, authObj.authReqPayload && authObj.authReqPayload.configUrl);
 
         if (!success) {
             socketServer.closeConnection(id);
@@ -146,12 +147,13 @@ function getAuthFile() {
     return `${electronApp.getPath('userData')}-${electronApp.generateGUID()}`;
 }
 
-function addPendingAuthentication(uuid, token, file, sponsor) {
+function addPendingAuthentication(uuid, token, file, sponsor, authReqPayload) {
     let authObj = {
         uuid,
         token,
         file,
-        sponsor
+        sponsor,
+        authReqPayload
     };
 
     authObj.type = file ? AUTH_TYPE.file : AUTH_TYPE.sponsored;
