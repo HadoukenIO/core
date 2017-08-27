@@ -43,6 +43,8 @@ type Rejector = (reason?: Error) => void;
 // 'http://path.com/to/script': 'load-succeeded'
 const preloadStates = new Map();
 
+const REGEX_FILE_SCHEME = /^file:\/\//i;
+
 interface FetchResponse {
     identity: Identity;
     preloadScript: PreloadInstance;
@@ -86,7 +88,12 @@ export function fetchAndLoadPreloadScripts(
         const loadedScripts: Promise<undefined>[] = preloadOption.map((preload: PreloadInstance) => {
             updatePreloadState(identity, preload, 'load-started');
 
-            if (System.getPreloadScript(preload.url)) {
+            // following if clause avoids re-fetch for resources already in memory
+            // todo: following if clause slated for removal (RUN-3227, blocked by RUN-3162)
+            if (
+                !REGEX_FILE_SCHEME.test(preload.url) && // except when resource does NOT use "file" scheme...
+                System.getPreloadScript(preload.url)   // ...is resource already in memory?
+            ) {
                 // previously downloaded
                 updatePreloadState(identity, preload, 'load-succeeded');
                 return Promise.resolve();

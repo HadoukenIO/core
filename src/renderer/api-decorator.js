@@ -545,14 +545,14 @@ limitations under the License.
                 console.error(response.error);
             } else {
                 response.scripts.forEach((script, index) => {
-                    const {url} = preloadOption[index];
+                    const { url } = preloadOption[index];
 
                     try {
                         window.eval(script); /* jshint ignore:line */
-                        asyncApiCall(action, {url, state: 'succeeded'});
+                        asyncApiCall(action, { url, state: 'succeeded' });
                     } catch (err) {
                         console.error(`Execution failed for preload script "${url}".`, err);
-                        asyncApiCall(action, {url, state: 'failed'});
+                        asyncApiCall(action, { url, state: 'failed' });
                     }
                 });
             }
