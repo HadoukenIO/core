@@ -132,8 +132,8 @@ export interface AppObj {
 export type WebRequestHeader = {[key: string]: string};
 
 export type WebRequestHeaderConfig = {
-        urlPatterns: string[],
-        headers: WebRequestHeader[]  // key=value is added to headers
+    urlPatterns: string[],
+    headers: WebRequestHeader[]  // key=value is added to headers
 };
 
 export interface WindowOptions {
