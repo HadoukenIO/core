@@ -610,15 +610,15 @@ function registerShortcuts() {
         const webContents = browserWindow.webContents;
 
         if (accelerator.zoom) {
-            const zoom = zoomIn => { return () => { webContents.send('zoom', zoomIn, zoomIn === undefined); }; };
+            const zoom = zoomIncrement => { return () => { webContents.send('zoom', zoomIncrement); }; };
 
-            globalShortcut.register('CommandOrControl+0', zoom(undefined));
+            globalShortcut.register('CommandOrControl+0', zoom(0));
 
-            globalShortcut.register('CommandOrControl+=', zoom(true));
-            globalShortcut.register('CommandOrControl+Plus', zoom(true));
+            globalShortcut.register('CommandOrControl+=', zoom(+1));
+            globalShortcut.register('CommandOrControl+Plus', zoom(+1));
 
-            globalShortcut.register('CommandOrControl+-', zoom(false));
-            globalShortcut.register('CommandOrControl+_', zoom(false));
+            globalShortcut.register('CommandOrControl+-', zoom(-1));
+            globalShortcut.register('CommandOrControl+_', zoom(-1));
         }
 
         if (accelerator.devtools) {
