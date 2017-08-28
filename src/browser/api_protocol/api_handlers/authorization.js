@@ -99,9 +99,11 @@ function onRequestAuthorization(id, data) {
     const uuid = data.payload.uuid;
     const authObj = pendingAuthentications.get(uuid);
     const externalConnObj = Object.assign({}, data.payload, {
-        id,
-        configUrl: authObj.authReqPayload && authObj.authReqPayload.configUrl
+        id
     });
+    if (authObj && authObj.authReqPayload) {
+        externalConnObj.configUrl = authObj.authReqPayload.configUrl;
+    }
 
     //Check if the file and token were written.
 
@@ -124,14 +126,14 @@ function onRequestAuthorization(id, data) {
 
         rvmMessageBus.registerLicenseInfo({
             data: {
-                licenseKey: authObj.authReqPayload && authObj.authReqPayload.licenseKey,
-                client: authObj.authReqPayload && authObj.authReqPayload.client,
+                licenseKey: authObj && authObj.authReqPayload && authObj.authReqPayload.licenseKey,
+                client: authObj && authObj.authReqPayload && authObj.authReqPayload.client,
                 uuid,
                 parentApp: {
                     uuid: null
                 }
             }
-        }, authObj.authReqPayload && authObj.authReqPayload.configUrl);
+        }, authObj && authObj.authReqPayload && authObj.authReqPayload.configUrl);
 
         if (!success) {
             socketServer.closeConnection(id);
@@ -178,7 +180,7 @@ function authenticateUuid(authObj, authRequest, cb) {
 }
 
 function cleanPendingRequest(authObj) {
-    if (authObj.type === AUTH_TYPE.file) {
+    if (authObj && authObj.type === AUTH_TYPE.file) {
         fs.unlink(authObj.file, err => {
             //really don't care about this error but log it either way.
             log.writeToLog('info', err);
