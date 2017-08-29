@@ -438,6 +438,8 @@ Application.revokeWindowAccess = function() {
     console.warn('Deprecated');
 };
 
+// userAppConfigArgs must be set to 'undefined' because
+// regular paramaters cannot come after default paramaters.
 Application.run = function(identity, configUrl = '', userAppConfigArgs = undefined) {
     if (!identity) {
         return;
@@ -829,7 +831,7 @@ Application.emitRunRequested = function(identity, userAppConfigArgs) {
             topic: 'application',
             type: 'run-requested',
             uuid,
-            userAppConfigArgs: userAppConfigArgs
+            userAppConfigArgs
         });
     }
 };
