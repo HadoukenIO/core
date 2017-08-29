@@ -46,7 +46,7 @@ function registerExternalConnection(identity, message, ack) {
         token
     };
 
-    addPendingAuthentication(uuidToRegister, token, null, identity);
+    addPendingAuthentication(uuidToRegister, token, null, identity, null);
     ack(dataAck);
 }
 
@@ -74,7 +74,7 @@ function onRequestExternalAuth(id, message) {
     }
 
     // UUID assignment priority: mapped process, client-requested, then auto-generated
-    var uuid = (extProcess || {}).uuid || uuidRequested || electronApp.generateGUID();
+    const uuid = (extProcess || {}).uuid || uuidRequested || electronApp.generateGUID();
 
     if (pendingAuthentications.has(uuid)) {
         return;
@@ -83,7 +83,7 @@ function onRequestExternalAuth(id, message) {
     file = getAuthFile();
     token = electronApp.generateGUID();
 
-    addPendingAuthentication(uuid, token, file);
+    addPendingAuthentication(uuid, token, file, null, message.payload);
 
     socketServer.send(id, JSON.stringify({
         action: 'external-authorization-response',
@@ -101,6 +101,9 @@ function onRequestAuthorization(id, data) {
     const externalConnObj = Object.assign({}, data.payload, {
         id
     });
+    if (authObj && authObj.authReqPayload) {
+        externalConnObj.configUrl = authObj.authReqPayload.configUrl;
+    }
 
     //Check if the file and token were written.
 
@@ -117,22 +120,21 @@ function onRequestAuthorization(id, data) {
         }
 
         socketServer.send(id, JSON.stringify(authorizationResponse));
+        if (success) {
+            ExternalApplication.addExternalConnection(externalConnObj);
+            socketServer.connectionAuthenticated(id, uuid);
 
-        ExternalApplication.addExternalConnection(externalConnObj);
-        socketServer.connectionAuthenticated(id, uuid);
-
-        rvmMessageBus.registerLicenseInfo({
-            data: {
-                licenseKey: externalConnObj.licenseKey,
-                client: externalConnObj.client,
-                uuid,
-                parentApp: {
-                    uuid: null
+            rvmMessageBus.registerLicenseInfo({
+                data: {
+                    licenseKey: authObj && authObj.authReqPayload && authObj.authReqPayload.licenseKey,
+                    client: authObj && authObj.authReqPayload && authObj.authReqPayload.client,
+                    uuid,
+                    parentApp: {
+                        uuid: null
+                    }
                 }
-            }
-        });
-
-        if (!success) {
+            }, authObj && authObj.authReqPayload && authObj.authReqPayload.configUrl);
+        } else {
             socketServer.closeConnection(id);
         }
 
@@ -146,12 +148,13 @@ function getAuthFile() {
     return `${electronApp.getPath('userData')}-${electronApp.generateGUID()}`;
 }
 
-function addPendingAuthentication(uuid, token, file, sponsor) {
+function addPendingAuthentication(uuid, token, file, sponsor, authReqPayload) {
     let authObj = {
         uuid,
         token,
         file,
-        sponsor
+        sponsor,
+        authReqPayload
     };
 
     authObj.type = file ? AUTH_TYPE.file : AUTH_TYPE.sponsored;
@@ -161,6 +164,8 @@ function addPendingAuthentication(uuid, token, file, sponsor) {
 function authenticateUuid(authObj, authRequest, cb) {
     if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid)) {
         cb(false, 'Application with specified UUID already exists: ' + authRequest.uuid);
+    } else if (!authObj) {
+        cb(false, 'Invalid UUID: ' + authRequest.uuid);
     } else if (authObj.type === AUTH_TYPE.file) {
         try {
             fs.readFile(authObj.file, (err, data) => {
@@ -176,7 +181,7 @@ function authenticateUuid(authObj, authRequest, cb) {
 }
 
 function cleanPendingRequest(authObj) {
-    if (authObj.type === AUTH_TYPE.file) {
+    if (authObj && authObj.type === AUTH_TYPE.file) {
         fs.unlink(authObj.file, err => {
             //really don't care about this error but log it either way.
             log.writeToLog('info', err);
