@@ -135,29 +135,6 @@ function updateHeaderFilter(): void {
     electronApp.vlog(1, `${moduleName}:updateHeaderFilter for ${JSON.stringify(filers)} headers ${JSON.stringify(headerMap)}`);
 }
 
-function onAppCreated(event: AppCreatedEvent): void {
-    electronApp.vlog(1, `${moduleName}:onAppCreated for ${event.uuid} `);
-    const obj: Shapes.AppObj = coreState.getAppObjByUuid(event.uuid);
-    if (obj) {
-        const options: Shapes.WindowOptions = obj._options;
-        if (options.customRequestHeaders) {
-            filterMap[event.uuid] = options.customRequestHeaders;
-            updateHeaderFilter();
-        }
-    }
-}
-
-function onAppClosed(event: AppCreatedEvent): void {
-    electronApp.vlog(1, `${moduleName}:onAppClosed for ${event.uuid} `);
-    const obj: Shapes.AppObj = coreState.getAppObjByUuid(event.uuid);
-    if (obj) {
-        if (filterMap[event.uuid]) {
-            delete filterMap[event.uuid];
-            updateHeaderFilter();
-        }
-    }
-}
-
 /**
  * Initialize web request handlers
  */
