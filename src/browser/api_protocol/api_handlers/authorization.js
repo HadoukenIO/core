@@ -120,22 +120,21 @@ function onRequestAuthorization(id, data) {
         }
 
         socketServer.send(id, JSON.stringify(authorizationResponse));
+        if (success) {
+            ExternalApplication.addExternalConnection(externalConnObj);
+            socketServer.connectionAuthenticated(id, uuid);
 
-        ExternalApplication.addExternalConnection(externalConnObj);
-        socketServer.connectionAuthenticated(id, uuid);
-
-        rvmMessageBus.registerLicenseInfo({
-            data: {
-                licenseKey: authObj && authObj.authReqPayload && authObj.authReqPayload.licenseKey,
-                client: authObj && authObj.authReqPayload && authObj.authReqPayload.client,
-                uuid,
-                parentApp: {
-                    uuid: null
+            rvmMessageBus.registerLicenseInfo({
+                data: {
+                    licenseKey: authObj && authObj.authReqPayload && authObj.authReqPayload.licenseKey,
+                    client: authObj && authObj.authReqPayload && authObj.authReqPayload.client,
+                    uuid,
+                    parentApp: {
+                        uuid: null
+                    }
                 }
-            }
-        }, authObj && authObj.authReqPayload && authObj.authReqPayload.configUrl);
-
-        if (!success) {
+            }, authObj && authObj.authReqPayload && authObj.authReqPayload.configUrl);
+        } else {
             socketServer.closeConnection(id);
         }
 
@@ -165,6 +164,8 @@ function addPendingAuthentication(uuid, token, file, sponsor, authReqPayload) {
 function authenticateUuid(authObj, authRequest, cb) {
     if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid)) {
         cb(false, 'Application with specified UUID already exists: ' + authRequest.uuid);
+    } else if (!authObj) {
+        cb(false, 'Invalid UUID: ' + authRequest.uuid);
     } else if (authObj.type === AUTH_TYPE.file) {
         try {
             fs.readFile(authObj.file, (err, data) => {
