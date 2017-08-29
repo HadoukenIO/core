@@ -1561,7 +1561,8 @@ Window.getZoomLevel = function(identity, callback) {
 Window.setZoomLevel = function(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
 
-    browserWindow.webContents.setZoomLevel(level);
+    // browserWindow.webContents.setZoomLevel(level); // zooms all windows loaded from same domain
+    browserWindow.webContents.send('zoom', { level }); // zoom just this window
 };
 
 Window.onUnload = (identity) => {

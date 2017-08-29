@@ -604,90 +604,43 @@ function initFirstApp(configObject, configUrl, licenseKey) {
 }
 
 function registerShortcuts() {
-    const resetZoomShortcut = 'CommandOrControl+0';
-    const zoomInShortcut = 'CommandOrControl+=';
-    const zoomInShiftShortcut = 'CommandOrControl+Plus';
-    const zoomOutShortcut = 'CommandOrControl+-';
-    const zoomOutShiftShortcut = 'CommandOrControl+_';
-    const devToolsShortcut = 'CommandOrControl+Shift+I';
-    const reloadF5Shortcut = 'F5';
-    const reloadShiftF5Shortcut = 'Shift+F5';
-    const reloadCtrlRShortcut = 'CommandOrControl+R';
-    const reloadCtrlShiftRShortcut = 'CommandOrControl+Shift+R';
+    app.on('browser-window-focus', (event, browserWindow) => {
+        const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
+        const accelerator = windowOptions && windowOptions.accelerator || {};
+        const webContents = browserWindow.webContents;
 
-    let zoom = (zoomIn, reset = false) => {
-        return () => {
-            let browserWindow = BrowserWindow.getFocusedWindow();
-            let windowOptions = browserWindow && coreState.getWindowOptionsById(browserWindow.id);
+        if (accelerator.zoom) {
+            const zoom = increment => { return () => { webContents.send('zoom', { increment }); }; };
 
-            if (windowOptions && windowOptions.accelerator && windowOptions.accelerator.zoom) {
-                browserWindow.webContents.send('zoom', zoomIn, reset);
-            }
-        };
-    };
+            globalShortcut.register('CommandOrControl+0', zoom(0));
 
-    let reload = () => {
-        let browserWindow = BrowserWindow.getFocusedWindow();
-        let windowOptions = browserWindow && coreState.getWindowOptionsById(browserWindow.id);
+            globalShortcut.register('CommandOrControl+=', zoom(+1));
+            globalShortcut.register('CommandOrControl+Plus', zoom(+1));
 
-        if (windowOptions && windowOptions.accelerator && windowOptions.accelerator.reload) {
-            browserWindow.webContents.reload();
+            globalShortcut.register('CommandOrControl+-', zoom(-1));
+            globalShortcut.register('CommandOrControl+_', zoom(-1));
         }
-    };
 
-    let reloadIgnoringCache = () => {
-        let browserWindow = BrowserWindow.getFocusedWindow();
-        let windowOptions = browserWindow && coreState.getWindowOptionsById(browserWindow.id);
-
-        if (windowOptions && windowOptions.accelerator && windowOptions.accelerator.reloadIgnoringCache) {
-            browserWindow.webContents.reloadIgnoringCache();
+        if (accelerator.devtools) {
+            const devtools = () => { webContents.openDevTools(); };
+            globalShortcut.register('CommandOrControl+Shift+I', devtools);
         }
-    };
 
-    app.on('browser-window-focus', () => {
-        globalShortcut.register(resetZoomShortcut, zoom(undefined, true));
-        globalShortcut.register(zoomInShortcut, zoom(true));
-        globalShortcut.register(zoomInShiftShortcut, zoom(true));
-        globalShortcut.register(zoomOutShortcut, zoom(false));
-        globalShortcut.register(zoomOutShiftShortcut, zoom(false));
+        if (accelerator.reload) {
+            const reload = () => { webContents.reload(); };
+            globalShortcut.register('F5', reload);
+            globalShortcut.register('CommandOrControl+R', reload);
+        }
 
-        globalShortcut.register(devToolsShortcut, () => {
-            let browserWindow = BrowserWindow.getFocusedWindow();
-            let windowOptions = browserWindow && coreState.getWindowOptionsById(browserWindow.id);
-
-            if (windowOptions && windowOptions.accelerator && windowOptions.accelerator.devtools) {
-                browserWindow.webContents.openDevTools();
-            }
-        });
-
-        globalShortcut.register(reloadF5Shortcut, reload);
-        globalShortcut.register(reloadShiftF5Shortcut, reloadIgnoringCache);
-        globalShortcut.register(reloadCtrlRShortcut, reload);
-        globalShortcut.register(reloadCtrlShiftRShortcut, reloadIgnoringCache);
+        if (accelerator.reloadIgnoringCache) {
+            const reloadIgnoringCache = () => { webContents.reloadIgnoringCache(); };
+            globalShortcut.register('Shift+F5', reloadIgnoringCache);
+            globalShortcut.register('CommandOrControl+Shift+R', reloadIgnoringCache);
+        }
     });
 
-    const unhookShortcuts = (event, bw) => {
-        let browserWindow = BrowserWindow.getFocusedWindow();
-        const sourceWindowExists = bw && !bw.isDestroyed();
-        const focusedWindowExists = browserWindow && !browserWindow.isDestroyed();
-        let unhook = !focusedWindowExists;
-
-        if (focusedWindowExists && sourceWindowExists) {
-            unhook = browserWindow.id === bw.id;
-        }
-
-        if (unhook) {
-            globalShortcut.unregister(resetZoomShortcut);
-            globalShortcut.unregister(zoomInShortcut);
-            globalShortcut.unregister(zoomInShiftShortcut);
-            globalShortcut.unregister(zoomOutShortcut);
-            globalShortcut.unregister(zoomOutShiftShortcut);
-            globalShortcut.unregister(devToolsShortcut);
-            globalShortcut.unregister(reloadF5Shortcut);
-            globalShortcut.unregister(reloadShiftF5Shortcut);
-            globalShortcut.unregister(reloadCtrlRShortcut);
-            globalShortcut.unregister(reloadCtrlShiftRShortcut);
-        }
+    const unhookShortcuts = (event, browserWindow) => {
+        globalShortcut.unregisterAll();
     };
 
     app.on('browser-window-closed', unhookShortcuts);
