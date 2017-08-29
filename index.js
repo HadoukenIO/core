@@ -504,6 +504,12 @@ function launchApp(argo, startExternalAdapterServer) {
             configObject: { licenseKey }
         } = configuration;
 
+        if (argo['user-app-config-args']) {
+            let tempUrl = configObject['startup_app'].url;
+            let delimiter = tempUrl.indexOf('?') < 0 ? '?' : '&';
+            configObject['startup_app'].url = `${tempUrl}${delimiter}${argo['user-app-config-args']}`;
+        }
+
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
         const uuid = startupAppOptions && startupAppOptions.uuid;
         const ofApp = Application.wrap(uuid);
@@ -518,9 +524,12 @@ function launchApp(argo, startExternalAdapterServer) {
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
         } else if (uuid) {
             Application.run({
-                uuid,
-                name: uuid
-            });
+                    uuid,
+                    name: uuid
+                },
+                '',
+                argo['user-app-config-args']
+            );
         }
 
         if (startExternalAdapterServer && successfulInitialLaunch) {
