@@ -1373,15 +1373,17 @@ Window.show = function(identity, force = false) {
         return;
     }
 
-    if (browserWindow.isMaximized() && browserWindow.isVisible()) {
-        // RUN-2905. To match v5 behavior, for maximized window, avoid calling bw.showInactive() because it does an erroneous bw.restore().
-        // Likely an oversight on electron's part considering that an implicit restore _is_ needed for minimized or hidden windows.
-        return;
-    }
-
     let payload = {};
     let defaultAction = () => {
-        if (!browserWindow.isMinimized()) {
+        const dontShow = (
+            browserWindow.isMinimized() ||
+
+            // RUN-2905: To match v5 behavior, for maximized window, avoid showInactive() because it does an
+            // erroneous restore(), an apparent Electron oversight (a restore _is_ needed in all other cases).
+            browserWindow.isMaximized() && browserWindow.isVisible()
+        );
+
+        if (!dontShow) {
             browserWindow.showInactive();
         }
     };
