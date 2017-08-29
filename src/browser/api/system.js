@@ -74,7 +74,8 @@ const defaultProc = {
     }
 };
 
-const preloadScriptsCache = {};
+let preloadScriptsCache;
+clearPreloadCache();
 
 let MonitorInfo;
 let Session;
@@ -171,16 +172,21 @@ exports.System = {
             cookies: true,
             localStorage: true,
             appcache: true,
-            userData: true // TODO: userData is the window bounds cache
+            userData: true, // TODO: userData is the window bounds cache
+            preload: true
         });
         */
         var settings = options || {};
+
+        if (settings.preload) {
+            clearPreloadCache();
+        }
 
         var availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
         var storages = [];
 
         if (typeof settings.localStorage === 'boolean') {
-            settings['localstorage'] = settings.localStorage;
+            settings.localstorage = settings.localStorage;
         }
 
         // 5.0 defaults cache true if not specified
@@ -210,11 +216,12 @@ exports.System = {
         electronApp.vlog(1, `clearCache ${JSON.stringify(storages)}`);
 
         defaultSession.clearCache(() => {
-
             defaultSession.clearStorageData(cacheOptions, () => {
                 resolve();
             });
         });
+
+
     },
     deleteCacheOnExit: function(callback, errorCallback) {
         const folders = [{
@@ -636,6 +643,8 @@ exports.System = {
         }
     },
 
+    clearPreloadCache,
+
     downloadPreloadScripts: function(identity, preloadOption, cb) {
         fetchAndLoadPreloadScripts(identity, preloadOption, cb);
     },
@@ -668,3 +677,7 @@ exports.System = {
         return response;
     }
 };
+
+function clearPreloadCache() {
+    preloadScriptsCache = {};
+}
