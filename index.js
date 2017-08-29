@@ -610,7 +610,7 @@ function registerShortcuts() {
         const webContents = browserWindow.webContents;
 
         if (accelerator.zoom) {
-            const zoom = zoomIncrement => { return () => { webContents.send('zoom', zoomIncrement); }; };
+            const zoom = increment => { return () => { webContents.send('zoom', { increment }); }; };
 
             globalShortcut.register('CommandOrControl+0', zoom(0));
 

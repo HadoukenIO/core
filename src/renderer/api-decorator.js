@@ -172,8 +172,12 @@ limitations under the License.
     function wireUpZoomEvents() {
         // listen for zoom-in/out keyboard shortcut
         // messages sent from the browser process
-        ipc.on(`zoom-${renderFrameId}`, (event, zoomIncrement) => {
-            webFrame.setZoomLevel(zoomIncrement ? webFrame.getZoomLevel() + zoomIncrement : 0);
+        ipc.on(`zoom-${renderFrameId}`, (event, zoom) => {
+            if ('level' in zoom) {
+                webFrame.setZoomLevel(zoom.level);
+            } else if ('increment' in zoom) {
+                webFrame.setZoomLevel(zoom.increment ? Math.floor(webFrame.getZoomLevel()) + zoom.increment : 0);
+            }
         });
 
         document.addEventListener('mousewheel', event => {
