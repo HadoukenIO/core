@@ -429,12 +429,9 @@ limitations under the License.
         options.openfin = true;
         options.preload = 'preload' in options ? options.preload : winOpts.preload;
         options.uuid = winOpts.uuid;
-        if (options.backgroundColor === undefined &&
-            winOpts.backgroundColor !== undefined) {
-          // Apply parent window background color to child window when child
-          // window background color is unspecified.
-          options.backgroundColor = winOpts.backgroundColor;
-        }
+        // Apply parent window background color to child window when child
+        // window background color is unspecified.
+        options.backgroundColor = options.backgroundColor || winOpts.backgroundColor;
         let responseChannel = `${frameName}-created`;
         ipc.once(responseChannel, () => {
             setTimeout(() => {
