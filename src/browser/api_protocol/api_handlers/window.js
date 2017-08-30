@@ -219,13 +219,16 @@ function moveWindowBy(identity, message, ack) {
     ack(successAck);
 }
 
-function navigateWindow(identity, message, ack) {
+function navigateWindow(identity, message, ack, nack) {
     let payload = message.payload;
     let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
     let url = payload.url;
 
-    Window.navigate(windowIdentity, url);
-    ack(successAck);
+    if (Window.navigate(windowIdentity, url)) {
+        ack(successAck);
+    } else {
+        nack(new Error('Navigation rejected.'));
+    }
 }
 
 function navigateWindowBack(identity, message, ack) {
