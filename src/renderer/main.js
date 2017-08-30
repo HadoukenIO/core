@@ -19,7 +19,19 @@ let fs = require('fs');
 let path = require('path');
 let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
 
-let jsAdapter = fs.readFileSync(path.join(process.resourcesPath, 'adapter.asar', 'openfin-desktop.js'), 'utf8');
+// check resources/adapter/openfin-desktop.js then
+// resources/adapter.asar/openfin-desktop.js
+// for ease of developement
+let jsAdapter = '';
+const searchPaths = ['adapter', 'adapter.asar'];
+for (let adapterPath of searchPaths) {
+    try {
+        jsAdapter = fs.readFileSync(path.join(process.resourcesPath, adapterPath, 'openfin-desktop.js'), 'utf8');
+        break;
+    } catch (error) {
+        continue;
+    }
+}
 
 // Remove strict (Prevents, as of now, poorly understood memory lifetime scoping issues with remote module)
 me = me.slice(13);
