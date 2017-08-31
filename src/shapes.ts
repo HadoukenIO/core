@@ -196,6 +196,7 @@ export interface WindowOptions {
     minWidth?: number;
     name: string;
     nonPersistent?: boolean;
+    nonPersistant?: boolean;  // deprecated, backwards compatible
     opacity?: number;
     plugins?: boolean;
     preload?: string;
