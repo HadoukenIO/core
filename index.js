@@ -43,6 +43,7 @@ let socketServer = require('./src/browser/transports/socket_server').server;
 let authenticationDelegate = require('./src/browser/authentication_delegate.js');
 let convertOptions = require('./src/browser/convert_options.js');
 let coreState = require('./src/browser/core_state.js');
+let webRequestHandlers = require('./src/browser/web_request_handler.js');
 let errors = require('./src/common/errors.js');
 import ofEvents from './src/browser/of_events';
 import {
@@ -247,6 +248,8 @@ app.on('ready', function() {
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
+    webRequestHandlers.initHandlers();
+
     launchApp(coreState.argo, true);
 
     registerShortcuts();
