@@ -393,10 +393,8 @@ function includeFlashPlugin() {
 function initializeCrashReporter(argo) {
     const configUrl = argo['startup-url'] || argo['config'];
     const diagnosticMode = argo['diagnostics'] || false;
-    const enableCrashReporting = argo['enable-crash-reporting'];
-    const shouldStartCrashReporter = enableCrashReporting || diagnosticMode;
 
-    if (shouldStartCrashReporter) {
+    if (isInDiagnosticsMode(argo)) {
         crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
     }
 }
@@ -500,6 +498,11 @@ function initServer() {
 //is essential for proper runtime startup and adapter connectivity. we want to split into smaller independent parts.
 //please see the discussion on https://github.com/openfin/runtime-core/pull/194
 function launchApp(argo, startExternalAdapterServer) {
+
+    if (isInDiagnosticsMode(argo)) {
+        log.setToVerbose();
+    }
+
     convertOptions.fetchOptions(argo, configuration => {
         const {
             configUrl,
@@ -648,4 +651,8 @@ function registerShortcuts() {
 
     app.on('browser-window-closed', unhookShortcuts);
     app.on('browser-window-blur', unhookShortcuts);
+}
+
+function isInDiagnosticsMode(argo) {
+    return !!argo['diagnostics'] || !!argo['enable-crash-reporting'];
 }

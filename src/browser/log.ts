@@ -16,6 +16,19 @@ limitations under the License.
 import {app} from 'electron';
 import {errorToPOJO} from '../common/errors';
 
+export const logLevelMappings = new Map<any, any>([
+    ['verbose', -1],
+    ['info', 0],
+    ['warning', 1],
+    ['error', 2],
+    ['fatal', 3],
+    [-1, 'verbose'],
+    [0, 'info'],
+    [1, 'warning'],
+    [2, 'error'],
+    [3, 'fatal']
+]);
+
 /**
  * Parses log messages and uses Electron's APIs to log them to console
  */
@@ -50,4 +63,12 @@ export function writeToLog(level: any, message: any, debug?: boolean): any {
     } else {
         return app.log(level, parsedMessage);
     }
+}
+
+/**
+ * Sets runtime log level to 'verbose'
+ */
+export function setToVerbose(): void {
+    const verboseLogLevel = logLevelMappings.get('verbose');
+    app.setMinLogLevel(verboseLogLevel);
 }
