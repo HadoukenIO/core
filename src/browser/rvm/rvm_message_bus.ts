@@ -77,6 +77,7 @@ type getShortcutStateAction = 'get-shortcut-state';
 type setShortcutStateAction = 'set-shortcut-state';
 type launchedFromAction = 'launched-from';
 type launchAppAction = 'launch-app';
+type pluginQueryAction = 'query-plugin';
 
 export interface LaunchApp extends RvmMsgBase {
     topic: applicationTopic;
@@ -125,6 +126,13 @@ export interface AppAssetsDownloadAsset extends RvmMsgBase {
     showRvmProgressDialog: boolean;
     asset: any;
     downloadId: string;
+}
+
+export interface PluginQuery extends RvmMsgBase {
+    topic: applicationTopic;
+    action: pluginQueryAction;
+    payload: any;
+    messageId: string;
 }
 
 // topic: cleanup -----

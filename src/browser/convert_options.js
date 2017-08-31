@@ -263,6 +263,7 @@ module.exports = {
             newOptions.permissions = options.permissions;
         }
 
+        log.writeToLog(1, `**** options.preload: ${JSON.stringify(options.preload, undefined, 4)}`, true);
         const preload = options.preload;
         if (!preload) {
             // for all falsy values
@@ -273,6 +274,18 @@ module.exports = {
         } else {
             newOptions.preload = preload;
         }
+        log.writeToLog(1, `**** newOptions.preload: ${JSON.stringify(newOptions.preload, undefined, 4)}`, true);
+
+        log.writeToLog(1, `**** options: ${JSON.stringify(options, undefined, 4)}`, true);
+        log.writeToLog(1, `**** options.plugins: ${JSON.stringify(options.plugins, undefined, 4)}`, true);
+        const plugins = options.plugins;
+        if (!plugins) {
+            // for all falsy values
+            newOptions.plugins = [];
+        } else {
+            newOptions.plugins = plugins;
+        }
+        log.writeToLog(1, `**** newOptions.plugins: ${JSON.stringify(newOptions.plugins, undefined, 4)}`, true);
 
         if (returnAsString) {
             return JSON.stringify(newOptions);

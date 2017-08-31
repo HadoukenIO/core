@@ -766,9 +766,10 @@ Window.create = function(id, opts) {
 
     // Set preload scripts' final loading states
     winObj.preloadState = _options.preload.map(preload => {
+        const identitier = preload.url ? preload.url : preload.name;
         return {
-            url: preload.url,
-            state: getPreloadScriptState(preload.url)
+            url: identitier,
+            state: getPreloadScriptState(identitier)
         };
     });
 

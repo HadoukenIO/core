@@ -445,15 +445,29 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
         return;
     }
 
+
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = _.clone(app._options);
+
+
+    log.writeToLog(1, '**** it is reaching the Application.run function', true);
+    let forPreload = []; // TODO: check for undefined values before concat or null will be in final array.
+    // forPreload = forPreload.concat([{ url: 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/core.js' }], [{ name: 'pat-plugin', version: '2.*.*' }]);
+    if (Array.isArray(mainWindowOpts.preload) && mainWindowOpts.preload[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.preload); }
+    if (Array.isArray(mainWindowOpts.plugins) && mainWindowOpts.plugins[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.plugins); }
+    log.writeToLog(1, `**** app._options: ${JSON.stringify(app._options, undefined, 4)}`, true);
+    log.writeToLog(1, `**** mainWindowOpts scripts: ${JSON.stringify(mainWindowOpts.preload, undefined, 4)}`, true);
+    log.writeToLog(1, `**** mainWindowOpts plugin: ${JSON.stringify(mainWindowOpts.plugins, undefined, 4)}`, true);
+    log.writeToLog(1, `**** forPreload: ${JSON.stringify(forPreload, undefined, 4)}`, true);
+
+
     const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
     const windowIdentity = {
         uuid: mainWindowOpts.uuid,
         name: mainWindowOpts.name
     };
-
-    fetchAndLoadPreloadScripts(windowIdentity, mainWindowOpts.preload, proceed);
+    fetchAndLoadPreloadScripts(windowIdentity, forPreload, proceed);
+    // fetchAndLoadPreloadScripts(windowIdentity, mainWindowOpts.preload, proceed);
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {

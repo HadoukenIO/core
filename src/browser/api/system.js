@@ -659,15 +659,15 @@ exports.System = {
         const response = {};
 
         const missingRequiredScripts = preloadOption.reduce((urls, preload) => {
-            if (!preload.optional && !(preload.url in preloadScriptsCache)) {
-                urls.push(preload.url);
+            if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
+                urls.push(getIdentifier(preload));
             }
             return urls;
         }, []);
 
         if (!missingRequiredScripts.length) {
             const missingOptionalScript = '';
-            response.scripts = preloadOption.map(preload => preloadScriptsCache[preload.url] || missingOptionalScript);
+            response.scripts = preloadOption.map(preload => preloadScriptsCache[getIdentifier(preload)] || missingOptionalScript);
         } else {
             response.error = `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
         }
@@ -675,6 +675,10 @@ exports.System = {
         return response;
     }
 };
+
+function getIdentifier(preload) {
+    return preload.url ? preload.url : preload.name;
+}
 
 function clearPreloadCache() {
     preloadScriptsCache = {};
