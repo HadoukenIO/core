@@ -75,8 +75,10 @@ export function fetchAndLoadPreloadScripts(
 ): Promise<undefined> {
     let allLoaded: Promise<undefined>;
 
-    // convert legacy `preloadOption` option into modern `preloadOption` option
-    if (typeof preloadOption === 'string') {
+    if (!preloadOption) {
+        preloadOption = [];
+    } else if (typeof preloadOption === 'string') {
+        // convert legacy `preloadOption` option into modern `preloadOption` option
         preloadOption = [<PreloadInstance>{ url: preloadOption }];
     }
 
