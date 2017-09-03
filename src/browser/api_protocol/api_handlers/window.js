@@ -17,11 +17,12 @@ limitations under the License.
 const apiProtocolBase = require('./api_protocol_base');
 const Window = require('../../api/window').Window;
 const Application = require('../../api/application').Application;
-const _ = require('underscore');
 
-let successAck = {
-    success: true
-};
+// some local sugar
+const successAck = { success: true };
+const dataAck = data => Object.assign({ data }, successAck);
+const getWinId = message => apiProtocolBase.getTargetWindowIdentity(message.payload);
+const getGroupingWinId = message => apiProtocolBase.getGroupingWindowIdentity(message.payload);
 
 module.exports.windowApiMap = {
     'animate-window': animateWindow,
@@ -82,431 +83,278 @@ module.exports.init = function() {
 };
 
 function windowAuthenticate(identity, message, ack, nack) {
-    let payload = message.payload,
-        { userName, password } = payload;
-
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.authenticate(windowIdentity, userName, password, err => {
-        if (!err) {
-            ack(successAck);
-        } else {
+    const { userName, password } = message.payload;
+    Window.authenticate(getWinId(message), userName, password, err => {
+        if (err) {
             nack(err);
+        } else {
+            ack(successAck);
         }
     });
 }
 
 function redirectWindowToUrl(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = {
-            uuid: payload.targetUuid,
-            name: payload.targetName
-        };
-
-    Window.navigate(windowIdentity, payload.url);
-    ack(successAck);
-}
-
-function updateWindowOptions(identity, rawMessage, ack) {
-    let message = JSON.parse(JSON.stringify(rawMessage));
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.updateOptions(windowIdentity, payload.options);
-    ack(successAck);
-}
-
-function stopFlashWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.stopFlashing(windowIdentity);
-    ack(successAck);
-}
-
-function setWindowBounds(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.setBounds(windowIdentity, payload.left, payload.top, payload.width, payload.height);
-    ack(successAck);
-}
-
-function setWindowPreloadState(identity, message, ack) {
-    const payload = message.payload;
-    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
-
-    Window.setWindowPreloadState(windowIdentity, payload);
-    ack();
-}
-
-function setForegroundWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.setAsForeground(windowIdentity);
-    ack(successAck);
-}
-
-function showAtWindow(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    let force = !!payload.force;
-
-    Window.showAt(windowIdentity, payload.left, payload.top, force);
-    ack(successAck);
-}
-
-function showMenu(identity, message, ack) {
-    var payload = message.payload;
-    var windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.showMenu(windowIdentity, payload.x, payload.y, payload.editable, payload.hasSelectedText);
-    ack(successAck);
-}
-
-function showWindow(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    let force = !!payload.force;
-
-    Window.show(windowIdentity, force);
-    ack(successAck);
-}
-
-function restoreWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.restore(windowIdentity);
-    ack(successAck);
-}
-
-function resizeWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.resizeTo(windowIdentity, payload.width, payload.height, payload.anchor);
-    ack(successAck);
-}
-
-function resizeWindowBy(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.resizeBy(windowIdentity, payload.deltaWidth, payload.deltaHeight, payload.anchor);
-    ack(successAck);
-}
-
-function undockWindow(identity, message, ack) {
-    //TODO:Figure out what this is suposed to do.
-    ack(successAck);
-}
-
-function moveWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.moveTo(windowIdentity, payload.left, payload.top);
-    ack(successAck);
-}
-
-function moveWindowBy(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.moveBy(windowIdentity, payload.deltaLeft, payload.deltaTop);
-    ack(successAck);
-}
-
-function navigateWindow(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    let url = payload.url;
-
+    const { targetUuid: uuid, targetName: name, url } = message.payload;
+    const windowIdentity = { uuid, name };
     Window.navigate(windowIdentity, url);
     ack(successAck);
 }
 
-function navigateWindowBack(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+function updateWindowOptions(identity, rawMessage, ack) {
+    const message = JSON.parse(JSON.stringify(rawMessage));
+    Window.updateOptions(getWinId(message), message.payload.options);
+    ack(successAck);
+}
 
-    Window.navigateBack(windowIdentity);
+function stopFlashWindow(identity, message, ack) {
+    Window.stopFlashing(getWinId(message));
+    ack(successAck);
+}
+
+function setWindowBounds(identity, message, ack) {
+    const { left, top, width, height } = message.payload;
+    Window.setBounds(getWinId(message), left, top, width, height);
+    ack(successAck);
+}
+
+function setWindowPreloadState(identity, message, ack) {
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
+    Window.setWindowPreloadState(windowIdentity, message.payload);
+    ack(successAck);
+}
+
+function setForegroundWindow(identity, message, ack) {
+    Window.setAsForeground(getWinId(message));
+    ack(successAck);
+}
+
+function showAtWindow(identity, message, ack) {
+    const { left, top, force } = message.payload;
+    Window.showAt(getWinId(message), left, top, !!force);
+    ack(successAck);
+}
+
+function showMenu(identity, message, ack) {
+    const { x, y, editable, hasSelectedText } = message.payload;
+    Window.showMenu(getWinId(message), x, y, editable, hasSelectedText);
+    ack(successAck);
+}
+
+function showWindow(identity, message, ack) {
+    Window.show(getWinId(message), !!message.payload.force);
+    ack(successAck);
+}
+
+function restoreWindow(identity, message, ack) {
+    Window.restore(getWinId(message));
+    ack(successAck);
+}
+
+function resizeWindow(identity, message, ack) {
+    const { width, height, anchor } = message.payload;
+    Window.resizeTo(getWinId(message), width, height, anchor);
+    ack(successAck);
+}
+
+function resizeWindowBy(identity, message, ack) {
+    const { deltaWidth, deltaHeight, anchor } = message.payload;
+    Window.resizeBy(getWinId(message), deltaWidth, deltaHeight, anchor);
+    ack(successAck);
+}
+
+function undockWindow(identity, message, ack) {
+    //TODO:Figure out what this is supposed to do.
+    ack(successAck);
+}
+
+function moveWindow(identity, message, ack) {
+    const { left, top } = message.payload;
+    Window.moveTo(getWinId(message), left, top);
+    ack(successAck);
+}
+
+function moveWindowBy(identity, message, ack) {
+    const { deltaLeft, deltaTop } = message.payload;
+    Window.moveBy(getWinId(message), deltaLeft, deltaTop);
+    ack(successAck);
+}
+
+function navigateWindow(identity, message, ack) {
+    Window.navigate(getWinId(message), message.payload.url);
+    ack(successAck);
+}
+
+function navigateWindowBack(identity, message, ack) {
+    Window.navigateBack(getWinId(message));
     ack(successAck);
 }
 
 function navigateWindowForward(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.navigateForward(windowIdentity);
+    Window.navigateForward(getWinId(message));
     ack(successAck);
 }
 
 function stopWindowNavigation(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.stopNavigation(windowIdentity);
+    Window.stopNavigation(getWinId(message));
     ack(successAck);
 }
 
 function reloadWindow(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    let ignoreCache = !!payload.ignoreCache;
-
-    Window.reload(windowIdentity, ignoreCache);
+    Window.reload(getWinId(message), !!message.payload.ignoreCache);
     ack(successAck);
 }
 
 function minimizeWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.minimize(windowIdentity);
+    Window.minimize(getWinId(message));
     ack(successAck);
 }
 
 function mergeWindowGroups(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload),
-        groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
-
-    Window.mergeGroups(windowIdentity, groupingIdentity);
+    Window.mergeGroups(getWinId(message), getGroupingWinId(message));
     ack(successAck);
 }
 
 function maximizeWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.maximize(windowIdentity);
+    Window.maximize(getWinId(message));
     ack(successAck);
 }
 
 function leaveWindowGroup(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.leaveGroup(windowIdentity);
+    Window.leaveGroup(getWinId(message));
     ack(successAck);
 }
 
 function joinWindowGroup(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload),
-        groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
-
-    Window.joinGroup(windowIdentity, groupingIdentity);
+    Window.joinGroup(getWinId(message), getGroupingWinId(message));
     ack(successAck);
 }
 
 function isWindowShowing(identity, message, ack) {
-    var payload = message.payload,
-        dataAck = _.clone(successAck),
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    dataAck.data = Window.isShowing(windowIdentity);
-    ack(dataAck);
+    ack(dataAck(Window.isShowing(getWinId(message))));
 }
 
 function hideWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.hide(windowIdentity);
+    Window.hide(getWinId(message));
     ack(successAck);
 }
 
 function getWindowSnapshot(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.getSnapshot(windowIdentity, (err, result) => {
+    Window.getSnapshot(getWinId(message), (err, result) => {
         if (err) {
-            throw err;
+            throw err; //todo: why not using nack?
         } else {
-            let dataAck = _.clone(successAck);
-            dataAck.data = result;
-            ack(dataAck);
+            ack(dataAck(result));
         }
     });
 }
 
 function getWindowState(identity, message, ack) {
-    var payload = message.payload,
-        dataAck = _.clone(successAck),
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    dataAck.data = Window.getState(windowIdentity);
-    ack(dataAck);
+    ack(dataAck(Window.getState(getWinId(message))));
 }
 
 function getWindowOptions(identity, message, ack) {
-    var payload = message.payload,
-        dataAck = _.clone(successAck),
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    dataAck.data = Window.getOptions(windowIdentity);
-    ack(dataAck);
+    ack(dataAck(Window.getOptions(getWinId(message))));
 }
 
 function getCurrentWindowOptions(identity, message, ack) {
-    let dataAck = _.clone(successAck);
-
-    dataAck.data = Window.getOptions(identity);
-    ack(dataAck);
+    ack(dataAck(Window.getOptions(identity)));
 }
 
 function getWindowInfo(identity, message, ack) {
-    var payload = message.payload,
-        dataAck = _.clone(successAck),
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    dataAck.data = Window.getWindowInfo(windowIdentity);
-    ack(dataAck);
+    ack(dataAck(Window.getWindowInfo(getWinId(message))));
 }
 
 function getWindowNativeId(identity, message, ack) {
-    var payload = message.payload,
-        dataAck = _.clone(successAck),
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    dataAck.data = Window.getNativeId(windowIdentity);
-    ack(dataAck);
+    ack(dataAck(Window.getNativeId(getWinId(message))));
 }
 
 function getWindowGroup(identity, message, ack) {
-    var payload = message.payload,
-        dataAck = _.clone(successAck),
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
     // NOTE: the Window API returns a wrapped window with 'name' as a member,
     // while the adaptor expects it to be 'windowName'
-    dataAck.data = _.map(Window.getGroup(windowIdentity), (window) => {
-        if (payload.crossApp === true) {
-            var clone = _.clone(window);
-            clone.windowName = window.name;
-            return clone;
+    ack(dataAck(Window.getGroup(getWinId(message)).map(window => {
+        const windowName = window.name;
+        if (message.payload.crossApp === true) {
+            return Object.assign({}, window, { windowName });
         } else {
-            return window.name; // backwards compatible
+            return windowName; // backwards compatible
         }
-    });
-    ack(dataAck);
+    })));
 }
 
 function getWindowBounds(identity, message, ack) {
-    var payload = message.payload,
-        dataAck = _.clone(successAck),
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    dataAck.data = Window.getBounds(windowIdentity);
-    ack(dataAck);
+    ack(dataAck(Window.getBounds(getWinId(message))));
 }
 
 function focusWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.focus(windowIdentity);
+    Window.focus(getWinId(message));
     ack(successAck);
 }
 
 function flashWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.flash(windowIdentity);
+    Window.flash(getWinId(message));
     ack(successAck);
 }
 
 function enableWindowFrame(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.enableFrame(windowIdentity);
+    Window.enableFrame(getWinId(message));
     ack(successAck);
 }
 
 function executeJavascript(identity, message, ack, nack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    let pUuid = windowIdentity.uuid;
+    let pUuid = getWinId(message).uuid;
 
     while (pUuid) {
         if (pUuid === identity.uuid) {
-            return Window.executeJavascript(windowIdentity, payload.code, (err, result) => {
+            return Window.executeJavascript(getWinId(message), message.payload.code, (err, result) => {
                 if (err) {
                     nack(err);
                 } else {
-                    let dataAck = _.clone(successAck);
-                    dataAck.data = result;
-                    ack(dataAck);
+                    ack(dataAck(result));
                 }
             });
         }
         pUuid = Application.getParentApplication({
             uuid: pUuid
         });
-
     }
+
     return nack(new Error('Rejected, target window is not owned by requesting identity'));
 }
 
 function disableWindowFrame(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.disableFrame(windowIdentity);
+    Window.disableFrame(getWinId(message));
     ack(successAck);
 }
 
 function windowEmbedded(identity, message, ack) {
-    let payload = message.payload;
-    // Ensure expected shape for identity utility compliance
+    const { payload } = message;
+
+    // Ensure expected shape for getTargetWindowIdentity (called by getWinId)
     payload.uuid = payload.targetUuid;
 
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    Window.embed(windowIdentity, `0x${payload.parentHwnd}`);
+    Window.embed(getWinId(message), `0x${payload.parentHwnd}`);
     ack(successAck);
 }
 
 function closeWindow(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    let force = !!payload.force;
-
-    Window.close(windowIdentity, force, () => {
+    Window.close(getWinId(message), !!message.payload.force, () => {
         ack(successAck);
     });
 }
 
 function bringWindowToFront(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.bringToFront(windowIdentity);
+    Window.bringToFront(getWinId(message));
     ack(successAck);
 }
 
 function blurWindow(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.blur(windowIdentity);
+    Window.blur(getWinId(message));
     ack(successAck);
 }
 
 function animateWindow(identity, message, ack) {
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(message.payload);
-    let transitions = message.payload.transitions;
-    let options = message.payload.options;
-
-    Window.animate(windowIdentity, transitions, options, () => {
-        ack(successAck);
-    });
+    const { transitions, options } = message.payload;
+    Window.animate(getWinId(message), transitions, options, () => { ack(successAck); });
 }
 
 function dockWindow(identity, message, ack) {
@@ -515,40 +363,22 @@ function dockWindow(identity, message, ack) {
 }
 
 function windowExists(identity, message, ack) {
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(message.payload);
-    let dataAck = _.clone(successAck);
-
-    dataAck.data = Window.exists(windowIdentity);
-    ack(dataAck);
+    ack(dataAck(Window.exists(getWinId(message))));
 }
 
 function getCachedBounds(identity, message, ack, nack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    let dataAck = _.clone(successAck);
-
-    Window.getBoundsFromDisk(windowIdentity, data => {
-        dataAck.data = data;
-        ack(dataAck);
+    Window.getBoundsFromDisk(getWinId(message), data => {
+        ack(dataAck(data));
     }, nack);
 }
 
 function getZoomLevel(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.getZoomLevel(windowIdentity, result => {
-        let dataAck = _.clone(successAck);
-        dataAck.data = result;
-        ack(dataAck);
+    Window.getZoomLevel(getWinId(message), result => {
+        ack(dataAck(result));
     });
 }
 
 function setZoomLevel(identity, message, ack) {
-    let payload = message.payload;
-    let windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    let level = payload.level;
-
-    Window.setZoomLevel(windowIdentity, level);
+    Window.setZoomLevel(getWinId(message), message.payload.level);
     ack(successAck);
 }
