@@ -278,6 +278,11 @@ module.exports = {
             newOptions.customRequestHeaders = options.customRequestHeaders;
         }
 
+        // implicitly set the backgroundColor if the window is transparent
+        if (newOptions.transparent) {
+            newOptions.backgroundColor = '#0FFF';
+        }
+
         if (returnAsString) {
             return JSON.stringify(newOptions);
         } else {
