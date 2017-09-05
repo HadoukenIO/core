@@ -42,6 +42,7 @@ function SystemApiHandler() {
         'get-el-ipc-config': getElIPCConfig,
         'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
         'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
+        'get-min-log-level': getMinLogLevel,
         'get-monitor-info': getMonitorInfo, // apiPath: '.getMonitorInfo' -> called by js adapter during init so can't be disabled
         'get-mouse-position': { apiFunc: getMousePosition, apiPath: '.getMousePosition' },
         'get-nearest-display-root': getNearestDisplayRoot,
@@ -61,6 +62,7 @@ function SystemApiHandler() {
         'resolve-uuid': resolveUuid,
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
         'set-cookie': setCookie,
+        'set-min-log-level': setMinLogLevel,
         'show-developer-tools': showDeveloperTools,
         'start-crash-reporter': startCrashReporter,
         'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess' },
@@ -71,6 +73,35 @@ function SystemApiHandler() {
     };
 
     apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
+
+    function didFail(e) {
+        return e !== undefined && e.constructor === Error;
+    }
+
+    function setMinLogLevel(identity, message, ack, nack) {
+        const { payload: { level } } = message;
+        const response = System.setMinLogLevel(level);
+
+        if (didFail(response)) {
+            nack(response);
+
+        } else {
+            ack(_.clone(successAck));
+        }
+    }
+
+    function getMinLogLevel(identity, message, ack, nack) {
+        const response = System.getMinLogLevel();
+
+        if (didFail(response)) {
+            nack(response);
+
+        } else {
+            const dataAck = _.clone(successAck);
+            dataAck.data = response;
+            ack(dataAck);
+        }
+    }
 
     function startCrashReporter(identity, message, ack) {
         const dataAck = _.clone(successAck);

@@ -39,7 +39,23 @@ import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts } from '../preload_scripts';
-
+const verbose = 'verbose';
+const info = 'info';
+const warning = 'warning';
+const error = 'error';
+const fatal = 'fatal';
+const logLevelMappings = new Map([
+    [verbose, -1],
+    [info, 0],
+    [warning, 1],
+    [error, 2],
+    [fatal, 3],
+    [-1, verbose],
+    [0, info],
+    [1, warning],
+    [2, error],
+    [3, fatal]
+]);
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -387,6 +403,15 @@ exports.System = {
             }
         });
     },
+    getMinLogLevel: function() {
+        try {
+            const logLevel = electronApp.getMinLogLevel();
+
+            return logLevelMappings.get(logLevel);
+        } catch (e) {
+            return e;
+        }
+    },
     getMonitorInfo: function() {
         return MonitorInfo.getInfo('api-query');
     },
@@ -479,6 +504,18 @@ exports.System = {
     },
     log: function(level, message) {
         return log.writeToLog(level, message, false);
+    },
+    setMinLogLevel: function(level) {
+        try {
+            const mappedLevel = logLevelMappings.get(level + '');
+
+            if (mappedLevel === undefined) {
+                throw new Error(`Invalid logging level: ${level}`);
+            }
+            electronApp.setMinLogLevel(mappedLevel);
+        } catch (e) {
+            return e;
+        }
     },
     debugLog: function(level, message) {
         return log.writeToLog(level, message, true);
