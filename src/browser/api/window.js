@@ -1375,7 +1375,15 @@ Window.show = function(identity, force = false) {
 
     let payload = {};
     let defaultAction = () => {
-        if (!browserWindow.isMinimized()) {
+        const dontShow = (
+            browserWindow.isMinimized() ||
+
+            // RUN-2905: To match v5 behavior, for maximized window, avoid showInactive() because it does an
+            // erroneous restore(), an apparent Electron oversight (a restore _is_ needed in all other cases).
+            browserWindow.isMaximized() && browserWindow.isVisible()
+        );
+
+        if (!dontShow) {
             browserWindow.showInactive();
         }
     };
