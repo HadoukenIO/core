@@ -490,7 +490,8 @@ exports.System = {
     },
     setMinLogLevel: function(level) {
         try {
-            const mappedLevel = log.logLevelMappings.get(level + '');
+            const levelAsString = String(level); // We only accept log levels as strings here
+            const mappedLevel = log.logLevelMappings.get(levelAsString);
 
             if (mappedLevel === undefined) {
                 throw new Error(`Invalid logging level: ${level}`);

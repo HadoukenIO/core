@@ -391,12 +391,14 @@ function includeFlashPlugin() {
 }
 
 function initializeCrashReporter(argo) {
+    if (!isInDiagnosticsMode(argo)) {
+        return;
+    }
+
     const configUrl = argo['startup-url'] || argo['config'];
     const diagnosticMode = argo['diagnostics'] || false;
 
-    if (isInDiagnosticsMode(argo)) {
-        crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
-    }
+    crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
 }
 
 function rotateLogs(argo) {
@@ -654,5 +656,5 @@ function registerShortcuts() {
 }
 
 function isInDiagnosticsMode(argo) {
-    return !!argo['diagnostics'] || !!argo['enable-crash-reporting'];
+    return !!(argo['diagnostics'] || argo['enable-crash-reporting']);
 }
