@@ -379,6 +379,11 @@ Window.create = function(id, opts) {
 
         browserWindow = BrowserWindow.fromId(id);
 
+        // set this listener up as soon as possible
+        browserWindow._whenReadyToShow = new Promise(ready => {
+            browserWindow.once('ready-to-show', ready);
+        });
+
         // this is a first pass at teardown. for now, push the unsubscribe
         // function for each subscription you make, on closed, remove them all
         // if you listen on 'closed' it will crash as your resources are
@@ -1724,10 +1729,7 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
                     callback();
                 } else {
                     // Version 8: Will be visible on the next tick
-                    browserWindow.once('ready-to-show', () => {
-                        browserWindow._readyToShowFiredAlready = true;
-                        callback();
-                    });
+                    browserWindow._whenReadyToShow.then(callback);
                 }
             }
         });
