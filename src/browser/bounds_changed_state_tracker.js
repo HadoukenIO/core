@@ -130,7 +130,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         var currentBounds = getCurrentBounds();
         var cachedBounds = getCachedBounds();
         var boundsCompare = compareBoundsResult(currentBounds, cachedBounds);
-        var stateMinMax = boundsCompare.state && currentBounds.state !== 'normal'; // maximized or minimized
+        var stateMin = boundsCompare.state && currentBounds.state === 'minimized';
 
         var eventType = isAdditionalChangeExpected ? 'bounds-changing' :
             'bounds-changed';
@@ -154,7 +154,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
             positionChangedCriteria.push(positionChanged);
         }
 
-        if (boundsCompare.changed && !stateMinMax || force) {
+        if (boundsCompare.changed && !stateMin || force) {
 
             // returns true if any of the criteria are true
             var sizeChange = _.some(sizeChangedCriteria, (criteria) => {
@@ -230,8 +230,14 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                                 });
                             }
                             hwndToId[hwnd] = win.browserWindow.id;
+                            if (win.browserWindow.isMaximized()) {
+                                win.browserWindow.unmaximize();
+                            }
                             wt.setWindowPos(hwnd, { x, y, flags });
                         } else {
+                            if (win.browserWindow.isMaximized()) {
+                                win.browserWindow.unmaximize();
+                            }
                             // no need to call clipBounds here because width and height are not changing
                             win.browserWindow.setBounds({ x, y, width, height });
                         }

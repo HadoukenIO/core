@@ -1223,6 +1223,10 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
     let left = toSafeInt(deltaLeft, 0);
     let top = toSafeInt(deltaTop, 0);
 
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
+    }
+
     // no need to call clipBounds here because width and height are not changing
     browserWindow.setBounds({
         x: currentBounds.x + left,
@@ -1243,6 +1247,10 @@ Window.moveTo = function(identity, x, y) {
     const currentBounds = browserWindow.getBounds();
     const safeX = toSafeInt(x);
     const safeY = toSafeInt(y);
+
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
+    }
 
     // no need to call clipBounds here because width and height are not changing
     browserWindow.setBounds({
@@ -1296,6 +1304,10 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
         return;
     }
 
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
+    }
+
     let currentBounds = browserWindow.getBounds();
     let newWidth = toSafeInt(currentBounds.width + deltaWidth, currentBounds.width);
     let newHeight = toSafeInt(currentBounds.height + deltaHeight, currentBounds.height);
@@ -1314,6 +1326,10 @@ Window.resizeTo = function(identity, newWidth, newHeight, anchor) {
 
     if (!browserWindow) {
         return;
+    }
+
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
     }
 
     const currentBounds = browserWindow.getBounds();
@@ -1357,6 +1373,11 @@ Window.setAsForeground = function(identity) {
 Window.setBounds = function(identity, left, top, width, height) {
     let browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
     let bounds = browserWindow.getBounds();
+
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
+    }
+
     browserWindow.setBounds(clipBounds({
         x: toSafeInt(left, bounds.x),
         y: toSafeInt(top, bounds.y),
@@ -1407,6 +1428,10 @@ Window.showAt = function(identity, left, top, force = false) {
     };
     let defaultAction = () => {
         let currentBounds = browserWindow.getBounds();
+
+        if (browserWindow.isMaximized()) {
+            browserWindow.unmaximize();
+        }
 
         // no need to call clipBounds here because width and height are not changing
         browserWindow.setBounds({

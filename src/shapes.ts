@@ -211,6 +211,7 @@ export interface WindowOptions {
     show?: boolean;
     showTaskbarIcon?: boolean;
     skipTaskbar?: boolean;
+    smallWindow?: boolean;
     state?: 'maximized'|'minimized'|'normal';
     taskbarIcon?: string;
     taskbarIconGroup?: string;
