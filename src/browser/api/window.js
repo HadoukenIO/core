@@ -47,6 +47,7 @@ let regex = require('../../common/regex');
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
 import {
+    isValidNavigation,
     validateNavigation,
     navigationValidator
 } from '../navigation_validation';
@@ -1267,8 +1268,14 @@ Window.moveTo = function(identity, x, y) {
 };
 
 Window.navigate = function(identity, url) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
-    browserWindow.webContents.loadURL(url);
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate');
+    const valid = isValidNavigation(url, identity.uuid);
+
+    if (valid) {
+        browserWindow.webContents.loadURL(url);
+    }
+
+    return valid;
 };
 
 Window.navigateBack = function(identity) {
