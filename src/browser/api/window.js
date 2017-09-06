@@ -379,6 +379,11 @@ Window.create = function(id, opts) {
 
         browserWindow = BrowserWindow.fromId(id);
 
+        // set this listener up as soon as possible
+        browserWindow._whenReadyToShow = new Promise(ready => {
+            browserWindow.once('ready-to-show', ready);
+        });
+
         // this is a first pass at teardown. for now, push the unsubscribe
         // function for each subscription you make, on closed, remove them all
         // if you listen on 'closed' it will crash as your resources are
@@ -1745,14 +1750,11 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
     } else {
         browserWindow.once('visibility-changed', (event, isVisible) => {
             if (isVisible) {
-                if (browserWindow.isVisible()) {
+                if (browserWindow._readyToShowFiredAlready) {
                     callback();
-                    // Version 8: Will be visible on the next tick
-                    // TODO: Refactor to also use 'ready-to-show'
                 } else {
-                    setTimeout(() => {
-                        callback();
-                    }, 1);
+                    // Version 8: Will be visible on the next tick
+                    browserWindow._whenReadyToShow.then(callback);
                 }
             }
         });
