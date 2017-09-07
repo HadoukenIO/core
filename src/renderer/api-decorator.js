@@ -24,7 +24,6 @@ limitations under the License.
     const processVersions = JSON.parse(JSON.stringify(process.versions));
 
     let renderFrameId = global.routingId;
-
     let customData = global.getFrameData(renderFrameId);
     let glbl = global;
 
