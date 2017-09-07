@@ -24,6 +24,7 @@ limitations under the License.
     const processVersions = JSON.parse(JSON.stringify(process.versions));
 
     let renderFrameId = global.routingId;
+
     let customData = global.getFrameData(renderFrameId);
     let glbl = global;
 
@@ -357,7 +358,17 @@ limitations under the License.
         //---------------------------------------------------------------
         let winOpts = getWindowOptionsSync();
 
-        showOnReady(glbl, winOpts);
+        // Prevent iframes from attempting to do windowing actions, these will always be handled
+        // by the main window frame.
+        if (window.frameElement) {
+
+            // If you are an iframe, you still need to send out the api ready event so frameConnect
+            // can correctly assign connection priority.
+            electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+        } else {
+            showOnReady(glbl, winOpts);
+        }
+
         wireUpMenu(glbl, winOpts);
         wireUpZoomEvents();
         raiseReadyEvents(winOpts);
