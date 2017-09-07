@@ -25,11 +25,13 @@ export class AckMessage {
 // ToDo following duplicated in src/shapes.ts
 
 export class AckPayload {
-    public success: true;
+    public readonly success: true = true;
     public data?: any;
 
     constructor(data: any) {
-        this.data = data;
+        if (data !== undefined) {
+            this.data = data;
+        }
     }
 }
 

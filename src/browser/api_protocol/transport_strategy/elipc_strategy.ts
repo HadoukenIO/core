@@ -40,15 +40,9 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
                     if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
-                            .then(() => endpoint.apiFunc(identity, data, ack, nack))
-                            .then(result => {
-                                // older action calls will invoke ack internally, newer ones will return a value
-                                if (result !== undefined) {
-                                    ack(new AckPayload(result));
-                                }
-                            }).catch(err => {
-                                nack(err);
-                            });
+                            .then(() => endpoint.apiFunc(identity, data))
+                            .then(result => { ack(new AckPayload(result)); })
+                            .catch(err => { nack(err); });
                     } else {
                         nack('API access has been superseded by another frame in this window.');
                     }

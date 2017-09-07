@@ -11,15 +11,11 @@ import {
 } from '../../api/external_application';
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
-let _ = require('underscore');
 let log = require('../../log');
 let socketServer = require('../../transports/socket_server').server;
 let ProcessTracker = require('../../process_tracker.js');
 const rvmMessageBus = require('../../rvm/rvm_message_bus').rvmMessageBus;
 import route from '../../../common/route';
-const successAck = {
-    success: true
-};
 
 const AUTH_TYPE = {
     file: 0,
@@ -37,26 +33,19 @@ var pendingAuthentications = new Map(),
         }
     };
 
-function registerExternalConnection(identity, message, ack) {
-    let uuidToRegister = message.payload.uuid;
+function registerExternalConnection(identity, message) {
+    const { uuid } = message.payload;
     let token = electronApp.generateGUID();
-    let dataAck = _.clone(successAck);
-    dataAck.data = {
-        uuid: uuidToRegister,
-        token
-    };
 
-    addPendingAuthentication(uuidToRegister, token, null, identity, null);
-    ack(dataAck);
+    addPendingAuthentication(uuid, token, null, identity, null);
+
+    return { uuid, token };
 }
 
 function onRequestExternalAuth(id, message) {
     console.log('processing request-external-authorization', message);
 
-    let {
-        uuid: uuidRequested,
-        pid
-    } = message.payload;
+    const { uuid: uuidRequested, pid } = message.payload;
 
     let extProcess, file, token;
 

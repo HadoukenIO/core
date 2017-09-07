@@ -38,11 +38,6 @@ import {
     addRemoteSubscription
 } from '../../remote_subscriptions';
 
-// locals
-const successAck = {
-    success: true
-};
-
 function isBrowserClient(uuid) {
     return connectionManager.connections.map((conn) => {
         return conn.portInfo.version + ':' + conn.portInfo.port;
@@ -151,7 +146,7 @@ function EventListenerApiHandler() {
         }
     };
 
-    function subToDesktopEvent(identity, message, ack) {
+    function subToDesktopEvent(identity, message) {
         let topic = message.payload.topic;
         let uuid = message.payload.uuid;
         let type = message.payload.type;
@@ -188,17 +183,15 @@ function EventListenerApiHandler() {
 
             apiProtocolBase.registerSubscription(unsubscribe, identity, topic, uuid, type, name);
         }
-        ack(successAck);
     }
 
-    function unSubToDesktopEvent(identity, message, ack) {
+    function unSubToDesktopEvent(identity, message) {
         let topic = message.payload.topic;
         let uuid = message.payload.uuid;
         let type = message.payload.type;
         let name = message.payload.name;
 
         apiProtocolBase.removeSubscription(identity, topic, uuid, type, name);
-        ack(successAck);
     }
 }
 

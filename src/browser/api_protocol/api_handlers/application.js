@@ -31,8 +31,6 @@ import route from '../../../common/route';
 import { WindowsMessages, SetWindowPosition, SysCommands } from '../../../microsoft';
 
 // some local sugar
-const successAck = { success: true };
-const dataAck = data => Object.assign({ data }, successAck);
 const getAppId = message => apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
 module.exports.applicationApiMap = {
@@ -68,74 +66,67 @@ module.exports.init = function() {
     apiProtocolBase.registerActionMap(module.exports.applicationApiMap, 'Application');
 };
 
-function setTrayIcon(identity, rawMessage, ack, nack) {
-    const message = JSON.parse(JSON.stringify(rawMessage));
-
-    Application.setTrayIcon(getAppId(message), message.payload.enabledIcon, () => {
-        ack(successAck);
-    }, nack);
-}
-
-function getTrayIconInfo(identity, message, ack, nack) {
-    Application.getTrayIconInfo(getAppId(message), response => {
-        ack(dataAck(response));
-    }, nack);
-}
-
-function removeTrayIcon(identity, message, ack) {
-    Application.removeTrayIcon(getAppId(message));
-    ack(successAck);
-}
-
-function waitForHungApplication(identity, message, ack) {
-    Application.wait(getAppId(message));
-    ack(successAck);
-}
-
-function terminateApplication(identity, message, ack) {
-    Application.terminate(getAppId(message), () => {
-        ack(successAck);
+function setTrayIcon(identity, rawMessage) {
+    return new Promise((resolve, reject) => {
+        const message = JSON.parse(JSON.stringify(rawMessage));
+        Application.setTrayIcon(getAppId(message), message.payload.enabledIcon, resolve, reject);
     });
-
 }
 
-function restartApplication(identity, message, ack) {
+function getTrayIconInfo(identity, message) {
+    return new Promise((resolve, reject) => {
+        Application.getTrayIconInfo(getAppId(message), resolve, reject);
+    });
+}
+
+function removeTrayIcon(identity, message) {
+    Application.removeTrayIcon(getAppId(message));
+}
+
+function waitForHungApplication(identity, message) {
+    Application.wait(getAppId(message));
+}
+
+function terminateApplication(identity, message) {
+    return new Promise(resolve => {
+        Application.terminate(getAppId(message), resolve);
+    });
+}
+
+function restartApplication(identity, message) {
     Application.restart(getAppId(message));
-    ack(successAck);
 }
 
-function createChildWindow(identity, message, ack) {
+function createChildWindow(identity, message) {
     const { payload, targetUuid: uuid, targetUuid: name } = message;
     const targetIdentity = { uuid, name };
     //This feature defers execution to the application's main window.
     const createChildPayload = { action: 'create-child-window', payload };
     apiProtocolBase.sendToIdentity(targetIdentity, createChildPayload);
-    ack(successAck);
 }
 
-function pingChildWindow(identity, message, ack) {
+function pingChildWindow(identity, message) {
     //TODO:send back an error saying its deprecated.
-    ack(successAck);
 }
 
-function isApplicationRunning(identity, message, ack) {
-    ack(dataAck(Application.isRunning(getAppId(message))));
+function isApplicationRunning(identity, message) {
+    return Application.isRunning(getAppId(message));
 }
 
-function getApplicationManifest(identity, message, ack, nack) {
-    let appIdentity;
+function getApplicationManifest(identity, message) {
+    return new Promise((resolve, reject) => {
+        let appIdentity;
 
-    // When manifest URL is provided, will be retrieving a remote manifest
-    if (!message.payload.hasOwnProperty('manifestUrl')) {
-        appIdentity = getAppId(message);
-    }
+        // When manifest URL is provided, will be retrieving a remote manifest
+        if (!message.payload.hasOwnProperty('manifestUrl')) {
+            appIdentity = getAppId(message);
+        }
 
-    Application.getManifest(appIdentity, message.payload.manifestUrl, manifest => {
-        ack(dataAck(manifest));
-    }, nack);
+        Application.getManifest(appIdentity, message.payload.manifestUrl, resolve, reject);
+    });
 }
 
-function getApplicationGroups(identity, message, ack) {
+function getApplicationGroups(identity, message) {
     const { uuid } = getAppId(message);
 
     // NOTE: the Window API returns a wrapped window with 'name' as a member,
@@ -145,7 +136,8 @@ function getApplicationGroups(identity, message, ack) {
             return window.uuid === uuid;
         });
     });
-    ack(dataAck(_.map(groups, groupOfWindows => {
+
+    return _.map(groups, groupOfWindows => {
         return _.map(groupOfWindows, window => {
             const windowName = window.name;
             if (message.payload.crossApp === true) {
@@ -154,111 +146,111 @@ function getApplicationGroups(identity, message, ack) {
                 return windowName; // backward compatible
             }
         });
-    })));
+    });
 }
 
-function getChildWindows(identity, message, ack) {
-    ack(dataAck(_.chain(Application.getChildWindows(getAppId(message)))
+function getChildWindows(identity, message) {
+    return _.chain(Application.getChildWindows(getAppId(message)))
         .filter(function(c) {
             return c.name !== c.uuid;
         })
         .map(function(c) {
             return c.name;
-        }).value()
-    ));
+        }).value();
 }
 
-function getInfo(identity, message, ack, nack) {
-    Application.getInfo(getAppId(message), response => {
-        ack(dataAck(response));
-    }, nack);
-}
-
-function getParentApplication(identity, message, ack, nack) {
-    const parentUuid = Application.getParentApplication(getAppId(message));
-
-    if (parentUuid) {
-        ack(dataAck(parentUuid));
-    } else {
-        nack(new Error('No parent application found'));
-    }
-}
-
-function getShortcuts(identity, message, ack, nack) {
-    Application.getShortcuts(getAppId(message), response => {
-        ack(dataAck(response));
-    }, nack);
-}
-
-function setShortcuts(identity, message, ack, nack) {
-    Application.setShortcuts(getAppId(message), message.payload.data, response => {
-        ack(dataAck(response));
-    }, nack);
-}
-
-function closeApplication(identity, message, ack) {
-    Application.close(getAppId(message), !!message.payload.force, () => {
-        ack(successAck);
+function getInfo(identity, message) {
+    return new Promise((resolve, reject) => {
+        Application.getInfo(getAppId(message), resolve, reject);
     });
 }
 
-function createApplication(identity, message, ack) {
-    Application.create(message.payload, undefined, identity);
-    ack(successAck);
+function getParentApplication(identity, message) {
+    return new Promise((resolve, reject) => {
+        const parentUuid = Application.getParentApplication(getAppId(message));
+
+        if (parentUuid) {
+            resolve(parentUuid);
+        } else {
+            reject(new Error('No parent application found'));
+        }
+    });
 }
 
-function notifyOnAppConnected(identity, message, ack) {
+function getShortcuts(identity, message) {
+    return new Promise((resolve, reject) => {
+        Application.getShortcuts(getAppId(message), resolve, reject);
+    });
+}
+
+function setShortcuts(identity, message) {
+    return new Promise((resolve, reject) => {
+        Application.setShortcuts(getAppId(message), message.payload.data, resolve, reject);
+    });
+}
+
+function closeApplication(identity, message) {
+    return new Promise(resolve => {
+        Application.close(getAppId(message), !!message.payload.force, resolve);
+    });
+}
+
+function createApplication(identity, message) {
+    Application.create(message.payload, undefined, identity);
+}
+
+function notifyOnAppConnected(identity, message) {
     const { targetUuid: uuid, name } = message.payload;
     const targetIdentity = { uuid, name };
     Application.notifyOnAppConnected(targetIdentity, identity);
-    ack(successAck);
 }
 
-function notifyOnContentLoaded(identity, message, ack) {
+function notifyOnContentLoaded(identity, message) {
     const { targetUuid: uuid, name } = message.payload;
     const targetIdentity = { uuid, name };
     Application.notifyOnContentLoaded(targetIdentity, identity);
-    ack(successAck);
 }
 
-function runApplication(identity, message, ack, nack) {
-    const { manifestUrl } = message.payload;
-    const appIdentity = getAppId(message);
-    const { uuid } = appIdentity;
-    let remoteSubscriptionUnSubscribe;
-    const remoteSubscription = {
-        uuid,
-        name: uuid,
-        listenType: 'once',
-        className: 'window',
-        eventName: 'fire-constructor-callback'
-    };
+function runApplication(identity, message) {
+    return new Promise((resolve, reject) => {
+        const { manifestUrl } = message.payload;
+        const appIdentity = getAppId(message);
+        const { uuid } = appIdentity;
+        let remoteSubscriptionUnSubscribe;
+        const remoteSubscription = {
+            uuid,
+            name: uuid,
+            listenType: 'once',
+            className: 'window',
+            eventName: 'fire-constructor-callback'
+        };
 
-    ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
-        if (loadInfo.success) {
-            ack(dataAck(loadInfo.data));
+        ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
+            if (loadInfo.success) {
+                resolve(loadInfo.data);
+            } else {
+                const theErr = new Error(loadInfo.data.message);
+                theErr.networkErrorCode = loadInfo.data.networkErrorCode;
+                reject(theErr);
+            }
+
+            if (typeof remoteSubscriptionUnSubscribe === 'function') {
+                remoteSubscriptionUnSubscribe();
+            }
+        });
+
+        if (manifestUrl) {
+            addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
+                remoteSubscriptionUnSubscribe = unSubscribe;
+                Application.runWithRVM(identity, manifestUrl).catch(reject);
+            });
         } else {
-            const theErr = new Error(loadInfo.data.message);
-            theErr.networkErrorCode = loadInfo.data.networkErrorCode;
-            nack(theErr);
-        }
-
-        if (typeof remoteSubscriptionUnSubscribe === 'function') {
-            remoteSubscriptionUnSubscribe();
+            Application.run(appIdentity);
         }
     });
-
-    if (manifestUrl) {
-        addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
-            remoteSubscriptionUnSubscribe = unSubscribe;
-            Application.runWithRVM(identity, manifestUrl).catch(nack);
-        });
-    } else {
-        Application.run(appIdentity);
-    }
 }
 
-function registerExternalWindow(identity, message, ack) {
+function registerExternalWindow(identity, message) {
     const { name, uuid, hwnd } = message.payload;
     const childWindowOptions = { name, uuid, hwnd };
     const parent = coreState.getWindowByUuidName(uuid, uuid);
@@ -266,17 +258,14 @@ function registerExternalWindow(identity, message, ack) {
     const childBw = new BrowserWindow(childWindowOptions);
 
     electronApp.emit('child-window-created', parentBw.id, childBw.id, childWindowOptions);
-    ack(successAck);
 }
 
-function deregisterExternalWindow(identity, message, ack) {
+function deregisterExternalWindow(identity, message) {
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(message.payload);
     ofEvents.emit(route.externalWindow('close', windowIdentity.uuid, windowIdentity.name));
-    ack(successAck);
 }
 
-function externalWindowAction(identity, message, ack) {
-    /* jshint bitwise: false */
+function externalWindowAction(identity, message) {
     const { payload } = message;
     const { uuid, name } = payload;
 
@@ -296,11 +285,13 @@ function externalWindowAction(identity, message, ack) {
             ofEvents.emit(route.externalWindow('bounds-changed', uuid, name));
 
             // dispatch show and hide events
+            /* jshint bitwise: false */
             if (flags & SetWindowPosition.SWP_SHOWWINDOW) {
                 ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), true);
             } else if (flags & SetWindowPosition.SWP_HIDEWINDOW) {
                 ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), false);
             }
+            /* jshint bitwise: true */
             break;
         case WindowsMessages.WM_SYSCOMMAND:
             const commandType = payload.wParam;
@@ -336,19 +327,16 @@ function externalWindowAction(identity, message, ack) {
             // Do nothing
             break;
     }
-
-    ack(successAck);
-    /* jshint bitwise: true */
 }
 
-function registerCustomData(identity, message, ack, nack) {
-    Application.registerCustomData(getAppId(message), message.payload.data, () => {
-        ack(successAck);
-    }, nack);
+function registerCustomData(identity, message) {
+    return new Promise((resolve, reject) => {
+        Application.registerCustomData(getAppId(message), message.payload.data, resolve, reject);
+    });
 }
 
-function relaunchOnClose(identity, message, ack, nack) {
-    Application.scheduleRestart(getAppId(message), () => {
-        ack(successAck);
-    }, nack);
+function relaunchOnClose(identity, message) {
+    return new Promise((resolve, reject) => {
+        Application.scheduleRestart(getAppId(message), resolve, reject);
+    });
 }

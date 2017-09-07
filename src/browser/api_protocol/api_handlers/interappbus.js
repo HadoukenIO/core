@@ -25,9 +25,6 @@ function InterApplicationBusApiHandler() {
             SUB_ADDED: 2,
             SUB_REMOVED: 3
         },
-        successAck = {
-            success: true
-        },
         interAppBusExternalApiMap = {
             'publish-message': publishMessage,
             'send-message': sendMessage,
@@ -39,33 +36,29 @@ function InterApplicationBusApiHandler() {
 
     apiProtocolBase.registerActionMap(interAppBusExternalApiMap);
 
-    function unsubscribe(identity, message, ack) {
+    function unsubscribe(identity, message) {
+        const { payload } = message;
+        const { topic, sourceUuid, sourceWindowName } = payload;
 
-        let payload = message.payload;
-        let topic = payload.topic;
-        let sourceUuid = payload.sourceUuid;
-        let sourceWindowName = payload.sourceWindowName || '';
-
-        apiProtocolBase.removeSubscription(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE);
-        ack(successAck);
+        apiProtocolBase.removeSubscription(
+            identity,
+            topic,
+            identity.uuid,
+            sourceUuid,
+            sourceWindowName || '',
+            subScriptionTypes.MESSAGE
+        );
     }
 
-    function subscribe(identity, message, ack) {
+    function subscribe(identity, message) {
         // let message = JSON.parse(JSON.stringify(rawMessage));
-        let payload = message.payload;
-        let topic = payload.topic;
-        let sourceUuid = payload.sourceUuid;
-        let sourceWindowName = payload.sourceWindowName || '';
-        let {
-            messageKey: subscribedMessageKey
-        } = payload;
+        const { payload } = message;
+        const { topic, sourceUuid, sourceWindowName, messageKey: subscribedMessageKey } = payload;
 
         let subscriptionCallback = function(payload) {
-            let {
-                messageKey: sentMessageKey
-            } = payload;
+            const { messageKey: sentMessageKey } = payload;
 
-            var command = {
+            const command = {
                 action: 'process-message',
                 payload
             };
@@ -83,15 +76,13 @@ function InterApplicationBusApiHandler() {
             topic,
             identity.uuid,
             sourceUuid,
-            sourceWindowName,
+            sourceWindowName || '',
             subScriptionTypes.MESSAGE
         ];
 
         if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
             apiProtocolBase.uppSubscriptionRefCount(...subscriptionArgs);
-
         } else {
-
             const subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
 
             apiProtocolBase.registerSubscription(subscriptionObj.unsubscribe, ...subscriptionArgs);
@@ -100,52 +91,34 @@ function InterApplicationBusApiHandler() {
                 apiProtocolBase.removeSubscription(...subscriptionArgs);
             });
         }
-
-        ack(successAck);
     }
 
-
-    function sendMessage(identity, message, ack) {
+    function sendMessage(identity, message) {
         InterApplicationBus.send(identity, message.payload);
-        ack(successAck);
     }
 
-    function publishMessage(identity, message, ack) {
+    function publishMessage(identity, message) {
         InterApplicationBus.publish(identity, message.payload);
-        ack(successAck);
     }
 
-    function subscriberAdded(identity, message, ack) {
-        const {
-            payload
-        } = message;
-
-        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.ADDED, payload);
-        ack(successAck);
+    function subscriberAdded(identity, message) {
+        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.ADDED, message.payload);
     }
 
-    function subscriberRemoved(identity, message, ack) {
-        const {
-            payload
-        } = message;
-
-        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.REMOVED, payload);
-        ack(successAck);
+    function subscriberRemoved(identity, message) {
+        InterApplicationBus.raiseSubscriberEvent(ofEvents.subscriber.REMOVED, message.payload);
     }
 
     function initSubscriptionListeners(connectionIdentity) {
-        var iabIdentity = {
+        const iabIdentity = {
             name: connectionIdentity.uuid,
             uuid: connectionIdentity.uuid
         };
         let subAddedSubObj, subRemovedSubObj;
 
         subAddedSubObj = InterApplicationBus.subscriberAdded(iabIdentity, function(subscriber) {
-
-            let {
-                directMsg
-            } = subscriber;
-            let directedToId = directMsg === connectionIdentity.name;
+            const { directMsg } = subscriber;
+            const directedToId = directMsg === connectionIdentity.name;
 
             if (directMsg) {
                 if (directedToId) {
@@ -160,10 +133,8 @@ function InterApplicationBusApiHandler() {
         });
 
         subRemovedSubObj = InterApplicationBus.subscriberRemoved(iabIdentity, function(subscriber = {}) {
-            let {
-                directMsg
-            } = subscriber;
-            let directedToId = directMsg === connectionIdentity.name;
+            const { directMsg } = subscriber;
+            const directedToId = directMsg === connectionIdentity.name;
 
             if (directMsg) {
                 if (directedToId) {
@@ -191,7 +162,6 @@ function InterApplicationBusApiHandler() {
             subScriptionTypes.SUB_REMOVED);
     }
 
-
     // As per 5.0 we blast out the subscriber-added and the subscriber-removed
     // envents. The following 2 hooks ensure that we continue to blast these out
     // for both external connections and js apps
@@ -202,7 +172,7 @@ function InterApplicationBusApiHandler() {
     apiProtocolBase.onClientAuthenticated(initSubscriptionListeners);
 
     function sendSubscriberEvent(identity, subscriber, action) {
-        var subscriberAdded = {
+        const subscriberAdded = {
             action: action,
             payload: {
                 senderName: subscriber.senderName,
