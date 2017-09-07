@@ -546,20 +546,25 @@ limitations under the License.
         const action = 'set-window-preload-state';
 
         if (preloadOption.length) { // short-circuit
-            const response = syncApiCall('get-selected-preload-scripts', preloadOption);
-
-            if (response.error) {
+            let response;
+            try {
+                response = syncApiCall('get-selected-preload-scripts', preloadOption);
+            } catch (err) {
                 console.error(response.error);
-            } else {
-                response.scripts.forEach((script, index) => {
-                    const { url } = preloadOption[index];
+            }
 
-                    try {
-                        window.eval(script); /* jshint ignore:line */
-                        asyncApiCall(action, { url, state: 'succeeded' });
-                    } catch (err) {
-                        console.error(`Execution failed for preload script "${url}".`, err);
-                        asyncApiCall(action, { url, state: 'failed' });
+            if (response) {
+                response.forEach((script, index) => {
+                    if (script !== null) {
+                        const { url } = preloadOption[index];
+
+                        try {
+                            window.eval(script); /* jshint ignore:line */
+                            asyncApiCall(action, { url, state: 'succeeded' });
+                        } catch (err) {
+                            console.error(`Execution failed for preload script "${url}".`, err);
+                            asyncApiCall(action, { url, state: 'failed' });
+                        }
                     }
                 });
             }

@@ -679,8 +679,6 @@ exports.System = {
     },
 
     getSelectedPreloadScripts: function(preloadOption) {
-        const response = {};
-
         const missingRequiredScripts = preloadOption.reduce((urls, preload) => {
             if (!preload.optional && !(preload.url in preloadScriptsCache)) {
                 urls.push(preload.url);
@@ -689,13 +687,10 @@ exports.System = {
         }, []);
 
         if (!missingRequiredScripts.length) {
-            const missingOptionalScript = '';
-            response.scripts = preloadOption.map(preload => preloadScriptsCache[preload.url] || missingOptionalScript);
+            return preloadOption.map(preload => preloadScriptsCache[preload.url]); // null when load/fetch failed
         } else {
-            response.error = `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
+            return `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
         }
-
-        return response;
     }
 };
 
