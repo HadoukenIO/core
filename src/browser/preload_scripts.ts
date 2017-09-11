@@ -163,28 +163,28 @@ function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<
             sourceUrl
         };
 
-        // rvmMessageBus.publish(msg, (resp) => {
-        //     log.writeToLog(1, `**** RVM message callback ${JSON.stringify(resp, undefined, 4)}`, true);
-        //     if (resp.payload.hasOwnProperty('path') && resp.action === 'query-plugin') {
-        //         const pluginPath = resp.payload.path;
-        //         resolve({identity, preloadPlugin, pluginPath});
-        //     } else {
-        //         updatePreloadState(identity, preloadPlugin, 'load-failed');
-        //         resolve();
-        //     }
-        // });
-
-        sendToRVM(msg).then((response: any) => {
-            log.writeToLog(1, `**** RVM message callback ${JSON.stringify(response, undefined, 4)}`, true);
-            cachedFetch(identity.uuid, getIdentifier(preloadPlugin), (fetchError: null | Error, scriptPath: string | undefined) => {
-                if (response.payload.hasOwnProperty('path') && response.action === 'query-plugin') {
-                    resolve({identity, preloadPlugin, scriptPath});
-                } else {
-                    updatePreloadState(identity, preloadPlugin, 'load-failed');
-                    resolve();
-                }
-            });
+        rvmMessageBus.publish(msg, (resp) => {
+            log.writeToLog(1, `**** RVM message callback ${JSON.stringify(resp, undefined, 4)}`, true);
+            if (resp.payload.hasOwnProperty('path') && resp.action === 'query-plugin') {
+                const pluginPath = resp.payload.path;
+                resolve({identity, preloadPlugin, pluginPath});
+            } else {
+                updatePreloadState(identity, preloadPlugin, 'load-failed');
+                resolve();
+            }
         });
+
+        // sendToRVM(msg).then((response: any) => {
+        //     log.writeToLog(1, `**** RVM message callback ${JSON.stringify(response, undefined, 4)}`, true);
+        //     cachedFetch(identity.uuid, getIdentifier(preloadPlugin), (fetchError: null | Error, scriptPath: string | undefined) => {
+        //         if (response.payload.hasOwnProperty('path') && response.action === 'query-plugin') {
+        //             resolve({identity, preloadPlugin, scriptPath});
+        //         } else {
+        //             updatePreloadState(identity, preloadPlugin, 'load-failed');
+        //             resolve();
+        //         }
+        //     });
+        // });
     });
 }
 
