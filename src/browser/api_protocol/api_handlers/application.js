@@ -31,7 +31,7 @@ import route from '../../../common/route';
 import { WindowsMessages, SetWindowPosition, SysCommands } from '../../../microsoft';
 
 // some local sugar
-const getAppId = message => apiProtocolBase.getTargetApplicationIdentity(message.payload);
+const getTargetAppId = message => apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
 module.exports.applicationApiMap = {
     'close-application': closeApplication,
@@ -69,32 +69,32 @@ module.exports.init = function() {
 function setTrayIcon(identity, rawMessage) {
     return new Promise((resolve, reject) => {
         const message = JSON.parse(JSON.stringify(rawMessage));
-        Application.setTrayIcon(getAppId(message), message.payload.enabledIcon, resolve, reject);
+        Application.setTrayIcon(getTargetAppId(message), message.payload.enabledIcon, resolve, reject);
     });
 }
 
 function getTrayIconInfo(identity, message) {
     return new Promise((resolve, reject) => {
-        Application.getTrayIconInfo(getAppId(message), resolve, reject);
+        Application.getTrayIconInfo(getTargetAppId(message), resolve, reject);
     });
 }
 
 function removeTrayIcon(identity, message) {
-    Application.removeTrayIcon(getAppId(message));
+    Application.removeTrayIcon(getTargetAppId(message));
 }
 
 function waitForHungApplication(identity, message) {
-    Application.wait(getAppId(message));
+    Application.wait(getTargetAppId(message));
 }
 
 function terminateApplication(identity, message) {
     return new Promise(resolve => {
-        Application.terminate(getAppId(message), resolve);
+        Application.terminate(getTargetAppId(message), resolve);
     });
 }
 
 function restartApplication(identity, message) {
-    Application.restart(getAppId(message));
+    Application.restart(getTargetAppId(message));
 }
 
 function createChildWindow(identity, message) {
@@ -110,7 +110,7 @@ function pingChildWindow(identity, message) {
 }
 
 function isApplicationRunning(identity, message) {
-    return Application.isRunning(getAppId(message));
+    return Application.isRunning(getTargetAppId(message));
 }
 
 function getApplicationManifest(identity, message) {
@@ -119,7 +119,7 @@ function getApplicationManifest(identity, message) {
 
         // When manifest URL is provided, will be retrieving a remote manifest
         if (!message.payload.hasOwnProperty('manifestUrl')) {
-            appIdentity = getAppId(message);
+            appIdentity = getTargetAppId(message);
         }
 
         Application.getManifest(appIdentity, message.payload.manifestUrl, resolve, reject);
@@ -127,7 +127,7 @@ function getApplicationManifest(identity, message) {
 }
 
 function getApplicationGroups(identity, message) {
-    const { uuid } = getAppId(message);
+    const { uuid } = getTargetAppId(message);
 
     // NOTE: the Window API returns a wrapped window with 'name' as a member,
     // while the adaptor expects it to be 'windowName'
@@ -150,7 +150,7 @@ function getApplicationGroups(identity, message) {
 }
 
 function getChildWindows(identity, message) {
-    return _.chain(Application.getChildWindows(getAppId(message)))
+    return _.chain(Application.getChildWindows(getTargetAppId(message)))
         .filter(function(c) {
             return c.name !== c.uuid;
         })
@@ -161,37 +161,35 @@ function getChildWindows(identity, message) {
 
 function getInfo(identity, message) {
     return new Promise((resolve, reject) => {
-        Application.getInfo(getAppId(message), resolve, reject);
+        Application.getInfo(getTargetAppId(message), resolve, reject);
     });
 }
 
 function getParentApplication(identity, message) {
-    return new Promise((resolve, reject) => {
-        const parentUuid = Application.getParentApplication(getAppId(message));
+    const parentUuid = Application.getParentApplication(getTargetAppId(message));
 
-        if (parentUuid) {
-            resolve(parentUuid);
-        } else {
-            reject(new Error('No parent application found'));
-        }
-    });
+    if (!parentUuid) {
+        throw new Error('No parent application found');
+    }
+
+    return parentUuid;
 }
 
 function getShortcuts(identity, message) {
     return new Promise((resolve, reject) => {
-        Application.getShortcuts(getAppId(message), resolve, reject);
+        Application.getShortcuts(getTargetAppId(message), resolve, reject);
     });
 }
 
 function setShortcuts(identity, message) {
     return new Promise((resolve, reject) => {
-        Application.setShortcuts(getAppId(message), message.payload.data, resolve, reject);
+        Application.setShortcuts(getTargetAppId(message), message.payload.data, resolve, reject);
     });
 }
 
 function closeApplication(identity, message) {
     return new Promise(resolve => {
-        Application.close(getAppId(message), !!message.payload.force, resolve);
+        Application.close(getTargetAppId(message), !!message.payload.force, resolve);
     });
 }
 
@@ -214,7 +212,7 @@ function notifyOnContentLoaded(identity, message) {
 function runApplication(identity, message) {
     return new Promise((resolve, reject) => {
         const { manifestUrl } = message.payload;
-        const appIdentity = getAppId(message);
+        const appIdentity = getTargetAppId(message);
         const { uuid } = appIdentity;
         let remoteSubscriptionUnSubscribe;
         const remoteSubscription = {
@@ -331,12 +329,12 @@ function externalWindowAction(identity, message) {
 
 function registerCustomData(identity, message) {
     return new Promise((resolve, reject) => {
-        Application.registerCustomData(getAppId(message), message.payload.data, resolve, reject);
+        Application.registerCustomData(getTargetAppId(message), message.payload.data, resolve, reject);
     });
 }
 
 function relaunchOnClose(identity, message) {
     return new Promise((resolve, reject) => {
-        Application.scheduleRestart(getAppId(message), resolve, reject);
+        Application.scheduleRestart(getTargetAppId(message), resolve, reject);
     });
 }

@@ -42,7 +42,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data))
                             .then(result => { ack(new AckPayload(result)); })
-                            .catch(err => { nack(err); });
+                            .catch(nack);
                     } else {
                         nack('API access has been superseded by another frame in this window.');
                     }

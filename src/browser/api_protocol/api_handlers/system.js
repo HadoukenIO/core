@@ -69,30 +69,24 @@ function SystemApiHandler() {
 
     apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
 
-    function didFail(e) {
-        return e !== undefined && e.constructor === Error;
-    }
-
     function setMinLogLevel(identity, message) {
-        return new Promise((resolve, reject) => {
-            const response = System.setMinLogLevel(message.payload.level);
-            if (didFail(response)) {
-                reject(response);
-            } else {
-                resolve();
-            }
-        });
+        const response = System.setMinLogLevel(message.payload.level);
+
+        if (response instanceof Error) {
+            throw response;
+        }
+
+        return response;
     }
 
     function getMinLogLevel(identity, message) {
-        return new Promise((resolve, reject) => {
-            const response = System.getMinLogLevel();
-            if (didFail(response)) {
-                reject(response);
-            } else {
-                resolve(response);
-            }
-        });
+        const response = System.getMinLogLevel();
+
+        if (response instanceof Error) {
+            throw response;
+        }
+
+        return response;
     }
 
     function startCrashReporter(identity, message) {
