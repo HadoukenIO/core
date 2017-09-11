@@ -12,7 +12,7 @@ import { rvmMessageBus } from '../rvm/rvm_message_bus';
 export interface SendToRVMOpts {
     topic: 'application';
     action: string;
-    sourceUrl?: string;
+    sourceUrl?: string | boolean;
     data?: any;
 }
 

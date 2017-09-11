@@ -152,8 +152,6 @@ function fetchScript(identity: Identity, preloadScript: PreloadInstance): Promis
 function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<FetchResponse> {
     log.writeToLog(1, '**** it is reaching fetchPlugin', true);
     return new Promise((resolve, reject) => {
-        // TODO: use actual plugin info in message
-
         const sourceUrl = getConfigUrlByUuid(identity.uuid);
         const msg: PluginQuery = {
             topic: 'application',
@@ -163,39 +161,30 @@ function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<
             version: preloadPlugin.version,
             critical: preloadPlugin.critical,
             sourceUrl
-            // name: 'pat-plugin',
-            // version: '2.*.*'
         };
 
-        rvmMessageBus.publish(msg, (resp) => {
-            log.writeToLog(1, `**** RVM message callback ${JSON.stringify(resp, undefined, 4)}`, true);
-            if (resp.payload.hasOwnProperty('path') && resp.action === 'query-plugin') {
-                const pluginPath = resp.payload.path;
-                resolve({identity, preloadPlugin, pluginPath});
-            } else {
-                updatePreloadState(identity, preloadPlugin, 'load-failed');
-                resolve();
-            }
-        });
-
-        // const opts: SendToRVMOpts = {
-        //     topic: 'application',
-        //     action: 'query-plugin',
-        //     data: preloadPlugin
-        // };
-
-        // sendToRVM(opts).then((response: any) => {
-        //     log.writeToLog(1, `**** RVM message callback ${JSON.stringify(response, undefined, 4)}`, true);
-        //     cachedFetch(identity.uuid, getIdentifier(preloadPlugin), (fetchError: null | Error, scriptPath: string | undefined) => {
-        //         if (response.payload.hasOwnProperty('path')) {
-        //             // const pluginPath = response.payload.path; // resp.payload.target?
-        //             resolve({identity, preloadPlugin, scriptPath});
-        //         } else {
-        //             updatePreloadState(identity, preloadPlugin, 'load-failed');
-        //             resolve();
-        //         }
-        //     });
+        // rvmMessageBus.publish(msg, (resp) => {
+        //     log.writeToLog(1, `**** RVM message callback ${JSON.stringify(resp, undefined, 4)}`, true);
+        //     if (resp.payload.hasOwnProperty('path') && resp.action === 'query-plugin') {
+        //         const pluginPath = resp.payload.path;
+        //         resolve({identity, preloadPlugin, pluginPath});
+        //     } else {
+        //         updatePreloadState(identity, preloadPlugin, 'load-failed');
+        //         resolve();
+        //     }
         // });
+
+        sendToRVM(msg).then((response: any) => {
+            log.writeToLog(1, `**** RVM message callback ${JSON.stringify(response, undefined, 4)}`, true);
+            cachedFetch(identity.uuid, getIdentifier(preloadPlugin), (fetchError: null | Error, scriptPath: string | undefined) => {
+                if (response.payload.hasOwnProperty('path') && response.action === 'query-plugin') {
+                    resolve({identity, preloadPlugin, scriptPath});
+                } else {
+                    updatePreloadState(identity, preloadPlugin, 'load-failed');
+                    resolve();
+                }
+            });
+        });
     });
 }
 
