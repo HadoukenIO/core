@@ -131,8 +131,11 @@ export interface AppAssetsDownloadAsset extends RvmMsgBase {
 export interface PluginQuery extends RvmMsgBase {
     topic: applicationTopic;
     action: pluginQueryAction;
-    payload: any;
     messageId: string;
+    name: string;
+    version: string;
+    critical?: boolean;
+    sourceUrl: string | boolean;
 }
 
 // topic: cleanup -----

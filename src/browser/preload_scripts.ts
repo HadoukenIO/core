@@ -25,6 +25,8 @@ import { Identity } from '../shapes';
 import ofEvents from './of_events';
 import route from '../common/route';
 import { rvmMessageBus, PluginQuery } from './rvm/rvm_message_bus';
+import { sendToRVM, SendToRVMOpts } from './rvm/utils';
+import { getConfigUrlByUuid } from './core_state.js';
 
 
 // some local type definitions
@@ -37,7 +39,7 @@ interface PreloadScript {
 interface PreloadPlugin {
     name: string;
     version: string;
-    optional?: boolean;
+    critical?: boolean;
 }
 interface PreloadFetched extends PreloadScript {
     scriptPath: string; // location on disc of cached fetch
@@ -80,15 +82,12 @@ export function fetchAndLoadPreloadScripts(
     preloadOption: PreloadOption,
     proceed?: () => void
 ): Promise<undefined> {
-    log.writeToLog(1, '**** it is reaching the fetchAndLoadPreloadScripts function', true);
     let allLoaded: Promise<undefined>;
 
     // convert legacy `preloadOption` option into modern `preloadOption` option
     if (typeof preloadOption === 'string') {
         preloadOption = [<PreloadInstance>{ url: preloadOption }];
     }
-
-    log.writeToLog(1, `**** preloadOption: ${JSON.stringify(preloadOption, undefined, 4)}`, true);
 
     if (!isPreloadOption(preloadOption)) {
         const message = 'Expected `preload` option to be a string primitive OR an array of objects with `url` props.';
@@ -97,7 +96,6 @@ export function fetchAndLoadPreloadScripts(
     } else {
         log.writeToLog(1, '**** fetchAndLoadPreloadScripts else statement entered', true);
         const loadedScripts: Promise<undefined>[] = preloadOption.map((preload: PreloadInstance) => {
-            log.writeToLog(1, '**** fetchAndLoadPreloadScripts map', true);
             updatePreloadState(identity, preload, 'load-started');
 
             // following if clause avoids re-fetch for resources already in memory
@@ -107,12 +105,10 @@ export function fetchAndLoadPreloadScripts(
                 System.getPreloadScript(getIdentifier(preload))   // ...is resource already in memory?
             ) {
                 // previously downloaded
-                log.writeToLog(1, '**** registering as previously downloaded', true);
                 updatePreloadState(identity, preload, 'load-succeeded');
                 return Promise.resolve();
             } else {
                 // not previously downloaded *OR* previous downloaded failed
-                log.writeToLog(1, '**** it is reaching the fetch functions', true);
                 if (isPreloadScript(preload)) {
                     return fetchScript(identity, preload).then(load);
                 } else {
@@ -126,7 +122,6 @@ export function fetchAndLoadPreloadScripts(
     }
 
     allLoaded.catch(err => {
-        log.writeToLog(1, '**** allLoaded catch error: ', true);
         log.writeToLog(1, err, true);
     });
 
@@ -157,24 +152,50 @@ function fetchScript(identity: Identity, preloadScript: PreloadInstance): Promis
 function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<FetchResponse> {
     log.writeToLog(1, '**** it is reaching fetchPlugin', true);
     return new Promise((resolve, reject) => {
-        // TODO: cache it somewhere? -> or is the rvm caching it? (cachedFetch)
+        // TODO: use actual plugin info in message
+
+        const sourceUrl = getConfigUrlByUuid(identity.uuid);
         const msg: PluginQuery = {
             topic: 'application',
+            messageId: '1',
             action: 'query-plugin',
-            payload: preloadPlugin,
-            messageId: '1'
+            name: preloadPlugin.name,
+            version: preloadPlugin.version,
+            critical: preloadPlugin.critical,
+            sourceUrl
+            // name: 'pat-plugin',
+            // version: '2.*.*'
         };
 
-        rvmMessageBus.publish(msg, (dataObj) => {
-            log.writeToLog(1, `**** RVM message callback ${JSON.stringify(dataObj, undefined, 4)}`, true);
-            if (dataObj.payload.hasOwnProperty('path') && dataObj.action === 'query-plugin') {
-                const pluginPath = dataObj.payload.path; // dataObj.payload.target?
+        rvmMessageBus.publish(msg, (resp) => {
+            log.writeToLog(1, `**** RVM message callback ${JSON.stringify(resp, undefined, 4)}`, true);
+            if (resp.payload.hasOwnProperty('path') && resp.action === 'query-plugin') {
+                const pluginPath = resp.payload.path;
                 resolve({identity, preloadPlugin, pluginPath});
             } else {
                 updatePreloadState(identity, preloadPlugin, 'load-failed');
                 resolve();
             }
         });
+
+        // const opts: SendToRVMOpts = {
+        //     topic: 'application',
+        //     action: 'query-plugin',
+        //     data: preloadPlugin
+        // };
+
+        // sendToRVM(opts).then((response: any) => {
+        //     log.writeToLog(1, `**** RVM message callback ${JSON.stringify(response, undefined, 4)}`, true);
+        //     cachedFetch(identity.uuid, getIdentifier(preloadPlugin), (fetchError: null | Error, scriptPath: string | undefined) => {
+        //         if (response.payload.hasOwnProperty('path')) {
+        //             // const pluginPath = response.payload.path; // resp.payload.target?
+        //             resolve({identity, preloadPlugin, scriptPath});
+        //         } else {
+        //             updatePreloadState(identity, preloadPlugin, 'load-failed');
+        //             resolve();
+        //         }
+        //     });
+        // });
     });
 }
 
@@ -215,8 +236,6 @@ function load(opts: FetchResponse): Promise<undefined> {
 
 // type guard: array of Preload objects
 function isPreloadOption(preloadOption: PreloadOption): preloadOption is PreloadOption {
-    log.writeToLog(1, '**** Checks if isPreloadOption', true);
-    log.writeToLog(1, `**** preloadOption: ${JSON.stringify(preloadOption, undefined, 4)}`, true);
     return (
         preloadOption &&
         Array.isArray(preloadOption) &&
@@ -226,7 +245,6 @@ function isPreloadOption(preloadOption: PreloadOption): preloadOption is Preload
 
 // type guard: a Preload object
 function isPreloadInstance(preload: PreloadInstance): preload is PreloadInstance {
-    log.writeToLog(1, '**** Checks if isPreloadInstance', true);
     return (
         typeof preload === 'object' && typeof getIdentifier(preload) === 'string'
     );

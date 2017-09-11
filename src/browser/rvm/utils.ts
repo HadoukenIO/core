@@ -9,7 +9,7 @@ import { rvmMessageBus } from '../rvm/rvm_message_bus';
 /**
  * Interface for [sendToRVM] method
  */
-interface SendToRVMOpts {
+export interface SendToRVMOpts {
     topic: 'application';
     action: string;
     sourceUrl?: string;
