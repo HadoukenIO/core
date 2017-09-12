@@ -359,14 +359,13 @@ limitations under the License.
 
         // Prevent iframes from attempting to do windowing actions, these will always be handled
         // by the main window frame.
-        if (window.frameElement) {
-
-            // If you are an iframe, you still need to send out the api ready event so frameConnect
-            // can correctly assign connection priority.
-            electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
-        } else {
+        if (!window.frameElement) {
             showOnReady(glbl, winOpts);
         }
+
+        // The api-ready event allows the webContents to assign api priority. This must happen after
+        // any spin up windowing action or you risk stealing api priority from an already connected frame
+        electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
         wireUpMenu(glbl, winOpts);
         wireUpZoomEvents();
