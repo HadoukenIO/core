@@ -335,6 +335,7 @@ let optionSetters = {
 
 
 Window.create = function(id, opts) {
+    log.writeToLog('info', `just got this for the window: ${id}`);
     let name = opts.name;
     let uuid = opts.uuid;
     let identity = {
@@ -378,6 +379,32 @@ Window.create = function(id, opts) {
     if (!opts._noregister) {
 
         browserWindow = BrowserWindow.fromId(id);
+        browserWindow.webContents.registerIframe = (frameName) => {
+            // const winObj = coreState.getWinById(id);
+            const isIframe = true;
+            const frameInfo = Object.assign({}, { name: frameName, uuid, isIframe });
+
+            coreState.addChildToWin(id, frameName, true);
+            coreState.setWindowObj(frameName, frameInfo);
+            // log.writeToLog(1, JSON.stringify(coreState.setWindowObj(frameName, winObj), null, ' '), true);
+            // log.writeToLog(1, JSON.stringify(coreState.apps, null, ' '), true);
+
+            log.writeToLog(1, 'whatever', true);
+
+
+            // if (winObj.iframes) {
+            //     winObj.iframes[frameName] = frameInfo;
+            // } else {
+            //     winObj.iframes = { frameName: frameInfo };
+            // }
+        };
+
+
+        // todo listen & create "isFrame" entry for core_state
+        // todo destroy this listener
+        browserWindow.webContents.on('create-iframe-child', (sender, data) => {
+            // bang
+        });
 
         // set this listener up as soon as possible
         browserWindow._whenReadyToShow = new Promise(ready => {
@@ -1075,11 +1102,59 @@ Window.getNativeId = function(identity) {
 
 Window.getNativeWindow = function() {};
 
+// the options are stored at to course a level....
+Window.getOptions = function(identity, iframeInfo) {
+    log.writeToLog(1, 'getOptions', true);
+    log.writeToLog(1, identity, true);
+    log.writeToLog(1, iframeInfo, true);
 
-Window.getOptions = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'get options for');
+    const { isIframe, frameName, winApi, renderFrameId } = iframeInfo;
+    const { uuid, parentFrame } = identity;
 
-    return browserWindow._options;
+    if (winApi) {
+        const browserWindow = getElectronBrowserWindow({
+            uuid,
+            name: parentFrame
+        }, 'get options for');
+        return browserWindow._options;
+    } else if (frameName) {
+        const browserWindow = getElectronBrowserWindow({
+            uuid,
+            name: parentFrame
+        }, 'get options for');
+        browserWindow.webContents.setFrameMapping(renderFrameId, frameName);
+        coreState.updateWinName(uuid, frameName, identity.name);
+
+        return {
+            // rawWindowOpen: false,
+            uuid,
+            name: frameName
+            // backgroundColor
+            // preload???
+        };
+    } else if (isIframe) {
+        return {
+            // rawWindowOpen: false,
+            uuid,
+            name: identity.name
+            // backgroundColor
+            // preload???
+        };
+    } else {
+        let browserWindow = getElectronBrowserWindow(identity, 'get options for');
+
+        return browserWindow._options;
+    }
+
+    //let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    // log.writeToLog(1, 'bleep', true);
+    // log.writeToLog(1, openfinWindow, true);
+    // log.writeToLog(1, identity, true);
+    // log.writeToLog(1, 'bloop', true);
+    //let browserWindow = openfinWindow && openfinWindow.browserWindow;
+    // let browserWindow = getElectronBrowserWindow(identity, 'get options for');
+
+    // return browserWindow._options;
 };
 
 Window.getParentApplication = function() {
@@ -1221,7 +1296,8 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
-        return;
+        //return;
+        throw new Error('bad window name');
     }
 
     let currentBounds = browserWindow.getBounds();
@@ -2164,6 +2240,10 @@ function handleCustomAlerts(id, opts) {
 //If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
 function getElectronBrowserWindow(identity, errDesc) {
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    // log.writeToLog(1, 'bleep', true);
+    // log.writeToLog(1, openfinWindow, true);
+    // log.writeToLog(1, identity, true);
+    // log.writeToLog(1, 'bloop', true);
     let browserWindow = openfinWindow && openfinWindow.browserWindow;
 
     if (errDesc && !browserWindow) {

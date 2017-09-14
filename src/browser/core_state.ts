@@ -57,7 +57,7 @@ export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
-const apps: Shapes.App[] = [];
+export const apps: Shapes.App[] = [];
 
 let startManifest = {};
 
@@ -125,7 +125,7 @@ export function removeChildById(id: number): void {
     }
 }
 
-export function getChildrenByWinId(id: number): boolean|number[] {
+export function getChildrenByWinId(id: number): boolean|Array<number|string> {
     const win = getWinById(id);
     return win && win.children;
 }
@@ -262,7 +262,7 @@ export function setAppOptions(opts: Shapes.WindowOptions, configUrl: string = ''
     return app;
 }
 
-export function getWinById(id: number): Shapes.Window|undefined {
+export function getWinById(id: number| string): Shapes.Window|undefined {
     return getWinList().find(win => win.id === id);
 }
 
@@ -280,7 +280,8 @@ export function getChildrenByApp(id: number): Shapes.OpenFinWindow[]|void {
         .map(child => child.openfinWindow);
 }
 
-export function addChildToWin(parentId: number, childId: number): number|void {
+// perhaps just check parentId === child for iframe check?
+export function addChildToWin(parentId: number, childId: number, isIframe: boolean = false): number|void {
     const app = getAppByWin(parentId);
 
     if (!app) {
@@ -298,14 +299,26 @@ export function addChildToWin(parentId: number, childId: number): number|void {
     }
 
     parent.children.push(childId);
-    //		}
 
     return app.children.push({
         children: [],
-        id: childId,
+        id: childId, //should the be null if isIframe???
         openfinWindow: null,
-        parentId: parentId
+        parentId: parentId,
+        isIframe
     });
+}
+
+export function updateWinName(uuid: string, name: string,  newId: number | string): boolean {
+    const winToUpdate = getOfWindowByUuidName(uuid, name);
+    const {parentId} = winToUpdate;
+    const parent = getWinById(parentId);
+
+    parent.children = parent.children.filter(id => id !== name);
+    parent.children.push(newId);
+    winToUpdate.id = newId;
+
+    return false;
 }
 
 export function getWinObjById(id: number): Shapes.OpenFinWindow|void {
@@ -561,5 +574,40 @@ export function getLicenseKey(identity: Shapes.Identity): string|null {
         return externalConnection.licenseKey;
     } else {
         return null;
+    }
+}
+
+export function getRoutingInfoByUuidFrame(identity: Shapes.Identity, frame: string) {
+    const { uuid } = identity;
+    const app = appByUuid(uuid);
+
+    if (!app) {
+        return;
+    }
+
+    for (const { openfinWindow } of app.children) {
+        const { name, browserWindow } = openfinWindow;
+        const isMainRenderFrame = name === frame;
+
+        if (isMainRenderFrame) {
+
+            // todo ensure that this is still correct with the different frameConnect opts
+            return {
+                name,
+                browserWindow,
+                frameRoutingId: 1,
+                frameName: name
+            };
+        } else {
+            const frameInfo = browserWindow.webContents.hasFrame(frame);
+
+            if (frameInfo) {
+
+                return Object.assign({
+                    name,
+                    browserWindow
+                }, frameInfo);
+            }
+        }
     }
 }

@@ -38,7 +38,8 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
-                    if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
+                    // todo revisit the strategy
+                    if (1 || !data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data, ack, nack))
                             .then(result => {
@@ -61,11 +62,29 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         electronIpc.ipc.on(electronIpc.channels.WINDOW_MESSAGE, this.onMessage.bind(this));
     }
 
-    public send(identity: any, payload: any): void {
-        const window = coreState.getWindowByUuidName(identity.uuid, identity.name);
-        if (window && !window.browserWindow.isDestroyed()) {
-            window.browserWindow.send(electronIpc.channels.CORE_MESSAGE, JSON.stringify(payload));
+    public send(identity: any, payloadObj: any): void {
+        const { uuid, name } = identity;
+        const routingInfo = coreState.getRoutingInfoByUuidFrame(uuid, name);
+
+        if (!routingInfo) { return; }
+
+        const { browserWindow, frameRoutingId } = routingInfo;
+        const payload = JSON.stringify(payloadObj);
+
+        // we need to preserve the bulk send (i think...) so if the routing id is 1
+        // send to the entire window (potentially all frame ids based on frameConnect)
+        if (browserWindow.isDestroyed()) {
+            system.debugLog(1, `${uuid}/${name} as been destroyed, payload not delivered: ${payload}`);
+        } else if (frameRoutingId === 1) {
+            browserWindow.send(electronIpc.channels.CORE_MESSAGE, payload);
+        } else {
+            browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
         }
+
+        // const window = coreState.getWindowByUuidName(identity.uuid, identity.name);
+        // if (window && !window.browserWindow.isDestroyed()) {
+        //     window.browserWindow.send(electronIpc.channels.CORE_MESSAGE, JSON.stringify(payload));
+        // }
     }
 
     //TODO: this needs to be refactor at some point.
@@ -89,9 +108,12 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             const openfinWindow = currWindow.openfinWindow;
             const opts = openfinWindow && openfinWindow._options || {};
             const identity = {
-                name: opts.name,
-                uuid: opts.uuid
+                name: e.sender.getFrameName(e.frameRoutingId) || opts.name,
+                uuid: opts.uuid,
+                parentFrame: opts.name
             };
+
+            system.debugLog(1, `this is my frame name ${e.sender.getFrameName(e.frameRoutingId)}`);
 
             /* tslint:disable: max-line-length */
             //message payload might contain sensitive data, mask it.

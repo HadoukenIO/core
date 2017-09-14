@@ -26,6 +26,7 @@ limitations under the License.
     let renderFrameId = global.routingId;
     let customData = global.getFrameData(renderFrameId);
     let glbl = global;
+    const frameElement = global.frameElement;
 
     const electron = require('electron');
     const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
@@ -78,7 +79,12 @@ limitations under the License.
 
     function getWindowOptionsSync() {
         if (!cachedOptions) {
-            cachedOptions = syncApiCall('get-current-window-options');
+            cachedOptions = syncApiCall('get-current-window-options', {
+                isIframe: !!frameElement,
+                frameName: frameElement && frameElement.name,
+                winApi: frameElement && frameElement.getAttribute('winapi'),
+                renderFrameId
+            });
         }
         return cachedOptions;
     }
@@ -267,7 +273,7 @@ limitations under the License.
             });
 
             // Notify WebContent that frame routing can now be counted
-            electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+            // electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
         };
 
         if (currWindowOpts.saveWindowState && !currWindowOpts.hasLoaded) {
@@ -357,7 +363,20 @@ limitations under the License.
         //---------------------------------------------------------------
         let winOpts = getWindowOptionsSync();
 
-        showOnReady(glbl, winOpts);
+
+        // Prevent iframes from attempting to do windowing actions, these will always be handled
+        // by the main window frame.
+        if (!window.frameElement) {
+            showOnReady(glbl, winOpts);
+        }
+
+        window.woah = frameElement;
+
+        // The api-ready event allows the webContents to assign api priority. This must happen after
+        // any spin up windowing action or you risk stealing api priority from an already connected frame
+        electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+
+
         wireUpMenu(glbl, winOpts);
         wireUpZoomEvents();
         raiseReadyEvents(winOpts);

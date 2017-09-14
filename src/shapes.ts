@@ -72,10 +72,11 @@ export interface App {
 }
 
 export interface Window {
-    children: number[];
-    id: number;
+    children: Array<number|string>;
+    id: number|string;
     openfinWindow: OpenFinWindow|null;
     parentId?: number;
+    isIframe?: boolean;
 }
 
 export interface OpenFinWindow {
@@ -113,6 +114,9 @@ export interface BrowserWindow {
     _eventsCount: number;
     _options: WindowOptions;
     devToolsWebContents: null;
+    webContents: {
+        hasFrame: (frameName: string) => boolean;
+    };
 }
 
 export interface AppObj {

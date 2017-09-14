@@ -356,7 +356,9 @@ function getWindowOptions(identity, message, ack) {
 function getCurrentWindowOptions(identity, message, ack) {
     let dataAck = _.clone(successAck);
 
-    dataAck.data = Window.getOptions(identity);
+    //const {payload:{isIframe, name}} = message;
+
+    dataAck.data = Window.getOptions(identity, message.payload);
     ack(dataAck);
 }
 
