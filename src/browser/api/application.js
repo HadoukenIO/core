@@ -134,7 +134,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
         throw new Error(`Invalid application name: ${name}`);
     }
 
-    const isAppRunning = coreState.getAppRunningState(uuid);
+    const isAppRunning = coreState.getAppRunningState(uuid) || coreState.getExternalAppObjByUuid(uuid);
     if (isAppRunning) {
         throw new Error(`Application with specified UUID already exists: ${uuid}`);
     }
