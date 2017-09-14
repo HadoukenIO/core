@@ -451,13 +451,12 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
 
 
     log.writeToLog(1, '**** it is reaching the Application.run function', true);
-    let forPreload = []; // TODO: check for undefined values before concat or null will be in final array.
-    // forPreload = forPreload.concat([{ url: 'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/core.js' }], [{ name: 'pat-plugin', version: '2.*.*' }]);
+    let forPreload = [];
     if (Array.isArray(mainWindowOpts.preload) && mainWindowOpts.preload[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.preload); }
-    if (Array.isArray(mainWindowOpts.pluginModule) && mainWindowOpts.pluginModule[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.pluginModule); }
+    if (Array.isArray(mainWindowOpts.plugin) && mainWindowOpts.plugin[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.plugin); }
     log.writeToLog(1, `**** app._options: ${JSON.stringify(app._options, undefined, 4)}`, true);
     log.writeToLog(1, `**** mainWindowOpts scripts: ${JSON.stringify(mainWindowOpts.preload, undefined, 4)}`, true);
-    log.writeToLog(1, `**** mainWindowOpts pluginModule: ${JSON.stringify(mainWindowOpts.pluginModule, undefined, 4)}`, true);
+    log.writeToLog(1, `**** mainWindowOpts plugin: ${JSON.stringify(mainWindowOpts.plugin, undefined, 4)}`, true);
     log.writeToLog(1, `**** forPreload: ${JSON.stringify(forPreload, undefined, 4)}`, true);
 
 

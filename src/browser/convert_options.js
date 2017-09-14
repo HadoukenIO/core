@@ -197,7 +197,7 @@ module.exports = {
 
     getStartupAppOptions: function(appJson) {
         let opts = appJson['startup_app'];
-        opts.pluginModule = appJson['plugin_module'];
+        opts.plugin = appJson['plugin'];
         opts.preload = appJson['preload'];
         return opts;
         // return appJson['startup_app'];
@@ -281,15 +281,15 @@ module.exports = {
         log.writeToLog(1, `**** newOptions.preload: ${JSON.stringify(newOptions.preload, undefined, 4)}`, true);
 
         log.writeToLog(1, `**** options: ${JSON.stringify(options, undefined, 4)}`, true);
-        log.writeToLog(1, `**** options.pluginModule: ${JSON.stringify(options['pluginModule'], undefined, 4)}`, true);
-        const pluginModule = options['pluginModule'];
-        if (!pluginModule) {
+        log.writeToLog(1, `**** options.plugin: ${JSON.stringify(options['plugin'], undefined, 4)}`, true);
+        const plugin = options['plugin'];
+        if (!plugin) {
             // for all falsy values
-            newOptions.pluginModule = [];
+            newOptions.plugin = [];
         } else {
-            newOptions.pluginModule = pluginModule;
+            newOptions.plugin = plugin;
         }
-        log.writeToLog(1, `**** newOptions.pluginModule: ${JSON.stringify(newOptions.pluginModule, undefined, 4)}`, true);
+        log.writeToLog(1, `**** newOptions.plugin: ${JSON.stringify(newOptions.plugin, undefined, 4)}`, true);
 
         if (returnAsString) {
             return JSON.stringify(newOptions);
