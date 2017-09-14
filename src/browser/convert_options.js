@@ -196,7 +196,11 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 module.exports = {
 
     getStartupAppOptions: function(appJson) {
-        return appJson['startup_app'];
+        let opts = appJson['startup_app'];
+        opts.pluginModule = appJson['plugin_module'];
+        opts.preload = appJson['preload'];
+        return opts;
+        // return appJson['startup_app'];
     },
 
     convertToElectron: function(options, returnAsString) {
@@ -277,15 +281,15 @@ module.exports = {
         log.writeToLog(1, `**** newOptions.preload: ${JSON.stringify(newOptions.preload, undefined, 4)}`, true);
 
         log.writeToLog(1, `**** options: ${JSON.stringify(options, undefined, 4)}`, true);
-        log.writeToLog(1, `**** options.plugins: ${JSON.stringify(options.plugins, undefined, 4)}`, true);
-        const plugins = options.plugins;
-        if (!plugins) {
+        log.writeToLog(1, `**** options.pluginModule: ${JSON.stringify(options['pluginModule'], undefined, 4)}`, true);
+        const pluginModule = options['pluginModule'];
+        if (!pluginModule) {
             // for all falsy values
-            newOptions.plugins = [];
+            newOptions.pluginModule = [];
         } else {
-            newOptions.plugins = plugins;
+            newOptions.pluginModule = pluginModule;
         }
-        log.writeToLog(1, `**** newOptions.plugins: ${JSON.stringify(newOptions.plugins, undefined, 4)}`, true);
+        log.writeToLog(1, `**** newOptions.pluginModule: ${JSON.stringify(newOptions.pluginModule, undefined, 4)}`, true);
 
         if (returnAsString) {
             return JSON.stringify(newOptions);

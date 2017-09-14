@@ -504,6 +504,9 @@ function launchApp(argo, startExternalAdapterServer) {
             configObject: { licenseKey }
         } = configuration;
 
+        log.writeToLog(1, `**** launchApp configuration: ${JSON.stringify(configuration, undefined, 4)}`, true);
+        log.writeToLog(1, `**** launchApp configObject: ${JSON.stringify(configObject, undefined, 4)}`, true);
+
         if (argo['user-app-config-args']) {
             const tempUrl = configObject['startup_app'].url;
             const delimiter = tempUrl.indexOf('?') < 0 ? '?' : '&';
@@ -559,6 +562,9 @@ function initFirstApp(configObject, configUrl, licenseKey) {
 
     try {
         startupAppOptions = convertOptions.getStartupAppOptions(configObject);
+
+        log.writeToLog(1, `**** initFirstApp: configObject: ${JSON.stringify(configObject, undefined, 4)}`, true);
+        log.writeToLog(1, `**** initFirstApp: startupAppOptions: ${JSON.stringify(startupAppOptions, undefined, 4)}`, true);
 
         // Needs proper configs
         firstApp = Application.create(startupAppOptions, configUrl);
