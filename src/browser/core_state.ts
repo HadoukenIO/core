@@ -29,6 +29,7 @@ import { app } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
+import * as log from './log';
 
 export interface StartManifest {
     data: Shapes.Manifest;
@@ -577,8 +578,8 @@ export function getLicenseKey(identity: Shapes.Identity): string|null {
     }
 }
 
-export function getRoutingInfoByUuidFrame(identity: Shapes.Identity, frame: string) {
-    const { uuid } = identity;
+export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
+    log.writeToLog(1, `really??? ${uuid}, ${frame}` , true);
     const app = appByUuid(uuid);
 
     if (!app) {
@@ -586,11 +587,34 @@ export function getRoutingInfoByUuidFrame(identity: Shapes.Identity, frame: stri
     }
 
     for (const { openfinWindow } of app.children) {
-        const { name, browserWindow } = openfinWindow;
-        const isMainRenderFrame = name === frame;
+        const { name, isIframe, parentFrameId } = openfinWindow;
+
+        if (name !== frame) {
+            continue;
+        }
+
+        const isMainRenderFrame = !isIframe; //name === frame;
+        let browserWindow: Shapes.BrowserWindow;
+
+        log.writeToLog(1, `aaaand ${name}, ${isIframe}, ${parentFrameId} ` , true);
 
         if (isMainRenderFrame) {
+            // log.writeToLog(1, 'really???' , true);
+            browserWindow = openfinWindow.browserWindow;
+        }  else if (isIframe && parentFrameId !== undefined) {
+            const parentWin = getWinById(parentFrameId);
+            browserWindow = parentWin.openfinWindow.browserWindow;
+        }
 
+        log.writeToLog(1, `${Object.keys(openfinWindow)}` , true);
+        log.writeToLog(1, `${name} -- ${frame} --> ${isMainRenderFrame}` , true);
+        if (isMainRenderFrame) {
+            log.writeToLog(1, `sent to main render frame ${{
+                name,
+                browserWindow,
+                frameRoutingId: 1,
+                frameName: name
+            }}` , true);
             // todo ensure that this is still correct with the different frameConnect opts
             return {
                 name,
@@ -600,6 +624,7 @@ export function getRoutingInfoByUuidFrame(identity: Shapes.Identity, frame: stri
             };
         } else {
             const frameInfo = browserWindow.webContents.hasFrame(frame);
+            log.writeToLog(1, 'has frame info? ' + frameInfo, true);
 
             if (frameInfo) {
 

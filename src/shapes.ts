@@ -80,6 +80,8 @@ export interface Window {
 }
 
 export interface OpenFinWindow {
+    isIframe?: boolean;
+    parentFrameId?: string|number;
     _openListeners: (() => void)[];
     _options: WindowOptions;
     _window: BrowserWindow;

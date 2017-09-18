@@ -382,7 +382,8 @@ Window.create = function(id, opts) {
         browserWindow.webContents.registerIframe = (frameName) => {
             // const winObj = coreState.getWinById(id);
             const isIframe = true;
-            const frameInfo = Object.assign({}, { name: frameName, uuid, isIframe });
+            const parentFrameId = id;
+            const frameInfo = Object.assign({}, { name: frameName, uuid, isIframe, parentFrameId });
 
             coreState.addChildToWin(id, frameName, true);
             coreState.setWindowObj(frameName, frameInfo);
@@ -1103,7 +1104,7 @@ Window.getNativeId = function(identity) {
 Window.getNativeWindow = function() {};
 
 // the options are stored at to course a level....
-Window.getOptions = function(identity, iframeInfo) {
+Window.getOptions = function(identity, iframeInfo = {}) {
     log.writeToLog(1, 'getOptions', true);
     log.writeToLog(1, identity, true);
     log.writeToLog(1, iframeInfo, true);
@@ -1123,7 +1124,7 @@ Window.getOptions = function(identity, iframeInfo) {
             name: parentFrame
         }, 'get options for');
         browserWindow.webContents.setFrameMapping(renderFrameId, frameName);
-        coreState.updateWinName(uuid, frameName, identity.name);
+        coreState.updateWinName(uuid, identity.name, frameName);
 
         return {
             // rawWindowOpen: false,
