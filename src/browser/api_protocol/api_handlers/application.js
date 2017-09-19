@@ -26,10 +26,9 @@ let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
 let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
-import {
-    addRemoteSubscription
-} from '../../remote_subscriptions';
+import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
+import { WindowsMessages, SetWindowPosition, SysCommands } from '../../../common/microsoft';
 
 let successAck = {
     success: true
@@ -193,12 +192,9 @@ function getChildWindows(identity, message, ack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
     dataAck.data = _.chain(Application.getChildWindows(appIdentity))
-        .filter(function(c) {
-            return c.name !== c.uuid;
-        })
-        .map(function(c) {
-            return c.name;
-        }).value();
+        .filter(function(c) { return c.name !== c.uuid; })
+        .map(function(c) { return c.name; })
+        .value();
     ack(dataAck);
 }
 
@@ -281,16 +277,10 @@ function notifyOnContentLoaded(identity, message, ack) {
 }
 
 function runApplication(identity, message, ack, nack) {
-    const {
-        payload
-    } = message;
-    const {
-        manifestUrl
-    } = payload;
+    const { payload } = message;
+    const { manifestUrl } = payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-    const {
-        uuid
-    } = appIdentity;
+    const { uuid } = appIdentity;
     let remoteSubscriptionUnSubscribe;
     const remoteSubscription = {
         uuid,
@@ -350,71 +340,58 @@ function deregisterExternalWindow(identity, message, ack) {
 
 function externalWindowAction(identity, message, ack) {
     /* jshint bitwise: false */
-    let payload = message.payload;
-    const { uuid, name } = payload;
+    const { payload, payload: { type, uuid, name } } = message;
 
-    const SWP_HIDEWINDOW = 128;
-    const SWP_SHOWWINDOW = 64;
-    const SC_MAXIMIZE = 61488;
-    const SC_MINIMIZE = 61472;
-    const SC_RESTORE = 61728;
-
-    switch (payload.type) {
-        case 2:
-            // WM_DESTROY
+    switch (type) {
+        case WindowsMessages.WM_DESTROY:
             ofEvents.emit(route.externalWindow('close', uuid, name));
             break;
-        case 7:
-            // WM_SETFOCUS
+        case WindowsMessages.WM_SETFOCUS:
             ofEvents.emit(route.externalWindow('focus', uuid, name));
             break;
-        case 8:
-            // WM__KILLFOCUS
+        case WindowsMessages.WM__KILLFOCUS:
             ofEvents.emit(route.externalWindow('blur', uuid, name));
             break;
-        case 71:
-            // WM_WINDOWPOSCHANGED
+        case WindowsMessages.WM_WINDOWPOSCHANGED:
             let flags = payload.flags;
 
             ofEvents.emit(route.externalWindow('bounds-changed', uuid, name));
 
             // dispatch show and hide events
-            if (flags & SWP_SHOWWINDOW) {
+            if (flags & SetWindowPosition.SWP_SHOWWINDOW) {
                 ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), true);
-            } else if (flags & SWP_HIDEWINDOW) {
+            } else if (flags & SetWindowPosition.SWP_HIDEWINDOW) {
                 ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), false);
             }
             break;
-        case 274:
-            // WM_SYSCOMMAND
+        case WindowsMessages.WM_SYSCOMMAND:
             let commandType = payload.wParam;
-            let stateChange = commandType === SC_MAXIMIZE || commandType === SC_MINIMIZE || commandType === SC_RESTORE;
+            let stateChange = (
+                commandType === SysCommands.SC_MAXIMIZE ||
+                commandType === SysCommands.SC_MINIMIZE ||
+                commandType === SysCommands.SC_RESTORE
+            );
 
             if (!stateChange) {
                 break;
             }
             /* falls through */
-        case 163:
-            // WM_NCLBUTTONDBLCLK
+        case WindowsMessages.WM_NCLBUTTONDBLCLK:
             ofEvents.emit(route.externalWindow('state-change', uuid, name));
             break;
-        case 532:
-            // WM_SIZING
+        case WindowsMessages.WM_SIZING:
             ofEvents.emit(route.externalWindow('sizing', uuid, name));
             break;
-        case 534:
-            // WM_MOVING
+        case WindowsMessages.WM_MOVING:
             ofEvents.emit(route.externalWindow('moving', uuid, name));
             break;
-        case 561:
-            // WM_ENTERSIZEMOVE
+        case WindowsMessages.WM_ENTERSIZEMOVE:
             ofEvents.emit(route.externalWindow('begin-user-bounds-change', uuid, name), {
                 x: payload.mouseX,
                 y: payload.mouseY
             });
             break;
-        case 562:
-            // WM_EXITSIZEMOVE
+        case WindowsMessages.WM_EXITSIZEMOVE:
             ofEvents.emit(route.externalWindow('end-user-bounds-change', uuid, name));
             break;
         default:
