@@ -563,8 +563,8 @@ function initFirstApp(configObject, configUrl, licenseKey) {
     try {
         startupAppOptions = convertOptions.getStartupAppOptions(configObject);
 
-        log.writeToLog(1, `**** initFirstApp: configObject: ${JSON.stringify(configObject, undefined, 4)}`, true);
-        log.writeToLog(1, `**** initFirstApp: startupAppOptions: ${JSON.stringify(startupAppOptions, undefined, 4)}`, true);
+        // log.writeToLog(1, `**** initFirstApp: configObject: ${JSON.stringify(configObject, undefined, 4)}`, true);
+        // log.writeToLog(1, `**** initFirstApp: startupAppOptions: ${JSON.stringify(startupAppOptions, undefined, 4)}`, true);
 
         // Needs proper configs
         firstApp = Application.create(startupAppOptions, configUrl);

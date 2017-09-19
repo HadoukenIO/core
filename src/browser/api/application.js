@@ -450,14 +450,14 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     const mainWindowOpts = _.clone(app._options);
 
 
-    log.writeToLog(1, '**** it is reaching the Application.run function', true);
+    // log.writeToLog(1, '**** it is reaching the Application.run function', true);
     let forPreload = [];
     if (Array.isArray(mainWindowOpts.preload) && mainWindowOpts.preload[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.preload); }
     if (Array.isArray(mainWindowOpts.plugin) && mainWindowOpts.plugin[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.plugin); }
-    log.writeToLog(1, `**** app._options: ${JSON.stringify(app._options, undefined, 4)}`, true);
-    log.writeToLog(1, `**** mainWindowOpts scripts: ${JSON.stringify(mainWindowOpts.preload, undefined, 4)}`, true);
-    log.writeToLog(1, `**** mainWindowOpts plugin: ${JSON.stringify(mainWindowOpts.plugin, undefined, 4)}`, true);
-    log.writeToLog(1, `**** forPreload: ${JSON.stringify(forPreload, undefined, 4)}`, true);
+    // log.writeToLog(1, `**** app._options: ${JSON.stringify(app._options, undefined, 4)}`, true);
+    // log.writeToLog(1, `**** mainWindowOpts scripts: ${JSON.stringify(mainWindowOpts.preload, undefined, 4)}`, true);
+    // log.writeToLog(1, `**** mainWindowOpts plugin: ${JSON.stringify(mainWindowOpts.plugin, undefined, 4)}`, true);
+    // log.writeToLog(1, `**** forPreload: ${JSON.stringify(forPreload, undefined, 4)}`, true);
 
 
     const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);

@@ -647,12 +647,12 @@ exports.System = {
         fetchAndLoadPreloadScripts(identity, preloadOption, cb);
     },
 
-    setPreloadScript: function(url, scriptText) {
-        preloadScriptsCache[url] = scriptText;
+    setPreloadScript: function(identitier, scriptText) {
+        preloadScriptsCache[identitier] = scriptText;
     },
 
-    getPreloadScript: function(url) {
-        return preloadScriptsCache[url];
+    getPreloadScript: function(identitier) {
+        return preloadScriptsCache[identitier];
     },
 
     getSelectedPreloadScripts: function(preloadOption) {
