@@ -263,7 +263,6 @@ function isPreloadScript(preload: any): preload is PreloadScript {
 const updatePreloadState = (identity: Identity, preload: PreloadInstance, state: string): void => {
     const {uuid, name} = identity;
     const eventRoute = route.window('preload-state-changing', uuid, name);
-    // const preloadState = Object.assign({}, preload, {state});
     const preloadState = {
         url: getIdentifier(preload),
         state
@@ -281,5 +280,6 @@ export const getPreloadScriptState = (identifier: string): string => {
 };
 
 function getIdentifier(preload: any) {
-    return preload.url ? preload.url : preload.name;
+    // return preload.url ? preload.url : preload.name;
+    return preload.url ? preload.url : `${preload.name}-${preload.version}`;
 }

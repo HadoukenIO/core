@@ -424,7 +424,6 @@ function SystemApiHandler() {
     }
 
     function getSelectedPreloadScripts(identity, message, ack, nack) {
-        // log.writeToLog(1, `**** getSelectedPreloadScripts: ${JSON.stringify(message, undefined, 4)}`, true);
         const { payload } = message;
         const dataAck = _.clone(successAck);
         dataAck.data = System.getSelectedPreloadScripts(payload, ack, nack);

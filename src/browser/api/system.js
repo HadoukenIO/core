@@ -677,7 +677,8 @@ exports.System = {
 };
 
 function getIdentifier(preload) {
-    return preload.url ? preload.url : preload.name;
+    // return preload.url ? preload.url : preload.name;
+    return preload.url ? preload.url : `${preload.name}-${preload.version}`;
 }
 
 function clearPreloadCache() {

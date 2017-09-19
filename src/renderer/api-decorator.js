@@ -546,7 +546,7 @@ limitations under the License.
                 console.error(response.error);
             } else {
                 response.scripts.forEach((script, index) => {
-                    const { identifier } = preloadOption[index].url ? preloadOption[index].url : preloadOption[index].name;
+                    const { identifier } = preloadOption[index].url ? preloadOption[index].url : `${preloadOption[index].name}-${preloadOption[index].version}`;
 
                     try {
                         window.eval(script); /* jshint ignore:line */
