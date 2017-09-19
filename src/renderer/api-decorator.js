@@ -539,9 +539,6 @@ limitations under the License.
 
         if (preloadOption.length) { // short-circuit
             const response = syncApiCall('get-selected-preload-scripts', preloadOption);
-            console.log(`**** ipc.once Preload script eval winOpts: ${JSON.stringify(winOpts, undefined, 4)}`);
-            console.log(`**** ipc.once Preload script eval preloadOption: ${JSON.stringify(preloadOption, undefined, 4)}`);
-            console.log(`**** ipc.once Preload script eval response: ${JSON.stringify(response, undefined, 4)}`);
             if (response.error) {
                 console.error(response.error);
             } else {

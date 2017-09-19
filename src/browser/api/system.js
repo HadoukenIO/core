@@ -38,7 +38,7 @@ const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
-import { fetchAndLoadPreloadScripts } from '../preload_scripts';
+import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 
 
 const defaultProc = {
@@ -675,11 +675,6 @@ exports.System = {
         return response;
     }
 };
-
-function getIdentifier(preload) {
-    // return preload.url ? preload.url : preload.name;
-    return preload.url ? preload.url : `${preload.name}-${preload.version}`;
-}
 
 function clearPreloadCache() {
     preloadScriptsCache = {};

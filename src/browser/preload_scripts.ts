@@ -166,7 +166,6 @@ function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<
 
         rvmMessageBus.publish(msg, (resp) => {
             if (resp.payload.hasOwnProperty('path') && resp.payload.action === 'query-plugin') {
-                log.writeToLog(1, `**** RVM success. message resolving ${JSON.stringify(resp, undefined, 4)}`, true);
                 // const scriptPath = `C:\\Users\\vanes\\AppData\\Local\\OpenFin\\${resp.payload.path}\\main.js`;
                 const scriptPath = `${resp.payload.path}\\${resp.payload.target}`;
                 resolve({identity, preloadPlugin, scriptPath});
@@ -181,7 +180,6 @@ function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<
 // resolves to type `PreloadLoaded` on success
 // resolves to `undefined` when above fetch failed or when successfully fetched asset fails to load from Chromium cache
 function load(opts: FetchResponse): Promise<undefined> {
-    // log.writeToLog(1, `**** Load opts: ${JSON.stringify(opts, undefined, 4)}`, true);
     return new Promise((resolve: Resolver, reject: Rejector) => {
         if (!opts || !opts.scriptPath) {
             resolve(); // got fetchError above OR no error but no scriptPath either; in any case don't attempt to load
@@ -203,33 +201,12 @@ function load(opts: FetchResponse): Promise<undefined> {
                 //END WORKAROUND
 
                 if (!readError) {
-                    log.writeToLog(1, `**** Load setting preload script: ${JSON.stringify(scriptText, undefined, 4)}`, true);
                     updatePreloadState(identity, preload, 'load-succeeded');
-                    // System.setPreloadScript(getIdentifier(preload), `window.examplePlugin = {
-                    //     text: 'Hello, Plugins!',
-                    //     func: function() {
-                    //         console.log(this.text);
-                    //     },
-                    //     print: function(str) {
-                    //         console.log(str);
-                    //     }
-                    // };`);
-                    // System.setPreloadScript(getIdentifier(preload), 'window.vanessa=42;');
                     System.setPreloadScript(getIdentifier(preload), scriptText);
-
-                    // if (isPreloadScript(preload)) {
-                    //     log.writeToLog(1, `**** Identifier, script: ${getIdentifier(preload)}`, true);
-                    //     System.setPreloadScript(getIdentifier(preload), 'window.script=42;');
-                    // } else {
-                    //     log.writeToLog(1, `**** Identifier, plugin: ${getIdentifier(preload)}`, true);
-                    //     System.setPreloadScript(getIdentifier(preload), 'window.plugin=77');
-                    // }
                 } else {
-                    log.writeToLog(1, `**** Load readfile failed: ${JSON.stringify(readError, undefined, 4)}`, true);
                     updatePreloadState(identity, preload, 'load-failed');
                 }
 
-                log.writeToLog(1, `**** Load preloadStates: ${preloadStates.values()}`, true);
 
                 resolve();
             });
@@ -270,16 +247,13 @@ const updatePreloadState = (identity: Identity, preload: PreloadInstance, state:
 
     preloadStates.set(getIdentifier(preload), state);
 
-    log.writeToLog(1, `**** updatePreloadState: ${name}, ${uuid}, ${JSON.stringify(preloadState, undefined, 4)}`, true);
     ofEvents.emit(eventRoute, {name, uuid, preloadState});
 };
 
-export const getPreloadScriptState = (identifier: string): string => {
-    log.writeToLog(1, `**** getPreloadScriptState identifier: ${identifier}`, true);
+export function getPreloadScriptState(identifier: string): string {
     return preloadStates.get(identifier);
-};
+}
 
-function getIdentifier(preload: any) {
-    // return preload.url ? preload.url : preload.name;
+export function getIdentifier(preload: any) {
     return preload.url ? preload.url : `${preload.name}-${preload.version}`;
 }
