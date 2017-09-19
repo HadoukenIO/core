@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// let log = require('../../log');
 let apiProtocolBase = require('./api_protocol_base.js');
 let System = require('../../api/system.js').System;
 let _ = require('underscore');
@@ -423,6 +424,7 @@ function SystemApiHandler() {
     }
 
     function getSelectedPreloadScripts(identity, message, ack, nack) {
+        // log.writeToLog(1, `**** getSelectedPreloadScripts: ${JSON.stringify(message, undefined, 4)}`, true);
         const { payload } = message;
         const dataAck = _.clone(successAck);
         dataAck.data = System.getSelectedPreloadScripts(payload, ack, nack);

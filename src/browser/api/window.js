@@ -1092,14 +1092,17 @@ Window.getParentWindow = function() {};
  */
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
-    const { url, state, allDone } = payload;
+    // const { url, state, allDone } = payload;
+    const { state, allDone } = payload;
+    const identitier = payload.url ? payload.url : payload.name;
     const openfinWindow = Window.wrap(uuid, name);
     let preloadState = openfinWindow.preloadState;
     const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === url);
+        preloadState = preloadState.find(e => e.url === identitier);
+        // preloadState = preloadState.find(e => e.url === url);
         preloadState.state = state;
     }
 

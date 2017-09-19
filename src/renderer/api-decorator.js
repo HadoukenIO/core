@@ -19,7 +19,6 @@ limitations under the License.
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
 (function() {
-
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
 
@@ -534,24 +533,27 @@ limitations under the License.
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const winOpts = getWindowOptionsSync();
-        const preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
+        let preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
+        if (Array.isArray(winOpts.plugin) && winOpts.plugin[0] !== undefined) { preloadOption = preloadOption.concat(winOpts.plugin); }
         const action = 'set-window-preload-state';
 
         if (preloadOption.length) { // short-circuit
             const response = syncApiCall('get-selected-preload-scripts', preloadOption);
-
+            console.log(`**** ipc.once Preload script eval winOpts: ${JSON.stringify(winOpts, undefined, 4)}`);
+            console.log(`**** ipc.once Preload script eval preloadOption: ${JSON.stringify(preloadOption, undefined, 4)}`);
+            console.log(`**** ipc.once Preload script eval response: ${JSON.stringify(response, undefined, 4)}`);
             if (response.error) {
                 console.error(response.error);
             } else {
                 response.scripts.forEach((script, index) => {
-                    const { url } = preloadOption[index];
+                    const { identifier } = preloadOption[index].url ? preloadOption[index].url : preloadOption[index].name;
 
                     try {
                         window.eval(script); /* jshint ignore:line */
-                        asyncApiCall(action, { url, state: 'succeeded' });
+                        asyncApiCall(action, { identifier, state: 'succeeded' });
                     } catch (err) {
-                        console.error(`Execution failed for preload script "${url}".`, err);
-                        asyncApiCall(action, { url, state: 'failed' });
+                        console.error(`Execution failed for preload script "${identifier}".`, err);
+                        asyncApiCall(action, { identifier, state: 'failed' });
                     }
                 });
             }

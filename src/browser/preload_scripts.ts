@@ -216,6 +216,14 @@ function load(opts: FetchResponse): Promise<undefined> {
                     // };`);
                     // System.setPreloadScript(getIdentifier(preload), 'window.vanessa=42;');
                     System.setPreloadScript(getIdentifier(preload), scriptText);
+
+                    // if (isPreloadScript(preload)) {
+                    //     log.writeToLog(1, `**** Identifier, script: ${getIdentifier(preload)}`, true);
+                    //     System.setPreloadScript(getIdentifier(preload), 'window.script=42;');
+                    // } else {
+                    //     log.writeToLog(1, `**** Identifier, plugin: ${getIdentifier(preload)}`, true);
+                    //     System.setPreloadScript(getIdentifier(preload), 'window.plugin=77');
+                    // }
                 } else {
                     log.writeToLog(1, `**** Load readfile failed: ${JSON.stringify(readError, undefined, 4)}`, true);
                     updatePreloadState(identity, preload, 'load-failed');
@@ -255,10 +263,15 @@ function isPreloadScript(preload: any): preload is PreloadScript {
 const updatePreloadState = (identity: Identity, preload: PreloadInstance, state: string): void => {
     const {uuid, name} = identity;
     const eventRoute = route.window('preload-state-changing', uuid, name);
-    const preloadState = Object.assign({}, preload, {state});
+    // const preloadState = Object.assign({}, preload, {state});
+    const preloadState = {
+        url: getIdentifier(preload),
+        state
+    };
 
     preloadStates.set(getIdentifier(preload), state);
 
+    log.writeToLog(1, `**** updatePreloadState: ${name}, ${uuid}, ${JSON.stringify(preloadState, undefined, 4)}`, true);
     ofEvents.emit(eventRoute, {name, uuid, preloadState});
 };
 

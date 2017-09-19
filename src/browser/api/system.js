@@ -658,11 +658,11 @@ exports.System = {
     getSelectedPreloadScripts: function(preloadOption) {
         const response = {};
 
-        const missingRequiredScripts = preloadOption.reduce((urls, preload) => {
+        const missingRequiredScripts = preloadOption.reduce((identifiers, preload) => {
             if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
-                urls.push(getIdentifier(preload));
+                identifiers.push(getIdentifier(preload));
             }
-            return urls;
+            return identifiers;
         }, []);
 
         if (!missingRequiredScripts.length) {
