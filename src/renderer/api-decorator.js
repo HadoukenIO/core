@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 /* global fin, window*/
-
+api
 // These are relative to the preload execution, the root of the proj
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
@@ -265,9 +265,6 @@ limitations under the License.
             updateWindowOptionsSync(currWindowOpts.name, currWindowOpts.uuid, {
                 hasLoaded: true
             });
-
-            // Notify WebContent that frame routing can now be counted
-            electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
         };
 
         if (currWindowOpts.saveWindowState && !currWindowOpts.hasLoaded) {
