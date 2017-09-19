@@ -26,9 +26,7 @@ const { writeToLog } = require('../../log');
 /* tslint:disable: function-name */
 function NotificationApiHandler() {
     const noteApiMap: ActionSpecMap = {
-        'notifications': (id: any, request: any, ack: any) => {
-            routeRequest(id, unpackGeneralMsg(request), ack);
-        },
+        'notifications': notifications,
         'send-action-to-notifications-center': normalizeAndDispatch
     };
 
@@ -37,28 +35,28 @@ function NotificationApiHandler() {
     return apiProtocolBase;
 }
 
-function normalizeAndDispatch(id: any, msg: any, ack: () => void): void {
-    const { action } = msg;
+function notifications(id: any, request: any) {
+    return new Promise((resolve, reject) => {
+        routeRequest(id, unpackGeneralMsg(request), resolve);
+    });
+}
 
-    switch (action) {
-        case 'send-action-to-notifications-center':
-            routeNoteCenterMessages(id, msg, ack);
-        break;
+function normalizeAndDispatch(id: any, msg: any) {
+    return new Promise((resolve, reject) => {
+        const {action} = msg;
 
-        default:
-        break;
-
-    }
+        switch (action) {
+            case 'send-action-to-notifications-center':
+                routeNoteCenterMessages(id, msg, resolve);
+                break;
+        }
+    });
 }
 
 // Route the messages that have the shape of the <= 5.0
 // 'send-action-to-notifications-center' messages
 function routeNoteCenterMessages(id: any, msg: any, ack: () => void) {
-    const {
-        payload: {
-            action,
-            payload: data
-        }} = msg;
+    const { payload: { action, payload: data } } = msg;
 
     switch (action) {
         case 'create-notification':

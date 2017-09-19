@@ -38,23 +38,17 @@ let clipBounds = require('../clip_bounds.js').default;
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
-import {
-    cachedFetch
-} from '../cached_resource_fetcher';
+import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
-import {
-    validateNavigation,
-    navigationValidator
-} from '../navigation_validation';
-import {
-    toSafeInt
-} from '../../common/safe_int';
+import { validateNavigation, navigationValidator } from '../navigation_validation';
+import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { getPreloadScriptState } from '../preload_scripts';
+import WindowsMessages from '../../microsoft';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -929,10 +923,10 @@ Window.embed = function(identity, parentHwnd) {
     }
 
     if (isWin32) {
-        browserWindow.setMessageObserver(0x0100, parentHwnd); // WM_KEYDOWN
-        browserWindow.setMessageObserver(0x0101, parentHwnd); // WM_KEYUP
-        browserWindow.setMessageObserver(0x0104, parentHwnd); // WM_SYSKEYDOWN
-        browserWindow.setMessageObserver(0x0105, parentHwnd); // WM_SYSKEYUP
+        browserWindow.setMessageObserver(WindowsMessages.WM_KEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_KEYUP, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYUP, parentHwnd);
     }
 
     ofEvents.emit(route.window('embedded', identity.uuid, identity.name), {

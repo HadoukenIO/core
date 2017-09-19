@@ -15,13 +15,8 @@ limitations under the License.
 */
 let apiProtocolBase = require('./api_protocol_base.js');
 let System = require('../../api/system.js').System;
-let _ = require('underscore');
 
 function SystemApiHandler() {
-    let successAck = {
-        success: true
-    };
-
     let SystemApiHandlerMap = {
         'clear-cache': { apiFunc: clearCache, apiPath: '.clearCache' },
         'convert-options': convertOptions,
@@ -74,390 +69,301 @@ function SystemApiHandler() {
 
     apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
 
-    function didFail(e) {
-        return e !== undefined && e.constructor === Error;
-    }
+    function setMinLogLevel(identity, message) {
+        const response = System.setMinLogLevel(message.payload.level);
 
-    function setMinLogLevel(identity, message, ack, nack) {
-        const { payload: { level } } = message;
-        const response = System.setMinLogLevel(level);
-
-        if (didFail(response)) {
-            nack(response);
-
-        } else {
-            ack(_.clone(successAck));
+        if (response instanceof Error) {
+            throw response;
         }
+
+        return response;
     }
 
-    function getMinLogLevel(identity, message, ack, nack) {
+    function getMinLogLevel(identity, message) {
         const response = System.getMinLogLevel();
 
-        if (didFail(response)) {
-            nack(response);
-
-        } else {
-            const dataAck = _.clone(successAck);
-            dataAck.data = response;
-            ack(dataAck);
+        if (response instanceof Error) {
+            throw response;
         }
+
+        return response;
     }
 
-    function startCrashReporter(identity, message, ack) {
-        const dataAck = _.clone(successAck);
+    function startCrashReporter(identity, message) {
         const { payload } = message;
-        dataAck.data = System.startCrashReporter(identity, payload, false);
-        ack(dataAck);
+        return System.startCrashReporter(identity, payload, false);
     }
 
-    function getCrashReporterState(identity, message, ack) {
-        const dataAck = _.clone(successAck);
-        dataAck.data = System.getCrashReporterState();
-        ack(dataAck);
+    function getCrashReporterState(identity, message) {
+        return System.getCrashReporterState();
     }
 
-    function downloadPreloadScripts(identity, message, ack, nack) {
-        const { payload } = message;
-        const { uuid, name, scripts } = payload;
-        const windowIdentity = { uuid, name };
+    function downloadPreloadScripts(identity, message) {
+        return new Promise((resolve, reject) => {
+            const { payload: { uuid, name, scripts } } = message;
+            const windowIdentity = { uuid, name };
 
-        System.downloadPreloadScripts(windowIdentity, scripts, err => {
-            if (!err) {
-                const dataAck = _.clone(successAck);
-                ack(dataAck);
-            } else {
-                nack(err);
-            }
+            System.downloadPreloadScripts(windowIdentity, scripts, err => {
+                if (!err) {
+                    resolve();
+                } else {
+                    reject(err);
+                }
+            });
         });
     }
 
-    function getAppAssetInfo(identity, message, ack, nack) {
-        let options = message.payload;
-
-        System.getAppAssetInfo(identity, options, function(data) {
-            let dataAck = _.clone(successAck);
-            //remove path due to security concern
-            delete data.path;
-            dataAck.data = data;
-            ack(dataAck);
-        }, nack);
+    function getAppAssetInfo(identity, message) {
+        return new Promise((resolve, reject) => {
+            const options = message.payload;
+            System.getAppAssetInfo(identity, options, data => {
+                //remove `path` due to security concern
+                delete data.path;
+                resolve(data);
+            }, reject);
+        });
     }
 
-    function getDeviceUserId(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getDeviceUserId();
-        ack(dataAck);
+    function getDeviceUserId(identity, message) {
+        return System.getDeviceUserId();
     }
 
-    function getAllExternalApplications(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getAllExternalApplications();
-        ack(dataAck);
+    function getAllExternalApplications(identity, message) {
+        return System.getAllExternalApplications();
     }
 
-    function raiseEvent(identity, message, ack) {
-        let evt = message.payload.eventName;
-        let eventArgs = message.payload.eventArgs;
-
-        System.raiseEvent(evt, eventArgs);
-        ack(successAck);
+    function raiseEvent(identity, message) {
+        const { payload: { eventName, eventArgs } } = message;
+        System.raiseEvent(eventName, eventArgs);
     }
 
-    function getElIPCConfig(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getElIPCConfiguration();
-        ack(dataAck);
+    function getElIPCConfig(identity, message) {
+        return System.getElIPCConfiguration();
     }
 
-    function convertOptions(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.convertOptions(message.payload);
-        ack(dataAck);
-
+    function convertOptions(identity, message) {
+        return System.convertOptions(message.payload);
     }
 
-    function getWebSocketState(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getWebSocketServerState();
-        ack(dataAck);
+    function getWebSocketState(identity, message) {
+        return System.getWebSocketServerState();
     }
 
-    function generateGuid(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-        dataAck.data = System.generateGUID();
-        ack(dataAck);
+    function generateGuid(identity, message) {
+        return System.generateGUID();
     }
 
-    function showDeveloperTools(identity, message, ack) {
+    function showDeveloperTools(identity, message) {
         System.showDeveloperTools(message.payload.uuid, message.payload.name);
-        ack(successAck);
     }
 
-    function clearCache(identity, message, ack, nack) {
-        System.clearCache(message.payload, (err) => {
-            if (!err) {
-                ack(successAck);
-            } else {
-                nack(err);
-            }
+    function clearCache(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.clearCache(message.payload, err => {
+                if (!err) {
+                    resolve();
+                } else {
+                    reject(err);
+                }
+            });
         });
     }
 
-    function deleteCacheRequest(identity, message, ack, nack) {
+    function deleteCacheRequest(identity, message) {
         // deleteCacheOnRestart has been deprecated; redirects
         // to deleteCacheOnExit
-        System.deleteCacheOnExit(() => {
-            ack(successAck);
-        }, nack);
+
+        return new Promise((resolve, reject) => {
+            System.deleteCacheOnExit(resolve, reject);
+        });
     }
 
-    function exitDesktop(identity, message, ack) {
-        ack(successAck);
-        System.exit();
+    function exitDesktop(identity, message) {
+        setTimeout(() => System.exit());
     }
 
-    function getAllApplications(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getAllApplications();
-        ack(dataAck);
+    function getAllApplications(identity, message) {
+        return System.getAllApplications();
     }
 
-    function getAllWindows(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getAllWindows(identity);
-        ack(dataAck);
+    function getAllWindows(identity, message) {
+        return System.getAllWindows(identity);
     }
 
-    function getCommandLineArguments(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getCommandLineArguments();
-        ack(dataAck);
+    function getCommandLineArguments(identity, message) {
+        return System.getCommandLineArguments();
     }
 
-    function getConfig(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getConfig().data;
-        ack(dataAck);
+    function getConfig(identity, message) {
+        return System.getConfig().data;
     }
 
-    function getDeviceId(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getDeviceId();
-        ack(dataAck);
+    function getDeviceId(identity, message) {
+        return System.getDeviceId();
     }
 
-    function getRemoteConfig(identity, message, ack, nack) {
-        System.getRemoteConfig(message.payload.url,
-            function(data) {
-                var dataAck = _.clone(successAck);
-                dataAck.data = data;
-                ack(dataAck);
-            },
-            function(reason) {
-                nack(reason);
+    function getRemoteConfig(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.getRemoteConfig(message.payload.url, resolve, reject);
+        });
+    }
+
+    function getEnvironmentVariable(identity, message) {
+        return System.getEnvironmentVariable(message.payload.environmentVariables);
+    }
+
+    function viewLog(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.getLog((message.payload || {}).name || '', (err, contents) => {
+                if (!err) {
+                    resolve(contents);
+                } else {
+                    reject(err);
+                }
             });
-    }
-
-    function getEnvironmentVariable(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getEnvironmentVariable(message.payload.environmentVariables);
-        ack(dataAck);
-    }
-
-    function viewLog(identity, message, ack, nack) {
-        System.getLog((message.payload || {}).name || '', (err, contents) => {
-            if (!err) {
-                var dataAck = _.clone(successAck);
-                dataAck.data = contents;
-                ack(dataAck);
-            } else {
-                nack(err);
-            }
         });
     }
 
-    function listLogs(identity, message, ack, nack) {
-        System.getLogList((err, logList) => {
-            if (!err) {
-                var dataAck = _.clone(successAck);
-                dataAck.data = logList;
-                ack(dataAck);
-            } else {
-                nack(err);
-            }
+    function listLogs(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.getLogList((err, logList) => {
+                if (!err) {
+                    resolve(logList);
+                } else {
+                    reject(err);
+                }
+            });
         });
     }
 
-    function getMonitorInfo(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-        dataAck.data = System.getMonitorInfo();
-        ack(dataAck);
+    function getMonitorInfo(identity, message) {
+        return System.getMonitorInfo();
     }
 
-    function getMousePosition(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getMousePosition();
-        ack(dataAck);
+    function getMousePosition(identity, message) {
+        return System.getMousePosition();
     }
 
-    function processSnapshot(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getProcessList();
-        ack(dataAck);
+    function processSnapshot(identity, message) {
+        return System.getProcessList();
     }
 
-    function getProxySettings(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-        dataAck.data = System.getProxySettings();
-        ack(dataAck);
+    function getProxySettings(identity, message) {
+        return System.getProxySettings();
     }
 
-    function getVersion(identity, message, ack) {
-        var dataAck = _.clone(successAck);
-        dataAck.data = System.getVersion();
-        ack(dataAck);
+    function getVersion(identity, message) {
+        return System.getVersion();
     }
 
-    function getRvmInfo(identity, message, ack, nack) {
-        System.getRvmInfo(identity, function(data) {
-            let dataAck = _.clone(successAck);
-            dataAck.data = data;
-            ack(dataAck);
-        }, function(err) {
-            nack(err);
+    function getRvmInfo(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.getRvmInfo(identity, resolve, reject);
         });
     }
 
-    function launchExternalProcess(identity, message, ack, nack) {
-        let dataAck = _.clone(successAck);
-        System.launchExternalProcess(identity, message.payload, (err, res) => {
-            if (!err) {
-                dataAck.data = res;
-                ack(dataAck);
-            } else {
-                nack(err);
-            }
+    function launchExternalProcess(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.launchExternalProcess(identity, message.payload, (err, res) => {
+                if (!err) {
+                    resolve(res);
+                } else {
+                    reject(err);
+                }
+            });
         });
     }
 
-    function writeToLog(identity, message, ack, nack) {
-        var logData = message.payload || {};
-        var err = System.log(logData.level || '', logData.message || '');
+    function writeToLog(identity, message) {
+        const logData = message.payload || {};
+        const err = System.log(logData.level || '', logData.message || '');
         if (err) {
-            nack(err);
-        } else {
-            ack(successAck);
+            throw err;
         }
     }
 
-    function openUrlWithBrowser(identity, message, ack) {
+    function openUrlWithBrowser(identity, message) {
         System.openUrlWithBrowser(message.payload.url);
-        ack(successAck);
     }
 
 
-    function releaseExternalProcess(identity, message, ack) {
+    function releaseExternalProcess(identity, message) {
         System.releaseExternalProcess(message.payload.uuid);
-        ack(successAck);
     }
 
-    function monitorExternalProcess(identity, message, ack, nack) {
-        System.monitorExternalProcess(identity, message.payload, function(data) {
-            let dataAck = _.clone(successAck);
-            dataAck.data = data;
-            ack(dataAck);
-        }, function(err) {
-            nack(err);
+    function monitorExternalProcess(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.monitorExternalProcess(identity, message.payload, resolve, reject);
         });
     }
 
-    function setCookie(identity, message, ack, nack) {
-        System.setCookie(message.payload, function() {
-            ack(successAck);
-        }, function(err) {
-            nack(err);
+    function setCookie(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.setCookie(message.payload, resolve, reject);
         });
-
     }
 
-    function terminateExternalProcess(identity, message, ack) {
-        let payload = message.payload || {};
-        let dataAck = _.clone(successAck);
-        dataAck.data = System.terminateExternalProcess(payload.uuid, payload.timeout, payload.child);
-        ack(dataAck);
+    function terminateExternalProcess(identity, message) {
+        const payload = message.payload || {};
+        return System.terminateExternalProcess(payload.uuid, payload.timeout, payload.child);
     }
 
-    function updateProxy(identity, message, ack, nack) {
-        var err = System.updateProxySettings(message.payload.type,
-            message.payload.proxyAddress,
-            message.payload.proxyPort);
-
-        if (!err) {
-            ack(successAck);
-        } else {
-            nack(err);
+    function updateProxy(identity, message) {
+        const { payload: { type, proxyAddress, proxyPort } } = message;
+        const err = System.updateProxySettings(type, proxyAddress, proxyPort);
+        if (err) {
+            throw err;
         }
     }
 
-    function getNearestDisplayRoot(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-        dataAck.data = System.getNearestDisplayRoot(message.payload);
-        ack(dataAck);
+    function getNearestDisplayRoot(identity, message) {
+        return System.getNearestDisplayRoot(message.payload);
     }
 
-    function downloadAsset(identity, message, ack, errorAck) {
-        let dataAck = _.clone(successAck);
-        System.downloadAsset(identity, message.payload, (err) => {
-            if (!err) {
-                ack(dataAck);
-            } else {
-                errorAck(err);
-            }
+    function downloadAsset(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.downloadAsset(identity, message.payload, err => {
+                if (!err) {
+                    resolve();
+                } else {
+                    reject(err);
+                }
+            });
         });
     }
 
-    function downloadRuntime(identity, message, ack, nack) {
-        const { payload } = message;
-        const dataAck = _.clone(successAck);
+    function downloadRuntime(identity, message) {
+        return new Promise((resolve, reject) => {
+            const { payload } = message;
 
-        System.downloadRuntime(identity, payload, (err) => {
-            if (err) {
-                nack(err);
-            } else {
-                ack(dataAck);
-            }
+            System.downloadRuntime(identity, payload, err => {
+                if (!err) {
+                    resolve();
+                } else {
+                    reject(err);
+                }
+            });
         });
     }
 
-    function getHostSpecs(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-        dataAck.data = System.getHostSpecs();
-        ack(dataAck);
+    function getHostSpecs(identity, message) {
+        return System.getHostSpecs();
     }
 
-    function resolveUuid(identity, message, ack, nack) {
-        let dataAck = _.clone(successAck);
-
-        System.resolveUuid(identity, message.payload.entityKey, (err, entity) => {
-            if (err) {
-                nack(err);
-            } else {
-                dataAck.data = entity;
-                ack(dataAck);
-            }
+    function resolveUuid(identity, message) {
+        return new Promise((resolve, reject) => {
+            System.resolveUuid(identity, message.payload.entityKey, (err, entity) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(entity);
+                }
+            });
         });
     }
 
-    function getSelectedPreloadScripts(identity, message, ack, nack) {
-        const { payload } = message;
-        const dataAck = _.clone(successAck);
-        dataAck.data = System.getSelectedPreloadScripts(payload, ack, nack);
-        ack(dataAck);
+    function getSelectedPreloadScripts(identity, message) {
+        return System.getSelectedPreloadScripts(message.payload);
     }
 }
 

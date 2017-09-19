@@ -58,90 +58,47 @@ interface APIMessageClipboardExpanded extends APIMessage {
     };
 }
 
-function clipboardWrite(identity: Identity,
-                        message: APIMessageClipboardExpanded,
-                        ack: (payload: APIPayloadAck) => void) {
-    const {data, type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.write(data, type)
-    });
+function clipboardWrite(identity: Identity, message: APIMessageClipboardExpanded) {
+    const { data, type } = message.payload;
+    return clipboard.write(data, type);
 }
 
-function clipboardWriteRtf(identity: Identity,
-                           message: APIMessageClipboard,
-                           ack: (payload: APIPayloadAck) => void) {
-    const {data, type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.writeRtf(data, type)
-    });
+function clipboardWriteRtf(identity: Identity, message: APIMessageClipboard) {
+    const { data, type } = message.payload;
+    return clipboard.writeRtf(data, type);
 }
 
-function clipboardWriteHtml(identity: Identity,
-                            message: APIMessageClipboard,
-                            ack: (payload: APIPayloadAck) => void) {
-    const {data, type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.writeHtml(data, type)
-    });
+function clipboardWriteHtml(identity: Identity, message: APIMessageClipboard) {
+    const { data, type } = message.payload;
+    return clipboard.writeHtml(data, type);
 }
 
-function clipboardWriteText(identity: Identity,
-                            message: APIMessageClipboard,
-                            ack: (payload: APIPayloadAck) => void) {
-    const {data, type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.writeText(data, type)
-    });
+function clipboardWriteText(identity: Identity, message: APIMessageClipboard) {
+    const { data, type } = message.payload;
+    return clipboard.writeText(data, type);
 }
 
-function clipboardAvailableFormats(identity: Identity,
-                                   message: APIMessageClipboard,
-                                   ack: (payload: APIPayloadAck) => void) {
-    const {type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.availableFormats(type)
-    });
+function clipboardAvailableFormats(identity: Identity, message: APIMessageClipboard) {
+    const { type } = message.payload;
+    return clipboard.availableFormats(type);
 }
 
-function clipboardClear(identity: Identity,
-                        message: APIMessageClipboard,
-                        ack: (payload: APIPayloadAck) => void) {
-    const {type} = message.payload;
+function clipboardClear(identity: Identity, message: APIMessageClipboard) {
+    const { type } = message.payload;
     clipboard.clear(type);
-    ack({success: true});
 }
 
-function clipboardReadRtf(identity: Identity,
-                          message: APIMessageClipboard,
-                          ack: (payload: APIPayloadAck) => void) {
-    const {type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.readRtf(type)
-    });
+function clipboardReadRtf(identity: Identity, message: APIMessageClipboard) {
+    const { type } = message.payload;
+    return clipboard.readRtf(type);
 }
 
-function clipboardReadHtml(identity: Identity,
-                           message: APIMessageClipboard,
-                           ack: (payload: APIPayloadAck) => void) {
-    const {type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.readHtml(type)
-    });
+function clipboardReadHtml(identity: Identity, message: APIMessageClipboard) {
+    const { type } = message.payload;
+    return clipboard.readHtml(type);
 }
 
-function clipboardReadText(identity: Identity,
-                           message: APIMessageClipboard,
-                           ack: (payload: APIPayloadAck) => void) {
-    const {type} = message.payload;
-    ack({
-        success: true,
-        data: clipboard.readText(type)
-    });
+function clipboardReadText(identity: Identity, message: APIMessageClipboard) {
+    const { type } = message.payload;
+    return clipboard.readText(type);
 }
