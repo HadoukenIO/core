@@ -549,8 +549,8 @@ limitations under the License.
             let response;
             try {
                 response = syncApiCall('get-selected-preload-scripts', preloadOption);
-            } catch (err) {
-                console.error(response.error);
+            } catch (error) {
+                console.error(error);
             }
 
             if (response) {

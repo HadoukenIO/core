@@ -687,7 +687,8 @@ exports.System = {
         }, []);
 
         if (!missingRequiredScripts.length) {
-            return preloadOption.map(preload => preloadScriptsCache[preload.url]); // null when load/fetch failed
+            // when load/fetch failed, mapped value will be `undefined`, which stringify translates to `null`
+            return preloadOption.map(preload => preloadScriptsCache[preload.url]);
         } else {
             return `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
         }
