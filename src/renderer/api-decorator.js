@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 /* global fin, window*/
-api
 // These are relative to the preload execution, the root of the proj
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
