@@ -164,8 +164,8 @@ let optionSetters = {
             // reapply resize region
             applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
                 let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
-                    size: 2,
-                    bottomRightCorner: 4
+                    size: 4,
+                    bottomRightCorner: 6
                 });
                 browserWin.setResizeRegion(resizeRegion.size);
                 browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
