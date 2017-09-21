@@ -70,11 +70,11 @@ interface FetchResponse {
  * If you don't supply `proceed`, call both `catch` and `then` on your own to proceed as appropriate.
  *
  * Notes:
- * 4. There is only one `catch`able error, bad preload option type, which has already been logged for you.
- * 1. The promise otherwise always resolves; fetch/load failures are not errors.
- * 2. Successfully loaded scripts are cached via `System.setPreloadScript`,
+ * 1. There is only one `catch`able error, bad preload option type, which has already been logged for you.
+ * 2. The promise otherwise always resolves; fetch/load failures are not errors.
+ * 3. Successfully loaded scripts are cached via `System.setPreloadScript`,
  * to be eval'd later by api_decorator as windows spin up.
- * 3. No resolve values are available to `then`; to access loaded scripts,
+ * 4. No resolve values are available to `then`; to access loaded scripts,
  * call `System.getPreloadScript` or `System.getSelectedPreloadScripts`.
  */
 
@@ -95,7 +95,6 @@ export function fetchAndLoadPreloadScripts(
         const err = new Error(message);
         allLoaded = Promise.reject(err);
     } else {
-        // log.writeToLog(1, '**** fetchAndLoadPreloadScripts else statement entered', true);
         const loadedScripts: Promise<undefined>[] = preloadOption.map((preload: PreloadInstance) => {
             updatePreloadState(identity, preload, 'load-started');
 
@@ -166,7 +165,6 @@ function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<
 
         rvmMessageBus.publish(msg, (resp) => {
             if (resp.payload.hasOwnProperty('path') && resp.payload.action === 'query-plugin') {
-                // const scriptPath = `C:\\Users\\vanes\\AppData\\Local\\OpenFin\\${resp.payload.path}\\main.js`;
                 const scriptPath = `${resp.payload.path}\\${resp.payload.target}`;
                 resolve({identity, preloadPlugin, scriptPath});
             } else {
@@ -186,7 +184,6 @@ function load(opts: FetchResponse): Promise<undefined> {
         } else {
             const {identity, scriptPath} = opts;
             const preload = opts.preloadScript ? opts.preloadScript : opts.preloadPlugin;
-            // const {identity, preloadScript, scriptPath} = opts;
 
             fs.readFile(scriptPath, 'utf8', (readError: null | Error, scriptText: string | undefined) => {
 

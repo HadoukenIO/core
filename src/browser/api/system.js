@@ -647,19 +647,23 @@ exports.System = {
         fetchAndLoadPreloadScripts(identity, preloadOption, cb);
     },
 
+    // identitier is preload script url or plugin name
     setPreloadScript: function(identitier, scriptText) {
         preloadScriptsCache[identitier] = scriptText;
     },
 
+    // identitier is preload script url or plugin name
     getPreloadScript: function(identitier) {
         return preloadScriptsCache[identitier];
     },
 
+    // identitiers are preload script url or plugin name
     getSelectedPreloadScripts: function(preloadOption) {
         const response = {};
 
         const missingRequiredScripts = preloadOption.reduce((identifiers, preload) => {
             if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
+                // if ((!preload.optional || preload.critical) && !(getIdentifier(preload) in preloadScriptsCache)) {
                 identifiers.push(getIdentifier(preload));
             }
             return identifiers;

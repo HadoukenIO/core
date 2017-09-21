@@ -200,7 +200,6 @@ module.exports = {
         opts.plugin = appJson['plugin'];
         opts.preload = appJson['preload'];
         return opts;
-        // return appJson['startup_app'];
     },
 
     convertToElectron: function(options, returnAsString) {

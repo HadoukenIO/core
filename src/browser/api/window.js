@@ -766,10 +766,9 @@ Window.create = function(id, opts) {
 
     // Set preload scripts' final loading states
     winObj.preloadState = _options.preload.map(preload => {
-        const identitier = preload.url ? preload.url : preload.name;
         return {
-            url: identitier,
-            state: getPreloadScriptState(identitier)
+            url: getIdentifier(preload),
+            state: getPreloadScriptState(getIdentifier(preload))
         };
     });
 
@@ -1092,17 +1091,14 @@ Window.getParentWindow = function() {};
  */
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
-    // const { url, state, allDone } = payload;
     const { state, allDone } = payload;
-    const identitier = payload.url ? payload.url : payload.name;
     const openfinWindow = Window.wrap(uuid, name);
     let preloadState = openfinWindow.preloadState;
     const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === identitier);
-        // preloadState = preloadState.find(e => e.url === url);
+        preloadState = preloadState.find(e => e.url === getIdentifier(payload));
         preloadState.state = state;
     }
 
@@ -2140,6 +2136,10 @@ function getElectronBrowserWindow(identity, errDesc) {
     }
 
     return browserWindow;
+}
+
+function getIdentifier(preload) {
+    return preload.url ? preload.url : `${preload.name}-${preload.version}`;
 }
 
 module.exports.Window = Window;

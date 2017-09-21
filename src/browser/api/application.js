@@ -445,10 +445,8 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
         return;
     }
 
-
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = _.clone(app._options);
-
 
     let forPreload = [];
     if (Array.isArray(mainWindowOpts.preload) && mainWindowOpts.preload[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.preload); }
@@ -459,6 +457,7 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
         uuid: mainWindowOpts.uuid,
         name: mainWindowOpts.name
     };
+
     fetchAndLoadPreloadScripts(windowIdentity, forPreload, proceed);
 };
 
