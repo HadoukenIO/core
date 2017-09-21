@@ -25,7 +25,7 @@ import { Identity } from '../shapes';
 import ofEvents from './of_events';
 import route from '../common/route';
 import { rvmMessageBus, PluginQuery } from './rvm/rvm_message_bus';
-import { sendToRVM, SendToRVMOpts } from './rvm/utils';
+import { sendToRVM } from './rvm/utils';
 import { getConfigUrlByUuid } from './core_state.js';
 
 

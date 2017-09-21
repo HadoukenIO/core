@@ -19,6 +19,7 @@ limitations under the License.
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
 (function() {
+
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
 
@@ -539,18 +540,19 @@ limitations under the License.
 
         if (preloadOption.length) { // short-circuit
             const response = syncApiCall('get-selected-preload-scripts', preloadOption);
+
             if (response.error) {
                 console.error(response.error);
             } else {
                 response.scripts.forEach((script, index) => {
-                    const { identifier } = preloadOption[index].url ? preloadOption[index].url : `${preloadOption[index].name}-${preloadOption[index].version}`;
+                    const { id } = preloadOption[index].url ? preloadOption[index].url : `${preloadOption[index].name}-${preloadOption[index].version}`;
 
                     try {
                         window.eval(script); /* jshint ignore:line */
-                        asyncApiCall(action, { identifier, state: 'succeeded' });
+                        asyncApiCall(action, { id, state: 'succeeded' });
                     } catch (err) {
-                        console.error(`Execution failed for preload script "${identifier}".`, err);
-                        asyncApiCall(action, { identifier, state: 'failed' });
+                        console.error(`Execution failed for preload script "${id}".`, err);
+                        asyncApiCall(action, { id, state: 'failed' });
                     }
                 });
             }
