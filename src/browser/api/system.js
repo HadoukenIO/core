@@ -663,7 +663,6 @@ exports.System = {
 
         const missingRequiredScripts = preloadOption.reduce((identifiers, preload) => {
             if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
-                // if ((!preload.optional || preload.critical) && !(getIdentifier(preload) in preloadScriptsCache)) {
                 identifiers.push(getIdentifier(preload));
             }
             return identifiers;
