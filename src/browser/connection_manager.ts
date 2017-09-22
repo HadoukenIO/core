@@ -12,15 +12,15 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 // built-in modules
 declare const process: any;
 import { EventEmitter } from 'events';
-import { Identity } from './api_protocol/transport_strategy/api_transport_base';
-import { ArgMap, PortInfo } from './port_discovery';
 
 // npm modules
 // (none)
 
 // local modules
-const coreState = require('./core_state');
+import { Identity } from './api_protocol/transport_strategy/api_transport_base';
+import { ArgMap, PortInfo } from './port_discovery';
 import * as log from './log';
+const coreState = require('./core_state');
 
 //TODO: pre-release flag, this will go away once we release multi runtime.
 const multiRuntimeCommandLineFlag = 'enable-multi-runtime';
@@ -73,10 +73,19 @@ function isMeshEnabled(args: ArgMap) {
     return enabled;
 }
 
+function keyFromPortInfo(portInfo: PortInfo): string {
+    const { version, port, securityRealm } = portInfo;
+    return `${version}/${port}/${securityRealm ? securityRealm : ''}`;
+}
+
 if (multiRuntimeEnabled && isMeshEnabled(coreState.argo)) {
     startConnectionManager();
 }
 
+function getMeshUuid(): string {
+    const portInfo = <PortInfo>coreState.getSocketServerState();
+    return keyFromPortInfo(portInfo);
+}
 /*
   Note that these should match the definitions found here:
   https://github.com/openfin/runtime-p2p/blob/master/src/connection_manager.ts
@@ -86,7 +95,6 @@ interface PeerRuntime {
     portInfo: PortInfo;
     fin: any;
     isDisconnected: boolean;
-    identity: Identity;
 }
 
 interface IdentityAddress {
@@ -102,4 +110,4 @@ interface ConnectionManager extends EventEmitter {
 }
 
 export default <ConnectionManager>connectionManager;
-export { meshEnabled, PeerRuntime, isMeshEnabled  };
+export { meshEnabled, PeerRuntime, isMeshEnabled, keyFromPortInfo, getMeshUuid };
