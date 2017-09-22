@@ -35,6 +35,7 @@ module.exports.windowApiMap = {
     'flash-window': flashWindow,
     'focus-window': focusWindow,
     'get-current-window-options': getCurrentWindowOptions,
+    'get-all-frames': getAllFrames,
     'get-window-bounds': getWindowBounds,
     'get-window-group': getWindowGroup,
     'get-window-info': getWindowInfo,
@@ -318,6 +319,16 @@ function hideWindow(identity, message, ack) {
 
     Window.hide(windowIdentity);
     ack(successAck);
+}
+
+
+function getAllFrames(identity, message, ack) {
+    var payload = message.payload,
+        dataAck = _.clone(successAck),
+        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+    dataAck.data = Window.getAllFrames(windowIdentity);
+    ack(dataAck);
 }
 
 function getWindowSnapshot(identity, message, ack) {

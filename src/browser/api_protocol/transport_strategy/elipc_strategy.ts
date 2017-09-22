@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+import * as log from '../../log';
 import { AckMessage,  AckFunc, AckPayload } from './ack';
 import { ApiTransportBase, MessagePackage } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
@@ -37,13 +38,16 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             } else {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
+                    log.writeToLog(1, `**** elipc l41 endpoint ${JSON.stringify(endpoint, undefined, 4)}`, true);                    
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
                     if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data, ack, nack))
                             .then(result => {
+                                log.writeToLog(1, `**** elipc l46 result ${JSON.stringify(result, undefined, 4)}`, true);
                                 // older action calls will invoke ack internally, newer ones will return a value
                                 if (result !== undefined) {
+                                    log.writeToLog(1, `**** elipc l50 ack ${JSON.stringify(ack, undefined, 4)}`, true);
                                     ack(new AckPayload(result));
                                 }
                             }).catch(err => {

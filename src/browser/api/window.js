@@ -996,6 +996,10 @@ Window.focus = function(identity) {
     browserWindow.focus();
 };
 
+Window.getAllFrames = function(identity) {
+    return 'window.getAllFrames in api/window from core - FILL ME IN>>>>>>>>>>';
+};
+
 Window.getBounds = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 
