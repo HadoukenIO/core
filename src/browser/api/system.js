@@ -40,7 +40,6 @@ const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 
-
 const defaultProc = {
     getCpuUsage: function() {
         return 0;
@@ -387,6 +386,15 @@ exports.System = {
             }
         });
     },
+    getMinLogLevel: function() {
+        try {
+            const logLevel = electronApp.getMinLogLevel();
+
+            return log.logLevelMappings.get(logLevel);
+        } catch (e) {
+            return e;
+        }
+    },
     getMonitorInfo: function() {
         return MonitorInfo.getInfo('api-query');
     },
@@ -480,6 +488,19 @@ exports.System = {
     log: function(level, message) {
         return log.writeToLog(level, message, false);
     },
+    setMinLogLevel: function(level) {
+        try {
+            const levelAsString = String(level); // We only accept log levels as strings here
+            const mappedLevel = log.logLevelMappings.get(levelAsString);
+
+            if (mappedLevel === undefined) {
+                throw new Error(`Invalid logging level: ${level}`);
+            }
+            electronApp.setMinLogLevel(mappedLevel);
+        } catch (e) {
+            return e;
+        }
+    },
     debugLog: function(level, message) {
         return log.writeToLog(level, message, true);
     },
@@ -512,6 +533,8 @@ exports.System = {
     startCrashReporter: function(identity, options) {
         const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
         const reporterOptions = Object.assign({ configUrl }, options);
+
+        log.setToVerbose();
         crashReporter.startOFCrashReporter(reporterOptions);
 
         return crashReporter.crashReporterState();

@@ -490,10 +490,12 @@ export function shouldCloseRuntime(ignoreArray: string[]|undefined): boolean {
             conn => conn.nonPersistent === undefined || !conn.nonPersistent
         );
 
-        return !hasPersistentConnections && !getAllAppObjects().find(app =>
-            getAppRunningState(app.uuid) && // app is running
-            ignoredApps.indexOf(app.uuid) < 0 && // app is not being ignored
-            !app._options.nonPersistent // app is persistent
+        return !hasPersistentConnections && !getAllAppObjects().find(app => {
+            const nonPersistent = app._options.nonPersistent !== undefined ? app._options.nonPersistent : app._options.nonPersistant;
+            return getAppRunningState(app.uuid) && // app is running
+                ignoredApps.indexOf(app.uuid) < 0 && // app is not being ignored
+                !nonPersistent; // app is persistent
+            }
         );
     }
 }

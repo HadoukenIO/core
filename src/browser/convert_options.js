@@ -90,6 +90,7 @@ function five0BaseOptions() {
         'saveWindowState': true,
         'shadow': false,
         'showTaskbarIcon': true,
+        'smallWindow': false,
         'state': 'normal',
         'taskbarIcon': '',
         'taskbarIconGroup': '',
@@ -283,6 +284,10 @@ module.exports = {
             newOptions.plugin = [];
         } else {
             newOptions.plugin = plugin;
+        }
+
+        if (options.customRequestHeaders !== undefined) {
+            newOptions.customRequestHeaders = options.customRequestHeaders;
         }
 
         if (returnAsString) {

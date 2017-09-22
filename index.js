@@ -43,6 +43,7 @@ let socketServer = require('./src/browser/transports/socket_server').server;
 let authenticationDelegate = require('./src/browser/authentication_delegate.js');
 let convertOptions = require('./src/browser/convert_options.js');
 let coreState = require('./src/browser/core_state.js');
+let webRequestHandlers = require('./src/browser/web_request_handler.js');
 let errors = require('./src/common/errors.js');
 import ofEvents from './src/browser/of_events';
 import {
@@ -247,6 +248,8 @@ app.on('ready', function() {
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
+    webRequestHandlers.initHandlers();
+
     launchApp(coreState.argo, true);
 
     registerShortcuts();
@@ -388,14 +391,14 @@ function includeFlashPlugin() {
 }
 
 function initializeCrashReporter(argo) {
+    if (!isInDiagnosticsMode(argo)) {
+        return;
+    }
+
     const configUrl = argo['startup-url'] || argo['config'];
     const diagnosticMode = argo['diagnostics'] || false;
-    const enableCrashReporting = argo['enable-crash-reporting'];
-    const shouldStartCrashReporter = enableCrashReporting || diagnosticMode;
 
-    if (shouldStartCrashReporter) {
-        crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
-    }
+    crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
 }
 
 function rotateLogs(argo) {
@@ -497,6 +500,11 @@ function initServer() {
 //is essential for proper runtime startup and adapter connectivity. we want to split into smaller independent parts.
 //please see the discussion on https://github.com/openfin/runtime-core/pull/194
 function launchApp(argo, startExternalAdapterServer) {
+
+    if (isInDiagnosticsMode(argo)) {
+        log.setToVerbose();
+    }
+
     convertOptions.fetchOptions(argo, configuration => {
         const {
             configUrl,
@@ -645,4 +653,8 @@ function registerShortcuts() {
 
     app.on('browser-window-closed', unhookShortcuts);
     app.on('browser-window-blur', unhookShortcuts);
+}
+
+function isInDiagnosticsMode(argo) {
+    return !!(argo['diagnostics'] || argo['enable-crash-reporting']);
 }
