@@ -84,8 +84,8 @@ function five0BaseOptions() {
         'resizable': true,
         'resize': true,
         'resizeRegion': {
-            'bottomRightCorner': 6,
-            'size': 4
+            'bottomRightCorner': 9,
+            'size': 7
         },
         'saveWindowState': true,
         'shadow': false,
