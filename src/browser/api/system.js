@@ -42,6 +42,7 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
+import { createChromiumSocket } from '../transports/chromium_socket';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -216,6 +217,13 @@ exports.System = {
         });
 
 
+    },
+    createProxySocket: function(options, callback, errorCallback) {
+        const url = options && options.url;
+
+        electronApp.vlog(1, `createProxySocket ${url}`);
+
+        createChromiumSocket({ url, dataSocket: true, callback, errorCallback });
     },
     deleteCacheOnExit: function(callback, errorCallback) {
         const folders = [{

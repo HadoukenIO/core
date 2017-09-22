@@ -26,7 +26,7 @@
     "@types/minimist": "^1.2.0",
     "@types/mocha": "^2.2.39",
     "@types/mockery": "^1.4.29",
-    "@types/node": "^6.0.49",
+    "@types/node": "^7.0.29",
     "@types/underscore": "^1.8.0",
     "asar": "^0.12.1",
     "babel-preset-es2015": "^6.1.4",

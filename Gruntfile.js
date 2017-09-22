@@ -363,7 +363,8 @@ module.exports = (grunt) => {
             'src/browser/transports/wm_copydata.ts',
             'src/browser/transports/base.ts',
             'src/browser/transports/chromium_ipc.ts',
-            'src/browser/transports/electron_ipc.ts'
+            'src/browser/transports/electron_ipc.ts',
+            'src/browser/transports/chromium_socket.ts'
         ];
 
         // List of files that need to have some kind of license
