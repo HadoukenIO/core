@@ -455,7 +455,13 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     const { uuid, name } = mainWindowOpts;
     const windowIdentity = { uuid, name };
 
-    System.downloadPreloadScripts(windowIdentity, forPreload, proceed);
+    if (coreState.getAppRunningState(uuid)) {
+        proceed();
+    } else {
+        // Flow through preload script logic (eg. re-download of failed preload scripts)
+        // only if app is not already running.
+        System.downloadPreloadScripts(windowIdentity, forPreload, proceed);
+    }
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {
