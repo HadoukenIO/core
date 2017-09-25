@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 /* global fin, window*/
-
 // These are relative to the preload execution, the root of the proj
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
@@ -265,9 +264,6 @@ limitations under the License.
             updateWindowOptionsSync(currWindowOpts.name, currWindowOpts.uuid, {
                 hasLoaded: true
             });
-
-            // Notify WebContent that frame routing can now be counted
-            electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
         };
 
         if (currWindowOpts.saveWindowState && !currWindowOpts.hasLoaded) {
@@ -357,7 +353,16 @@ limitations under the License.
         //---------------------------------------------------------------
         let winOpts = getWindowOptionsSync();
 
-        showOnReady(glbl, winOpts);
+        // Prevent iframes from attempting to do windowing actions, these will always be handled
+        // by the main window frame.
+        if (!window.frameElement) {
+            showOnReady(glbl, winOpts);
+        }
+
+        // The api-ready event allows the webContents to assign api priority. This must happen after
+        // any spin up windowing action or you risk stealing api priority from an already connected frame
+        electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+
         wireUpMenu(glbl, winOpts);
         wireUpZoomEvents();
         raiseReadyEvents(winOpts);
