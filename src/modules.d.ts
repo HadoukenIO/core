@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 /**
  * All declared modules in this file don't correctly represent all of
  * their functionality, rather things are constantly added here while
@@ -32,12 +33,19 @@ declare module 'electron' {
         export function vlog(level: number, message: any): any;
     }
 
+    export interface Rectangle {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    }
+
     namespace BrowserWindow {
         export function fromId(id: string): any;
     }
-
     export class BrowserWindow {
         constructor(props: any);
+
         _options: {
             minWidth: number;
             minHeight: number;

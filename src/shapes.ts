@@ -20,16 +20,6 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
-/**
- * Window bounds
- */
-export interface WindowBounds {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
-
 export interface APIMessage {
     action: string;
     messageId: number;
