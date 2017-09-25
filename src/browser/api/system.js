@@ -304,6 +304,28 @@ exports.System = {
             return process.env[varsToExpand] || null;
         }
     },
+    getFocusedWindow: function() {
+        let allWindows = coreState.getAllWindows();
+        for (var i = 0; i < allWindows.length; i++) {
+            let winMeta = allWindows[i];
+            let uuid = winMeta.uuid;
+            //check main window
+            let ofMainWin = coreState.getWindowByUuidName(uuid, winMeta.mainWindow.name);
+            if (ofMainWin && ofMainWin.browserWindow && ofMainWin.browserWindow.isFocused()) {
+                return ofMainWin;
+            } else {
+                //check child window
+                for (var j = 0; j < winMeta.childWindows.length; j++) {
+                    let childWin = winMeta.childWindows[j];
+                    let ofWin = coreState.getWindowByUuidName(uuid, childWin.name);
+                    if (ofWin && ofWin.browserWindow && ofWin.browserWindow.isFocused()) {
+                        return ofWin;
+                    }
+                }
+            }
+        }
+        return null;
+    },
     getHostSpecs: function() {
         return {
             cpus: os.cpus(),

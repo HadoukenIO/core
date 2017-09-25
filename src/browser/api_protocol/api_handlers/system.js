@@ -41,6 +41,7 @@ function SystemApiHandler() {
         'get-device-user-id': getDeviceUserId,
         'get-el-ipc-config': getElIPCConfig,
         'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
+        'get-focused-window': getFocusedWindow,
         'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
         'get-min-log-level': getMinLogLevel,
         'get-monitor-info': getMonitorInfo, // apiPath: '.getMonitorInfo' -> called by js adapter during init so can't be disabled
@@ -248,6 +249,12 @@ function SystemApiHandler() {
     function getDeviceId(identity, message, ack) {
         var dataAck = _.clone(successAck);
         dataAck.data = System.getDeviceId();
+        ack(dataAck);
+    }
+
+    function getFocusedWindow(identity, message, ack) {
+        var dataAck = _.clone(successAck);
+        dataAck.data = System.getFocusedWindow();
         ack(dataAck);
     }
 
