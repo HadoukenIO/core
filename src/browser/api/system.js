@@ -19,6 +19,7 @@ const fs = require('fs');
 const os = require('os');
 const electron = require('electron');
 const electronApp = electron.app;
+const electronBrowserWindow = electron.BrowserWindow;
 const ResourceFetcher = electron.resourceFetcher;
 const session = electron.session;
 const shell = electron.shell;
@@ -305,26 +306,17 @@ exports.System = {
         }
     },
     getFocusedWindow: function() {
-        let allWindows = coreState.getAllWindows();
-        for (var i = 0; i < allWindows.length; i++) {
-            let winMeta = allWindows[i];
-            let uuid = winMeta.uuid;
-            //check main window
-            let ofMainWin = coreState.getWindowByUuidName(uuid, winMeta.mainWindow.name);
-            if (ofMainWin && ofMainWin.browserWindow && ofMainWin.browserWindow.isFocused()) {
-                return ofMainWin;
+        const fWin = electronBrowserWindow.getFocusedWindow();
+        if (fWin) {
+            const win = coreState.getWinById(fWin.id);
+            if (win && win.openfinWindow) {
+                return { 'uuid': win.openfinWindow.uuid, 'name': win.openfinWindow.name };
             } else {
-                //check child window
-                for (var j = 0; j < winMeta.childWindows.length; j++) {
-                    let childWin = winMeta.childWindows[j];
-                    let ofWin = coreState.getWindowByUuidName(uuid, childWin.name);
-                    if (ofWin && ofWin.browserWindow && ofWin.browserWindow.isFocused()) {
-                        return ofWin;
-                    }
-                }
+                return null;
             }
+        } else {
+            return null;
         }
-        return null;
     },
     getHostSpecs: function() {
         return {
