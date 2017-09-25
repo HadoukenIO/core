@@ -455,15 +455,14 @@ function SystemApiHandler() {
 
     function getSelectedPreloadScripts(identity, message, ack, nack) {
         const { payload } = message;
-        const response = System.getSelectedPreloadScripts(payload);
 
-        if (Array.isArray(response)) {
-            const dataAck = _.clone(successAck);
-            dataAck.data = response;
-            ack(dataAck);
-        } else {
-            nack(response);
-        }
+        System.getSelectedPreloadScripts(payload)
+            .then(scriptSet => {
+                const dataAck = _.clone(successAck);
+                dataAck.data = scriptSet;
+                ack(dataAck);
+            })
+            .catch(nack);
     }
 }
 

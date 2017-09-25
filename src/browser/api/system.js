@@ -686,12 +686,14 @@ exports.System = {
             return urls;
         }, []);
 
-        if (!missingRequiredScripts.length) {
-            // when load/fetch failed, mapped value will be `undefined`, which stringify translates to `null`
-            return preloadOption.map(preload => preloadScriptsCache[preload.url]);
-        } else {
-            return `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
+        if (missingRequiredScripts.length) {
+            const err = `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
+            return Promise.reject(err);
         }
+
+        // when load/fetch failed, mapped object will be `undefined` (stringifies as `null`)
+        const scriptSet = preloadOption.map(preload => preloadScriptsCache[preload.url]);
+        return Promise.resolve(scriptSet);
     }
 };
 
