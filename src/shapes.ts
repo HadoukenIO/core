@@ -88,6 +88,7 @@ export interface OpenFinWindow {
     app_uuid: string;
     browserWindow: BrowserWindow;
     children: OpenFinWindow[];
+    frames: any; // TODO type this
     forceClose: boolean;
     groupUuid: string|null;
     hideReason: string;

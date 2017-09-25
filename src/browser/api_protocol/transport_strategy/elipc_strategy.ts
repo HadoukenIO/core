@@ -70,12 +70,19 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         const { uuid, name } = identity;
         const routingInfo = coreState.getRoutingInfoByUuidFrame(uuid, name);
 
-        if (!routingInfo) { return; }
+        if (!routingInfo) { return; } // TODO handle the failed lookup
 
         system.debugLog(1, `the routing info ${Object.keys(routingInfo)}`);
 
         const { browserWindow, frameRoutingId } = routingInfo;
+        system.debugLog(1, `the ID  ${frameRoutingId}`);
+        system.debugLog(1, `the Type  ${typeof frameRoutingId}`);
+        // system.debugLog(1, `the Type  ${typeof frameRoutingId}`);
+        // system.debugLog(1, ` ${JSON.stringify(Object.assign({}) routingInfo)}`);
         const payload = JSON.stringify(payloadObj);
+
+        // TODO FIXME !!!
+        // we need to check that the endpoints are defined and are numbers!
 
         // we need to preserve the bulk send (i think...) so if the routing id is 1
         // send to the entire window (potentially all frame ids based on frameConnect)

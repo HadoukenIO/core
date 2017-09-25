@@ -282,7 +282,7 @@ export function getChildrenByApp(id: number): Shapes.OpenFinWindow[]|void {
 }
 
 // perhaps just check parentId === child for iframe check?
-export function addChildToWin(parentId: number, childId: number, isIframe: boolean = false): number|void {
+export function addChildToWin(parentId: number, childId: number): number|void {
     const app = getAppByWin(parentId);
 
     if (!app) {
@@ -305,8 +305,8 @@ export function addChildToWin(parentId: number, childId: number, isIframe: boole
         children: [],
         id: childId, //should the be null if isIframe???
         openfinWindow: null,
-        parentId: parentId,
-        isIframe
+        parentId: parentId
+        //isIframe
     });
 }
 
@@ -588,51 +588,73 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
 
     for (const { openfinWindow } of app.children) {
         const { name, isIframe, parentFrameId } = openfinWindow;
-
-        if (name !== frame) {
-            continue;
-        }
-
-        const isMainRenderFrame = !isIframe; //name === frame;
         let browserWindow: Shapes.BrowserWindow;
+        browserWindow = openfinWindow.browserWindow;
 
-        log.writeToLog(1, `aaaand ${name}, ${isIframe}, ${parentFrameId} ` , true);
-
-        if (isMainRenderFrame) {
-            // log.writeToLog(1, 'really???' , true);
-            browserWindow = openfinWindow.browserWindow;
-        }  else if (isIframe && parentFrameId !== undefined) {
-            const parentWin = getWinById(parentFrameId);
-            browserWindow = parentWin.openfinWindow.browserWindow;
-        }
-
-        log.writeToLog(1, `${Object.keys(openfinWindow)}` , true);
-        log.writeToLog(1, `${name} -- ${frame} --> ${isMainRenderFrame}` , true);
-        if (isMainRenderFrame) {
-            log.writeToLog(1, `sent to main render frame ${{
-                name,
-                browserWindow,
-                frameRoutingId: 1,
-                frameName: name
-            }}` , true);
-            // todo ensure that this is still correct with the different frameConnect opts
+        if (name === frame) {
             return {
                 name,
                 browserWindow,
                 frameRoutingId: 1,
                 frameName: name
             };
+        } else if (openfinWindow.frames[frame]) {
+            const {name, frameRoutingId} = openfinWindow.frames[frame];
+            log.writeToLog(1, 'we made it!' , true);
+            log.writeToLog(1, `${JSON.stringify(openfinWindow.frames[frame])}` , true);
+            return {
+                name,
+                browserWindow,
+                frameRoutingId,
+                frameName: name
+            };
         } else {
-            const frameInfo = browserWindow.webContents.hasFrame(frame);
-            log.writeToLog(1, 'has frame info? ' + frameInfo, true);
-
-            if (frameInfo) {
-
-                return Object.assign({
-                    name,
-                    browserWindow
-                }, frameInfo);
-            }
+            throw new Error(`${uuid} / ${name} not found!!`);
         }
-    }
+
+        // if (name !== frame) {
+        //     continue;
+        // }
+
+        // const isMainRenderFrame = !isIframe; //name === frame;
+
+        // log.writeToLog(1, `aaaand ${name}, ${isIframe}, ${parentFrameId} ` , true);
+
+        // if (isMainRenderFrame) {
+        //     // log.writeToLog(1, 'really???' , true);
+        //     browserWindow = openfinWindow.browserWindow;
+        // }  else if (isIframe && parentFrameId !== undefined) {
+        //     const parentWin = getWinById(parentFrameId);
+        //     browserWindow = parentWin.openfinWindow.browserWindow;
+        // }
+
+        // log.writeToLog(1, `${Object.keys(openfinWindow)}` , true);
+        // log.writeToLog(1, `${name} -- ${frame} --> ${isMainRenderFrame}` , true);
+        // if (isMainRenderFrame) {
+        //     log.writeToLog(1, `sent to main render frame ${{
+        //         name,
+        //         browserWindow,
+        //         frameRoutingId: 1,
+        //         frameName: name
+        //     }}` , true);
+        //     // todo ensure that this is still correct with the different frameConnect opts
+        //     return {
+        //         name,
+        //         browserWindow,
+        //         frameRoutingId: 1,
+        //         frameName: name
+        //     };
+        // } else {
+        //     const frameInfo = browserWindow.webContents.hasFrame(frame);
+        //     log.writeToLog(1, 'has frame info? ' + frameInfo, true);
+
+        //     if (frameInfo) {
+
+        //         return Object.assign({
+        //             name,
+        //             browserWindow
+        //         }, frameInfo);
+        //     }
+        // }
+    } // end for ofwin of app.children
 }

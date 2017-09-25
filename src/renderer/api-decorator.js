@@ -91,6 +91,7 @@ limitations under the License.
 
     function getWindowIdentitySync() {
         let winOpts = getWindowOptionsSync();
+        glbl.winOpts = winOpts;
 
         return {
             uuid: winOpts.uuid,

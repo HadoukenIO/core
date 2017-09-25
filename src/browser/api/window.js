@@ -379,27 +379,36 @@ Window.create = function(id, opts) {
     if (!opts._noregister) {
 
         browserWindow = BrowserWindow.fromId(id);
-        browserWindow.webContents.registerIframe = (frameName) => {
+        browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
             // const winObj = coreState.getWinById(id);
-            const isIframe = true;
+            // const isIframe = true;
             const parentFrameId = id;
-            const frameInfo = Object.assign({}, { name: frameName, uuid, isIframe, parentFrameId });
+            const frameInfo = Object.assign({}, {
+                name: frameName,
+                uuid,
+                // isIframe,
+                parentFrameId,
+                frameRoutingId
+            });
 
-            coreState.addChildToWin(id, frameName, true);
-            coreState.setWindowObj(frameName, frameInfo);
+            // coreState.addChildToWin(id, frameName, true);
+            // coreState.setWindowObj(frameName, frameInfo);
             // log.writeToLog(1, JSON.stringify(coreState.setWindowObj(frameName, winObj), null, ' '), true);
             // log.writeToLog(1, JSON.stringify(coreState.apps, null, ' '), true);
 
             log.writeToLog(1, 'whatever', true);
 
-
-            // if (winObj.iframes) {
-            //     winObj.iframes[frameName] = frameInfo;
+            // should this have a guard? can a window get created w/o going through here??
+            // if (winObj.frames) {
+            winObj.frames[frameName] = frameInfo;
             // } else {
-            //     winObj.iframes = { frameName: frameInfo };
+            //    winObj.frames = { frameName: frameInfo };
             // }
         };
 
+        browserWindow.webContents.unregisterIframe = (frameName) => {
+            delete winObj.frames[frameName];
+        };
 
         // todo listen & create "isFrame" entry for core_state
         // todo destroy this listener
@@ -791,6 +800,7 @@ Window.create = function(id, opts) {
         /* jshint ignore:end */
 
         children: [],
+        frames: {},
 
         // TODO this should be removed once it's safe in favor of the
         //      more descriptive browserWindow key
@@ -1109,43 +1119,49 @@ Window.getOptions = function(identity, iframeInfo = {}) {
     log.writeToLog(1, identity, true);
     log.writeToLog(1, iframeInfo, true);
 
-    const { isIframe, frameName, winApi, renderFrameId } = iframeInfo;
-    const { uuid, parentFrame } = identity;
-
-    if (winApi) {
-        const browserWindow = getElectronBrowserWindow({
-            uuid,
-            name: parentFrame
-        }, 'get options for');
-        return browserWindow._options;
-    } else if (frameName) {
-        const browserWindow = getElectronBrowserWindow({
-            uuid,
-            name: parentFrame
-        }, 'get options for');
-        browserWindow.webContents.setFrameMapping(renderFrameId, frameName);
-        coreState.updateWinName(uuid, identity.name, frameName);
-
-        return {
-            // rawWindowOpen: false,
-            uuid,
-            name: frameName
-            // backgroundColor
-            // preload???
-        };
-    } else if (isIframe) {
-        return {
-            // rawWindowOpen: false,
-            uuid,
-            name: identity.name
-            // backgroundColor
-            // preload???
-        };
-    } else {
-        let browserWindow = getElectronBrowserWindow(identity, 'get options for');
-
-        return browserWindow._options;
+    try {
+        return getElectronBrowserWindow(identity, 'get options for')._options;
+    } catch (e) {
+        return Object.assign({entityType: 'iframe'}, identity);
     }
+
+    // const { isIframe, frameName, winApi } = iframeInfo;
+    // const { uuid, parentFrame } = identity;
+
+    // if (winApi) {
+    //     const browserWindow = getElectronBrowserWindow({
+    //         uuid,
+    //         name: parentFrame
+    //     }, 'get options for');
+    //     return browserWindow._options;
+    // } else if (frameName) {
+    //     // const browserWindow = getElectronBrowserWindow({
+    //     //     uuid,
+    //     //     name: parentFrame
+    //     // }, 'get options for');
+    //     // browserWindow.webContents.setFrameMapping(renderFrameId, frameName);
+    //     // coreState.updateWinName(uuid, identity.name, frameName);
+
+    //     return {
+    //         // rawWindowOpen: false,
+    //         uuid,
+    //         name: frameName
+    //         // backgroundColor
+    //         // preload???
+    //     };
+    // } else if (isIframe) {
+    //     return {
+    //         // rawWindowOpen: false,
+    //         uuid,
+    //         name: identity.name
+    //         // backgroundColor
+    //         // preload???
+    //     };
+    // } else {
+    //     let browserWindow = getElectronBrowserWindow(identity, 'get options for');
+
+    //     return browserWindow._options;
+    // }
 
     //let openfinWindow = Window.wrap(identity.uuid, identity.name);
     // log.writeToLog(1, 'bleep', true);
