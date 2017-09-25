@@ -11,7 +11,7 @@ import { Identity } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
 
 
-let successAck: object = {
+const successAck: object = {
     success: true
 };
 
@@ -26,11 +26,10 @@ export class FrameApiHandler {
 
     private getInfo(identity: Identity, message: any, ack: any) {
 
-        const dataAck: object = {...successAck};
+        const dataAck: {[k: string]: any} = {...successAck};
         const frameIdentity: any = apiProtocolBase.getTargetWindowIdentity(message.payload);
 
         dataAck.data = Frame.getInfo(frameIdentity);
         ack(dataAck);
-        // return Frame.getInfo(message.payload);
     }
 }

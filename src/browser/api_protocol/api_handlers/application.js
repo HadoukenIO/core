@@ -44,6 +44,7 @@ module.exports.applicationApiMap = {
     'get-application-groups': getApplicationGroups,
     'get-application-manifest': getApplicationManifest,
     'get-child-windows': getChildWindows,
+    'get-entity-info': getEntityInfo,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
     'get-shortcuts': getShortcuts,
@@ -200,6 +201,16 @@ function getChildWindows(identity, message, ack) {
             return c.name;
         }).value();
     ack(dataAck);
+}
+
+function getEntityInfo(identity, message, ack, nack) {
+    const dataAck = _.clone(successAck);
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(message.payload);
+
+    Application.getEntityInfo(windowIdentity, response => {
+        dataAck.data = response;
+        ack(dataAck);
+    }, nack);
 }
 
 function getInfo(identity, message, ack, nack) {
