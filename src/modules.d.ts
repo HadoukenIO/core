@@ -40,9 +40,6 @@ declare module 'electron' {
         height: number;
     }
 
-    namespace BrowserWindow {
-        export function fromId(id: string): any;
-    }
     export class BrowserWindow {
         constructor(props: any);
 
@@ -52,12 +49,21 @@ declare module 'electron' {
             maxWidth: number;
             maxHeight: number;
         };
+
+        static fromId(id: string): BrowserWindow;
+        static getAllWindows(): BrowserWindow[];
+
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         getWindowsByClassName(className: string): any;
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
         hookWindowMessage(n: number, listener: (message: any) => void): void;
         subscribeSessionNotifications(b: boolean): void;
         isDestroyed(): boolean;
+        isMaximized(): boolean;
+        isMinimized(): boolean;
+        emit(routeString: string, ...args: any[]): void;
+        getBounds(): Rectangle;
+        setWindowPlacement(bounds: Rectangle): void;
     }
 
     export class ipcMain {
