@@ -1122,56 +1122,8 @@ Window.getOptions = function(identity, iframeInfo = {}) {
     try {
         return getElectronBrowserWindow(identity, 'get options for')._options;
     } catch (e) {
-        return Object.assign({entityType: 'iframe'}, identity);
+        return Object.assign({ entityType: 'iframe' }, identity);
     }
-
-    // const { isIframe, frameName, winApi } = iframeInfo;
-    // const { uuid, parentFrame } = identity;
-
-    // if (winApi) {
-    //     const browserWindow = getElectronBrowserWindow({
-    //         uuid,
-    //         name: parentFrame
-    //     }, 'get options for');
-    //     return browserWindow._options;
-    // } else if (frameName) {
-    //     // const browserWindow = getElectronBrowserWindow({
-    //     //     uuid,
-    //     //     name: parentFrame
-    //     // }, 'get options for');
-    //     // browserWindow.webContents.setFrameMapping(renderFrameId, frameName);
-    //     // coreState.updateWinName(uuid, identity.name, frameName);
-
-    //     return {
-    //         // rawWindowOpen: false,
-    //         uuid,
-    //         name: frameName
-    //         // backgroundColor
-    //         // preload???
-    //     };
-    // } else if (isIframe) {
-    //     return {
-    //         // rawWindowOpen: false,
-    //         uuid,
-    //         name: identity.name
-    //         // backgroundColor
-    //         // preload???
-    //     };
-    // } else {
-    //     let browserWindow = getElectronBrowserWindow(identity, 'get options for');
-
-    //     return browserWindow._options;
-    // }
-
-    //let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    // log.writeToLog(1, 'bleep', true);
-    // log.writeToLog(1, openfinWindow, true);
-    // log.writeToLog(1, identity, true);
-    // log.writeToLog(1, 'bloop', true);
-    //let browserWindow = openfinWindow && openfinWindow.browserWindow;
-    // let browserWindow = getElectronBrowserWindow(identity, 'get options for');
-
-    // return browserWindow._options;
 };
 
 Window.getParentApplication = function() {

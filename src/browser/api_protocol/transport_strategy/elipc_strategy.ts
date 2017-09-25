@@ -72,32 +72,23 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
         if (!routingInfo) { return; } // TODO handle the failed lookup
 
-        system.debugLog(1, `the routing info ${Object.keys(routingInfo)}`);
-
         const { browserWindow, frameRoutingId } = routingInfo;
-        system.debugLog(1, `the ID  ${frameRoutingId}`);
-        system.debugLog(1, `the Type  ${typeof frameRoutingId}`);
-        // system.debugLog(1, `the Type  ${typeof frameRoutingId}`);
-        // system.debugLog(1, ` ${JSON.stringify(Object.assign({}) routingInfo)}`);
         const payload = JSON.stringify(payloadObj);
-
-        // TODO FIXME !!!
-        // we need to check that the endpoints are defined and are numbers!
 
         // we need to preserve the bulk send (i think...) so if the routing id is 1
         // send to the entire window (potentially all frame ids based on frameConnect)
-        if (browserWindow.isDestroyed()) {
-            system.debugLog(1, `${uuid}/${name} as been destroyed, payload not delivered: ${payload}`);
+        const browserWindowLocated = browserWindow;
+        const browserWindowExists = !browserWindow.isDestroyed();
+        const validRoutingId = typeof frameRoutingId === 'number';
+        const canTrySend = browserWindowLocated && browserWindowExists && validRoutingId;
+
+        if (!canTrySend) {
+            system.debugLog(1, `uuid:${uuid} name:${name} frameRoutingId:${frameRoutingId} not reachable, payload:${payload}`);
         } else if (frameRoutingId === 1) {
             browserWindow.send(electronIpc.channels.CORE_MESSAGE, payload);
         } else {
             browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
         }
-
-        // const window = coreState.getWindowByUuidName(identity.uuid, identity.name);
-        // if (window && !window.browserWindow.isDestroyed()) {
-        //     window.browserWindow.send(electronIpc.channels.CORE_MESSAGE, JSON.stringify(payload));
-        // }
     }
 
     //TODO: this needs to be refactor at some point.
