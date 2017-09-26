@@ -35,7 +35,7 @@ interface ProxyEvent {
 
 export interface CreateProxyResponse {
     success: boolean;
-    data?: {localPort: number}; // port# on localhost
+    data?: {localPort: number, proxyUrl: string}; // port# on localhost
 }
 
 export interface CreateProxyRequest {
@@ -73,7 +73,10 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
                 request.closeSocket();
             }
             if (event.eventType === ProxyEventType.Listening) {
-                req.callback({success: true, data: {localPort: event.payload}});
+                const proxyUrl: Url = parseUrl(req.url);
+                // setting mappedUrl.port does not work.  Have to append to host
+                proxyUrl.host = originalUrl.host + ':' + event.payload;
+                req.callback({success: true, data: {localPort: event.payload, proxyUrl: formatUrl(proxyUrl)}});
             }
         }, response);
     });
@@ -147,6 +150,6 @@ function startProxyConnection(proxyCallback: (event: ProxyEvent) => void, respon
         log.writeToLog(1, `proxy server error ${err}`, true);
         server.close();
     });
-    //    server.listen(0, 'localhost');
-    server.listen(8082, 'localhost');
+    server.listen(0, 'localhost');
+    //server.listen(8082, 'localhost');
 }
