@@ -47,7 +47,6 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { fetchAndLoadPreloadScripts } from '../preload_scripts';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -134,7 +133,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
         throw new Error(`Invalid application name: ${name}`);
     }
 
-    const isAppRunning = coreState.getAppRunningState(uuid);
+    const isAppRunning = coreState.getAppRunningState(uuid) || coreState.getExternalAppObjByUuid(uuid);
     if (isAppRunning) {
         throw new Error(`Application with specified UUID already exists: ${uuid}`);
     }
@@ -439,21 +438,18 @@ Application.revokeWindowAccess = function() {
 };
 
 // userAppConfigArgs must be set to 'undefined' because
-// regular paramaters cannot come after default paramaters.
+// regular parameters cannot come after default parameters.
 Application.run = function(identity, configUrl = '', userAppConfigArgs = undefined) {
     if (!identity) {
         return;
     }
 
     const app = createAppObj(identity.uuid, null, configUrl);
-    const mainWindowOpts = _.clone(app._options);
-    const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
-    const windowIdentity = {
-        uuid: mainWindowOpts.uuid,
-        name: mainWindowOpts.name
-    };
+    const proceed = () => run(identity, app._options, userAppConfigArgs);
+    const { uuid, name, preload } = app._options;
+    const windowIdentity = { uuid, name };
 
-    fetchAndLoadPreloadScripts(windowIdentity, mainWindowOpts.preload, proceed);
+    System.downloadPreloadScripts(windowIdentity, preload, proceed);
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {
@@ -558,7 +554,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
 
     //for backwards compatibility main window needs to have name === uuid
-    mainWindowOpts.name = uuid;
+    mainWindowOpts = Object.assign({}, mainWindowOpts, { name: uuid }); //avoid mutating original object
 
     const win = Window.create(app.id, mainWindowOpts);
     coreState.setWindowObj(app.id, win);

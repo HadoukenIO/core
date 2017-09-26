@@ -75,15 +75,19 @@ limitations under the License.
         }
     }
 
-    function getWindowOptionsSync() {
+    function getCachedWindowOptionsSync() {
         if (!cachedOptions) {
-            cachedOptions = syncApiCall('get-current-window-options');
+            cachedOptions = getWindowOptionsSync();
         }
         return cachedOptions;
     }
 
+    function getWindowOptionsSync() {
+        return syncApiCall('get-current-window-options');
+    }
+
     function getWindowIdentitySync() {
-        let winOpts = getWindowOptionsSync();
+        let winOpts = getCachedWindowOptionsSync();
 
         return {
             uuid: winOpts.uuid,
@@ -301,10 +305,12 @@ limitations under the License.
         }
     }
 
-    function wireUpMenu(global, options) {
+    function wireUpMenu(global) {
         global.addEventListener('contextmenu', e => {
             if (!e.defaultPrevented) {
                 e.preventDefault();
+
+                const options = getWindowOptionsSync();
 
                 if (options.contextMenu) {
                     const identity = getWindowIdentitySync();
@@ -351,7 +357,7 @@ limitations under the License.
         //---------------------------------------------------------------
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
-        let winOpts = getWindowOptionsSync();
+        let winOpts = getCachedWindowOptionsSync();
 
         // Prevent iframes from attempting to do windowing actions, these will always be handled
         // by the main window frame.
@@ -363,7 +369,7 @@ limitations under the License.
         // any spin up windowing action or you risk stealing api priority from an already connected frame
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
-        wireUpMenu(glbl, winOpts);
+        wireUpMenu(glbl);
         wireUpZoomEvents();
         raiseReadyEvents(winOpts);
 
@@ -409,7 +415,7 @@ limitations under the License.
 
     function onContentReady(bindObject, callback) {
 
-        let winOpts = getWindowOptionsSync();
+        let winOpts = getCachedWindowOptionsSync();
 
         if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || winOpts.rawWindowOpen)) {
             deferByTick(() => {
@@ -422,7 +428,7 @@ limitations under the License.
 
     function createChildWindow(options, cb) {
         let requestId = ++childWindowRequestId;
-        let winOpts = getWindowOptionsSync();
+        let winOpts = getCachedWindowOptionsSync();
         // initialize what's needed to create a child window via window.open
         let url = ((options || {}).url || undefined);
         let uniqueKey = generateGuidSync();
@@ -484,7 +490,7 @@ limitations under the License.
 
     global.chrome.desktop = {
         getDetails: cb => {
-            let winOpts = getWindowOptionsSync();
+            let winOpts = getCachedWindowOptionsSync();
             let details = {};
             let currSocketServerState = getSocketServerStateSync();
 
@@ -531,7 +537,7 @@ limitations under the License.
             windowExists: windowExistsSync,
             ipcconfig: getIpcConfigSync(),
             createChildWindow: createChildWindow,
-            getWindowOptions: getWindowOptionsSync,
+            getCachedWindowOptionsSync: getCachedWindowOptionsSync,
             openerSuccessCBCalled: openerSuccessCBCalled,
             emitNoteProxyReady: emitNoteProxyReady
         }
@@ -541,25 +547,35 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const winOpts = getWindowOptionsSync();
+        const winOpts = getCachedWindowOptionsSync();
+        const identity = {
+            uuid: winOpts.uuid,
+            name: winOpts.name
+        };
         const preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
         const action = 'set-window-preload-state';
 
         if (preloadOption.length) { // short-circuit
-            const response = syncApiCall('get-selected-preload-scripts', preloadOption);
+            let response;
+            try {
+                response = syncApiCall('get-selected-preload-scripts', preloadOption);
+            } catch (error) {
+                logPreload('error', identity, 'error', '', error);
+            }
 
-            if (response.error) {
-                console.error(response.error);
-            } else {
-                response.scripts.forEach((script, index) => {
-                    const { url } = preloadOption[index];
+            if (response) {
+                response.forEach((script, index) => {
+                    if (script !== null) {
+                        const { url } = preloadOption[index];
 
-                    try {
-                        window.eval(script); /* jshint ignore:line */
-                        asyncApiCall(action, { url, state: 'succeeded' });
-                    } catch (err) {
-                        console.error(`Execution failed for preload script "${url}".`, err);
-                        asyncApiCall(action, { url, state: 'failed' });
+                        try {
+                            const val = window.eval(script); /* jshint ignore:line */
+                            logPreload('info', identity, `eval succeeded`, url, val);
+                            asyncApiCall(action, { url, state: 'succeeded' });
+                        } catch (err) {
+                            logPreload('error', identity, 'eval failed', url, err);
+                            asyncApiCall(action, { url, state: 'failed' });
+                        }
                     }
                 });
             }
@@ -567,5 +583,16 @@ limitations under the License.
 
         asyncApiCall(action, { allDone: true });
     });
+
+    function logPreload(level, identity, state, url, data) {
+        if (url) {
+            state += ` for ${url}`;
+        }
+        if (data) {
+            state += ` with ${JSON.stringify(data)}`;
+        }
+        const message = `[PRELOAD] [${identity.uuid}]-[${identity.name}] ${state}`;
+        syncApiCall('write-to-log', { level, message });
+    }
 
 }());
