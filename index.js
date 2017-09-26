@@ -548,7 +548,8 @@ function launchApp(argo, startExternalAdapterServer) {
 
         app.emit('synth-desktop-icon-clicked', {
             mouse: System.getMousePosition(),
-            tickCount: app.getTickCount()
+            tickCount: app.getTickCount(),
+            uuid
         });
     }, error => {
         log.writeToLog(1, error, true);
