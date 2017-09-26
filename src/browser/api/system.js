@@ -687,7 +687,9 @@ exports.System = {
         }, []);
 
         if (missingRequiredScripts.length) {
-            const err = `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
+            const list = JSON.stringify(missingRequiredScripts);
+            const message = `Execution of preload scripts canceled because of missing required script(s) ${list}`;
+            const err = new Error(message);
             return Promise.reject(err);
         }
 
