@@ -19,6 +19,7 @@ limitations under the License.
 
 // npm modules
 let _ = require('underscore');
+import * as log from '../../log';
 
 // local modules
 let apiProtocolBase = require('./api_protocol_base.js');
@@ -28,6 +29,9 @@ let System = require('../../api/system.js').System;
 import {
     ExternalApplication
 } from '../../api/external_application';
+import {
+    Frame
+} from '../../api/frame';
 import {
     default as connectionManager
 } from '../../connection_manager';
@@ -78,6 +82,44 @@ function EventListenerApiHandler() {
                         name,
                         listenType: 'on',
                         className: 'window',
+                        eventName: type
+                    };
+
+                    addRemoteSubscription(subscription).then(unSubscribe => {
+                        remoteUnSub = unSubscribe;
+                    });
+                }
+
+                return () => {
+                    localUnsub();
+                    if (typeof remoteUnSub === 'function') {
+                        remoteUnSub();
+                    }
+                };
+            }
+        },
+        'frame': {
+            name: 'frame',
+            subscribe: function(identity, type, payload, cb) {
+                log.writeToLog(1, `**** event_listener l104 args are ${identity}${type}${JSON.stringify(payload)}${cb}`, true);
+
+                const {
+                    uuid,
+                    name
+                } = payload;
+                const frameIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+                const targetUuid = frameIdentity.uuid;
+                const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
+                const localUnsub = Frame.addEventListener(identity, frameIdentity, type, cb);
+                let remoteUnSub;
+                const isExternalClient = isBrowserClient(identity.uuid);
+
+                if (!islocalWindow && !isExternalClient) {
+                    const subscription = {
+                        uuid,
+                        name,
+                        listenType: 'on',
+                        className: 'frame',
                         eventName: type
                     };
 
