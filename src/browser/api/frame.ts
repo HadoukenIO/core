@@ -8,7 +8,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import ofEvents from '../of_events';
 import { Identity } from '../../shapes';
 import route from '../../common/route';
-const coreState = require('../../core_state');
+const coreState = require('../core_state');
 
 
 export module Frame {

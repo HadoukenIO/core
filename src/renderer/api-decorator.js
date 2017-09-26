@@ -88,10 +88,7 @@ limitations under the License.
         let winOpts = getWindowOptionsSync();
         glbl.winOpts = winOpts;
 
-        return {
-            uuid: winOpts.uuid,
-            name: winOpts.name
-        };
+        return Object.assign({}, getWindowOptionsSync());
     }
 
     function getSocketServerStateSync() {

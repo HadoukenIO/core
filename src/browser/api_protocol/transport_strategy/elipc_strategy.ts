@@ -114,7 +114,8 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             const identity = {
                 name: e.sender.getFrameName(e.frameRoutingId) || opts.name,
                 uuid: opts.uuid,
-                parentFrame: opts.name
+                parentFrame: opts.name,
+                entityType: e.sender.getEntityType(e.frameRoutingId)
             };
 
             system.debugLog(1, `this is my frame name ${e.sender.getFrameName(e.frameRoutingId)}`);
