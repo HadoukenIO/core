@@ -14,12 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// built-in modules
-import * as fs from 'fs';
-
 // local modules
 import { System } from './api/system.js';
-import { cachedFetch } from './cached_resource_fetcher';
+import {cachedFetch, FetchResponse} from './cached_resource_fetcher';
 import * as log from './log';
 import { Identity } from '../shapes';
 import ofEvents from './of_events';
@@ -33,21 +30,11 @@ interface PreloadInstance {
     url: string; // URI actually: http:// or file://
     optional?: boolean; // not used herein but used by api_decorator at script execution time
 }
-type FetchResolver = (value?: FetchResponse) => void;
-type Resolver = (value?: any) => void;
-type Rejector = (reason?: Error) => void;
-
 // Preload scripts' states are stored here. Example:
 // 'http://path.com/to/script': 'load-succeeded'
 const preloadStates = new Map();
 
 const REGEX_FILE_SCHEME = /^file:\/\//i;
-
-interface FetchResponse {
-    identity: Identity;
-    preloadScript: PreloadInstance;
-    scriptPath: string;
-}
 
 type LoadResponses = boolean[];
 
@@ -89,7 +76,10 @@ export function fetchAndLoadPreloadScripts(
             return Promise.resolve(true);
         } else {
             // not previously downloaded *OR* previous downloaded failed
-            return fetchToCache(identity, preload).then(loadFromCache);
+            return cachedFetch(preload.url).then((dataResponse: FetchResponse) => {
+                updatePreloadState(identity, preload, dataResponse.success ? 'load-succeeded' : 'load-failed');
+                System.setPreloadScript(preload.url, dataResponse.data);
+            });
         }
     });
 
@@ -110,69 +100,6 @@ export function fetchAndLoadPreloadScripts(
     }
 
     return result;
-}
-
-
-// resolves to type `PreloadFetched` on success
-// resolves to `undefined` when fetch fails to cache the asset
-function fetchToCache(identity: Identity, preloadScript: PreloadInstance): Promise<FetchResponse> {
-    const timer = new Timer();
-    const { url } = preloadScript;
-
-    logPreload('info', identity, 'fetch started', url);
-    updatePreloadState(identity, preloadScript, 'load-started');
-
-    return new Promise((resolve: FetchResolver, reject: Rejector) => {
-        cachedFetch(identity.uuid, url, (fetchError: Error, scriptPath: string) => {
-            if (!fetchError) {
-                logPreload('info', identity, 'fetch succeeded', url, timer);
-                resolve({identity, preloadScript, scriptPath});
-            } else {
-                logPreload(preloadScript.optional ? 'warning' : 'error', identity, 'fetch failed', url, fetchError);
-                updatePreloadState(identity, preloadScript, 'load-failed');
-                resolve();
-            }
-        });
-    });
-}
-
-// resolves to type `PreloadLoaded` on success
-// resolves to `undefined` when above fetch failed or when successfully fetched asset fails to load from Chromium cache
-function loadFromCache(opts: FetchResponse): Promise<boolean> {
-    return new Promise((resolve: Resolver, reject: Rejector) => {
-        if (!opts || !opts.scriptPath) {
-            resolve(false); // got fetchError above OR no error but no scriptPath either; in any case don't attempt to load
-        } else {
-            const { identity, preloadScript, preloadScript: { url }, scriptPath } = opts;
-
-            logPreload('info', identity, 'load started', url);
-            updatePreloadState(identity, preloadScript, 'load-started');
-
-            fs.readFile(scriptPath, 'utf8', (readError: Error, scriptText: string) => {
-                // todo: remove following workaround when RUN-3162 issue fixed
-                //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
-                if (!readError && /^(Cannot GET |<\?xml)/.test(scriptText)) {
-                    // got a 404 but response was cached as a
-                    logPreload(preloadScript.optional ? 'warning' : 'error', identity, 'load failed', url, 404);
-                    updatePreloadState(identity, preloadScript, 'load-failed');
-                    resolve(false);
-                    return;
-                }
-                //END WORKAROUND
-
-                if (!readError) {
-                    logPreload('info', identity, 'load succeeded', url);
-                    updatePreloadState(identity, preloadScript, 'load-succeeded');
-                    System.setPreloadScript(preloadScript.url, scriptText);
-                } else {
-                    logPreload(preloadScript.optional ? 'warning' : 'error', identity, 'load failed', url, readError);
-                    updatePreloadState(identity, preloadScript, 'load-failed');
-                }
-
-                resolve(!readError);
-            });
-        }
-    });
 }
 
 function logPreload(

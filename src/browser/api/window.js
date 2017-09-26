@@ -2080,21 +2080,19 @@ function setTaskbar(browserWindow, forceFetch = false) {
 }
 
 function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
-    let options = browserWindow._options;
-    let uuid = options.uuid;
-
-    cachedFetch(uuid, iconUrl, (error, iconFilepath) => {
-        if (!error) {
-            setIcon(browserWindow, iconFilepath, errorCallback);
-        } else {
-            errorCallback();
-        }
-    });
+    cachedFetch(iconUrl)
+        .then(dataResponse => {
+            if (dataResponse.success) {
+                setIcon(browserWindow, new Buffer(dataResponse.data), errorCallback);
+            }
+        })
+        .catch(errorCallback);
 }
 
-function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
+function setIcon(browserWindow, bufferOrFilepath, errorCallback = () => {}) {
     if (!browserWindow.isDestroyed()) {
-        let icon = nativeImage.createFromPath(iconFilepath);
+        const methodName = bufferOrFilepath instanceof Buffer ? 'createFromBuffer' : 'createFromPath';
+        const icon = nativeImage[methodName](bufferOrFilepath);
         if (icon.isEmpty()) {
             errorCallback();
         } else {

@@ -13,121 +13,64 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {app, resourceFetcher} from 'electron'; // Electron app
-import {stat, mkdir} from 'fs';
-import {join, parse} from 'path';
-import {parse as parseUrl} from 'url';
-import {createHash} from 'crypto';
-import {isURL, isURI, uriToPath} from '../common/regex';
+import {app, net, ClientResponse} from 'electron'; // Electron app
 
 let appQuiting: Boolean = false;
-
 app.on('quit', () => { appQuiting = true; });
 
+export interface FetchResponse {
+    // elements of the array contain the data
+    success: boolean; // reflects statusCode === 200
+    statusCode: number;
+    headers: { [key: string]: any }[];
+    data?: string;
+}
+
 /**
- * Downloads a file if it doesn't exist in cache yet.
+ * Downloads a file to cache and/or retrieves it from cache and returns its status code, headers, and data
  */
-export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): void {
-    if (!fileUrl || typeof fileUrl !== 'string') {
-        callback(new Error(`Bad file url: '${fileUrl}'`));
-        return;
-    }
-    if (appQuiting) {
-        callback(new Error('Runtime is exiting'));
-        return;
-    }
-
-    if (!isURL(fileUrl)) {
-        if (isURI(fileUrl)) {
-            callback(null, uriToPath(fileUrl));
-        } else {
-            stat(fileUrl, (err: null|Error) => {
-                if (err) {
-                    callback(new Error(`Invalid file url: '${fileUrl}'`));
-                } else {
-                    callback(null, fileUrl);
-                }
-            });
+export function cachedFetch(url: string): Promise<FetchResponse> {
+    return new Promise((resolve, reject) => {
+        if (!url || typeof url !== 'string') {
+            reject(new Error(`Bad file url: '${url}'`));
+            return;
         }
-        return;
-    }
 
-    const appCacheDir = getAppCacheDir(appUuid);
-    const filePath = getFilePath(appCacheDir, fileUrl);
+        if (appQuiting) {
+            reject(new Error('Runtime is exiting'));
+            return;
+        }
 
-    stat(filePath, (err: null | Error) => {
-        if (err) {
-            if (!appQuiting) {
-                stat(appCacheDir, (err: null | Error) => {
-                    if (err) {
-                        if (!appQuiting) {
-                            mkdir(appCacheDir, () => {
-                                download(fileUrl, filePath, callback);
-                            });
-                        }
-                    } else {
-                        download(fileUrl, filePath, callback);
-                    }
-                });
+        const request = net.request(url);
+
+        request.on('error', reject); // this is an error making the request
+
+        request.on('response', (response: ClientResponse) => {
+            const dataResponse: FetchResponse = <FetchResponse>{};
+            const chunks: string[] = [];
+
+            dataResponse.success = response.statusCode === 200;
+            dataResponse.statusCode = response.statusCode;
+            dataResponse.headers = response.headers;
+
+            if (!dataResponse.success) {
+                resolve(dataResponse); // not an error, however `success` will be false and `data` will be undefined
+                return;
             }
-        } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
-            download(fileUrl, filePath, callback);
-        } else {
-            callback(null, filePath);
-        }
+
+            response.on('error', reject); // this is an error receiving the response
+
+            response.on('data', (chunk: string) => {
+                chunks.push(chunk);
+            });
+
+            response.on('end', () => {
+                dataResponse.data = chunks.join('');
+                resolve(dataResponse);
+            });
+        });
+
+        request.end();
     });
 }
 
-function remoteFileIsYoungerThanCachedFile(remoteUrl: string, cachedFilePath: string) {
-    //todo: make a RESTful HEAD request and if file at remoteUrl is missing, return false;
-    //todo: else if file at remoteUrl is younger than file at cachedFilePath, return true;
-    //todo: else return false
-    return true; //for now we are always fetching
-}
-
-/**
- * Generates a folder name for the app to store the file in.
- */
-function getAppCacheDir(appUuid: string): string {
-    const appUuidHash = generateHash(appUuid);
-    const userDataDir = app.getPath('userData');
-    return join(userDataDir, 'Cache', appUuidHash);
-}
-
-/**
- * Generates file name and returns a full path.
- */
-function getFilePath(appCacheDir: string, fileUrl: string): string {
-    const fileUrlHash = generateHash(fileUrl);
-    const fileUrlPathname = parseUrl(fileUrl).pathname;
-    const fileExt = parse(fileUrlPathname).ext;
-    const filename = fileUrlHash + fileExt; // <HASH>.<EXT>
-    return join(appCacheDir, filename); // path/to/<HASH>.<EXT>
-}
-
-/**
- * Generates SHA-256 hash
- */
-function generateHash(str: string): string {
-    const hash = createHash('sha256');
-    hash.update(str);
-    return hash.digest('hex');
-}
-
-/**
- * Downloads the file from given url using Resource Fetcher and saves it into specified path
- */
-function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
-    const fetcher = new resourceFetcher('file');
-
-    fetcher.once('fetch-complete', (event: string, status: string) => {
-        if (status === 'success') {
-            callback(null, filePath);
-        } else {
-            callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
-        }
-    });
-
-    fetcher.setFilePath(filePath);
-    fetcher.fetch(fileUrl);
-}

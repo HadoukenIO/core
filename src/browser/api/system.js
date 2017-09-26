@@ -675,7 +675,11 @@ exports.System = {
     },
 
     setPreloadScript: function(url, scriptText) {
-        preloadScriptsCache[url] = scriptText;
+        if (scriptText === undefined) {
+            delete preloadScriptsCache[url];
+        } else {
+            preloadScriptsCache[url] = scriptText;
+        }
     },
 
     getPreloadScript: function(url) {

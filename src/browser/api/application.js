@@ -711,10 +711,10 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
-    cachedFetch(app.uuid, iconUrl, (error, iconFilepath) => {
-        if (!error) {
-            if (app) {
-                const iconImage = nativeImage.createFromPath(iconFilepath);
+    cachedFetch(iconUrl)
+        .then(dataResponse => {
+            if (app && dataResponse.success) {
+                const iconImage = nativeImage.createFromBuffer(new Buffer(dataResponse.data));
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = route.application('tray-icon-clicked', app.uuid);
@@ -759,14 +759,16 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
                     callback();
                 }
             }
-        } else {
+
+            fetchingIcon[uuid] = false;
+        })
+        .catch(error => {
             if (typeof errorCallback === 'function') {
                 errorCallback(error);
             }
-        }
 
-        fetchingIcon[uuid] = false;
-    });
+            fetchingIcon[uuid] = false;
+        });
 };
 
 
