@@ -548,6 +548,10 @@ limitations under the License.
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const winOpts = getCachedWindowOptionsSync();
+        const identity = {
+            uuid: winOpts.uuid,
+            name: winOpts.name
+        };
         const preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
         const action = 'set-window-preload-state';
 
@@ -556,7 +560,7 @@ limitations under the License.
             try {
                 response = syncApiCall('get-selected-preload-scripts', preloadOption);
             } catch (error) {
-                console.error(error);
+                logPreload('error', identity, 'error', '', error);
             }
 
             if (response) {
@@ -565,10 +569,11 @@ limitations under the License.
                         const { url } = preloadOption[index];
 
                         try {
-                            window.eval(script); /* jshint ignore:line */
+                            const val = window.eval(script); /* jshint ignore:line */
+                            logPreload('info', identity, `eval succeeded`, url, val);
                             asyncApiCall(action, { url, state: 'succeeded' });
                         } catch (err) {
-                            console.error(`Execution failed for preload script "${url}".`, err);
+                            logPreload('error', identity, 'eval failed', url, err);
                             asyncApiCall(action, { url, state: 'failed' });
                         }
                     }
@@ -578,5 +583,16 @@ limitations under the License.
 
         asyncApiCall(action, { allDone: true });
     });
+
+    function logPreload(level, identity, state, url, data) {
+        if (url) {
+            state += ` for ${url}`;
+        }
+        if (data) {
+            state += ` with ${JSON.stringify(data)}`;
+        }
+        const message = `[PRELOAD] [${identity.uuid}]-[${identity.name}] ${state}`;
+        syncApiCall('write-to-log', { level, message });
+    }
 
 }());
