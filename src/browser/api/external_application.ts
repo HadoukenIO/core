@@ -60,6 +60,14 @@ export module ExternalApplication {
         });
     }
 
+    export function isRuntimeClient(uuid: string) {
+        const target = authenticatedConnections.find(c => {
+            return c.uuid === uuid;
+        });
+
+        return target ? target.runtimeClient === true : false;
+    }
+
     export function removeExternalConnection(externalConnection: Identity) {
         authenticatedConnections.splice(authenticatedConnections.indexOf(externalConnection), 1);
 
