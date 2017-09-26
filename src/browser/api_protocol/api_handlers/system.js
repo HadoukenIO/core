@@ -455,9 +455,14 @@ function SystemApiHandler() {
 
     function getSelectedPreloadScripts(identity, message, ack, nack) {
         const { payload } = message;
-        const dataAck = _.clone(successAck);
-        dataAck.data = System.getSelectedPreloadScripts(payload, ack, nack);
-        ack(dataAck);
+
+        System.getSelectedPreloadScripts(payload)
+            .then(scriptSet => {
+                const dataAck = _.clone(successAck);
+                dataAck.data = scriptSet;
+                ack(dataAck);
+            })
+            .catch(nack);
     }
 }
 
