@@ -517,6 +517,16 @@ Window.create = function(id, opts) {
             emitToAppAndWin('crashed', 'out-of-memory');
         });
 
+        browserWindow.on('blur', () => {
+            ofEvents.emit(route.application('window-blurred', uuid), { topic: 'application', type: 'window-blurred', uuid, name });
+            ofEvents.emit(route.system('window-blurred'), { topic: 'system', type: 'window-blurred', uuid, name });
+        });
+
+        browserWindow.on('focus', () => {
+            ofEvents.emit(route.application('window-focused', uuid), { topic: 'application', type: 'window-focused', uuid, name });
+            ofEvents.emit(route.system('window-focused'), { topic: 'system', type: 'window-focused', uuid, name });
+        });
+
         browserWindow.on('responsive', () => {
             emitToAppAndWin('responding');
         });
