@@ -79,12 +79,7 @@ limitations under the License.
 
     function getWindowOptionsSync() {
         if (!cachedOptions) {
-            cachedOptions = syncApiCall('get-current-window-options', {
-                isIframe: !!frameElement,
-                frameName: frameElement && frameElement.name,
-                winApi: frameElement && frameElement.getAttribute('winapi'),
-                renderFrameId
-            });
+            cachedOptions = syncApiCall('get-current-window-options', {});
         }
         return cachedOptions;
     }
