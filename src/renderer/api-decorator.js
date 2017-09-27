@@ -325,6 +325,8 @@ limitations under the License.
     }
 
     function raiseReadyEvents(currWindowOpts) {
+        console.log('my curr opts: ');
+        console.log(currWindowOpts);
         let winIdentity = {
             uuid: currWindowOpts.uuid,
             name: currWindowOpts.name
@@ -336,6 +338,8 @@ limitations under the License.
         }
         raiseEventSync(`window/dom-content-loaded/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
         raiseEventSync(`window/connected/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
+
+        raiseEventSync(`frame/connected/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
     }
 
     function deferByTick(callback) {

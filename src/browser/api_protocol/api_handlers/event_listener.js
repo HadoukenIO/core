@@ -101,7 +101,7 @@ function EventListenerApiHandler() {
         'frame': {
             name: 'frame',
             subscribe: function(identity, type, payload, cb) {
-                log.writeToLog(1, `**** event_listener l104 args are ${identity}${type}${JSON.stringify(payload)}${cb}`, true);
+                log.writeToLog(1, `**** event_listener l104 args are ${JSON.stringify(identity)} ${type}${JSON.stringify(payload)}`, true);
 
                 const {
                     uuid,

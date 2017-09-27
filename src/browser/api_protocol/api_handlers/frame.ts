@@ -26,10 +26,9 @@ export class FrameApiHandler {
 
     private getInfo(identity: Identity, message: any, ack: any) {
 
-        const dataAck: {[k: string]: any} = {...successAck};
-        const frameIdentity: any = apiProtocolBase.getTargetWindowIdentity(message.payload);
+        // const dataAck: {[k: string]: any} = {...successAck};
+        // const frameIdentity: any = apiProtocolBase.getTargetWindowIdentity(message.payload);
 
-        dataAck.data = Frame.getInfo(frameIdentity);
-        ack(dataAck);
+        return Frame.getInfo(identity);
     }
 }

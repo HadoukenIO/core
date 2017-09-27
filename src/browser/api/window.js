@@ -408,6 +408,9 @@ Window.create = function(id, opts) {
 
         browserWindow.webContents.unregisterIframe = (frameName) => {
             delete winObj.frames[frameName];
+            log.writeToLog(1, `dead! ${route.frame('disconnected', uuid, frameName)}`, true);
+            ofEvents.emit(route.frame('disconnected', uuid, frameName), { uuid, name: frameName });
+
         };
 
         // todo listen & create "isFrame" entry for core_state

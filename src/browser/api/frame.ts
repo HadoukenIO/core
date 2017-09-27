@@ -9,12 +9,13 @@ import ofEvents from '../of_events';
 import { Identity } from '../../shapes';
 import route from '../../common/route';
 const coreState = require('../core_state');
+import * as log from '../log';
 
 
 export module Frame {
     export function addEventListener (identity: Identity, targetIdentity: Identity, type: string, listener: Function) {
         //  SAME AS WINDOW
-        const eventString = route.window(type, targetIdentity.uuid, targetIdentity.name);
+        const eventString = route.frame(type, targetIdentity.uuid, targetIdentity.name);
         const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
 
         let unsubscribe;
@@ -39,6 +40,7 @@ export module Frame {
         };
 
         // electronApp.vlog(1, `addEventListener ${eventString}`);
+        log.writeToLog(1, `eventString: ${eventString}`, true);
         ofEvents.on(eventString, safeListener);
 
         unsubscribe = () => {
@@ -54,7 +56,7 @@ export module Frame {
         ofEvents.removeListener(route.frame(type, browserFrame.id), listener);
     }
 
-    export function getInfo (Frame: Identity) {
-        return 'getInfo in api/frame from core - FILL ME IN>>>>>>>>>';
+    export function getInfo (identity: Identity) {
+        return identity;
     }
 }

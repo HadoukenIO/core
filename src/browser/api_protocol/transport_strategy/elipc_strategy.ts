@@ -17,6 +17,7 @@ import { AckMessage,  AckFunc, AckPayload } from './ack';
 import { ApiTransportBase, MessagePackage } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
+import * as log from '../../log';
 
 declare var require: any;
 
@@ -45,6 +46,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                             .then(result => {
                                 // older action calls will invoke ack internally, newer ones will return a value
                                 if (result !== undefined) {
+
                                     ack(new AckPayload(result));
                                 }
                             }).catch(err => {
@@ -111,10 +113,11 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             const currWindow = browserWindow ? coreState.getWinById(browserWindow.id) : null;
             const openfinWindow = currWindow.openfinWindow;
             const opts = openfinWindow && openfinWindow._options || {};
+            const subFrameName = e.sender.getFrameName(e.frameRoutingId);
             const identity = {
-                name: e.sender.getFrameName(e.frameRoutingId) || opts.name,
+                name: subFrameName || opts.name,
                 uuid: opts.uuid,
-                parentFrame: opts.name,
+                parentFrame: opts.name, //rename to 'parent'?
                 entityType: e.sender.getEntityType(e.frameRoutingId)
             };
 
