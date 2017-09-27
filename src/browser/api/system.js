@@ -667,7 +667,11 @@ exports.System = {
     clearPreloadCache,
 
     downloadPreloadScripts: function(identity, preloadOption, cb) {
-        fetchAndLoadPreloadScripts(identity, preloadOption, cb);
+        if (!preloadOption) {
+            cb();
+        } else {
+            fetchAndLoadPreloadScripts(identity, preloadOption, cb);
+        }
     },
 
     // identitier is preload script url or plugin name
@@ -682,8 +686,6 @@ exports.System = {
 
     // identitiers are preload script url or plugin name
     getSelectedPreloadScripts: function(preloadOption) {
-        const response = {};
-
         const missingRequiredScripts = preloadOption.reduce((identifiers, preload) => {
             if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
                 identifiers.push(getIdentifier(preload));
@@ -691,14 +693,16 @@ exports.System = {
             return identifiers;
         }, []);
 
-        if (!missingRequiredScripts.length) {
-            const missingOptionalScript = '';
-            response.scripts = preloadOption.map(preload => preloadScriptsCache[getIdentifier(preload)] || missingOptionalScript);
-        } else {
-            response.error = `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
+        if (missingRequiredScripts.length) {
+            const list = JSON.stringify(missingRequiredScripts);
+            const message = `Execution of preload scripts canceled because of missing required script(s) ${list}`;
+            const err = new Error(message);
+            return Promise.reject(err);
         }
 
-        return response;
+        // when load/fetch failed, mapped object will be `undefined` (stringifies as `null`)
+        const scriptSet = preloadOption.map(preload => preloadScriptsCache[preload.url]);
+        return Promise.resolve(scriptSet);
     }
 };
 

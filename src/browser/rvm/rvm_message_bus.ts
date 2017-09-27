@@ -134,7 +134,7 @@ export interface PluginQuery extends RvmMsgBase {
     messageId: string;
     name: string;
     version: string;
-    critical?: boolean;
+    optional?: boolean;
     sourceUrl: string | boolean;
 }
 

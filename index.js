@@ -521,12 +521,13 @@ function launchApp(argo, startExternalAdapterServer) {
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
         const uuid = startupAppOptions && startupAppOptions.uuid;
         const ofApp = Application.wrap(uuid);
+        const ofManifestUrl = ofApp && ofApp._configUrl;
         const isRunning = Application.isRunning(ofApp);
 
         // this ensures that external connections that start the runtime can do so without a main window
         let successfulInitialLaunch = true;
 
-        if (startupAppOptions && !isRunning) {
+        if (startupAppOptions && (!isRunning || ofManifestUrl !== configUrl)) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
@@ -547,7 +548,8 @@ function launchApp(argo, startExternalAdapterServer) {
 
         app.emit('synth-desktop-icon-clicked', {
             mouse: System.getMousePosition(),
-            tickCount: app.getTickCount()
+            tickCount: app.getTickCount(),
+            uuid
         });
     }, error => {
         log.writeToLog(1, error, true);

@@ -268,14 +268,18 @@ module.exports = {
         }
 
         const preload = options.preload;
-        if (!preload) {
-            // for all falsy values
-            newOptions.preload = [];
-        } else if (typeof preload === 'string') {
-            // backward compatibility
-            newOptions.preload = [{ url: preload }];
-        } else {
-            newOptions.preload = preload;
+        if (preload) {
+            if (typeof preload === 'string') {
+                // convert legacy `preload` option into modern `preload` option
+                newOptions.preload = [{ url: preload }];
+            } else if (
+                Array.isArray(preload) &&
+                preload.every(eachPreload => typeof eachPreload === 'object' && typeof eachPreload.url === 'string')
+            ) {
+                newOptions.preload = preload;
+            } else {
+                log.writeToLog('warning', 'Expected `preload` option to be a string primitive OR an array of objects with `url` string properties.');
+            }
         }
 
         const plugin = options['plugin'];
