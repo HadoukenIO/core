@@ -228,6 +228,7 @@ function EventListenerApiHandler() {
                 apiProtocolBase.sendToIdentity(identity, eventObj);
             });
 
+            log.writeToLog(1, `there it was... ${JSON.stringify([identity, topic, uuid, type, name])}`, true);
             apiProtocolBase.registerSubscription(unsubscribe, identity, topic, uuid, type, name);
         }
         ack(successAck);

@@ -16,6 +16,7 @@ limitations under the License.
 import ofEvents from './of_events';
 import route from '../common/route';
 import { Identity } from '../shapes';
+import * as log from './log';
 
 interface Subscription {
     fn: () => void;
@@ -29,10 +30,16 @@ export default class SubscriptionManager {
         this.subscriptionList = new Map();
 
         ofEvents.on(route.window('closed'), (identity: Identity) => {
+            log.writeToLog(1, `from the sub man...window , ${JSON.stringify(identity.name)}`, true);
+
             this.removeAllSubscriptions(identity);
         });
 
         ofEvents.on(route('externalconn', 'closed'), (identity: Identity) => {
+            this.removeAllSubscriptions(identity);
+        });
+
+        ofEvents.on(route.frame('disconnected'), (identity: Identity) => {
             this.removeAllSubscriptions(identity);
         });
     }

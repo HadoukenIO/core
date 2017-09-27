@@ -410,6 +410,7 @@ Window.create = function(id, opts) {
             delete winObj.frames[frameName];
             log.writeToLog(1, `dead! ${route.frame('disconnected', uuid, frameName)}`, true);
             ofEvents.emit(route.frame('disconnected', uuid, frameName), { uuid, name: frameName });
+            ofEvents.emit(route.frame('disconnected'), { uuid, name: frameName });
 
         };
 

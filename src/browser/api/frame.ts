@@ -44,6 +44,7 @@ export module Frame {
         ofEvents.on(eventString, safeListener);
 
         unsubscribe = () => {
+            log.writeToLog(1, 'unhooking up!!!', true);
             ofEvents.removeListener(eventString, safeListener);
         };
         return unsubscribe;
