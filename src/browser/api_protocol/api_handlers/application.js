@@ -349,7 +349,7 @@ function externalWindowAction(identity, message, ack) {
         case WindowsMessages.WM_SETFOCUS:
             ofEvents.emit(route.externalWindow('focus', uuid, name));
             break;
-        case WindowsMessages.WM__KILLFOCUS:
+        case WindowsMessages.WM_KILLFOCUS:
             ofEvents.emit(route.externalWindow('blur', uuid, name));
             break;
         case WindowsMessages.WM_WINDOWPOSCHANGED:
