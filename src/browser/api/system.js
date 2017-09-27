@@ -308,9 +308,9 @@ exports.System = {
     getFocusedWindow: function() {
         const fWin = electronBrowserWindow.getFocusedWindow();
         if (fWin) {
-            const win = coreState.getWinById(fWin.id);
-            if (win && win.openfinWindow) {
-                return { 'uuid': win.openfinWindow.uuid, 'name': win.openfinWindow.name };
+            const ofWin = coreState.getWinObjById(fWin.id);
+            if (ofWin) {
+                return { 'uuid': ofWin.uuid, 'name': ofWin.name };
             } else {
                 return null;
             }
