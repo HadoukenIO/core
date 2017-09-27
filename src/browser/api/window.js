@@ -395,7 +395,7 @@ Window.create = function(id, opts) {
         // each window now inherits the main window's base options. this can
         // be made to be the parent's options if that makes more sense...
         baseOpts = coreState.getMainWindowOptions(id) || {};
-        _options = _.extend(_.clone(baseOpts), convertOptions.convertToElectron(opts));
+        _options = convertOptions.convertToElectron(Object.assign({}, baseOpts, opts));
 
         // (taskbar) a child window should be grouped in with the application
         // if a taskbarIconGroup isn't specified
@@ -765,7 +765,7 @@ Window.create = function(id, opts) {
     };
 
     // Set preload scripts' final loading states
-    winObj.preloadState = _options.preload.map(preload => {
+    winObj.preloadState = (_options.preload || []).map(preload => {
         return {
             url: preload.url,
             state: getPreloadScriptState(preload.url)

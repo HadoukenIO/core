@@ -437,11 +437,14 @@ limitations under the License.
         let webContentsId = getWebContentsId();
         // Reset state machine values that are set through synchronous handshake between native WebContent lifecycle observers and JS
         options.openfin = true;
-        options.preload = 'preload' in options ? options.preload : winOpts.preload;
+
+        // Force window to be a child of its parent application.
         options.uuid = winOpts.uuid;
+
         // Apply parent window background color to child window when child
         // window background color is unspecified.
         options.backgroundColor = options.backgroundColor || winOpts.backgroundColor;
+
         let responseChannel = `${frameName}-created`;
         ipc.once(responseChannel, () => {
             setTimeout(() => {
@@ -467,15 +470,16 @@ limitations under the License.
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
-        const preloadScriptsPayload = {
-            uuid: options.uuid,
-            name: options.name,
-            scripts: convertedOpts.preload
-        };
 
-        if (!convertedOpts.preload.length) { // short-circuit
-            proceed();
+        const { preload } = convertedOpts;
+        if (!(preload && preload.length)) {
+            proceed(); // short-circuit preload scripts fetch
         } else {
+            const preloadScriptsPayload = {
+                uuid: options.uuid,
+                name: options.name,
+                scripts: preload
+            };
             fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, proceed, proceed);
         }
 
@@ -552,7 +556,7 @@ limitations under the License.
             uuid: winOpts.uuid,
             name: winOpts.name
         };
-        const preloadOption = typeof winOpts.preload === 'string' ? [{ url: winOpts.preload }] : winOpts.preload;
+        const { preload: preloadOption } = convertOptionsToElectronSync(getWindowOptionsSync());
         const action = 'set-window-preload-state';
 
         if (preloadOption.length) { // short-circuit

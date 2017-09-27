@@ -54,7 +54,7 @@ type LoadResponses = boolean[];
 /** Returns a `Promise` once all preload scripts have been fetched and loaded or have failed to fetch or load.
  *
  * @param {object} identity
- * @param {string|object[]} preloadOption
+ * @param {PreloadInstance[]} preloadOption
  * @param {function} [proceed] - If supplied, both `catch` and `then` are called on it.
  *
  * If you don't supply `proceed`, call both `catch` and `then` on your own to proceed as appropriate.
@@ -76,38 +76,25 @@ export function fetchAndLoadPreloadScripts(
     const timer = new Timer();
     let result: Promise<LoadResponses>;
 
-    if (!preloadOption) {
-        preloadOption = [];
-    } else if (typeof preloadOption === 'string') {
-        // convert legacy `preloadOption` option into modern `preloadOption` option
-        preloadOption = [<PreloadInstance>{ url: preloadOption }];
-    }
+    const loadedScripts: Promise<undefined>[] = preloadOption.map((preload: PreloadInstance) => {
+        // following if clause avoids re-fetch for remote resources already in memory
+        // todo: following if clause slated for removal (RUN-3227, blocked by RUN-3162), i.e., return always
+        if (
+            !REGEX_FILE_SCHEME.test(preload.url) && // not a local file AND...
+            System.getPreloadScript(preload.url)   // ...is already in memory?
+        ) {
+            // previously downloaded
+            logPreload('info', identity, 'previously cached:', preload.url);
+            updatePreloadState(identity, preload, 'load-succeeded');
+            return Promise.resolve(true);
+        } else {
+            // not previously downloaded *OR* previous downloaded failed
+            return fetchToCache(identity, preload).then(loadFromCache);
+        }
+    });
 
-    if (!isPreloadOption(preloadOption)) {
-        const message = 'Expected `preload` option to be a string primitive OR an array of objects with `url` props.';
-        const err = new Error(message);
-        result = Promise.reject(err);
-    } else {
-        const loadedScripts: Promise<undefined>[] = preloadOption.map((preload: PreloadInstance) => {
-            // following if clause avoids re-fetch for remote resources already in memory
-            // todo: following if clause slated for removal (RUN-3227, blocked by RUN-3162), i.e., return always
-            if (
-                !REGEX_FILE_SCHEME.test(preload.url) && // not a local file AND...
-                System.getPreloadScript(preload.url)   // ...is already in memory?
-            ) {
-                // previously downloaded
-                logPreload('info', identity, 'previously cached:', preload.url);
-                updatePreloadState(identity, preload, 'load-succeeded');
-                return Promise.resolve(true);
-            } else {
-                // not previously downloaded *OR* previous downloaded failed
-                return fetchToCache(identity, preload).then(loadFromCache);
-            }
-        });
-
-        // wait for them all to resolve
-        result = Promise.all(loadedScripts);
-    }
+    // wait for them all to resolve
+    result = Promise.all(loadedScripts);
 
     result.catch((error: Error | string) => {
         logPreload('error', identity, 'error', '', error);
@@ -149,6 +136,8 @@ function fetchToCache(identity: Identity, preloadScript: PreloadInstance): Promi
     });
 }
 
+// resolves to type `PreloadLoaded` on success
+// resolves to `undefined` when above fetch failed or when successfully fetched asset fails to load from Chromium cache
 function loadFromCache(opts: FetchResponse): Promise<boolean> {
     return new Promise((resolve: Resolver, reject: Rejector) => {
         if (!opts || !opts.scriptPath) {
@@ -184,24 +173,6 @@ function loadFromCache(opts: FetchResponse): Promise<boolean> {
             });
         }
     });
-}
-
-
-// type guard: array of Preload objects
-function isPreloadOption(preloadOption: PreloadOption): preloadOption is PreloadOption {
-    return (
-        preloadOption &&
-        Array.isArray(preloadOption) &&
-        preloadOption.every(isPreloadScript)
-    );
-}
-
-// type guard: a Preload object
-function isPreloadScript(preloadScript: PreloadInstance): preloadScript is PreloadInstance {
-    return (
-        typeof preloadScript === 'object' &&
-        typeof preloadScript.url === 'string'
-    );
 }
 
 function logPreload(

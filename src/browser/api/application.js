@@ -445,8 +445,9 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     }
 
     const app = createAppObj(identity.uuid, null, configUrl);
-    const proceed = () => run(identity, app._options, userAppConfigArgs);
-    const { uuid, name, preload } = app._options;
+    const mainWindowOpts = convertOpts.convertToElectron(app._options);
+    const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
+    const { uuid, name, preload } = mainWindowOpts;
     const windowIdentity = { uuid, name };
 
     System.downloadPreloadScripts(windowIdentity, preload, proceed);
