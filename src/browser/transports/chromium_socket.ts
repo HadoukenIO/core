@@ -11,14 +11,17 @@ import * as log from '../log';
 
 import * as nodeNet from 'net';
 
-const ProtocolMap: { [index: string]: string } = {
-    // tslint:disable-next-line:no-http-string
-    'rtmp:' : 'http:',
-    'rtmps:' : 'https:'
-};
+interface RequestProtocol {
+    port: number;
+    proxyProtocol: string; // protocol that proxy socket should be accessed with
+    chromiumProtocol: string; // protocol Chromium network layer should use to create connection
+}
 
-const PortMap: { [index: string]: string } = {
-    'rtmp:' :  '1935'
+const ProtocolMap: { [index: string]: RequestProtocol } = {
+    // tslint:disable-next-line:no-http-string
+    'rtmp:' :  { port: 1935, proxyProtocol: 'rtmp:', chromiumProtocol: 'http:'},
+    // tslint:disable-next-line:no-http-string
+    'rtmps:' : { port: 443,  proxyProtocol: 'rtmp:', chromiumProtocol: 'https:'}
 };
 
 enum ProxyEventType {
@@ -48,13 +51,9 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
     const originalUrl: Url = parseUrl(req.url);
     const mappedUrl: Url = parseUrl(req.url);
     if (ProtocolMap.hasOwnProperty(originalUrl.protocol)) {
-        mappedUrl.protocol = ProtocolMap[originalUrl.protocol];
-    }
-    if (PortMap.hasOwnProperty(originalUrl.protocol)) {
-        if (originalUrl.port === null) {
-            // setting mappedUrl.port does not work.  Have to append to host
-            mappedUrl.host = originalUrl.host + ':' + PortMap[originalUrl.protocol];
-        }
+        mappedUrl.protocol = ProtocolMap[originalUrl.protocol].chromiumProtocol;
+        // setting mappedUrl.port does not work.  Have to append to host
+        mappedUrl.host = originalUrl.host + ':' + ProtocolMap[originalUrl.protocol].port;
     }
     const url: string = formatUrl(mappedUrl);
     log.writeToLog(1, `mapped URL: ${url}`, true);
@@ -74,8 +73,9 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
             }
             if (event.eventType === ProxyEventType.Listening) {
                 const proxyUrl: Url = parseUrl(req.url);
+                proxyUrl.protocol = ProtocolMap[originalUrl.protocol].proxyProtocol;
                 // setting mappedUrl.port does not work.  Have to append to host
-                proxyUrl.host = originalUrl.host + ':' + event.payload;
+                proxyUrl.host = 'localhost:' + event.payload;
                 req.callback({success: true, data: {localPort: event.payload, proxyUrl: formatUrl(proxyUrl)}});
             }
         }, response);
