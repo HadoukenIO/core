@@ -101,7 +101,7 @@ function startProxyConnection(proxyCallback: (event: ProxyEvent) => void, respon
     let proxyConnected: boolean = false; // only one connection is allowed
     const server = nodeNet.createServer((conn: nodeNet.Socket) => {
         if (!proxyConnected) {
-            log.writeToLog(1, `proxy socket new connection ${conn}`, true);
+            log.writeToLog(1, `proxy socket new connection ${conn.localPort}`, true);
             proxyConnected = true;
             conn.on('data', (data) => {
                 log.writeToLog(1, `proxy socket input data ${data.length}`, true);
@@ -127,15 +127,15 @@ function startProxyConnection(proxyCallback: (event: ProxyEvent) => void, respon
                 const flushed: boolean = conn.write(data);
                 log.writeToLog(1, `proxy socket input chromium data: ${data.length} flushed ${flushed}`, true);
             });
-            // error from Chromium socket
-            response.on('error', (err: string) => {
-                log.writeToLog(1, `proxy socket error: ${err}`, true);
-                conn.end();
-            });
         } else {
             log.writeToLog(1, `proxy socket duplicate connection: ${JSON.stringify(server.address())}`, true);
             conn.end();
         }
+    });
+    // error from Chromium socket
+    response.on('error', (err: string) => {
+        log.writeToLog(1, `proxy socket error: ${err}`, true);
+        server.close();
     });
     server.maxConnections = 1;  //only one connection for each proxy
     server.on('listening', () => {
