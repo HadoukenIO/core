@@ -29,6 +29,7 @@ import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
 import { WindowsMessages, SetWindowPosition, SysCommands } from '../../../common/microsoft';
+import * as preloadScripts from '../../preload_scripts';
 
 let successAck = {
     success: true
@@ -39,12 +40,14 @@ module.exports.applicationApiMap = {
     'create-application': createApplication,
     'create-child-window': createChildWindow,
     'deregister-external-window': deregisterExternalWindow,
+    'download-preload-scripts': downloadPreloadScripts, //internal function (undocumented externally)
     'external-window-action': externalWindowAction,
     'get-application-groups': getApplicationGroups,
     'get-application-manifest': getApplicationManifest,
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
+    'get-preload-scripts': getPreloadScripts, //internal function (undocumented externally)
     'get-shortcuts': getShortcuts,
     'get-tray-icon-info': getTrayIconInfo,
     'is-application-running': isApplicationRunning,
@@ -221,6 +224,18 @@ function getParentApplication(identity, message, ack, nack) {
     }
 }
 
+function getPreloadScripts(identity, message, ack, nack) {
+    const { payload } = message;
+
+    preloadScripts.get(payload)
+        .then(scriptSet => {
+            const dataAck = _.clone(successAck);
+            dataAck.data = scriptSet;
+            ack(dataAck);
+        })
+        .catch(nack);
+}
+
 function getShortcuts(identity, message, ack, nack) {
     const dataAck = _.clone(successAck);
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
@@ -336,6 +351,21 @@ function deregisterExternalWindow(identity, message, ack) {
 
     ofEvents.emit(route.externalWindow('close', windowIdentity.uuid, windowIdentity.name));
     ack(successAck);
+}
+
+function downloadPreloadScripts(identity, message, ack, nack) {
+    const { payload } = message;
+    const { uuid, name, preloadOption } = payload;
+    const windowIdentity = { uuid, name };
+
+    preloadScripts.download(windowIdentity, preloadOption, err => {
+        if (!err) {
+            const dataAck = _.clone(successAck);
+            ack(dataAck);
+        } else {
+            nack(err);
+        }
+    });
 }
 
 function externalWindowAction(identity, message, ack) {

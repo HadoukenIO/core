@@ -47,6 +47,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
+import * as preloadScripts from '../preload_scripts';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -446,11 +447,12 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
 
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = convertOpts.convertToElectron(app._options);
-    const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
-    const { uuid, name, preload } = mainWindowOpts;
+    const { uuid, name } = mainWindowOpts;
     const windowIdentity = { uuid, name };
+    const preload = mainWindowOpts.preload || []; // todo#RUN-3373 the default (`|| []` part) won't be needed here once inheritance is fixed
+    const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
 
-    System.downloadPreloadScripts(windowIdentity, preload, proceed);
+    preloadScripts.download(windowIdentity, preload, proceed);
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {
@@ -712,9 +714,9 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
     cachedFetch(iconUrl)
-        .then(dataResponse => {
-            if (app && dataResponse.success) {
-                const iconImage = nativeImage.createFromBuffer(new Buffer(dataResponse.data));
+        .then(fetchResponse => {
+            if (app && fetchResponse.success) {
+                const iconImage = nativeImage.createFromBuffer(new Buffer(fetchResponse.data));
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = route.application('tray-icon-clicked', app.uuid);
@@ -1073,4 +1075,4 @@ function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
 }
 
-module.exports.Application = Application;
+exports.Application = Application;

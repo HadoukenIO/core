@@ -469,16 +469,17 @@ limitations under the License.
             }, 1);
         });
 
+        // todo#RUN-3373: converting options here is premature, not yet having inherited from parent
         const convertedOpts = convertOptionsToElectronSync(options);
+        const preload = convertedOpts.preload || winOpts.preload || []; // appply same inheritance as in Window.create
 
-        const { preload } = convertedOpts;
-        if (!(preload && preload.length)) {
-            proceed(); // short-circuit preload scripts fetch
+        if (!preload.length) {
+            proceed();
         } else {
             const preloadScriptsPayload = {
                 uuid: options.uuid,
                 name: options.name,
-                scripts: preload
+                preloadOption: preload
             };
             fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, proceed, proceed);
         }
@@ -551,41 +552,36 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const winOpts = getCachedWindowOptionsSync();
-        const identity = {
-            uuid: winOpts.uuid,
-            name: winOpts.name
-        };
-        const { preload: preloadOption } = convertOptionsToElectronSync(getWindowOptionsSync());
-        const action = 'set-window-preload-state';
+        const setState = asyncApiCall.bind(null, 'set-window-preload-state');
+        const { uuid, name, preload } = convertOptionsToElectronSync(getWindowOptionsSync());
+        const identity = { uuid, name };
 
-        if (preloadOption.length) { // short-circuit
+        if (preload) { // short-circuit to avoid pointless api call
             let response;
             try {
-                response = syncApiCall('get-selected-preload-scripts', preloadOption);
+                response = syncApiCall('get-preload-scripts', identity);
             } catch (error) {
                 logPreload('error', identity, 'error', '', error);
             }
 
             if (response) {
-                response.forEach((script, index) => {
-                    if (script !== null) {
-                        const { url } = preloadOption[index];
-
+                response.forEach(preloadScript => {
+                    const { success, url, data } = preloadScript;
+                    if (success) {
                         try {
-                            const val = window.eval(script); /* jshint ignore:line */
+                            const val = window.eval(data); /* jshint ignore:line */
                             logPreload('info', identity, `eval succeeded`, url, val);
-                            asyncApiCall(action, { url, state: 'succeeded' });
+                            setState({ url, state: 'succeeded' });
                         } catch (err) {
                             logPreload('error', identity, 'eval failed', url, err);
-                            asyncApiCall(action, { url, state: 'failed' });
+                            setState({ url, state: 'failed' });
                         }
                     }
                 });
             }
         }
 
-        asyncApiCall(action, { allDone: true });
+        setState({ allDone: true });
     });
 
     function logPreload(level, identity, state, url, data) {
