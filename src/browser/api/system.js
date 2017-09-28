@@ -701,7 +701,7 @@ exports.System = {
         }
 
         // when load/fetch failed, mapped object will be `undefined` (stringifies as `null`)
-        const scriptSet = preloadOption.map(preload => preloadScriptsCache[preload.url]);
+        const scriptSet = preloadOption.map(preload => preloadScriptsCache[getIdentifier(preload)]);
         return Promise.resolve(scriptSet);
     }
 };

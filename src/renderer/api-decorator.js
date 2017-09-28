@@ -558,7 +558,6 @@ limitations under the License.
         };
         let { preload: preloadOption, plugin: plugin } = convertOptionsToElectronSync(getWindowOptionsSync());
         if (Array.isArray(plugin) && plugin[0] !== undefined) { preloadOption = preloadOption.concat(plugin); }
-        // if (Array.isArray(winOpts.plugin) && winOpts.plugin[0] !== undefined) { preloadOption = preloadOption.concat(winOpts.plugin); }
         const action = 'set-window-preload-state';
 
         if (preloadOption.length) { // short-circuit
