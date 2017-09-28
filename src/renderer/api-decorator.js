@@ -555,11 +555,12 @@ limitations under the License.
         const setState = asyncApiCall.bind(null, 'set-window-preload-state');
         const { uuid, name, preload } = convertOptionsToElectronSync(getWindowOptionsSync());
         const identity = { uuid, name };
+        const payload = { uuid, name, preload };
 
         if (preload) { // short-circuit to avoid pointless api call
             let response;
             try {
-                response = syncApiCall('get-preload-scripts', identity);
+                response = syncApiCall('get-preload-scripts', payload);
             } catch (error) {
                 logPreload('error', identity, 'error', '', error);
             }

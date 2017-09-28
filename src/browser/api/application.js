@@ -452,7 +452,7 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     const preload = mainWindowOpts.preload || []; // todo#RUN-3373 the default (`|| []` part) won't be needed here once inheritance is fixed
     const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
 
-    preloadScripts.download(windowIdentity, preload, proceed);
+    preloadScripts.download(windowIdentity, preload).then(proceed);
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {

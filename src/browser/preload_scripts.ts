@@ -45,26 +45,23 @@ const scriptSetCache: { [key: string]: ScriptSet } = {};
 
 const preloadStates: Map<string, PreloadState> = new Map();
 
-/** @summary oad all the window's preload scripts.
- * @desc Successfully loaded scripts are saved via `setPreloadScript` before `loadUrl` is called.
+/* Requests all the window's preload scripts.
+ * Successfully loaded scripts are saved via `set` before `loadUrl` is called.
  * They are kept in memory only until api-decorator consumes them via `eval`, after which they are released.
  *
  * Per `cachedFetch`, errors are limited to actual transport errors; unexpected server responses are not
  * considered errors. E.g., 404 status does not throw an error; rather `success` is set to false and the
  * `data` property is undefined.
  *
- * @param {object} identity
- * @param {string|object[]} preloadOption
- * @param {function} [proceed] - If supplied, both `then` and `catch` call it.
- *
- * If you don't supply `proceed`, call both `then` and `catch` on your own to proceed as appropriate.
+ * Note that errors are caught herein and logged; they are not re-thrown, the
+ * rejection is no longer pending, and further catch handlers will never be called.
+ * Therefore, the caller if the caller wants to know when the download is complete,
+ * only a `.then()` is needed.
  */
-
 export function download(
     identity: Identity,
-    preloadOption: PreloadFile[],
-    proceed?: () => void
-) {
+    preloadOption: PreloadFile[]
+): Promise<ScriptSet> {
     const timer = new Timer();
     let allLoaded: Promise<ScriptSet>;
 
@@ -91,52 +88,72 @@ export function download(
     allLoaded = Promise.all(preloadPromises);
 
     allLoaded
-        .then((scriptSet: ScriptSet) => {
-            const compactScriptList = scriptSet.filter((preloadedScript: PreloadedScript) => preloadedScript.success);
-            const summary = `${compactScriptList.length} of ${scriptSet.length} scripts`;
-            logPreload('info', identity, 'load summary', summary, timer);
-            set(identity, scriptSet);
-            if (proceed) {
-                proceed();
-            }
-        })
-        .catch((error: Error | string | number) => {
-            logPreload('error', identity, 'error', '', error);
-            if (proceed) {
-                proceed();
-            }
-        });
+        .then(logSummary)
+        .then(cache)
+        .catch(logError);
+
+    return allLoaded;
+
+    function logSummary(scriptSet: ScriptSet): ScriptSet {
+        const compactScriptList = scriptSet.filter((preloadedScript: PreloadedScript) => preloadedScript.success);
+        const summary = `${compactScriptList.length} of ${scriptSet.length} scripts`;
+        logPreload('info', identity, 'load summary', summary, timer);
+        return scriptSet;
+    }
+
+   function cache(scriptSet: ScriptSet): ScriptSet {
+       set(identity, scriptSet);
+       return scriptSet;
+   }
+
+   function logError(error: Error | string | number) {
+       logPreload('error', identity, 'error', '', error);
+   }
 }
 
-export function set(identity: Identity, scriptSet: ScriptSet) {
-    const uniqueWindowId = route.window('preload', identity.uuid, identity.name);
-    scriptSetCache[uniqueWindowId] = scriptSet;
+export function set(identity: Identity, scriptSet: ScriptSet): void {
+    scriptSetCache[uniqueWindowKey(identity)] = scriptSet;
 }
 
-//Meant to be called one time per window; scripts are deleted from cache so cannot be returned more than once.
-export function get(identity: Identity): Promise<ScriptSet> {
-    const uniqueWindowId = route.window('preload', identity.uuid, identity.name);
-    const scriptSet: ScriptSet = scriptSetCache[uniqueWindowId] || [];
+// Be sure to supply a catch (`get(...).catch(...)`) as `validate` may throw an error
+export function get(identity: Identity, preloadOption: PreloadFile[]): Promise<ScriptSet> {
+    const scriptSet: ScriptSet = scriptSetCache[uniqueWindowKey(identity)];
+    let promisedScriptSet: Promise<ScriptSet>;
 
-    //release from memory; won't be needed again
-    delete scriptSetCache[uniqueWindowId];
+    if (scriptSet) {
+        // release from memory
+        // todo: consider not releasing main window's for reuse by child windows that inherit
+        delete scriptSetCache[uniqueWindowKey(identity)];
 
-    //any missing required script(s) preclude running any scripts at all
+        // scripts were fully loaded & cached prior to window create
+        promisedScriptSet = Promise.resolve(scriptSet);
+    } else {
+        // scripts missing due to reload or window.open
+        promisedScriptSet = download(identity, preloadOption);
+    }
+
+    return promisedScriptSet.then(validate);
+}
+
+function uniqueWindowKey(identity: Identity): string {
+    return route.window('preload', identity.uuid, identity.name);
+}
+
+//validate for any missing required script(s) even one of which will preclude running any scripts at all
+function validate(scriptSet: ScriptSet): ScriptSet {
     //todo: check this earlier and if any, cancel remaining in-progress downloads which could be sizable
-    const missingRequiredScripts = scriptSet.filter(preloadScript => {
-        const required = !preloadScript.optional;
-        return required && !preloadScript.success;
+    const missingRequiredScripts: ScriptSet = scriptSet.filter((preloadedScript: PreloadedScript) => {
+        const required = !preloadedScript.optional;
+        return required && !preloadedScript.success;
     });
 
     if (missingRequiredScripts.length) {
-        const URLs = missingRequiredScripts.map(preloadScript => preloadScript.url);
-        const list = JSON.stringify(JSON.stringify(URLs));
-        const message = `Execution of preload scripts canceled due to missing required script(s) ${list}`;
-        const error = new Error(message);
-        return Promise.reject(error);
+        const URLs: string[] = missingRequiredScripts.map((missingScript: PreloadedScript)  => missingScript.url);
+        const message = `Execution of preload scripts canceled due to missing required script(s) ${URLs}`;
+        throw new Error(message);
     }
 
-    return Promise.resolve(scriptSet);
+    return scriptSet;
 }
 
 function logPreload(
