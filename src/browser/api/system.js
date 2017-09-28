@@ -306,17 +306,9 @@ exports.System = {
         }
     },
     getFocusedWindow: function() {
-        const fWin = electronBrowserWindow.getFocusedWindow();
-        if (fWin) {
-            const ofWin = coreState.getWinObjById(fWin.id);
-            if (ofWin) {
-                return { 'uuid': ofWin.uuid, 'name': ofWin.name };
-            } else {
-                return null;
-            }
-        } else {
-            return null;
-        }
+        const { id } = electronBrowserWindow.getFocusedWindow() || {};
+        const { uuid, name } = coreState.getWinObjById(id) || {};
+        return uuid ? { uuid, name } : null;
     },
     getHostSpecs: function() {
         return {
