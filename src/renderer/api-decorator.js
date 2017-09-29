@@ -556,7 +556,8 @@ limitations under the License.
             uuid: winOpts.uuid,
             name: winOpts.name
         };
-        const { preload: preloadOption } = convertOptionsToElectronSync(getWindowOptionsSync());
+        let { preload: preloadOption, plugin: plugin } = convertOptionsToElectronSync(getWindowOptionsSync());
+        if (Array.isArray(plugin) && plugin[0] !== undefined) { preloadOption = preloadOption.concat(plugin); }
         const action = 'set-window-preload-state';
 
         if (preloadOption.length) { // short-circuit
@@ -570,15 +571,15 @@ limitations under the License.
             if (response) {
                 response.forEach((script, index) => {
                     if (script !== null) {
-                        const { url } = preloadOption[index];
+                        const { id } = preloadOption[index].url ? preloadOption[index].url : `${preloadOption[index].name}-${preloadOption[index].version}`;
 
                         try {
                             const val = window.eval(script); /* jshint ignore:line */
-                            logPreload('info', identity, `eval succeeded`, url, val);
-                            asyncApiCall(action, { url, state: 'succeeded' });
+                            logPreload('info', identity, `eval succeeded`, id, val);
+                            asyncApiCall(action, { id, state: 'succeeded' });
                         } catch (err) {
-                            logPreload('error', identity, 'eval failed', url, err);
-                            asyncApiCall(action, { url, state: 'failed' });
+                            logPreload('error', identity, 'eval failed', id, err);
+                            asyncApiCall(action, { id, state: 'failed' });
                         }
                     }
                 });

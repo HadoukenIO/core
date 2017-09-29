@@ -47,7 +47,7 @@ let WindowGroups = require('../window_groups.js');
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
-import { getPreloadScriptState } from '../preload_scripts';
+import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import WindowsMessages from '../../common/microsoft';
 
 // constants
@@ -767,8 +767,8 @@ Window.create = function(id, opts) {
     // Set preload scripts' final loading states
     winObj.preloadState = (_options.preload || []).map(preload => {
         return {
-            url: preload.url,
-            state: getPreloadScriptState(preload.url)
+            url: getIdentifier(preload),
+            state: getPreloadScriptState(getIdentifier(preload))
         };
     });
 
@@ -1091,14 +1091,14 @@ Window.getParentWindow = function() {};
  */
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
-    const { url, state, allDone } = payload;
+    const { state, allDone } = payload;
     const openfinWindow = Window.wrap(uuid, name);
     let preloadState = openfinWindow.preloadState;
     const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === url);
+        preloadState = preloadState.find(e => e.url === getIdentifier(payload));
         preloadState.state = state;
     }
 

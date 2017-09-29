@@ -203,7 +203,10 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 module.exports = {
 
     getStartupAppOptions: function(appJson) {
-        return appJson['startup_app'];
+        let opts = appJson['startup_app'];
+        opts.plugin = appJson['plugin'];
+        opts.preload = appJson['preload'];
+        return opts;
     },
 
     convertToElectron: function(options, returnAsString) {
@@ -283,6 +286,14 @@ module.exports = {
             } else {
                 log.writeToLog('warning', 'Expected `preload` option to be a string primitive OR an array of objects with `url` string properties.');
             }
+        }
+
+        const plugin = options['plugin'];
+        if (!plugin) {
+            // for all falsy values
+            newOptions.plugin = [];
+        } else {
+            newOptions.plugin = plugin;
         }
 
         if (options.customRequestHeaders !== undefined) {
