@@ -713,10 +713,10 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
-    cachedFetch(iconUrl)
+    cachedFetch(iconUrl, 'binary')
         .then(fetchResponse => {
             if (app && fetchResponse.success) {
-                const iconImage = nativeImage.createFromBuffer(new Buffer(fetchResponse.data));
+                const iconImage = nativeImage.createFromBuffer(fetchResponse.buffer);
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = route.application('tray-icon-clicked', app.uuid);
@@ -981,7 +981,7 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         opts.url = opts.url || 'about:blank';
 
-        if (!regex.isURL(opts.url) && !isURI(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
+        if (!regex.isURL(opts.url) && !regex.isURI(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
         }
 
@@ -1065,10 +1065,6 @@ function createAppObj(uuid, opts, configUrl = '') {
         });
     }
     return appObj;
-}
-
-function isURI(str) {
-    return /^file:\/\/\/?/.test(str);
 }
 
 function isNonEmptyString(str) {

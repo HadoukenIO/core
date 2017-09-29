@@ -2032,16 +2032,8 @@ function setTaskbar(browserWindow, forceFetch = false) {
     // we try the window options and if that fails we get the icon info
     // from the main window.
     if (!regex.isURL(options.url)) {
-        let _url = getWinOptsIconUrl(options);
-
-        // v6 needs to match v5's behavior: if the window url is a file uri,
-        // then icon can be either a file path, file uri, or url
-        if (!regex.isURL(_url) && !regex.isURI(_url)) {
-            _url = 'file:///' + _url;
-        }
-
         // try the window icon options first
-        setTaskbarIcon(browserWindow, _url, () => {
+        setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {
             if (!browserWindow.isDestroyed()) {
                 // if not, try using the main window's icon
                 setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
@@ -2063,8 +2055,8 @@ function setTaskbar(browserWindow, forceFetch = false) {
         setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {
             if (!browserWindow.isDestroyed()) {
                 // if not, try any favicons that were found
-                const _url = urls && urls[0];
-                setTaskbarIcon(browserWindow, _url, () => {
+                const url = urls && urls[0];
+                setTaskbarIcon(browserWindow, url, () => {
                     if (!browserWindow.isDestroyed()) {
                         // if not, try using the main window's icon
                         setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
@@ -2086,19 +2078,40 @@ function setTaskbar(browserWindow, forceFetch = false) {
 }
 
 function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
-    cachedFetch(iconUrl)
+    if (!iconUrl) {
+        errorCallback();
+        return;
+    }
+
+    // v6 needs to match v5's behavior: if the window url is a file uri,
+    // then icon can be either a file path, file uri, or url
+    if (!regex.isURL(iconUrl) && !regex.isURI(iconUrl)) {
+        iconUrl = `file:///${iconUrl}`;
+    }
+
+    cachedFetch(iconUrl, 'binary')
         .then(fetchResponse => {
             if (fetchResponse.success) {
-                setIcon(browserWindow, new Buffer(fetchResponse.data), errorCallback);
+                setIcon(browserWindow, fetchResponse.buffer, errorCallback);
             }
         })
-        .catch(errorCallback);
+        .catch(error => {
+            if (error) {
+                log.writeToLog('error', error);
+            }
+            errorCallback();
+        });
 }
 
-function setIcon(browserWindow, bufferOrFilepath, errorCallback = () => {}) {
+// data can be Buffer or dataURL or filepath
+function setIcon(browserWindow, data, errorCallback = () => {}) {
     if (!browserWindow.isDestroyed()) {
-        const methodName = bufferOrFilepath instanceof Buffer ? 'createFromBuffer' : 'createFromPath';
-        const icon = nativeImage[methodName](bufferOrFilepath);
+        const methodName = data instanceof Buffer ? 'createFromBuffer' :
+            /^data:/.test(data) ? 'createFromDataURL' :
+            'createFromPath';
+
+        const icon = nativeImage[methodName](data);
+
         if (icon.isEmpty()) {
             errorCallback();
         } else {
@@ -2108,8 +2121,8 @@ function setIcon(browserWindow, bufferOrFilepath, errorCallback = () => {}) {
 }
 
 function setBlankTaskbarIcon(browserWindow) {
-    // the file is located at ..\runtime-core\blank.ico
-    setIcon(browserWindow, path.resolve(`${__dirname}/../../../blank.ico`));
+    const BLANK1x1PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNiYAAAAAkAAxkR2eQAAAAASUVORK5CYII=';
+    setIcon(browserWindow, `data:image/png;base64,${BLANK1x1PNG}`);
 }
 
 function getMainWinIconUrl(id) {

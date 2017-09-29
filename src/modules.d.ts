@@ -57,6 +57,7 @@ declare module 'electron' {
     }
 
     export interface ClientResponse {
+        setEncoding(encoding: string): ClientResponse;
         on(eventName: string, event: (data?: any) => void): void;
         statusCode: number;
         headers: { [key: string]: any }[];
