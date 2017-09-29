@@ -53,7 +53,8 @@ import {
 import {
     default as connectionManager,
     meshEnabled,
-    isMeshEnabled
+    isMeshEnabled,
+    getMeshUuid
 } from './src/browser/connection_manager';
 
 import * as log from './src/browser/log';
@@ -136,12 +137,14 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
 portDiscovery.on('runtime/launched', (portInfo) => {
     //check if the ports match:
     const myPortInfo = coreState.getSocketServerState();
+    const myUuid = getMeshUuid();
+
     log.writeToLog('info', `Port discovery message received ${JSON.stringify(portInfo)}`);
 
-    //TODO: Include REALM in the determination.
+    //TODO include old runtimes in the determination.
     if (meshEnabled && portInfo.port !== myPortInfo.port && isMeshEnabled(portInfo.options)) {
 
-        connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
+        connectionManager.connectToRuntime(myUuid, portInfo).then((runtimePeer) => {
             //one connected we broadcast our port discovery message.
             staggerPortBroadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);

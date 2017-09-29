@@ -23,9 +23,11 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
  */
 
 import ofEvents from './of_events';
-import connectionManager, { PeerRuntime } from './connection_manager';
+import connectionManager, { PeerRuntime, keyFromPortInfo, getMeshUuid } from './connection_manager';
 import { Identity } from '../shapes';
 import route from '../common/route';
+import * as coreState from './core_state';
+import { PortInfo } from './port_discovery';
 
 // id count to generate IDs for subscriptions
 let subscriptionIdCount = 0;
@@ -111,18 +113,21 @@ export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
  */
 function applyRemoteSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
     const classEventEmitter = getClassEventEmitter(subscription, runtime);
-    const runtimeVersion = getRuntimeVersion(runtime);
+    const runtimeKey = keyFromPortInfo(runtime.portInfo);
     const { uuid, name, className, eventName, listenType, unSubscriptions } = subscription;
     const fullEventName = (typeof name === 'string')
         ? route(className, eventName, uuid, name, true)
         : route(className, eventName, uuid);
 
     const listener = (data: any) => {
-        ofEvents.emit(fullEventName, data);
+        if (!data.runtimeUuid) {
+            data.runtimeUuid = getMeshUuid();
+            ofEvents.emit(fullEventName, data);
+        }
 
         // As soon as the event listener fires, we know which runtime is a true
         // subscription holder, all other runtimes should remove this subscription
-        cleanUpSubscription(subscription, runtimeVersion);
+        cleanUpSubscription(subscription, runtimeKey);
     };
 
     // Subscribe to an event on a remote runtime
@@ -130,10 +135,10 @@ function applyRemoteSubscription(subscription: RemoteSubscription, runtime: Peer
 
     // Store a cleanup function for the added listener in
     // un-subscription map, so that later we can remove extra subscriptions
-    if (!Array.isArray(unSubscriptions.get(runtimeVersion))) {
-        unSubscriptions.set(runtimeVersion, []);
+    if (!Array.isArray(unSubscriptions.get(runtimeKey))) {
+        unSubscriptions.set(runtimeKey, []);
     }
-    unSubscriptions.get(runtimeVersion).push(() => {
+    unSubscriptions.get(runtimeKey).push(() => {
         classEventEmitter.removeListener(eventName, listener);
     });
 }
@@ -151,13 +156,12 @@ function cleanUpSubscription(subscription: RemoteSubscription, keepInRuntimeVers
     if (subscription.isCleaned && keepInRuntimeVersion) {
         return;
     }
-
     // Cleanup subscriptions in all connected runtimes
     connectionManager.connections.forEach((runtime) => {
-        const runtimeVersion = getRuntimeVersion(runtime);
+        const runtimeKey = keyFromPortInfo(runtime.portInfo);
 
         // Don't un-subscribe in the runtime where we need to keep the subscription
-        if (runtimeVersion === keepInRuntimeVersion) {
+        if (runtimeKey === keepInRuntimeVersion) {
             persistSubscription(subscription, runtime);
             return;
         }
@@ -179,7 +183,7 @@ function cleanUpSubscription(subscription: RemoteSubscription, keepInRuntimeVers
  * comes back in the future, we can subscribe again
  */
 function persistSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
-    const runtimeVersion = getRuntimeVersion(runtime);
+    const runtimeKey = keyFromPortInfo(runtime.portInfo);
     const { unSubscriptions } = subscription;
     const disconnectEventName = 'disconnected';
 
@@ -189,7 +193,7 @@ function persistSubscription(subscription: RemoteSubscription, runtime: PeerRunt
     };
 
     runtime.fin.on(disconnectEventName, listener);
-    unSubscriptions.get(runtimeVersion).push(() => {
+    unSubscriptions.get(runtimeKey).push(() => {
         runtime.fin.removeListener(disconnectEventName, listener);
     });
 }
@@ -198,11 +202,14 @@ function persistSubscription(subscription: RemoteSubscription, runtime: PeerRunt
  * Remove subscription from a given runtime
  */
 function unSubscribe(subscription: RemoteSubscription, runtime: PeerRuntime) {
-    const runtimeVersion = getRuntimeVersion(runtime);
+    const runtimeKey = keyFromPortInfo(runtime.portInfo);
     const { unSubscriptions } = subscription;
+    const unSubs = unSubscriptions.get(runtimeKey);
 
-    unSubscriptions.get(runtimeVersion).forEach(unSubscribe => unSubscribe());
-    unSubscriptions.delete(runtimeVersion);
+    if (unSubs) {
+        unSubs.forEach(unSubscribe => unSubscribe());
+    }
+    unSubscriptions.delete(runtimeKey);
 }
 
 /**
@@ -229,11 +236,4 @@ function getClassEventEmitter(subscription: RemoteSubscription, runtime: PeerRun
  */
 function getId() {
     return ++subscriptionIdCount;
-}
-
-/**
- * Extract runtime version from runtime object
- */
-function getRuntimeVersion(runtime: PeerRuntime): string {
-    return runtime.portInfo.version;
 }
