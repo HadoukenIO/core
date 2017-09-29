@@ -12,29 +12,13 @@ const coreState = require('../core_state');
 import * as log from '../log';
 import * as Shapes from '../../shapes';
 
-// enum EntityType {
-//     window = 'window',
-//     iframe = 'iframe',
-//     externalConnection = 'external connection',
-//     unknown = 'unknown'
-// }
-
-// type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
-
-// interface FrameInfo {
-//     uuid: string;
-//     name: string;
-//     parent: shapes.Identity;
-//     entityType: EntityType;
-// }
-
-class FrameInfo {
+export class FrameInfo implements Shapes.FrameInfo {
     public uuid: string = '';
     public name: string = '';
     public parent: Identity = {uuid: null, name: null};
     public entityType: Shapes.EntityType = 'unknown';
 
-    constructor(frameInfo: FrameInfo = <FrameInfo>{}) {
+    constructor(frameInfo: Shapes.FrameInfo = <Shapes.FrameInfo>{}) {
         const {uuid, name, parent, entityType} = frameInfo;
         this.name = name || this.name;
         this.uuid = uuid || this.uuid;
@@ -96,5 +80,20 @@ export module Frame {
         } else {
             return new FrameInfo(<FrameInfo>targetIdentity);
         }
+    }
+
+    export function getParentWindow(identity: Shapes.Identity) {
+        const app: Shapes.App = coreState.getAppByUuid(identity.uuid);
+        const parentWindow: Shapes.Window | undefined = app.children.find((win: Shapes.Window) =>
+            win.openfinWindow &&
+            win.openfinWindow.frames &&
+            win.openfinWindow.frames[identity.name]
+        );
+
+        if (!parentWindow || !parentWindow.openfinWindow) {
+            return undefined;
+        }
+        const { uuid, name } = parentWindow.openfinWindow;
+        return { uuid, name };
     }
 }

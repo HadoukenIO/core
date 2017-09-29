@@ -643,8 +643,6 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
             return openfinWindow.frames[frame];
         }
     }
-
-    log.writeToLog(1, 'you suck', true);
 }
 
 export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {

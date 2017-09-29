@@ -39,6 +39,7 @@ import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts } from '../preload_scripts';
+import * as Frame from './frame';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -293,6 +294,50 @@ exports.System = {
     },
     getDeviceId: function() {
         return electronApp.getHostToken();
+    },
+    // TODO unit test me!!
+    getEntityInfo: function(identity) {
+        let entityInfo = coreState.getInfoByUuidFrame(identity);
+
+        if (entityInfo) {
+            return new Frame.FrameInfo(entityInfo);
+        } else if (ExternalApplication.getExternalConnectionByUuid(identity.uuid)) {
+            const externalAppInfo = ExternalApplication.getInfo(identity);
+            return new Frame.FrameInfo({
+                uuid: identity.uuid,
+                entityType: 'external connection',
+                parent: externalAppInfo.parent
+            });
+        } else {
+            return new Frame.FrameInfo(identity);
+        }
+
+        // if (!identity.name) {
+        //     const externalApp = ExternalApplication.getExternalConnectionByUuid(identity.uuid);
+        //     const externalAppInfo = ExternalApplication.getInfo(externalApp);
+        //     if (externalApp) {
+        //         externalAppInfo.entityType = 'external connection';
+        //         externalAppInfo.parent = externalApp.parent;
+        //     }
+        //     response = isExternalApp ? 'external connection' : 'unknown';
+        // } else {
+        //     let app = coreState.getAppByUuid(identity.uuid);
+        //     if (app && app.children) {
+        //         app.children.some(win => {
+        //             if (win.openfinWindow && win.openfinWindow.name === identity.name) {
+        //                 response.parent = coreState.getParentIdentity(identity);
+        //                 response.entityType = 'window';
+        //                 return true;
+        //             } else if (win.openfinWindow.frames[identity.name]) {
+        //                 response.parent = coreState.getParentIdentity(identity);
+        //                 response.entityType = 'frame';
+        //                 return true;
+        //             }
+        //         });
+        //     }
+        // }
+        // return response;
+
     },
     getEnvironmentVariable: function(varsToExpand) {
         if (Array.isArray(varsToExpand)) {

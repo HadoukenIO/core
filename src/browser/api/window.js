@@ -1029,6 +1029,13 @@ Window.getAllFrames = function(identity) {
     return 'window.getAllFrames in api/window from core - FILL ME IN>>>>>>>>>>';
 };
 
+Window.getAllFrames = function(identity) {
+    let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
+    // Valid window with no frames returns an empty obj
+    // TODO return these as a list of frame infos
+    return openfinWindow ? openfinWindow.frames || undefined : undefined;
+};
+
 Window.getBounds = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 

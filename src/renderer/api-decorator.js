@@ -26,7 +26,6 @@ limitations under the License.
     let renderFrameId = global.routingId;
     let customData = global.getFrameData(renderFrameId);
     let glbl = global;
-    const frameElement = global.frameElement;
 
     const electron = require('electron');
     const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
@@ -363,14 +362,14 @@ limitations under the License.
 
         // Prevent iframes from attempting to do windowing actions, these will always be handled
         // by the main window frame.
+        // TODO this needs to be revisited when we have xorigin frame api
         if (!window.frameElement) {
             showOnReady(glbl, winOpts);
         }
 
-        window.woah = frameElement;
-
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
+        // TODO this need to go away if the beta flags is set
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
 

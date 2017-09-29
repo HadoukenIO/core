@@ -40,6 +40,7 @@ function SystemApiHandler() {
         'get-device-id': { apiFunc: getDeviceId, apiPath: '.getDeviceId' },
         'get-device-user-id': getDeviceUserId,
         'get-el-ipc-config': getElIPCConfig,
+        'get-entity-info': getEntityInfo,
         'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
         'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
         'get-min-log-level': getMinLogLevel,
@@ -249,6 +250,12 @@ function SystemApiHandler() {
         var dataAck = _.clone(successAck);
         dataAck.data = System.getDeviceId();
         ack(dataAck);
+    }
+
+    function getEntityInfo(identity, message, ack, nack) {
+        const { uuid, name } = message.payload;
+
+        return System.getEntityInfo({ uuid, name });
     }
 
     function getRemoteConfig(identity, message, ack, nack) {

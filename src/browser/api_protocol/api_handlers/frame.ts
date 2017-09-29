@@ -17,7 +17,8 @@ const successAck: object = {
 
 export class FrameApiHandler {
     private readonly actionMap: ActionSpecMap = {
-        'get-frame-info': this.getInfo
+        'get-frame-info': this.getInfo,
+        'get-parent-window': this.getParentWindow
     };
 
     constructor() {
@@ -30,5 +31,10 @@ export class FrameApiHandler {
         const frameIdentity: any = apiProtocolBase.getTargetWindowIdentity(message.payload);
 
         return Frame.getInfo(frameIdentity, message);
+    }
+
+    private getParentWindow(identity: Identity) {
+
+        return Frame.getParentWindow(identity);
     }
 }

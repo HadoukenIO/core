@@ -277,11 +277,6 @@ Application.getChildWindows = function(identity /*, callback, errorCallback*/ ) 
     return coreState.getChildrenByApp(app.id);
 };
 
-Application.getEntityInfo = function(identity, callback, errCallback) {
-    let response = 'getEntityInfo in api/app from core - FILL ME IN>>>>>>>>>';
-    callback(response);
-};
-
 Application.getGroups = function( /* callback, errorCallback*/ ) {
     return WindowGroups.getGroups();
 };
