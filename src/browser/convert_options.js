@@ -31,6 +31,12 @@ let coreState = require('./core_state.js');
 let log = require('./log');
 let regex = require('../common/regex');
 
+// constants
+import {
+    DEFAULT_RESIZE_REGION_SIZE,
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+} from '../../shapes.ts';
+
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
     return {
@@ -84,8 +90,8 @@ function five0BaseOptions() {
         'resizable': true,
         'resize': true,
         'resizeRegion': {
-            'bottomRightCorner': 9,
-            'size': 7
+            'bottomRightCorner': DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
+            'size': DEFAULT_RESIZE_REGION_SIZE
         },
         'saveWindowState': true,
         'shadow': false,
