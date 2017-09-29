@@ -47,7 +47,7 @@ let WindowGroups = require('../window_groups.js');
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
-import { getPreloadScriptState } from '../preload_scripts';
+import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import WindowsMessages from '../../common/microsoft';
 
 const subscriptionManager = new SubscriptionManager();
@@ -2163,10 +2163,6 @@ function getElectronBrowserWindow(identity, errDesc) {
     }
 
     return browserWindow;
-}
-
-function getIdentifier(preload) {
-    return preload.url ? preload.url : `${preload.name}-${preload.version}`;
 }
 
 module.exports.Window = Window;
