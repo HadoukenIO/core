@@ -106,7 +106,7 @@ function onRequestAuthorization(id, data) {
     }
 
     //issue with older adapters where part of the data is comming from different locations;
-    const externalApplicationOptions = ExternalApplication.createExternalApplicationOptions(Object.assign({}, authObj, externalConnObj));
+    const externalApplicationOptions = ExternalApplication.createExternalApplicationOptions(Object.assign({}, authObj.authReqPayload, externalConnObj));
     //Check if the file and token were written.
 
     authenticateUuid(authObj, data.payload, (success, error) => {
