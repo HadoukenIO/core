@@ -47,8 +47,14 @@ let WindowGroups = require('../window_groups.js');
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
-import { getPreloadScriptState } from '../preload_scripts';
+import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import WindowsMessages from '../../common/microsoft';
+
+// constants
+import {
+    DEFAULT_RESIZE_REGION_SIZE,
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+} from '../../shapes';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -158,8 +164,8 @@ let optionSetters = {
             // reapply resize region
             applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
                 let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
-                    size: 2,
-                    bottomRightCorner: 4
+                    size: DEFAULT_RESIZE_REGION_SIZE,
+                    bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
                 });
                 browserWin.setResizeRegion(resizeRegion.size);
                 browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
@@ -761,8 +767,8 @@ Window.create = function(id, opts) {
     // Set preload scripts' final loading states
     winObj.preloadState = (_options.preload || []).map(preload => {
         return {
-            url: preload.url,
-            state: getPreloadScriptState(preload.url)
+            url: getIdentifier(preload),
+            state: getPreloadScriptState(getIdentifier(preload))
         };
     });
 
@@ -1085,14 +1091,14 @@ Window.getParentWindow = function() {};
  */
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
-    const { url, state, allDone } = payload;
+    const { state, allDone } = payload;
     const openfinWindow = Window.wrap(uuid, name);
     let preloadState = openfinWindow.preloadState;
     const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === url);
+        preloadState = preloadState.find(e => e.url === getIdentifier(payload));
         preloadState.state = state;
     }
 

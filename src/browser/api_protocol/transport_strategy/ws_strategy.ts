@@ -9,6 +9,7 @@ import { ApiTransportBase, MessagePackage, Identity } from './api_transport_base
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
 import route from '../../../common/route';
+import * as log from '../../log';
 
 declare var require: any;
 
@@ -49,6 +50,11 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     public send(externalConnection: any, payload: any): void {
+        try {
+            log.writeToLog('info', `sent external-adapter <= ${externalConnection.id} ${JSON.stringify(payload)}`);
+        } catch (err) {
+            /* tslint:disable: no-empty */
+        }
         socketServer.send(externalConnection.id, JSON.stringify(payload));
     }
 

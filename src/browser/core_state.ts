@@ -456,7 +456,7 @@ export function getAllWindows(): WindowMeta[] {
     const getBounds = require('./api/window.js').Window.getBounds; // do not move this line!
     return apps.map(app => {
         const windowBounds = app.children
-            .filter(win => win.openfinWindow && win.id !== app.id)
+            .filter(win => win.openfinWindow)
             .map(win => {
                 const bounds = getBounds({
                     name: win.openfinWindow.name,
@@ -466,9 +466,14 @@ export function getAllWindows(): WindowMeta[] {
                 return bounds;
             });
 
+        const mainWin = windowBounds[0] || {};
+        if (windowBounds.length > 0) {
+            windowBounds.splice(0, 1); //child windows should not contain main window
+        }
+
         return {
             childWindows: windowBounds,
-            mainWindow: windowBounds[0] || {},
+            mainWindow: mainWin,
             uuid: app.uuid
         };
     });

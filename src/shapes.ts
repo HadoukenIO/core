@@ -20,16 +20,6 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
-/**
- * Window bounds
- */
-export interface WindowBounds {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
-
 export interface APIMessage {
     action: string;
     messageId: number;
@@ -229,6 +219,9 @@ export interface WindowOptions {
     x?: number;
     y?: number;
 }
+
+export const DEFAULT_RESIZE_REGION_SIZE = 7;
+export const DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER = 9;
 
 export interface Manifest {
     appAssets?: {

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 /**
  * All declared modules in this file don't correctly represent all of
  * their functionality, rather things are constantly added here while
@@ -32,24 +33,37 @@ declare module 'electron' {
         export function vlog(level: number, message: any): any;
     }
 
-    namespace BrowserWindow {
-        export function fromId(id: string): any;
+    export interface Rectangle {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
     }
 
     export class BrowserWindow {
         constructor(props: any);
+
         _options: {
             minWidth: number;
             minHeight: number;
             maxWidth: number;
             maxHeight: number;
         };
+
+        static fromId(id: string): BrowserWindow;
+        static getAllWindows(): BrowserWindow[];
+
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         getWindowsByClassName(className: string): any;
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
         hookWindowMessage(n: number, listener: (message: any) => void): void;
         subscribeSessionNotifications(b: boolean): void;
         isDestroyed(): boolean;
+        isMaximized(): boolean;
+        isMinimized(): boolean;
+        emit(routeString: string, ...args: any[]): void;
+        getBounds(): Rectangle;
+        setWindowPlacement(bounds: Rectangle): void;
     }
 
     export class ipcMain {

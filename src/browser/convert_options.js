@@ -31,6 +31,12 @@ let coreState = require('./core_state.js');
 let log = require('./log');
 let regex = require('../common/regex');
 
+// constants
+import {
+    DEFAULT_RESIZE_REGION_SIZE,
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+} from '../shapes';
+
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
     return {
@@ -84,8 +90,8 @@ function five0BaseOptions() {
         'resizable': true,
         'resize': true,
         'resizeRegion': {
-            'bottomRightCorner': 4,
-            'size': 2
+            'bottomRightCorner': DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
+            'size': DEFAULT_RESIZE_REGION_SIZE
         },
         'saveWindowState': true,
         'shadow': false,
@@ -197,7 +203,10 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 module.exports = {
 
     getStartupAppOptions: function(appJson) {
-        return appJson['startup_app'];
+        let opts = appJson['startup_app'];
+        opts.plugin = appJson['plugin'];
+        opts.preload = appJson['preload'];
+        return opts;
     },
 
     convertToElectron: function(options, returnAsString) {
@@ -277,6 +286,14 @@ module.exports = {
             } else {
                 log.writeToLog('warning', 'Expected `preload` option to be a string primitive OR an array of objects with `url` string properties.');
             }
+        }
+
+        const plugin = options['plugin'];
+        if (!plugin) {
+            // for all falsy values
+            newOptions.plugin = [];
+        } else {
+            newOptions.plugin = plugin;
         }
 
         if (options.customRequestHeaders !== undefined) {

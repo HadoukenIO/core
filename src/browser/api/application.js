@@ -446,11 +446,22 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
 
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = convertOpts.convertToElectron(app._options);
+
+    let forPreload = [];
+    if (Array.isArray(mainWindowOpts.preload) && mainWindowOpts.preload[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.preload); }
+    if (Array.isArray(mainWindowOpts.plugin) && mainWindowOpts.plugin[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.plugin); }
+
     const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
-    const { uuid, name, preload } = mainWindowOpts;
+    const { uuid, name } = mainWindowOpts;
     const windowIdentity = { uuid, name };
 
-    System.downloadPreloadScripts(windowIdentity, preload, proceed);
+    if (coreState.getAppRunningState(uuid)) {
+        proceed();
+    } else {
+        // Flow through preload script logic (eg. re-download of failed preload scripts)
+        // only if app is not already running.
+        System.downloadPreloadScripts(windowIdentity, forPreload, proceed);
+    }
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {
