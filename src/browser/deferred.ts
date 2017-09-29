@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { BrowserWindow } from 'electron';
-import { WindowBounds } from '../shapes';
+import { BrowserWindow, Rectangle } from 'electron';
 import { toSafeInt } from '../common/safe_int';
 import clipBounds from './clip_bounds';
 
@@ -36,8 +35,8 @@ function handleMove(windowId: string, bounds: Bounds): void {
     const browserWindow = BrowserWindow.fromId(windowId);
 
     if (isWin32 && browserWindow && (browserWindow.isMinimized() || browserWindow.isMaximized())) {
-        const oldBounds = browserWindow.getBounds();
-        const newBounds: WindowBounds = {
+        const oldBounds: Rectangle = browserWindow.getBounds();
+        const newBounds: Rectangle = {
             x: toSafeInt(bounds.x, oldBounds.x),
             y: toSafeInt(bounds.y, oldBounds.y),
             width: toSafeInt(bounds.w, oldBounds.width),
