@@ -50,6 +50,12 @@ import route from '../../common/route';
 import { getPreloadScriptState } from '../preload_scripts';
 import WindowsMessages from '../../common/microsoft';
 
+// constants
+import {
+    DEFAULT_RESIZE_REGION_SIZE,
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+} from '../../shapes.ts';
+
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
@@ -158,8 +164,8 @@ let optionSetters = {
             // reapply resize region
             applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
                 let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
-                    size: 2,
-                    bottomRightCorner: 4
+                    size: DEFAULT_RESIZE_REGION_SIZE,
+                    bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
                 });
                 browserWin.setResizeRegion(resizeRegion.size);
                 browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
