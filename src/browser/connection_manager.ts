@@ -20,7 +20,7 @@ import { EventEmitter } from 'events';
 import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 import { ArgMap, PortInfo } from './port_discovery';
 import * as log from './log';
-const coreState = require('./core_state');
+import * as  coreState from './core_state';
 
 //TODO: pre-release flag, this will go away once we release multi runtime.
 const multiRuntimeCommandLineFlag = 'enable-multi-runtime';
@@ -74,8 +74,8 @@ function isMeshEnabled(args: ArgMap) {
 }
 
 function keyFromPortInfo(portInfo: PortInfo): string {
-    const { version, port, securityRealm } = portInfo;
-    return `${version}/${port}/${securityRealm ? securityRealm : ''}`;
+    const { version, port, securityRealm = '' } = portInfo;
+    return `${version}/${port}/${securityRealm}`;
 }
 
 if (multiRuntimeEnabled && isMeshEnabled(coreState.argo)) {
