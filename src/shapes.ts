@@ -20,6 +20,14 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
+export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
+
+export interface FrameInfo extends Identity {
+    name: string;
+    parent: Identity;
+    entityType: EntityType;
+}
+
 /**
  * Window bounds
  */

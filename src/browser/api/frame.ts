@@ -10,7 +10,38 @@ import { Identity } from '../../shapes';
 import route from '../../common/route';
 const coreState = require('../core_state');
 import * as log from '../log';
+import * as Shapes from '../../shapes';
 
+// enum EntityType {
+//     window = 'window',
+//     iframe = 'iframe',
+//     externalConnection = 'external connection',
+//     unknown = 'unknown'
+// }
+
+// type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
+
+// interface FrameInfo {
+//     uuid: string;
+//     name: string;
+//     parent: shapes.Identity;
+//     entityType: EntityType;
+// }
+
+class FrameInfo {
+    public uuid: string = '';
+    public name: string = '';
+    public parent: Identity = {uuid: null, name: null};
+    public entityType: Shapes.EntityType = 'unknown';
+
+    constructor(frameInfo: FrameInfo = <FrameInfo>{}) {
+        const {uuid, name, parent, entityType} = frameInfo;
+        this.name = name || this.name;
+        this.uuid = uuid || this.uuid;
+        this.parent = parent || this.parent;
+        this.entityType = entityType || this.entityType;
+    }
+}
 
 export module Frame {
     export function addEventListener (identity: Identity, targetIdentity: Identity, type: string, listener: Function) {
@@ -39,12 +70,9 @@ export module Frame {
             }
         };
 
-        // electronApp.vlog(1, `addEventListener ${eventString}`);
-        log.writeToLog(1, `eventString: ${eventString}`, true);
         ofEvents.on(eventString, safeListener);
 
         unsubscribe = () => {
-            log.writeToLog(1, 'unhooking up!!!', true);
             ofEvents.removeListener(eventString, safeListener);
         };
         return unsubscribe;
@@ -53,11 +81,20 @@ export module Frame {
 
     export function removeEventListener (identity: Identity, type: string, listener: Function) {
         const browserFrame = coreState.getWindowByUuidName(identity.uuid, identity.name);
-        // const browserFrame = getElectronBrowserWindow(identity, 'remove event listener for');
+
         ofEvents.removeListener(route.frame(type, browserFrame.id), listener);
     }
 
-    export function getInfo (identity: Identity) {
-        return identity;
+    export function getInfo (targetIdentity: Identity, message: any) {
+        const frameInfo = coreState.getInfoByUuidFrame(targetIdentity);
+
+        log.writeToLog(1, 'thennn', true);
+        log.writeToLog(1, `go get ${JSON.stringify(frameInfo)}`, true);
+
+        if (frameInfo) {
+            return new FrameInfo(frameInfo);
+        } else {
+            return new FrameInfo(<FrameInfo>targetIdentity);
+        }
     }
 }

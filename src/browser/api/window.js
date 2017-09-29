@@ -380,30 +380,17 @@ Window.create = function(id, opts) {
 
         browserWindow = BrowserWindow.fromId(id);
         browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
-            // const winObj = coreState.getWinById(id);
-            // const isIframe = true;
             const parentFrameId = id;
             const frameInfo = Object.assign({}, {
                 name: frameName,
                 uuid,
-                // isIframe,
                 parentFrameId,
-                frameRoutingId
+                parent: { uuid, name },
+                frameRoutingId,
+                entityType: 'iframe'
             });
 
-            // coreState.addChildToWin(id, frameName, true);
-            // coreState.setWindowObj(frameName, frameInfo);
-            // log.writeToLog(1, JSON.stringify(coreState.setWindowObj(frameName, winObj), null, ' '), true);
-            // log.writeToLog(1, JSON.stringify(coreState.apps, null, ' '), true);
-
-            log.writeToLog(1, 'whatever', true);
-
-            // should this have a guard? can a window get created w/o going through here??
-            // if (winObj.frames) {
             winObj.frames[frameName] = frameInfo;
-            // } else {
-            //    winObj.frames = { frameName: frameInfo };
-            // }
         };
 
         browserWindow.webContents.unregisterIframe = (frameName) => {

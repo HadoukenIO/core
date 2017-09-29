@@ -578,8 +578,76 @@ export function getLicenseKey(identity: Shapes.Identity): string|null {
     }
 }
 
+export function getParentWindow(childIdentity: Shapes.Identity): Shapes.Window {
+    const { uuid, name } = childIdentity;
+
+    const app = appByUuid(uuid);
+
+    const childWin = getOfWindowByUuidName(uuid, name);
+
+    if (!childWin) {
+        return;
+    }
+
+    return getWinById(childWin.parentId);
+
+}
+
+export function getParentOpenFinWindow(childIdentity: Shapes.Identity): Shapes.OpenFinWindow {
+    const parentWin = getParentWindow(childIdentity);
+
+    if (!parentWin) {
+        return;
+    }
+
+    return parentWin.openfinWindow;
+}
+
+export function getParentIdentity(childIdentity: Shapes.Identity): Shapes.Identity {
+    const parentOpenFinWin = getParentOpenFinWindow(childIdentity);
+
+    if (!parentOpenFinWin) {
+        return;
+    }
+
+    return {
+        uuid: parentOpenFinWin.uuid,
+        name: parentOpenFinWin.name
+    };
+}
+
+export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.FrameInfo {
+    log.writeToLog(1, `go get ${JSON.stringify(targetIdentity)}`, true);
+    const {uuid, name: frame} = targetIdentity;
+
+    const app = appByUuid(uuid);
+
+    if (!app) {
+        return;
+    }
+
+    for (const { openfinWindow } of app.children) {
+        const { name, parentFrameId } = openfinWindow;
+
+        if (name === frame) {
+            const winParent = getWinById(parentFrameId);
+            const parent = getParentIdentity({uuid, name});
+
+            return {
+                name,
+                uuid,
+                parent,
+                entityType: 'window'
+            };
+        } else if (openfinWindow.frames[frame]) {
+            return openfinWindow.frames[frame];
+        }
+    }
+
+    log.writeToLog(1, 'you suck', true);
+}
+
 export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
-    log.writeToLog(1, `really??? ${uuid}, ${frame}` , true);
     const app = appByUuid(uuid);
 
     if (!app) {
@@ -600,61 +668,12 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             };
         } else if (openfinWindow.frames[frame]) {
             const {name, frameRoutingId} = openfinWindow.frames[frame];
-            log.writeToLog(1, 'we made it!' , true);
-            log.writeToLog(1, `${JSON.stringify(openfinWindow.frames[frame])}` , true);
             return {
                 name,
                 browserWindow,
                 frameRoutingId,
                 frameName: name
             };
-        } else {
-            throw new Error(`${uuid} / ${name} not found!!`);
         }
-
-        // if (name !== frame) {
-        //     continue;
-        // }
-
-        // const isMainRenderFrame = !isIframe; //name === frame;
-
-        // log.writeToLog(1, `aaaand ${name}, ${isIframe}, ${parentFrameId} ` , true);
-
-        // if (isMainRenderFrame) {
-        //     // log.writeToLog(1, 'really???' , true);
-        //     browserWindow = openfinWindow.browserWindow;
-        // }  else if (isIframe && parentFrameId !== undefined) {
-        //     const parentWin = getWinById(parentFrameId);
-        //     browserWindow = parentWin.openfinWindow.browserWindow;
-        // }
-
-        // log.writeToLog(1, `${Object.keys(openfinWindow)}` , true);
-        // log.writeToLog(1, `${name} -- ${frame} --> ${isMainRenderFrame}` , true);
-        // if (isMainRenderFrame) {
-        //     log.writeToLog(1, `sent to main render frame ${{
-        //         name,
-        //         browserWindow,
-        //         frameRoutingId: 1,
-        //         frameName: name
-        //     }}` , true);
-        //     // todo ensure that this is still correct with the different frameConnect opts
-        //     return {
-        //         name,
-        //         browserWindow,
-        //         frameRoutingId: 1,
-        //         frameName: name
-        //     };
-        // } else {
-        //     const frameInfo = browserWindow.webContents.hasFrame(frame);
-        //     log.writeToLog(1, 'has frame info? ' + frameInfo, true);
-
-        //     if (frameInfo) {
-
-        //         return Object.assign({
-        //             name,
-        //             browserWindow
-        //         }, frameInfo);
-        //     }
-        // }
-    } // end for ofwin of app.children
+    }
 }

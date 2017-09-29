@@ -24,6 +24,8 @@ declare var require: any;
 const coreState = require('../../core_state');
 const electronIpc = require('../../transports/electron_ipc');
 const system = require('../../api/system').System;
+const frameStrategy = coreState.argo.framestrategy;
+const bypassLocalFrameConnect = frameStrategy === 'frames';
 
 export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
@@ -40,7 +42,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                 if (endpoint) {
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
                     // todo revisit the strategy
-                    if (1 || !data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
+                    if (bypassLocalFrameConnect || !data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data, ack, nack))
                             .then(result => {
@@ -113,7 +115,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             const currWindow = browserWindow ? coreState.getWinById(browserWindow.id) : null;
             const openfinWindow = currWindow.openfinWindow;
             const opts = openfinWindow && openfinWindow._options || {};
-            const subFrameName = e.sender.getFrameName(e.frameRoutingId);
+            const subFrameName = bypassLocalFrameConnect ? e.sender.getFrameName(e.frameRoutingId) : null;
             const identity = {
                 name: subFrameName || opts.name,
                 uuid: opts.uuid,

@@ -30,8 +30,6 @@ export default class SubscriptionManager {
         this.subscriptionList = new Map();
 
         ofEvents.on(route.window('closed'), (identity: Identity) => {
-            log.writeToLog(1, `from the sub man...window , ${JSON.stringify(identity.name)}`, true);
-
             this.removeAllSubscriptions(identity);
         });
 
