@@ -54,7 +54,7 @@ import WindowsMessages from '../../common/microsoft';
 import {
     DEFAULT_RESIZE_REGION_SIZE,
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
-} from '../../shapes.ts';
+} from '../../shapes';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
