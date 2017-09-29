@@ -13,12 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+export const Patterns: {[key: string]: RegExp} = {
+    URL: /^https?:\/\//,
+    URI: /^file:\/\/\// // file:// is BAD; file:/// is GOOD
+};
+
 export function isURL(str: string): boolean {
-    return /^https?:\/\//.test(str);
+    return Patterns.URL.test(str);
 }
 
 export function isURI(str: string): boolean {
-    return /^file:\/\/\//.test(str); // file:// is BAD; file:/// is GOOD
+    return Patterns.URI.test(str);
 }
 
 export function uriToPath(uri: string): string {
