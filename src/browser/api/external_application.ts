@@ -13,8 +13,8 @@ import route from '../../common/route';
 const authenticatedConnections: ExternalApplicationOptions[] = [];
 
 export interface ExternalApplicationClient {
-    type: string;
-    version: any;
+    type: 'dotnet' | 'java' | 'air' | 'node' | 'silverlight';
+    version: string;
 }
 
 export interface ExternalApplicationOptions extends Identity {
@@ -25,7 +25,7 @@ export interface ExternalApplicationOptions extends Identity {
     configUrl?: string;
     pid?: number;
     client?: ExternalApplicationClient;
-    type?: string;
+    type?: string; // authorization type e.g., 'file-token'
 }
 
 interface ExternalProcessInfo {
