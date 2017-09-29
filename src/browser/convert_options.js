@@ -35,7 +35,7 @@ let regex = require('../common/regex');
 import {
     DEFAULT_RESIZE_REGION_SIZE,
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
-} from '../../shapes.ts';
+} from '../shapes';
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
