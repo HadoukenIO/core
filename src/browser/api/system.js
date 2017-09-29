@@ -667,7 +667,11 @@ exports.System = {
     clearPreloadCache,
 
     downloadPreloadScripts: function(identity, preloadOption, cb) {
-        fetchAndLoadPreloadScripts(identity, preloadOption, cb);
+        if (!preloadOption) {
+            cb();
+        } else {
+            fetchAndLoadPreloadScripts(identity, preloadOption, cb);
+        }
     },
 
     setPreloadScript: function(url, scriptText) {
