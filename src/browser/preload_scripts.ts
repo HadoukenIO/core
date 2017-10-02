@@ -21,6 +21,7 @@ import { join } from 'path';
 // local modules
 import { cachedFetch, FetchResponse } from './cached_resource_fetcher';
 import * as log from './log';
+import { errorToPOJO } from '../common/errors';
 import { Identity } from '../shapes';
 import ofEvents from './of_events';
 import route from '../common/route';
@@ -259,7 +260,7 @@ function logPreload(
     identity: Identity,
     state: string,
     target: Preload | string,
-    timerOrError?: Timer | Error | string | number
+    value?: Timer | Error | string | number
 ): void {
     state = state.replace(/-/g, ' ');
 
@@ -273,10 +274,10 @@ function logPreload(
         state += ` for ${target}`;
     }
 
-    if (timerOrError instanceof Timer) {
-        state += timerOrError.toString(' in #.### secs.');
-    } else if (timerOrError) {
-        state += `: ${JSON.stringify(timerOrError)}`;
+    if (value instanceof Timer) {
+        state += value.toString(' in #.### secs.');
+    } else if (value) {
+        state += `: ${JSON.stringify(value instanceof Error ? errorToPOJO(value) : value)}`;
     }
 
     log.writeToLog(level, `[PRELOAD] [${identity.uuid}]-[${identity.name}] ${state}`);
