@@ -49,6 +49,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import WindowsMessages from '../../common/microsoft';
+import { getDataURL } from '../assets';
 
 // constants
 import {
@@ -2082,9 +2083,9 @@ function setTaskbar(browserWindow, forceFetch = false) {
     }
 }
 
-function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
+function setTaskbarIcon(browserWindow, iconUrl, fallback = () => {}) {
     if (!iconUrl) {
-        errorCallback();
+        fallback();
         return;
     }
 
@@ -2094,40 +2095,57 @@ function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
         iconUrl = `file:///${iconUrl}`;
     }
 
-    cachedFetch(iconUrl, 'binary')
-        .then(fetchResponse => {
-            if (fetchResponse.success) {
-                setIcon(browserWindow, fetchResponse.buffer, errorCallback);
-            }
-        })
-        .catch(error => {
-            if (error) {
-                log.writeToLog('error', error);
-            }
-            errorCallback();
-        });
+    cachedFetch(iconUrl).then(fetchResponse => {
+        if (fetchResponse.success) {
+            setIcon(browserWindow, fetchResponse.getNativeImage(), fallback);
+        } else {
+            fallback();
+        }
+    }).catch(error => {
+        if (error) {
+            log.writeToLog('error', error);
+        }
+        fallback();
+    });
 }
 
-// data can be Buffer or dataURL or filepath
-function setIcon(browserWindow, data, errorCallback = () => {}) {
-    if (!browserWindow.isDestroyed()) {
-        const methodName = data instanceof Buffer ? 'createFromBuffer' :
-            /^data:/.test(data) ? 'createFromDataURL' :
-            'createFromPath';
-
-        const icon = nativeImage[methodName](data);
-
-        if (icon.isEmpty()) {
-            errorCallback();
-        } else {
-            browserWindow.setIcon(icon);
-        }
+// data can be any of: Buffer, dataURL, filepath, Promise<nativeImage>
+function setIcon(browserWindow, data, fallback = () => {}) {
+    if (browserWindow.isDestroyed()) {
+        return;
     }
+
+    let gotImage; // Promise<NativeImage>
+    let blank;
+
+    if (data instanceof Promise) {
+        gotImage = data;
+    } else if (data instanceof Buffer) {
+        gotImage = Promise.resolve(nativeImage.createFromBuffer(data));
+    } else if (/^data:/.test(data)) {
+        blank = data === getDataURL('blank-1x1.png');
+        gotImage = Promise.resolve(nativeImage.createFromDataURL(data));
+    } else if (data === 'string') {
+        gotImage = Promise.resolve(nativeImage.createFromPath(data));
+    } else {
+        log.writeToLog('error', new Error('Unexpected icon data type'));
+        fallback();
+        return;
+    }
+
+    gotImage
+        .then(icon => {
+            if (!blank && icon.isEmpty()) {
+                fallback();
+            } else {
+                browserWindow.setIcon(icon);
+            }
+        })
+        .catch(fallback);
 }
 
 function setBlankTaskbarIcon(browserWindow) {
-    const BLANK1x1PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNiYAAAAAkAAxkR2eQAAAAASUVORK5CYII=';
-    setIcon(browserWindow, `data:image/png;base64,${BLANK1x1PNG}`);
+    setIcon(browserWindow, getDataURL('blank-1x1.png'));
 }
 
 function getMainWinIconUrl(id) {

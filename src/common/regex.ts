@@ -16,7 +16,9 @@ limitations under the License.
 
 export const Patterns: {[key: string]: RegExp} = {
     URL: /^https?:\/\//,
-    URI: /^file:\/\/\// // file:// is BAD; file:/// is GOOD
+    URI: /^file:\/\/\//, // file:// is BAD; file:/// is GOOD
+    ICO: /\.ico$/i,
+    GIForJPGorPNG: /\.(gif|jpe?g|png)$/i
 };
 
 export function isURL(str: string): boolean {
@@ -25,6 +27,14 @@ export function isURL(str: string): boolean {
 
 export function isURI(str: string): boolean {
     return Patterns.URI.test(str);
+}
+
+export function isICO(str: string): boolean {
+    return Patterns.ICO.test(str);
+}
+
+export function isImageFile(uri: string): boolean {
+    return Patterns.GIForJPGorPNG.test(uri);
 }
 
 export function uriToPath(uri: string): string {

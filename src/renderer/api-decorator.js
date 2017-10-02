@@ -603,7 +603,7 @@ limitations under the License.
     }
 
     function getIdentifier(preload) {
-        return isPreloadScript(preload) ? preload.url : `${preload.name}@${preload.version}`;
+        return isPreloadScript(preload) ? preload.url : `${preload.name}-${preload.version}`;
     }
 
     function isPreloadScript(preload) {

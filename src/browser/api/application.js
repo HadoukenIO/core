@@ -24,7 +24,6 @@ let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
-let nativeImage = electron.nativeImage;
 let ProcessInfo = electron.processInfo;
 let ResourceFetcher = electron.resourceFetcher;
 let Tray = electron.Tray;
@@ -702,6 +701,9 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     let { uuid } = identity;
 
+    if (typeof callback !== 'function') { callback = () => {}; }
+    if (typeof errorCallback !== 'function') { errorCallback = () => {}; }
+
     if (fetchingIcon[uuid]) {
         errorCallback(new Error('currently fetching icon'));
         return;
@@ -719,21 +721,16 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
-    cachedFetch(iconUrl, 'binary')
-        .then(fetchResponse => {
-            if (app && fetchResponse.success) {
-                const iconImage = nativeImage.createFromBuffer(fetchResponse.buffer);
+    cachedFetch(iconUrl).then(fetchResponse => {
+        if (app && fetchResponse.success) {
+            fetchResponse.getNativeImage().then(iconImage => {
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = route.application('tray-icon-clicked', app.uuid);
 
                 const getData = (bounds, source) => {
-                    const data = {
-                        x: bounds.x,
-                        y: bounds.y,
-                        bounds,
-                        monitorInfo
-                    };
+                    const { x, y } = bounds;
+                    const data = { x, y, bounds, monitorInfo };
                     return Object.assign(data, source);
                 };
 
@@ -763,20 +760,15 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
                 };
                 subscriptionManager.registerSubscription(unsubscribe, app.identity, TRAY_ICON_KEY);
 
-                if (typeof callback === 'function') {
-                    callback();
-                }
-            }
+                callback();
+            });
+        }
 
-            fetchingIcon[uuid] = false;
-        })
-        .catch(error => {
-            if (typeof errorCallback === 'function') {
-                errorCallback(error);
-            }
-
-            fetchingIcon[uuid] = false;
-        });
+        fetchingIcon[uuid] = false;
+    }).catch(error => {
+        errorCallback(error);
+        fetchingIcon[uuid] = false;
+    });
 };
 
 

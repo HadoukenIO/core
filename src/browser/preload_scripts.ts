@@ -26,13 +26,13 @@ import { Identity } from '../shapes';
 import ofEvents from './of_events';
 import route from '../common/route';
 import { rvmMessageBus, PluginQuery } from './rvm/rvm_message_bus';
-import { sendToRVM } from './rvm/utils';
-import { getConfigUrlByUuid } from './core_state.js';
+import { getConfigUrlByUuid } from './core_state';
 import { Timer } from '../common/timer';
 
 
 // some local type definitions
-type Preload = PreloadScript | PluginModule;
+type PreloadItem = PreloadScript | PluginModule;
+type PreloadOption = PreloadItem[];
 interface PreloadScript {
     url: string; // URI actually: http:// or file://
     optional?: boolean; // false means required for any script to run (used by Application.getPreloadScripts)
@@ -44,7 +44,7 @@ interface PluginModule {
 }
 
 interface File extends PreloadScript, PluginModule, FetchResponse {
-    // Preload with FetchResponse properties mixed in
+    // PreloadItem with FetchResponse properties mixed in
 }
 type Fileset = File[];
 
@@ -58,7 +58,7 @@ interface PluginResponse {
     plugin: PluginModule;
 }
 
-// Preload scripts' states are stored here. Example:
+// PreloadItem scripts' states are stored here. Example:
 // 'http://path.com/to/script': 'load-succeeded'
 type PreloadState = string;
 interface StatefulPreloadFile extends File {
@@ -82,14 +82,13 @@ const preloadStates: Map<string, PreloadState> = new Map();
  */
 export function download(
     identity: Identity,
-    preloads: Preload[]
+    optionOrOptions: PreloadOption | PreloadOption[]
 ): Promise<Fileset> {
     const timer = new Timer();
-
-    preloads = concat(preloads);
+    const preloads: PreloadOption = concat(optionOrOptions); // see above and also see concat for explanation
 
     // start overlapped downloads
-    const filePromises: Promise<File>[] = preloads.map((preload: Preload): Promise<File> => {
+    const filePromises: Promise<File>[] = preloads.map((preload: PreloadItem): Promise<File> => {
         const toPreloaded : (fetch: FetchResponse | PluginResponse) => File =
             mixinFetchResults.bind(null, identity, timer, preload);
 
@@ -171,7 +170,7 @@ function fetchPlugin(identity: Identity, plugin: PluginModule): Promise<PluginRe
 // resolves to type `PreloadLoaded` on success
 // resolves to `undefined` when above fetch failed or when successfully fetched asset fails to load from Chromium cache
 function loadPlugin(opts: PluginResponse): FetchResponse {
-    let fetchResponse: FetchResponse = { success: false };
+    const fetchResponse: FetchResponse = new FetchResponse();
 
     if (opts) {
         const { identity, plugin, filePath }: { identity: Identity, plugin: PluginModule, filePath: string } = opts;
@@ -189,7 +188,8 @@ function loadPlugin(opts: PluginResponse): FetchResponse {
                 logPreload('info', identity, state, plugin);
                 updatePreloadState(identity, plugin, state);
 
-                fetchResponse = { success: true, data };
+                fetchResponse.success = true;
+                fetchResponse.data = data;
             }
         });
     }
@@ -197,7 +197,7 @@ function loadPlugin(opts: PluginResponse): FetchResponse {
     return fetchResponse;
 }
 
-function mixinFetchResults(identity: Identity, timer: Timer, preload: Preload, fetchResponse: FetchResponse) : File {
+function mixinFetchResults(identity: Identity, timer: Timer, preload: PreloadItem, fetchResponse: FetchResponse) : File {
     const state: PreloadState = fetchResponse.success ? 'load-succeeded' : 'load-failed';
 
     updatePreloadState(identity, preload, state);
@@ -206,9 +206,9 @@ function mixinFetchResults(identity: Identity, timer: Timer, preload: Preload, f
     return Object.assign(<File>{}, preload, fetchResponse);
 }
 
-function concat(...preloads: any[]): Preload[] {
+function concat(preloads: PreloadOption | PreloadOption[]): PreloadOption {
     // concatenates multiple arrays into a single array and filters out undefined
-    return Array.prototype.concat.apply([], preloads).filter((preload: Preload) => preload);
+    return Array.prototype.concat.apply([], preloads).filter((preload: PreloadItem) => preload);
 }
 
 function set(identity: Identity, fileSet: Fileset) {
@@ -216,7 +216,7 @@ function set(identity: Identity, fileSet: Fileset) {
 }
 
 // Be sure to supply a catch (`get(...).catch(...)`) as `validate` may throw an error
-export function get(identity: Identity, preloads: Preload[]): Promise<Fileset> {
+export function get(identity: Identity, preloads: PreloadOption): Promise<Fileset> {
     const fileset: Fileset = cache[uniqueWindowKey(identity)];
     let promisedScriptSet: Promise<Fileset>;
 
@@ -259,7 +259,7 @@ function logPreload(
     level: string,
     identity: Identity,
     state: string,
-    target: Preload | string,
+    target: PreloadItem | string,
     value?: Timer | Error | string | number
 ): void {
     state = state.replace(/-/g, ' ');
@@ -285,7 +285,7 @@ function logPreload(
 
 function updatePreloadState(
     identity: Identity,
-    preload: Preload,
+    preload: PreloadItem,
     state: PreloadState
 ): void {
     const { uuid, name }: Identity = identity;
@@ -300,8 +300,8 @@ export function getPreloadScriptState(identifier: string): string {
     return preloadStates.get(identifier);
 }
 
-export function getIdentifier(preload: Preload): string {
-    return isPreloadScript(preload) ? preload.url : `${preload.name}@${preload.version}`;
+export function getIdentifier(preload: PreloadItem): string {
+    return isPreloadScript(preload) ? preload.url : `${preload.name}-${preload.version}`;
 }
 
 function isPreloadScript(preload: any): preload is PreloadScript {

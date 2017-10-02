@@ -120,9 +120,6 @@ module.exports = (grunt) => {
 
         // Transpile TypeScript to JavaScript
         ts: {
-            options: {
-                suppressImplicitAnyIndexErrors: false // set to true for temporary dev hacks
-            },
             default: {
                 tsconfig: true
             }
