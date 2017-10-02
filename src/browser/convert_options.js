@@ -204,8 +204,10 @@ module.exports = {
 
     getStartupAppOptions: function(appJson) {
         let opts = appJson['startup_app'];
-        opts.plugin = appJson['plugin'];
-        opts.preload = appJson['preload'];
+        if (opts) {
+            opts.plugin = appJson['plugin'];
+            opts.preload = appJson['preload'];
+        }
         return opts;
     },
 
