@@ -676,7 +676,11 @@ exports.System = {
 
     // identitier is preload script url or plugin name
     setPreloadScript: function(identitier, scriptText) {
-        preloadScriptsCache[identitier] = scriptText;
+        if (scriptText === undefined) {
+            delete preloadScriptsCache[url];
+        } else {
+            preloadScriptsCache[url] = scriptText;
+        }
     },
 
     // identitier is preload script url or plugin name

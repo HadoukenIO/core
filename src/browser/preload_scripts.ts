@@ -19,7 +19,7 @@ import * as fs from 'fs';
 
 // local modules
 import { System } from './api/system.js';
-import { cachedFetch } from './cached_resource_fetcher';
+import {cachedFetch, FetchResponse} from './cached_resource_fetcher';
 import * as log from './log';
 import { Identity } from '../shapes';
 import ofEvents from './of_events';
@@ -42,10 +42,6 @@ interface PreloadPlugin {
     version: string;
     optional?: boolean;
 }
-interface PreloadFetched extends PreloadScript {
-    scriptPath: string; // location on disc of cached fetch
-}
-type FetchResolver = (value?: PreloadInstance | PreloadFetched | FetchResponse) => void;
 type Resolver = (value?: any) => void;
 type Rejector = (reason?: Error) => void;
 
@@ -103,7 +99,10 @@ export function fetchAndLoadPreloadScripts(
         } else {
             // not previously downloaded *OR* previous downloaded failed
             if (isPreloadScript(preload)) {
-                return fetchToCache(identity, preload).then(loadFromCache);
+                return cachedFetch(preload.url).then((dataResponse: FetchResponse) => {
+                    updatePreloadState(identity, preload, dataResponse.success ? 'load-succeeded' : 'load-failed');
+                    System.setPreloadScript(preload.url, dataResponse.data);
+                });
             } else {
                 return fetchPlugin(identity, preload).then(loadFromCache);
             }
@@ -127,29 +126,6 @@ export function fetchAndLoadPreloadScripts(
     }
 
     return result;
-}
-
-// resolves to type `PreloadFetched` on success
-// resolves to `undefined` when fetch fails to cache the asset
-function fetchToCache(identity: Identity, preloadScript: PreloadScript): Promise<FetchResponse> {
-    const timer = new Timer();
-    const { url } = preloadScript;
-
-    logPreload('info', identity, 'fetch started', url);
-    updatePreloadState(identity, preloadScript, 'load-started');
-
-    return new Promise((resolve: FetchResolver, reject: Rejector) => {
-        cachedFetch(identity.uuid, url, (fetchError: Error, scriptPath: string) => {
-            if (!fetchError) {
-                logPreload('info', identity, 'fetch succeeded', url, timer);
-                resolve({identity, preloadScript, scriptPath});
-            } else {
-                logPreload(preloadScript.optional ? 'warning' : 'error', identity, 'fetch failed', url, fetchError);
-                updatePreloadState(identity, preloadScript, 'load-failed');
-                resolve();
-            }
-        });
-    });
 }
 
 // resolves to type `PreloadFetched` on success

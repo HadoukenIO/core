@@ -70,6 +70,34 @@ declare module 'electron' {
 
     }
 
+    export interface ClientResponse {
+        on(eventName: string, event: (data?: any) => void): void;
+        statusCode: number;
+        headers: { [key: string]: any }[];
+    }
+
+    export interface ClientRequest {
+        on(eventName: string, event: (response: ClientResponse | Error) => void): void;
+        end(): void;
+    }
+
+    export interface clientRequestOptions {
+        method?: string;
+        url?: string;
+        session?: object;
+        partition?: string;
+        protocol?: string;
+        host?: string;
+        hostname?: string;
+        port?: number;
+        path?: string;
+        redirect?: string;
+    }
+
+    namespace net {
+        export function request(options: clientRequestOptions | string): ClientRequest;
+    }
+
     export class resourceFetcher {
         constructor(type: string);
         on(event: string, callback: (event: string, status: string) => any): void;
