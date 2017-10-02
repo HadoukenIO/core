@@ -392,16 +392,22 @@ Window.create = function(id, opts) {
         if (coreState.getAppObjByUuid(identity.uuid)._options.customWindowAlert) {
             handleCustomAlerts(id, opts);
         }
+
         // each window now inherits the main window's base options. this can
         // be made to be the parent's options if that makes more sense...
         baseOpts = coreState.getMainWindowOptions(id) || {};
         _options = convertOptions.convertToElectron(Object.assign({}, baseOpts, opts));
+
+        // preload should dependably be an array
+        // todo#RUN-3373: handle inhertibale option defaults in convert-options
+        _options.preload = _options.preload || [];
 
         // (taskbar) a child window should be grouped in with the application
         // if a taskbarIconGroup isn't specified
         _options.taskbarIconGroup = _options.taskbarIconGroup || baseOpts.uuid;
 
         // inherit from mainWindow unless specified
+        // todo#RUN-3373: handle inhertibale option defaults in convert-options
         _options.frameConnect = _options.frameConnect || baseOpts.frameConnect || 'last';
 
         // pass along if we should show once DOMContentLoaded. this gets used
@@ -765,7 +771,7 @@ Window.create = function(id, opts) {
     };
 
     // Set preload scripts' final loading states
-    winObj.preloadState = (_options.preload || []).map(preload => {
+    winObj.preloadState = _options.preload.map(preload => {
         return {
             url: getIdentifier(preload),
             state: getPreloadScriptState(getIdentifier(preload))
@@ -2087,9 +2093,9 @@ function setTaskbar(browserWindow, forceFetch = false) {
 
 function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
     cachedFetch(iconUrl)
-        .then(dataResponse => {
-            if (dataResponse.success) {
-                setIcon(browserWindow, new Buffer(dataResponse.data), errorCallback);
+        .then(fetchResponse => {
+            if (fetchResponse.success) {
+                setIcon(browserWindow, new Buffer(fetchResponse.data), errorCallback);
             }
         })
         .catch(errorCallback);
@@ -2169,4 +2175,4 @@ function getElectronBrowserWindow(identity, errDesc) {
     return browserWindow;
 }
 
-module.exports.Window = Window;
+exports.Window = Window;

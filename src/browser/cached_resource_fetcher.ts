@@ -20,9 +20,7 @@ app.on('quit', () => { appQuiting = true; });
 
 export interface FetchResponse {
     // elements of the array contain the data
-    success: boolean; // reflects statusCode === 200
-    statusCode: number;
-    headers: { [key: string]: any }[];
+    success: boolean;
     data?: string;
 }
 
@@ -46,15 +44,13 @@ export function cachedFetch(url: string): Promise<FetchResponse> {
         request.on('error', reject); // this is an error making the request
 
         request.on('response', (response: ClientResponse) => {
-            const dataResponse: FetchResponse = <FetchResponse>{};
+            const fetchResponse: FetchResponse = <FetchResponse>{};
             const chunks: string[] = [];
 
-            dataResponse.success = response.statusCode === 200;
-            dataResponse.statusCode = response.statusCode;
-            dataResponse.headers = response.headers;
+            fetchResponse.success = response.statusCode === 200;
 
-            if (!dataResponse.success) {
-                resolve(dataResponse); // not an error, however `success` will be false and `data` will be undefined
+            if (!fetchResponse.success) {
+                resolve(fetchResponse); // not an error, however `success` will be false and `data` will be undefined
                 return;
             }
 
@@ -65,8 +61,8 @@ export function cachedFetch(url: string): Promise<FetchResponse> {
             });
 
             response.on('end', () => {
-                dataResponse.data = chunks.join('');
-                resolve(dataResponse);
+                fetchResponse.data = chunks.join('');
+                resolve(fetchResponse);
             });
         });
 

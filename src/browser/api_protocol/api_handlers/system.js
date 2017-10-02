@@ -49,7 +49,6 @@ function SystemApiHandler() {
         'get-proxy-settings': getProxySettings,
         'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
         'get-rvm-info': getRvmInfo,
-        'get-selected-preload-scripts': getSelectedPreloadScripts,
         'get-version': getVersion,
         'get-websocket-state': getWebSocketState,
         'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
@@ -68,8 +67,7 @@ function SystemApiHandler() {
         'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess' },
         'update-proxy': updateProxy,
         'view-log': { apiFunc: viewLog, apiPath: '.getLog' },
-        'write-to-log': writeToLog,
-        'download-preload-scripts': downloadPreloadScripts //internal function
+        'write-to-log': writeToLog
     };
 
     apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
@@ -114,21 +112,6 @@ function SystemApiHandler() {
         const dataAck = _.clone(successAck);
         dataAck.data = System.getCrashReporterState();
         ack(dataAck);
-    }
-
-    function downloadPreloadScripts(identity, message, ack, nack) {
-        const { payload } = message;
-        const { uuid, name, scripts } = payload;
-        const windowIdentity = { uuid, name };
-
-        System.downloadPreloadScripts(windowIdentity, scripts, err => {
-            if (!err) {
-                const dataAck = _.clone(successAck);
-                ack(dataAck);
-            } else {
-                nack(err);
-            }
-        });
     }
 
     function getAppAssetInfo(identity, message, ack, nack) {
@@ -451,18 +434,6 @@ function SystemApiHandler() {
                 ack(dataAck);
             }
         });
-    }
-
-    function getSelectedPreloadScripts(identity, message, ack, nack) {
-        const { payload } = message;
-
-        System.getSelectedPreloadScripts(payload)
-            .then(scriptSet => {
-                const dataAck = _.clone(successAck);
-                dataAck.data = scriptSet;
-                ack(dataAck);
-            })
-            .catch(nack);
     }
 }
 

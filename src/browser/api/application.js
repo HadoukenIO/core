@@ -47,6 +47,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
+import * as preloadScripts from '../preload_scripts';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -446,21 +447,17 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
 
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = convertOpts.convertToElectron(app._options);
-
-    let forPreload = [];
-    if (Array.isArray(mainWindowOpts.preload) && mainWindowOpts.preload[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.preload); }
-    if (Array.isArray(mainWindowOpts.plugin) && mainWindowOpts.plugin[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.plugin); }
-
     const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
-    const { uuid, name } = mainWindowOpts;
-    const windowIdentity = { uuid, name };
+    const { uuid, name, preload, plugin } = mainWindowOpts;
 
     if (coreState.getAppRunningState(uuid)) {
         proceed();
     } else {
         // Flow through preload script logic (eg. re-download of failed preload scripts)
         // only if app is not already running.
-        System.downloadPreloadScripts(windowIdentity, forPreload, proceed);
+        const windowIdentity = { uuid, name };
+        const downloadOptions = { preload, plugin };
+        preloadScripts.download(windowIdentity, downloadOptions, proceed);
     }
 };
 
@@ -723,9 +720,9 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
     cachedFetch(iconUrl)
-        .then(dataResponse => {
-            if (app && dataResponse.success) {
-                const iconImage = nativeImage.createFromBuffer(new Buffer(dataResponse.data));
+        .then(fetchResponse => {
+            if (app && fetchResponse.success) {
+                const iconImage = nativeImage.createFromBuffer(new Buffer(fetchResponse.data));
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = route.application('tray-icon-clicked', app.uuid);
@@ -1084,4 +1081,4 @@ function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
 }
 
-module.exports.Application = Application;
+exports.Application = Application;
