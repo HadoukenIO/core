@@ -456,8 +456,8 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
         // Flow through preload script logic (eg. re-download of failed preload scripts)
         // only if app is not already running.
         const windowIdentity = { uuid, name };
-        const downloadOptions = { preload, plugin };
-        preloadScripts.download(windowIdentity, downloadOptions, proceed);
+        const preloads = [preload, plugin];
+        preloadScripts.download(windowIdentity, preloads).then(proceed);
     }
 };
 

@@ -553,15 +553,14 @@ limitations under the License.
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const setState = asyncApiCall.bind(null, 'set-window-preload-state');
-        let { uuid, name, preload: scripts, plugin: plugins } = convertOptionsToElectronSync(getWindowOptionsSync());
+        let { uuid, name, preload, plugin } = convertOptionsToElectronSync(getWindowOptionsSync());
         const identity = { uuid, name };
 
-        if (Array.isArray(plugins) && plugins[0] !== undefined) { scripts = scripts.concat(plugins); }
-
-        if (scripts) { // short-circuit to avoid pointless api call
+        if (preload || plugin) { // short-circuit to avoid pointless api call
             let response;
             try {
-                response = syncApiCall('get-preload-scripts', identity);
+                const payload = { uuid, name, preload, plugin };
+                response = syncApiCall('get-preload-scripts', payload);
             } catch (error) {
                 logPreload('error', identity, 'error', '', error);
             }

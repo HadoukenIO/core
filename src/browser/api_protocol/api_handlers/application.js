@@ -225,9 +225,10 @@ function getParentApplication(identity, message, ack, nack) {
 }
 
 function getPreloadScripts(identity, message, ack, nack) {
-    const { payload } = message;
+    const { payload: { uuid, name, preload, plugin } } = message;
+    const winIdentity = { uuid, name };
 
-    preloadScripts.get(payload)
+    preloadScripts.get(winIdentity, [preload, plugin])
         .then(scriptSet => {
             const dataAck = _.clone(successAck);
             dataAck.data = scriptSet;
@@ -353,18 +354,14 @@ function deregisterExternalWindow(identity, message, ack) {
     ack(successAck);
 }
 
-function downloadPreloadScripts(identity, message, ack, nack) {
+function downloadPreloadScripts(identity, message, ack) {
     const { payload } = message;
     const { uuid, name, preloadOption } = payload;
     const windowIdentity = { uuid, name };
 
-    preloadScripts.download(windowIdentity, preloadOption, err => {
-        if (!err) {
-            const dataAck = _.clone(successAck);
-            ack(dataAck);
-        } else {
-            nack(err);
-        }
+    preloadScripts.download(windowIdentity, preloadOption).then(() => {
+        const dataAck = _.clone(successAck);
+        ack(dataAck);
     });
 }
 

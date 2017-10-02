@@ -41,23 +41,14 @@ interface PluginModule {
     version: string;
     optional?: boolean;
 }
-type Resolver = (value?: any) => void;
-type Rejector = (reason?: Error) => void;
 
-interface Preloaded extends PreloadScript, PluginModule, FetchResponse {
+interface File extends PreloadScript, PluginModule, FetchResponse {
     // Preload with FetchResponse properties mixed in
 }
-type PreloadFileset = Preloaded[];
+type Fileset = File[];
 
-// Preload scripts' states are stored here. Example:
-// 'http://path.com/to/script': 'load-succeeded'
-type PreloadState = string;
-interface StatefulPreloadFile extends Preloaded {
-    state: string;
-}
-
-// store for windows' fetched preload script sets, just until eval'd
-const filesetCache: { [key: string]: PreloadFileset } = {};
+// store for windows' fetched preload script and plugin module files, just until eval'd
+const cache: { [key: string]: Fileset } = {};
 
 interface PluginResponse {
     success: boolean;
@@ -66,34 +57,39 @@ interface PluginResponse {
     plugin: PluginModule;
 }
 
+// Preload scripts' states are stored here. Example:
+// 'http://path.com/to/script': 'load-succeeded'
+type PreloadState = string;
+interface StatefulPreloadFile extends File {
+    state: string;
+}
+
 const preloadStates: Map<string, PreloadState> = new Map();
 
-/** @summary oad all the window's preload scripts.
- * @desc Successfully loaded scripts are saved via `setPreloadScript` before `loadUrl` is called.
+/* Requests all the window's preload scripts.
+ * Successfully loaded scripts are saved via `set` before `loadUrl` is called.
  * They are kept in memory only until api-decorator consumes them via `eval`, after which they are released.
  *
+ * The `preload` parameter may be either:
+ * 1. a single array OR
+ * 2. a nested array containing: `preload` array and/or `plugin` array and/or undefined
+ *
+ * Errors are caught herein and logged; the caller does not need to call .catch().
  * Per `cachedFetch`, errors are limited to actual transport errors; unexpected server responses are not
  * considered errors. E.g., 404 status does not throw an error; rather `success` is set to false and the
  * `data` property is undefined.
- *
- * @param {object} identity
- * @param {string|object[]} options
- * @param {function} [proceed] - If supplied, both `then` and `catch` call it.
- *
- * If you don't supply `proceed`, call both `then` and `catch` on your own to proceed as appropriate.
  */
-
 export function download(
     identity: Identity,
-    options: { preload?: PreloadScript[], plugin?: PluginModule[] },
-    proceed?: () => void
-): void {
+    preloads: Preload[]
+): Promise<Fileset> {
     const timer = new Timer();
-    const preloads: Preload[] = (<Preload[]>(options.preload || [])).concat(<Preload[]>(options.plugin || []));
+
+    preloads = concat(preloads);
 
     // start overlapped downloads
-    const preloadPromises: Promise<Preloaded>[] = preloads.map((preload: Preload): Promise<Preloaded> => {
-        const toPreloaded : (fetch: FetchResponse | PluginResponse) => Preloaded =
+    const filePromises: Promise<File>[] = preloads.map((preload: Preload): Promise<File> => {
+        const toPreloaded : (fetch: FetchResponse | PluginResponse) => File =
             mixinFetchResults.bind(null, identity, timer, preload);
 
         updatePreloadState(identity, preload, 'load-started');
@@ -107,28 +103,40 @@ export function download(
     });
 
     // wait for them all to resolve
-    const allLoaded: Promise<PreloadFileset> = Promise.all(preloadPromises);
+    const allLoaded: Promise<Fileset> = Promise.all(filePromises);
 
     allLoaded
-        .then((scriptSet: PreloadFileset) => {
-            const compactScriptList = scriptSet.filter((preloadFile: Preloaded) => preloadFile.success);
-            const summary = `${compactScriptList.length} of ${scriptSet.length} scripts`;
+        .then(logSummary)
+        .then(cacheLoadedFileset)
+        .catch(logError);
 
-            logPreload('info', identity, 'load summary', summary, timer);
+    return allLoaded;
 
-            set(identity, scriptSet);
+    function logSummary(fileset: Fileset): Fileset {
+        const scripts: Fileset = fileset.filter(isPreloadScript);
+        const loadedScripts: Fileset = scripts.filter((file: File) => file.success);
 
-            if (proceed) {
-                proceed();
-            }
-        })
-        .catch((error: Error | string | number) => {
-            logPreload('error', identity, 'error', '', error);
+        const plugins: Fileset = fileset.filter(isPluginModule);
+        const loadedPlugins: Fileset = plugins.filter((file: File) => file.success);
 
-            if (proceed) {
-                proceed();
-            }
-        });
+        const summary: string[] = [];
+        if (scripts.length) { summary.push(`${loadedScripts.length} of ${scripts.length} scripts`); }
+        if (plugins.length) { summary.push(`${loadedPlugins.length} of ${plugins.length} plugins`); }
+
+        const jointSummary = summary.join(' and ');
+        logPreload('info', identity, 'load summary', jointSummary, timer);
+
+        return fileset;
+    }
+
+    function cacheLoadedFileset(fileset: Fileset): Fileset {
+        set(identity, fileset);
+        return fileset;
+    }
+
+    function logError(error: Error | string | number) {
+        logPreload('error', identity, 'error', '', error);
+    }
 }
 
 // resolves to type `PreloadFetched` on success
@@ -188,44 +196,62 @@ function loadPlugin(opts: PluginResponse): FetchResponse {
     return fetchResponse;
 }
 
-function mixinFetchResults(identity: Identity, timer: Timer, preload: Preload, fetchResponse: FetchResponse) : Preloaded {
+function mixinFetchResults(identity: Identity, timer: Timer, preload: Preload, fetchResponse: FetchResponse) : File {
     const state: PreloadState = fetchResponse.success ? 'load-succeeded' : 'load-failed';
 
     updatePreloadState(identity, preload, state);
     logPreload('info', identity, state, preload, timer);
 
-    return Object.assign(<Preloaded>{}, preload, fetchResponse);
+    return Object.assign(<File>{}, preload, fetchResponse);
 }
 
-export function set(identity: Identity, scriptSet: PreloadFileset) {
-    const uniqueWindowId = route.window('preload', identity.uuid, identity.name);
-    filesetCache[uniqueWindowId] = scriptSet;
+function concat(...preloads: any[]): Preload[] {
+    // concatenates multiple arrays into a single array and filters out undefined
+    return Array.prototype.concat.apply([], preloads).filter((preload: Preload) => preload);
 }
 
-//Meant to be called one time per window; scripts are deleted from cache so cannot be returned more than once.
-export function get(identity: Identity): Promise<PreloadFileset> {
-    const uniqueWindowId = route.window('preload', identity.uuid, identity.name);
-    const scriptSet: PreloadFileset = filesetCache[uniqueWindowId] || [];
+function set(identity: Identity, fileSet: Fileset) {
+    cache[uniqueWindowKey(identity)] = fileSet;
+}
 
-    //release from memory; won't be needed again
-    delete filesetCache[uniqueWindowId];
+// Be sure to supply a catch (`get(...).catch(...)`) as `validate` may throw an error
+export function get(identity: Identity, preloads: Preload[]): Promise<Fileset> {
+    const fileset: Fileset = cache[uniqueWindowKey(identity)];
+    let promisedScriptSet: Promise<Fileset>;
 
-    //any missing required script(s) preclude running any scripts at all
-    //todo: check this earlier and if any, cancel remaining in-progress downloads which could be sizable
-    const missingRequiredScripts = scriptSet.filter(preloadScript => {
-        const required = !preloadScript.optional;
-        return required && !preloadScript.success;
-    });
+    if (fileset) {
+        // release from memory
+        // todo: consider not releasing main window's for reuse by child windows that inherit
+        delete cache[uniqueWindowKey(identity)];
 
-    if (missingRequiredScripts.length) {
-        const URLs = missingRequiredScripts.map(preloadScript => preloadScript.url);
-        const list = JSON.stringify(JSON.stringify(URLs));
-        const message = `Execution of preload scripts canceled due to missing required script(s) ${list}`;
-        const error = new Error(message);
-        return Promise.reject(error);
+        // scripts were fully loaded & cached prior to window create
+        promisedScriptSet = Promise.resolve(fileset);
+    } else {
+        // scripts missing due to reload or window.open
+        promisedScriptSet = download(identity, preloads);
     }
 
-    return Promise.resolve(scriptSet);
+    return promisedScriptSet.then(validate);
+}
+
+function uniqueWindowKey(identity: Identity): string {
+    return route.window('preload', identity.uuid, identity.name);
+}
+
+//validate for any missing required script(s) even one of which will preclude running any scripts at all
+function validate(fileset: Fileset): Fileset {
+    //todo: check this earlier and if any, cancel remaining in-progress downloads which could be sizable
+    const missingRequiredFiles: Fileset = fileset.filter((file: File) => {
+        return isPreloadScript(file) && !file.optional && !file.success;
+    });
+
+    if (missingRequiredFiles.length) {
+        const IDs: string[] = missingRequiredFiles.map(getIdentifier);
+        const message = `Execution of preload scripts and plugin modules canceled due to missing required resource(s) ${IDs}`;
+        throw new Error(message);
+    }
+
+    return fileset;
 }
 
 function logPreload(
@@ -263,7 +289,7 @@ function updatePreloadState(
 ): void {
     const { uuid, name }: Identity = identity;
     const eventRoute = route.window('preload-state-changing', uuid, name);
-    const preloadState: StatefulPreloadFile = Object.assign(<Preloaded>{}, preload, { state });
+    const preloadState: StatefulPreloadFile = Object.assign(<File>{}, preload, { state });
 
     preloadStates.set(getIdentifier(preload), state);
     ofEvents.emit(eventRoute, {name, uuid, preloadState});
