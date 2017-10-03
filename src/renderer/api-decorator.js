@@ -376,8 +376,10 @@ limitations under the License.
 
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
-        // TODO this need to go away if the beta flags is set
-        electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+        // this is not the case with the updated frame strategy
+        if (!(winOpts.entityType && winOpts.entityType === 'iframe')) {
+            electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+        }
 
 
         wireUpMenu(glbl, winOpts);

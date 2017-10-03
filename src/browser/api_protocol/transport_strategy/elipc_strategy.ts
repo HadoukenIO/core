@@ -24,11 +24,11 @@ declare var require: any;
 const coreState = require('../../core_state');
 const electronIpc = require('../../transports/electron_ipc');
 const system = require('../../api/system').System;
-const frameStrategy = coreState.argo.framestrategy;
+const frameStrategy = coreState.argo.frameStrategy;
 
 // TODO PUT THIS BACK
-// const bypassLocalFrameConnect = frameStrategy === 'frames';
-const bypassLocalFrameConnect = true;
+const bypassLocalFrameConnect = frameStrategy === 'frames';
+// const bypassLocalFrameConnect = true;
 
 export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
@@ -44,7 +44,6 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
-                    // todo revisit the strategy
                     if (bypassLocalFrameConnect || !data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data, ack, nack))
