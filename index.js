@@ -53,7 +53,8 @@ import {
 import {
     default as connectionManager,
     meshEnabled,
-    isMeshEnabled
+    isMeshEnabled,
+    getMeshUuid
 } from './src/browser/connection_manager';
 
 import * as log from './src/browser/log';
@@ -136,12 +137,14 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
 portDiscovery.on('runtime/launched', (portInfo) => {
     //check if the ports match:
     const myPortInfo = coreState.getSocketServerState();
+    const myUuid = getMeshUuid();
+
     log.writeToLog('info', `Port discovery message received ${JSON.stringify(portInfo)}`);
 
-    //TODO: Include REALM in the determination.
+    //TODO include old runtimes in the determination.
     if (meshEnabled && portInfo.port !== myPortInfo.port && isMeshEnabled(portInfo.options)) {
 
-        connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
+        connectionManager.connectToRuntime(myUuid, portInfo).then((runtimePeer) => {
             //one connected we broadcast our port discovery message.
             staggerPortBroadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
@@ -521,12 +524,13 @@ function launchApp(argo, startExternalAdapterServer) {
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
         const uuid = startupAppOptions && startupAppOptions.uuid;
         const ofApp = Application.wrap(uuid);
+        const ofManifestUrl = ofApp && ofApp._configUrl;
         const isRunning = Application.isRunning(ofApp);
 
         // this ensures that external connections that start the runtime can do so without a main window
         let successfulInitialLaunch = true;
 
-        if (startupAppOptions && !isRunning) {
+        if (startupAppOptions && (!isRunning || ofManifestUrl !== configUrl)) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
@@ -547,7 +551,8 @@ function launchApp(argo, startExternalAdapterServer) {
 
         app.emit('synth-desktop-icon-clicked', {
             mouse: System.getMousePosition(),
-            tickCount: app.getTickCount()
+            tickCount: app.getTickCount(),
+            uuid
         });
     }, error => {
         log.writeToLog(1, error, true);

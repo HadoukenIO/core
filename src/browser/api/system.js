@@ -38,7 +38,7 @@ const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
-import { fetchAndLoadPreloadScripts } from '../preload_scripts';
+import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 import * as Frame from './frame';
 
 const defaultProc = {
@@ -688,35 +688,42 @@ exports.System = {
     clearPreloadCache,
 
     downloadPreloadScripts: function(identity, preloadOption, cb) {
-        fetchAndLoadPreloadScripts(identity, preloadOption, cb);
+        if (!preloadOption) {
+            cb();
+        } else {
+            fetchAndLoadPreloadScripts(identity, preloadOption, cb);
+        }
     },
 
-    setPreloadScript: function(url, scriptText) {
-        preloadScriptsCache[url] = scriptText;
+    // identitier is preload script url or plugin name
+    setPreloadScript: function(identitier, scriptText) {
+        preloadScriptsCache[identitier] = scriptText;
     },
 
-    getPreloadScript: function(url) {
-        return preloadScriptsCache[url];
+    // identitier is preload script url or plugin name
+    getPreloadScript: function(identitier) {
+        return preloadScriptsCache[identitier];
     },
 
+    // identitiers are preload script url or plugin name
     getSelectedPreloadScripts: function(preloadOption) {
-        const response = {};
-
-        const missingRequiredScripts = preloadOption.reduce((urls, preload) => {
-            if (!preload.optional && !(preload.url in preloadScriptsCache)) {
-                urls.push(preload.url);
+        const missingRequiredScripts = preloadOption.reduce((identifiers, preload) => {
+            if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
+                identifiers.push(getIdentifier(preload));
             }
-            return urls;
+            return identifiers;
         }, []);
 
-        if (!missingRequiredScripts.length) {
-            const missingOptionalScript = '';
-            response.scripts = preloadOption.map(preload => preloadScriptsCache[preload.url] || missingOptionalScript);
-        } else {
-            response.error = `Execution of preload scripts canceled because of missing required script(s) ${JSON.stringify(missingRequiredScripts)}`;
+        if (missingRequiredScripts.length) {
+            const list = JSON.stringify(missingRequiredScripts);
+            const message = `Execution of preload scripts canceled because of missing required script(s) ${list}`;
+            const err = new Error(message);
+            return Promise.reject(err);
         }
 
-        return response;
+        // when load/fetch failed, mapped object will be `undefined` (stringifies as `null`)
+        const scriptSet = preloadOption.map(preload => preloadScriptsCache[getIdentifier(preload)]);
+        return Promise.resolve(scriptSet);
     }
 };
 

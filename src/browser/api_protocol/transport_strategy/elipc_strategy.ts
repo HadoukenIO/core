@@ -24,7 +24,7 @@ declare var require: any;
 const coreState = require('../../core_state');
 const electronIpc = require('../../transports/electron_ipc');
 const system = require('../../api/system').System;
-const frameStrategy = coreState.argo.frameStrategy;
+const frameStrategy = coreState.argo.framestrategy;
 
 // TODO PUT THIS BACK
 const bypassLocalFrameConnect = frameStrategy === 'frames';

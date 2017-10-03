@@ -38,24 +38,23 @@ let clipBounds = require('../clip_bounds.js').default;
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
-import {
-    cachedFetch
-} from '../cached_resource_fetcher';
+import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
-import {
-    validateNavigation,
-    navigationValidator
-} from '../navigation_validation';
-import {
-    toSafeInt
-} from '../../common/safe_int';
+import { validateNavigation, navigationValidator } from '../navigation_validation';
+import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
-import { getPreloadScriptState } from '../preload_scripts';
+import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
+import WindowsMessages from '../../common/microsoft';
 import { FrameInfo } from './frame';
+// constants
+import {
+    DEFAULT_RESIZE_REGION_SIZE,
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+} from '../../shapes';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -165,8 +164,8 @@ let optionSetters = {
             // reapply resize region
             applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
                 let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
-                    size: 2,
-                    bottomRightCorner: 4
+                    size: DEFAULT_RESIZE_REGION_SIZE,
+                    bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
                 });
                 browserWin.setResizeRegion(resizeRegion.size);
                 browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
@@ -425,7 +424,7 @@ Window.create = function(id, opts) {
         // each window now inherits the main window's base options. this can
         // be made to be the parent's options if that makes more sense...
         baseOpts = coreState.getMainWindowOptions(id) || {};
-        _options = _.extend(_.clone(baseOpts), convertOptions.convertToElectron(opts));
+        _options = convertOptions.convertToElectron(Object.assign({}, baseOpts, opts));
 
         // (taskbar) a child window should be grouped in with the application
         // if a taskbarIconGroup isn't specified
@@ -796,10 +795,10 @@ Window.create = function(id, opts) {
     };
 
     // Set preload scripts' final loading states
-    winObj.preloadState = _options.preload.map(preload => {
+    winObj.preloadState = (_options.preload || []).map(preload => {
         return {
-            url: preload.url,
-            state: getPreloadScriptState(preload.url)
+            url: getIdentifier(preload),
+            state: getPreloadScriptState(getIdentifier(preload))
         };
     });
 
@@ -962,10 +961,10 @@ Window.embed = function(identity, parentHwnd) {
     }
 
     if (isWin32) {
-        browserWindow.setMessageObserver(0x0100, parentHwnd); // WM_KEYDOWN
-        browserWindow.setMessageObserver(0x0101, parentHwnd); // WM_KEYUP
-        browserWindow.setMessageObserver(0x0104, parentHwnd); // WM_SYSKEYDOWN
-        browserWindow.setMessageObserver(0x0105, parentHwnd); // WM_SYSKEYUP
+        browserWindow.setMessageObserver(WindowsMessages.WM_KEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_KEYUP, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYUP, parentHwnd);
     }
 
     ofEvents.emit(route.window('embedded', identity.uuid, identity.name), {
@@ -1149,14 +1148,14 @@ Window.getParentWindow = function() {};
  */
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
-    const { url, state, allDone } = payload;
+    const { state, allDone } = payload;
     const openfinWindow = Window.wrap(uuid, name);
     let preloadState = openfinWindow.preloadState;
     const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === url);
+        preloadState = preloadState.find(e => e.url === getIdentifier(payload));
         preloadState.state = state;
     }
 

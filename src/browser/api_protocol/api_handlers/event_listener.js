@@ -26,14 +26,11 @@ let apiProtocolBase = require('./api_protocol_base.js');
 let Window = require('../../api/window.js').Window;
 let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
+import { ExternalApplication } from '../../api/external_application';
+import { Frame } from '../../api/frame';
 import {
-    ExternalApplication
-} from '../../api/external_application';
-import {
-    Frame
-} from '../../api/frame';
-import {
-    default as connectionManager
+    default as connectionManager,
+    keyFromPortInfo
 } from '../../connection_manager';
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -46,10 +43,10 @@ import {
 const successAck = {
     success: true
 };
-
+//TODO: this needs to be owned by external connections. RUN-3363 will take care of this.
 function isBrowserClient(uuid) {
     return connectionManager.connections.map((conn) => {
-        return conn.portInfo.version + ':' + conn.portInfo.port;
+        return keyFromPortInfo(conn.portInfo);
     }).filter((id) => id === uuid).length > 0;
 }
 

@@ -245,6 +245,9 @@ export interface WindowOptions {
     y?: number;
 }
 
+export const DEFAULT_RESIZE_REGION_SIZE = 7;
+export const DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER = 9;
+
 export interface Manifest {
     appAssets?: {
         alias: string;
