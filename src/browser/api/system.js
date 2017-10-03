@@ -19,6 +19,7 @@ const fs = require('fs');
 const os = require('os');
 const electron = require('electron');
 const electronApp = electron.app;
+const electronBrowserWindow = electron.BrowserWindow;
 const ResourceFetcher = electron.resourceFetcher;
 const session = electron.session;
 const shell = electron.shell;
@@ -303,6 +304,11 @@ exports.System = {
         } else {
             return process.env[varsToExpand] || null;
         }
+    },
+    getFocusedWindow: function() {
+        const { id } = electronBrowserWindow.getFocusedWindow() || {};
+        const { uuid, name } = coreState.getWinObjById(id) || {};
+        return uuid ? { uuid, name } : null;
     },
     getHostSpecs: function() {
         return {
