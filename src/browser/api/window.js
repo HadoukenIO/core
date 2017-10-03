@@ -1860,16 +1860,14 @@ function closeRequestedDecorator(payload) {
 }
 
 function blurredDecorator(payload, args) {
-    const uuid = payload.uuid;
-    const name = payload.name;
+    const { uuid, name } = payload;
     ofEvents.emit(route.application('window-blurred', uuid), { topic: 'application', type: 'window-blurred', uuid, name });
     ofEvents.emit(route.system('window-blurred'), { topic: 'system', type: 'window-blurred', uuid, name });
     return true;
 }
 
 function focusedDecorator(payload, args) {
-    const uuid = payload.uuid;
-    const name = payload.name;
+    const { uuid, name } = payload;
     ofEvents.emit(route.application('window-focused', uuid), { topic: 'application', type: 'window-focused', uuid, name });
     ofEvents.emit(route.system('window-focused'), { topic: 'system', type: 'window-focused', uuid, name });
     return true;
