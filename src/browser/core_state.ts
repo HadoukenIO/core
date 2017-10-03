@@ -639,8 +639,8 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
                 parent,
                 entityType: 'window'
             };
-        } else if (openfinWindow.frames[frame]) {
-            return openfinWindow.frames[frame];
+        } else if (openfinWindow.frames.get(frame)) {
+            return openfinWindow.frames.get(frame);
         }
     }
 }
@@ -664,8 +664,8 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 frameRoutingId: 1,
                 frameName: name
             };
-        } else if (openfinWindow.frames[frame]) {
-            const {name, frameRoutingId} = openfinWindow.frames[frame];
+        } else if (openfinWindow.frames.get(frame)) {
+            const {name, frameRoutingId} = openfinWindow.frames.get(frame);
             return {
                 name,
                 browserWindow,

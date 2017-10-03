@@ -312,32 +312,6 @@ exports.System = {
             return new Frame.FrameInfo(identity);
         }
 
-        // if (!identity.name) {
-        //     const externalApp = ExternalApplication.getExternalConnectionByUuid(identity.uuid);
-        //     const externalAppInfo = ExternalApplication.getInfo(externalApp);
-        //     if (externalApp) {
-        //         externalAppInfo.entityType = 'external connection';
-        //         externalAppInfo.parent = externalApp.parent;
-        //     }
-        //     response = isExternalApp ? 'external connection' : 'unknown';
-        // } else {
-        //     let app = coreState.getAppByUuid(identity.uuid);
-        //     if (app && app.children) {
-        //         app.children.some(win => {
-        //             if (win.openfinWindow && win.openfinWindow.name === identity.name) {
-        //                 response.parent = coreState.getParentIdentity(identity);
-        //                 response.entityType = 'window';
-        //                 return true;
-        //             } else if (win.openfinWindow.frames[identity.name]) {
-        //                 response.parent = coreState.getParentIdentity(identity);
-        //                 response.entityType = 'frame';
-        //                 return true;
-        //             }
-        //         });
-        //     }
-        // }
-        // return response;
-
     },
     getEnvironmentVariable: function(varsToExpand) {
         if (Array.isArray(varsToExpand)) {
@@ -647,6 +621,8 @@ exports.System = {
         return MonitorInfo.getNearestDisplayRoot(point);
     },
     raiseEvent: function(eventName, eventArgs) {
+        log.writeToLog(1, `raising: ${eventName}`, true);
+        log.writeToLog(1, `aaaan the args: ${JSON.stringify(eventArgs)}`, true);
         return ofEvents.emit(eventName, eventArgs);
     },
     downloadAsset: function(identity, asset, cb) {

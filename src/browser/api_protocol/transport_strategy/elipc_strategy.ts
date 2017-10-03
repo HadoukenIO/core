@@ -25,7 +25,10 @@ const coreState = require('../../core_state');
 const electronIpc = require('../../transports/electron_ipc');
 const system = require('../../api/system').System;
 const frameStrategy = coreState.argo.framestrategy;
-const bypassLocalFrameConnect = frameStrategy === 'frames';
+
+// TODO PUT THIS BACK
+// const bypassLocalFrameConnect = frameStrategy === 'frames';
+const bypassLocalFrameConnect = true;
 
 export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 

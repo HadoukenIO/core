@@ -55,6 +55,7 @@ import {
 } from '../../common/safe_int';
 import route from '../../common/route';
 import { getPreloadScriptState } from '../preload_scripts';
+import { FrameInfo } from './frame';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -390,11 +391,12 @@ Window.create = function(id, opts) {
                 entityType: 'iframe'
             });
 
-            winObj.frames[frameName] = frameInfo;
+            winObj.frames.set(frameName, frameInfo);
         };
 
         browserWindow.webContents.unregisterIframe = (frameName) => {
-            delete winObj.frames[frameName];
+            // delete winObj.frames[frameName];
+            winObj.frames.delete(frameName);
             log.writeToLog(1, `dead! ${route.frame('disconnected', uuid, frameName)}`, true);
             ofEvents.emit(route.frame('disconnected', uuid, frameName), { uuid, name: frameName });
             ofEvents.emit(route.frame('disconnected'), { uuid, name: frameName });
@@ -786,7 +788,7 @@ Window.create = function(id, opts) {
         /* jshint ignore:end */
 
         children: [],
-        frames: {},
+        frames: new Map(),
 
         // TODO this should be removed once it's safe in favor of the
         //      more descriptive browserWindow key
@@ -847,7 +849,8 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
     safeListener = (...args) => {
 
         try {
-
+            log.writeToLog(1, `da event: ${eventString}`, true);
+            log.writeToLog(1, `da args: ${JSON.stringify(...args)}`, true);
             listener.call(null, ...args);
 
         } catch (err) {
@@ -862,7 +865,8 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
         }
     };
 
-    electronApp.vlog(1, `addEventListener ${eventString}`);
+    // electronApp.vlog(1, `addEventListener ${eventString}`);
+
     ofEvents.on(eventString, safeListener);
 
     unsubscribe = () => {
@@ -1025,15 +1029,23 @@ Window.focus = function(identity) {
     browserWindow.focus();
 };
 
-Window.getAllFrames = function(identity) {
-    return 'window.getAllFrames in api/window from core - FILL ME IN>>>>>>>>>>';
-};
 
 Window.getAllFrames = function(identity) {
     let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
     // Valid window with no frames returns an empty obj
     // TODO return these as a list of frame infos
-    return openfinWindow ? openfinWindow.frames || undefined : undefined;
+    if (!openfinWindow) {
+        return [];
+    }
+
+    const framesArr = [coreState.getInfoByUuidFrame(identity)];
+    const subFrames = [];
+
+    for (let [, info] of openfinWindow.frames) {
+        subFrames.push(new FrameInfo(info));
+    }
+
+    return framesArr.concat(subFrames);
 };
 
 Window.getBounds = function(identity) {

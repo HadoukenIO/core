@@ -338,6 +338,13 @@ limitations under the License.
         raiseEventSync(`window/dom-content-loaded/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
         raiseEventSync(`window/connected/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
 
+        if (currWindowOpts.entityType && currWindowOpts.entityType === 'iframe') {
+            raiseEventSync(`window/frame-connected/${currWindowOpts.uuid}-${currWindowOpts.parentFrame}`, {
+                frameName: currWindowOpts.name,
+                entityType: currWindowOpts.entityType
+            });
+        }
+
         raiseEventSync(`frame/connected/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
     }
 

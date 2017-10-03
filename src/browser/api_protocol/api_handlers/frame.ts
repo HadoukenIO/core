@@ -30,7 +30,7 @@ export class FrameApiHandler {
         // const dataAck: {[k: string]: any} = {...successAck};
         const frameIdentity: any = apiProtocolBase.getTargetWindowIdentity(message.payload);
 
-        return Frame.getInfo(frameIdentity, message);
+        return Frame.getInfo(frameIdentity);
     }
 
     private getParentWindow(identity: Identity) {

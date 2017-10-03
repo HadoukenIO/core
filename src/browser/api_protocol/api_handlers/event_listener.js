@@ -65,6 +65,9 @@ function EventListenerApiHandler() {
         'window': {
             name: 'window',
             subscribe: function(identity, type, payload, cb) {
+                // log.writeToLog(1, ``, true );
+                // log.writeToLog(1, `rubber meet road ${JSON.stringify(message)}`, true);
+
                 const {
                     uuid,
                     name
@@ -207,6 +210,7 @@ function EventListenerApiHandler() {
         } else if (subTopicProvider && typeof(subTopicProvider.subscribe) === 'function') {
 
             unsubscribe = subTopicProvider.subscribe(identity, type, message.payload, (emmitedPayload) => {
+                log.writeToLog(1, `rubber meet road ${JSON.stringify(message)}`, true);
                 let eventObj = {
                     action: 'process-desktop-event',
                     payload: {

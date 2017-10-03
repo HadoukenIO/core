@@ -54,6 +54,7 @@ export module Frame {
             }
         };
 
+
         ofEvents.on(eventString, safeListener);
 
         unsubscribe = () => {
@@ -69,11 +70,8 @@ export module Frame {
         ofEvents.removeListener(route.frame(type, browserFrame.id), listener);
     }
 
-    export function getInfo (targetIdentity: Identity, message: any) {
+    export function getInfo (targetIdentity: Identity) {
         const frameInfo = coreState.getInfoByUuidFrame(targetIdentity);
-
-        log.writeToLog(1, 'thennn', true);
-        log.writeToLog(1, `go get ${JSON.stringify(frameInfo)}`, true);
 
         if (frameInfo) {
             return new FrameInfo(frameInfo);
@@ -87,13 +85,16 @@ export module Frame {
         const parentWindow: Shapes.Window | undefined = app.children.find((win: Shapes.Window) =>
             win.openfinWindow &&
             win.openfinWindow.frames &&
-            win.openfinWindow.frames[identity.name]
+            win.openfinWindow.frames.get(identity.name)
         );
 
+        log.writeToLog(1, 'we in here', true);
+        log.writeToLog(1, JSON.stringify(identity), true);
         if (!parentWindow || !parentWindow.openfinWindow) {
-            return undefined;
+            log.writeToLog(1, 'we in here', true);
+            return new FrameInfo();
         }
         const { uuid, name } = parentWindow.openfinWindow;
-        return { uuid, name };
+        return getInfo({ uuid, name });
     }
 }
