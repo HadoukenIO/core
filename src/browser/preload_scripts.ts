@@ -106,13 +106,13 @@ export function download(
     const allLoaded: Promise<Fileset> = Promise.all(filePromises);
 
     allLoaded
-        .then(logSummary)
-        .then(cacheLoadedFileset)
+        .then(finish)
         .catch(logError);
 
     return allLoaded;
 
-    function logSummary(fileset: Fileset): Fileset {
+    function finish(fileset: Fileset): Fileset {
+        // STEP 1: log a summary of how many scripts and p;lugins were successful and total time
         const scripts: Fileset = fileset.filter(isPreloadScript);
         const loadedScripts: Fileset = scripts.filter((file: File) => file.success);
 
@@ -126,11 +126,9 @@ export function download(
         const jointSummary = summary.join(' and ');
         logPreload('info', identity, 'load summary', jointSummary, timer);
 
-        return fileset;
-    }
-
-    function cacheLoadedFileset(fileset: Fileset): Fileset {
+        // STEP 2: save the fileset in memory for api-decorator eval
         set(identity, fileset);
+
         return fileset;
     }
 

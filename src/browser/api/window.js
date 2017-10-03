@@ -2083,7 +2083,13 @@ function setTaskbar(browserWindow, forceFetch = false) {
     }
 }
 
-function setTaskbarIcon(browserWindow, iconUrl, fallback = () => {}) {
+function warnIconNotFound(url) {
+    if (url) {
+        log.writeToLog('warning', new Error(`Icon file unavailable: "${url}`));
+    }
+}
+
+function setTaskbarIcon(browserWindow, iconUrl, fallback = () => warnIconNotFound(iconUrl)) {
     if (!iconUrl) {
         fallback();
         return;
@@ -2116,14 +2122,14 @@ function setIcon(browserWindow, data, fallback = () => {}) {
     }
 
     let gotImage; // Promise<NativeImage>
-    let blank;
+    let isBlank;
 
     if (data instanceof Promise) {
         gotImage = data;
     } else if (data instanceof Buffer) {
         gotImage = Promise.resolve(nativeImage.createFromBuffer(data));
     } else if (/^data:/.test(data)) {
-        blank = data === getDataURL('blank-1x1.png');
+        isBlank = data === getDataURL('blank-1x1.png');
         gotImage = Promise.resolve(nativeImage.createFromDataURL(data));
     } else if (data === 'string') {
         gotImage = Promise.resolve(nativeImage.createFromPath(data));
@@ -2135,7 +2141,7 @@ function setIcon(browserWindow, data, fallback = () => {}) {
 
     gotImage
         .then(icon => {
-            if (!blank && icon.isEmpty()) {
+            if (!isBlank && icon.isEmpty()) {
                 fallback();
             } else {
                 browserWindow.setIcon(icon);

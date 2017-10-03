@@ -16,9 +16,11 @@ limitations under the License.
 
 import * as path from 'path';
 
+import * as log from './log';
+
 export type DataURL = string;
 
-const assets: {[key: string]: DataURL} = {
+const assets: {[key: string]: string} = {
     'blank-1x1.png': 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNiYAAAAAkAAxkR2eQAAAAASUVORK5CYII='
 };
 
@@ -31,11 +33,24 @@ const contentTypesByExt: {[key: string]: string} = {
 
 // Returns `undefined` when filename is unknown or no content type nor known extension.
 export function getDataURL(filename: string, contentType?: string): DataURL {
+    let asset: string = assets[filename];
+    let dataURL: DataURL;
+
+    if (!asset) {
+        log.writeToLog('warning', `Null asset "${filename}"`);
+        asset = '';
+    }
+
     if (!contentType) {
         const ext: string = path.extname(filename);
         contentType = contentTypesByExt[ext.substr(1).toLowerCase()];
     }
+
     if (contentType) {
-        return `data:image/${contentType};base64,${assets[filename]}`;
+        dataURL = `data:${contentType};base64,${asset}`;
+    } else {
+        log.writeToLog('error', `Unknown content type for asset "${filename}"`);
     }
+
+    return dataURL;
 }

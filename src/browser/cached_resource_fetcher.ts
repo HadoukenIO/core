@@ -29,7 +29,7 @@ app.on('quit', () => { appQuitting = true; });
 const ERR_QUITTING: string = 'Runtime is exiting';
 
 export class FetchResponse {
-    constructor(success: boolean = false, data?: string, isImageData: boolean = false) {
+    constructor(success: boolean = false, data?: string, isImageData?: boolean) {
         this.success = success;
         this.data = data;
         this.isImageData = isImageData;
@@ -38,28 +38,61 @@ export class FetchResponse {
     public data: string;
     private isImageData: boolean;
     private image: NativeImage;
+    private waitForIcoFile: Promise<NativeImage>;
+
+    // simple createFromBuffer for all data (except .ico files which need to use createFromPath)
     public getNativeImage(): Promise<NativeImage> {
-        this.image = this.image || this.success && this.isImageData ?
-            nativeImage.createFromBuffer(new Buffer(this.data, 'binary')) :
-            nativeImage.createFromDataURL(getDataURL('blank-1x1.png'));
-        return Promise.resolve(this.image);
+        let image: NativeImage = this.image;
+
+        if (!image) {
+            if (this.success && this.isImageData) {
+                image = nativeImage.createFromBuffer(new Buffer(this.data, 'binary'));
+            } else {
+                log.writeToLog('error', new Error('Attempt to get image from non-image data!'));
+                image = nativeImage.createFromDataURL(getDataURL('blank-1x1.png'));
+            }
+            this.image = image;
+        }
+
+        return Promise.resolve(image);
     }
 
     // used to createFromPath from an .ico file that is already a file
     public getNativeImageFromPath(path: string): Promise<NativeImage> {
-        this.image = this.image || this.success && isICO(path) ?
-            nativeImage.createFromPath(path) :
-            FetchResponse.prototype.getNativeImage.call(this);
-        return Promise.resolve(this.image);
+        let image: NativeImage = this.image;
+
+        if (!image) {
+            if (this.success && isICO(path)) {
+                image = nativeImage.createFromPath(path);
+            } else {
+                image = FetchResponse.prototype.getNativeImage.call(this);
+            }
+            this.image = image;
+        }
+
+        return Promise.resolve(image);
     }
 
     // used to createFromPath from an .ico file created from downloaded data
     public getNativeImageFromCreatedPath(url: string): Promise<NativeImage> {
-        return this.image = this.image || this.success && isICO(url) ?
-            makeAppCacheDir('ico')
-                .then(dirPath => getFile(dirPath, url, this.data, 'binary'))
-                .then(filePath => createFromPath(filePath, 20000)) : // 20s = small window for possible reuse
-            Promise.resolve(FetchResponse.prototype.getNativeImage.call(this));
+        let waitForIcoFile: Promise<NativeImage> = this.waitForIcoFile;
+
+        if (!waitForIcoFile) {
+            if (this.success && isICO(url)) {
+                waitForIcoFile = makeCacheDir('ico')
+                    .then(dirPath => getFile(dirPath, url, this.data, 'binary'))
+                    .then(filePath => createFromPath(filePath, 20000)) // 20s = small window for possible reuse
+                    .catch(err => {
+                        log.writeToLog('error', err);
+                        return nativeImage.createFromDataURL(getDataURL('blank-1x1.png'));
+                    });
+            } else {
+                waitForIcoFile = Promise.resolve(FetchResponse.prototype.getNativeImage.call(this));
+            }
+            this.waitForIcoFile = waitForIcoFile;
+        }
+
+        return waitForIcoFile;
     }
 }
 
@@ -152,7 +185,7 @@ function netRequester(url: string, encoding: string): Promise<FetchResponse> {
     });
 }
 
-function makeAppCacheDir(dir: string): Promise<string> {
+function makeCacheDir(dir: string): Promise<string> {
     return new Promise((resolve, reject) => {
         const appCacheDir: string = getAppCacheDir(dir);
         stat(appCacheDir, (err: Error) => {
@@ -173,13 +206,22 @@ function makeAppCacheDir(dir: string): Promise<string> {
 
 const cachedFiles: { [key: string]: Promise<string> } = {};
 
+// gets filepath from when ready
 function getFile(dirPath: string, url: string, data: string | Buffer, encoding: string): Promise<string> {
     const filePath: string = getFilePath(dirPath, url);
-    return cachedFiles[filePath] ?
-        Promise.resolve(cachedFiles[filePath]) :
-        (cachedFiles[filePath] = write(filePath, data, encoding));
+    let result: Promise<string>;
+
+    if (cachedFiles[filePath]) {
+        result = Promise.resolve(cachedFiles[filePath]);
+    } else {
+        result = write(filePath, data, encoding);
+        cachedFiles[filePath] = result;
+    }
+
+    return result;
 }
 
+// initiates async file write and returns a promise of the written filepath
 function write(filePath: string, data: string | Buffer, encoding: string): Promise<string> {
     return new Promise((resolve, reject) => {
         stat(filePath, (err: Error) => {
