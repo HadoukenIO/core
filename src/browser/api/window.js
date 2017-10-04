@@ -68,7 +68,8 @@ let browserWindowEventMap = {
         topic: 'api-injection-failed'
     },
     'blur': {
-        topic: 'blurred'
+        topic: 'blurred',
+        decorator: blurredDecorator
     },
     'synth-bounds-change': {
         topic: 'bounds-changing', // or bounds-changed
@@ -87,7 +88,8 @@ let browserWindowEventMap = {
         decorator: disabledFrameBoundsChangeDecorator
     },
     'focus': {
-        topic: 'focused'
+        topic: 'focused',
+        decorator: focusedDecorator
     },
     'opacity-changed': {
         decorator: opacityChangedDecorator
@@ -1910,6 +1912,19 @@ function closeRequestedDecorator(payload) {
     return propagate;
 }
 
+function blurredDecorator(payload, args) {
+    const { uuid, name } = payload;
+    ofEvents.emit(route.application('window-blurred', uuid), { topic: 'application', type: 'window-blurred', uuid, name });
+    ofEvents.emit(route.system('window-blurred'), { topic: 'system', type: 'window-blurred', uuid, name });
+    return true;
+}
+
+function focusedDecorator(payload, args) {
+    const { uuid, name } = payload;
+    ofEvents.emit(route.application('window-focused', uuid), { topic: 'application', type: 'window-focused', uuid, name });
+    ofEvents.emit(route.system('window-focused'), { topic: 'system', type: 'window-focused', uuid, name });
+    return true;
+}
 
 function boundsChangeDecorator(payload, args) {
     let boundsChangePayload = args[0];

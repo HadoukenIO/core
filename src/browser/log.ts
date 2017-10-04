@@ -33,25 +33,34 @@ export const logLevelMappings = new Map<any, any>([
  * Parses log messages and uses Electron's APIs to log them to console
  */
 export function writeToLog(level: any, message: any, debug?: boolean): any {
+    const isObj = typeof message === 'object' && message !== null;
     let parsedMessage: string;
 
     // Parse log message
     try {
 
-        if (typeof message === 'object') {
-            if (message instanceof Error) {
+        if (isObj && message instanceof Error) {
 
-                // Properly stringify error objects
-                parsedMessage = JSON.stringify(errorToPOJO(message));
-            } else {
+            // Properly stringify error objects (i.e., stack and message properties only)
+            parsedMessage = JSON.stringify(errorToPOJO(message));
 
-                // Stringify plain objects
-                parsedMessage = JSON.stringify(message);
+        } else if (isObj && message.toString === Object.prototype.toString) {
+
+            const className = message.constructor && message.constructor.name;
+
+            // Don't use Object's toString which just returns "[object Object]"
+            parsedMessage = JSON.stringify(message);
+
+            // Prefix object name to stringification when known
+            if (className !== 'Object' && className !== 'Function') {
+                parsedMessage = `${className}: ${parsedMessage}`;
             }
+
         } else {
 
-            // Convert non-object messages to a string
-            parsedMessage = message.toString();
+            // Use object's custom toString function OR convert primitive values to string
+            parsedMessage = message + ''; // concatenation better than .toString(): handles null, undefined, NaN
+
         }
 
     } catch (err) {

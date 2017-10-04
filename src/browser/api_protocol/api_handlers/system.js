@@ -42,6 +42,7 @@ function SystemApiHandler() {
         'get-el-ipc-config': getElIPCConfig,
         'get-entity-info': getEntityInfo,
         'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
+        'get-focused-window': getFocusedWindow,
         'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
         'get-min-log-level': getMinLogLevel,
         'get-monitor-info': getMonitorInfo, // apiPath: '.getMonitorInfo' -> called by js adapter during init so can't be disabled
@@ -256,6 +257,12 @@ function SystemApiHandler() {
         const { uuid, name } = message.payload;
 
         return System.getEntityInfo({ uuid, name });
+    }
+
+    function getFocusedWindow(identity, message, ack) {
+        var dataAck = _.clone(successAck);
+        dataAck.data = System.getFocusedWindow();
+        ack(dataAck);
     }
 
     function getRemoteConfig(identity, message, ack, nack) {
