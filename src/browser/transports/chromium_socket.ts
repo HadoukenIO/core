@@ -98,11 +98,11 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
  *
  */
 function startProxyConnection(proxyCallback: (event: ProxyEvent) => void, response: any) {
-    let proxyConnected: boolean = false; // only one connection is allowed
+    let clientConn: nodeNet.Socket; // only one connection is allowed
     const server = nodeNet.createServer((conn: nodeNet.Socket) => {
-        if (!proxyConnected) {
+        if (!clientConn) {
             log.writeToLog(1, `proxy socket new connection ${conn.localPort}`, true);
-            proxyConnected = true;
+            clientConn = conn;
             conn.on('data', (data) => {
                 log.writeToLog(1, `proxy socket input data ${data.length}`, true);
                 proxyCallback({eventType: ProxyEventType.Data, payload: data});
@@ -113,13 +113,12 @@ function startProxyConnection(proxyCallback: (event: ProxyEvent) => void, respon
             });
             conn.on('end', () => {
                 log.writeToLog(1, 'proxy socket ended', true);
-                server.close();
             });
             conn.on('timeout', () => {
                 log.writeToLog(1, 'proxy socket timeout', true);
             });
             conn.on('error', (err) => {
-                log.writeToLog(1, `proxy socket error ${err}`, true);
+                log.writeToLog(1, `proxy socket connect error ${err}`, true);
                 // according to the doc, 'close' event will come next
             });
             // data from Chromium socket
@@ -134,8 +133,12 @@ function startProxyConnection(proxyCallback: (event: ProxyEvent) => void, respon
     });
     // error from Chromium socket
     response.on('error', (err: string) => {
-        log.writeToLog(1, `proxy socket error: ${err}`, true);
-        server.close();
+        log.writeToLog(1, `proxy socket response error: ${err}`, true);
+        if (clientConn) {
+            clientConn.destroy();
+        } else {
+            server.close();
+        }
     });
     server.maxConnections = 1;  //only one connection for each proxy
     server.on('listening', () => {
