@@ -469,16 +469,17 @@ limitations under the License.
             }, 1);
         });
 
+        // todo#RUN-3373: converting options here is premature, not yet having inherited from parent
         const convertedOpts = convertOptionsToElectronSync(options);
+        const preload = convertedOpts.preload || winOpts.preload || []; // appply same inheritance as in Window.create
 
-        const { preload } = convertedOpts;
-        if (!(preload && preload.length)) {
-            proceed(); // short-circuit preload scripts fetch
+        if (!preload.length) {
+            proceed();
         } else {
             const preloadScriptsPayload = {
                 uuid: options.uuid,
                 name: options.name,
-                scripts: preload
+                preloadOption: preload
             };
             fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, proceed, proceed);
         }
@@ -551,53 +552,62 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const winOpts = getCachedWindowOptionsSync();
-        const identity = {
-            uuid: winOpts.uuid,
-            name: winOpts.name
-        };
-        let { preload: preloadOption, plugin: plugin } = convertOptionsToElectronSync(getWindowOptionsSync());
-        if (Array.isArray(plugin) && plugin[0] !== undefined) { preloadOption = preloadOption.concat(plugin); }
-        const action = 'set-window-preload-state';
+        const setState = asyncApiCall.bind(null, 'set-window-preload-state');
+        let { uuid, name, preload, plugin } = convertOptionsToElectronSync(getWindowOptionsSync());
+        const identity = { uuid, name };
 
-        if (preloadOption.length) { // short-circuit
+        if (preload || plugin) { // short-circuit to avoid pointless api call
             let response;
             try {
-                response = syncApiCall('get-selected-preload-scripts', preloadOption);
+                const payload = { uuid, name, preload, plugin };
+                response = syncApiCall('get-preload-scripts', payload);
             } catch (error) {
                 logPreload('error', identity, 'error', '', error);
             }
 
             if (response) {
-                response.forEach((script, index) => {
-                    if (script !== null) {
-                        const { id } = preloadOption[index].url ? preloadOption[index].url : `${preloadOption[index].name}-${preloadOption[index].version}`;
-
+                response.forEach(preload => {
+                    if (preload.success) {
                         try {
-                            const val = window.eval(script); /* jshint ignore:line */
-                            logPreload('info', identity, `eval succeeded`, id, val);
-                            asyncApiCall(action, { id, state: 'succeeded' });
+                            const val = window.eval(preload.data); /* jshint ignore:line */
+                            logPreload('info', identity, `eval succeeded`, preload, val);
+                            setState({ id: getIdentifier(preload), state: 'succeeded' });
                         } catch (err) {
-                            logPreload('error', identity, 'eval failed', id, err);
-                            asyncApiCall(action, { id, state: 'failed' });
+                            logPreload('error', identity, 'eval failed', preload, err);
+                            setState({ id: getIdentifier(preload), state: 'failed' });
                         }
                     }
                 });
             }
         }
 
-        asyncApiCall(action, { allDone: true });
+        setState({ allDone: true });
     });
 
-    function logPreload(level, identity, state, url, data) {
-        if (url) {
-            state += ` for ${url}`;
+    function logPreload(level, identity, state, target, data) {
+        if (target) {
+            if (typeof target === 'object') {
+                if (target.url) {
+                    target = `preload script ${getIdentifier(target)}`;
+                } else {
+                    target = `plugin module ${getIdentifier(target)}`;
+                }
+            }
+            state += ` for ${target}`;
         }
         if (data) {
             state += ` with ${JSON.stringify(data)}`;
         }
         const message = `[PRELOAD] [${identity.uuid}]-[${identity.name}] ${state}`;
         syncApiCall('write-to-log', { level, message });
+    }
+
+    function getIdentifier(preload) {
+        return isPreloadScript(preload) ? preload.url : `${preload.name}-${preload.version}`;
+    }
+
+    function isPreloadScript(preload) {
+        return preload.hasOwnProperty('url');
     }
 
 }());

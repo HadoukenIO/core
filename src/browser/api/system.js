@@ -39,7 +39,6 @@ const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
-import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -73,9 +72,6 @@ const defaultProc = {
         return 0;
     }
 };
-
-let preloadScriptsCache;
-clearPreloadCache();
 
 let MonitorInfo;
 let Session;
@@ -172,15 +168,10 @@ exports.System = {
             cookies: true,
             localStorage: true,
             appcache: true,
-            userData: true, // TODO: userData is the window bounds cache
-            preload: true
+            userData: true // TODO: userData is the window bounds cache
         });
         */
         var settings = options || {};
-
-        if (settings.preload) {
-            clearPreloadCache();
-        }
 
         var availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
         var storages = [];
@@ -668,50 +659,5 @@ exports.System = {
         } else {
             cb(new Error('uuid not found.'));
         }
-    },
-
-    clearPreloadCache,
-
-    downloadPreloadScripts: function(identity, preloadOption, cb) {
-        if (!preloadOption) {
-            cb();
-        } else {
-            fetchAndLoadPreloadScripts(identity, preloadOption, cb);
-        }
-    },
-
-    // identitier is preload script url or plugin name
-    setPreloadScript: function(identitier, scriptText) {
-        preloadScriptsCache[identitier] = scriptText;
-    },
-
-    // identitier is preload script url or plugin name
-    getPreloadScript: function(identitier) {
-        return preloadScriptsCache[identitier];
-    },
-
-    // identitiers are preload script url or plugin name
-    getSelectedPreloadScripts: function(preloadOption) {
-        const missingRequiredScripts = preloadOption.reduce((identifiers, preload) => {
-            if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
-                identifiers.push(getIdentifier(preload));
-            }
-            return identifiers;
-        }, []);
-
-        if (missingRequiredScripts.length) {
-            const list = JSON.stringify(missingRequiredScripts);
-            const message = `Execution of preload scripts canceled because of missing required script(s) ${list}`;
-            const err = new Error(message);
-            return Promise.reject(err);
-        }
-
-        // when load/fetch failed, mapped object will be `undefined` (stringifies as `null`)
-        const scriptSet = preloadOption.map(preload => preloadScriptsCache[getIdentifier(preload)]);
-        return Promise.resolve(scriptSet);
     }
 };
-
-function clearPreloadCache() {
-    preloadScriptsCache = {};
-}

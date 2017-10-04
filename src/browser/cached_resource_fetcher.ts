@@ -13,85 +13,255 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {app, resourceFetcher} from 'electron'; // Electron app
-import {stat, mkdir} from 'fs';
-import {join, parse} from 'path';
-import {parse as parseUrl} from 'url';
+import { app, net, ClientResponse, nativeImage, NativeImage } from 'electron'; // Electron app
+import { stat, mkdir, readFile, writeFile, unlink } from 'fs';
+import { join, parse } from 'path';
+import { parse as parseUrl } from 'url';
 import {createHash} from 'crypto';
-import {isURL, isURI, uriToPath} from '../common/regex';
+import * as log from './log';
 
-let appQuiting: Boolean = false;
+import { isURL, isICO, isImageFile, Patterns } from '../common/regex';
+import { getDataURL } from './assets';
 
-app.on('quit', () => { appQuiting = true; });
+let appQuitting: boolean = false;
+app.on('quit', () => { appQuitting = true; });
+
+const ERR_QUITTING: string = 'Runtime is exiting';
+
+export class FetchResponse {
+    constructor(success: boolean = false, data?: string, isImageData?: boolean) {
+        this.success = success;
+        this.data = data;
+        this.isImageData = isImageData;
+    }
+    public success: boolean;
+    public data: string;
+    private isImageData: boolean;
+    private image: NativeImage;
+    private waitForIcoFile: Promise<NativeImage>;
+
+    // simple createFromBuffer for all data (except .ico files which need to use createFromPath)
+    public getNativeImage(): Promise<NativeImage> {
+        let image: NativeImage = this.image;
+
+        if (!image) {
+            if (this.success && this.isImageData) {
+                image = nativeImage.createFromBuffer(new Buffer(this.data, 'binary'));
+            } else {
+                log.writeToLog('error', new Error('Attempt to get image from non-image data!'));
+                image = nativeImage.createFromDataURL(getDataURL('blank-1x1.png'));
+            }
+            this.image = image;
+        }
+
+        return Promise.resolve(image);
+    }
+
+    // used to createFromPath from an .ico file that is already a file
+    public getNativeImageFromPath(path: string): Promise<NativeImage> {
+        let image: NativeImage = this.image;
+
+        if (!image) {
+            if (this.success && isICO(path)) {
+                image = nativeImage.createFromPath(path);
+            } else {
+                image = FetchResponse.prototype.getNativeImage.call(this);
+            }
+            this.image = image;
+        }
+
+        return Promise.resolve(image);
+    }
+
+    // used to createFromPath from an .ico file created from downloaded data
+    public getNativeImageFromCreatedPath(url: string): Promise<NativeImage> {
+        let waitForIcoFile: Promise<NativeImage> = this.waitForIcoFile;
+
+        if (!waitForIcoFile) {
+            if (this.success && isICO(url)) {
+                waitForIcoFile = makeCacheDir('ico')
+                    .then(dirPath => getFile(dirPath, url, this.data, 'binary'))
+                    .then(filePath => createFromPath(filePath, 20000)) // 20s = small window for possible reuse
+                    .catch(err => {
+                        log.writeToLog('error', err);
+                        return nativeImage.createFromDataURL(getDataURL('blank-1x1.png'));
+                    });
+            } else {
+                waitForIcoFile = Promise.resolve(FetchResponse.prototype.getNativeImage.call(this));
+            }
+            this.waitForIcoFile = waitForIcoFile;
+        }
+
+        return waitForIcoFile;
+    }
+}
+
+type Fetcher = (url: string, encoding: string) => Promise<FetchResponse>;
 
 /**
- * Downloads a file if it doesn't exist in cache yet.
+ * Downloads a file to cache and/or retrieves it from cache and returns its status code, headers, and data
  */
-export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): void {
-    if (!fileUrl || typeof fileUrl !== 'string') {
-        callback(new Error(`Bad file url: '${fileUrl}'`));
-        return;
-    }
-    if (appQuiting) {
-        callback(new Error('Runtime is exiting'));
-        return;
+export function cachedFetch(url: string, encoding: string = 'utf8'): Promise<FetchResponse> {
+    if (!url || typeof url !== 'string') {
+        return Promise.reject(new Error(`Bad file url: '${url}'`));
     }
 
-    if (!isURL(fileUrl)) {
-        if (isURI(fileUrl)) {
-            callback(null, uriToPath(fileUrl));
-        } else {
-            stat(fileUrl, (err: null|Error) => {
-                if (err) {
-                    callback(new Error(`Invalid file url: '${fileUrl}'`));
+    if (appQuitting) {
+        return Promise.reject(new Error(ERR_QUITTING));
+    }
+
+    const fetcher: Fetcher = isURL(url) ? netRequester : fileRequester;
+
+    return fetcher(url, encoding);
+}
+
+function fileRequester(url: string, encoding: string): Promise<FetchResponse> {
+    return new Promise((resolve, reject) => {
+        // remove possible URI (file:/// scheme) prefix
+        const filepath: string = url.replace(Patterns.URI, '');
+        const isImage = isImageFile(url) || isICO(url);
+
+        if (isImage) {
+            encoding = 'binary';
+        }
+
+        readFile(filepath, encoding, (error: Error | string, data: string) => {
+            if (error) {
+                if (/ENOENT/.test((<Error>error).message || <string>error)) {
+                    resolve(new FetchResponse(false));
                 } else {
-                    callback(null, fileUrl);
+                    reject(error);
                 }
-            });
-        }
-        return;
-    }
+            } else {
+                const fetchResponse: FetchResponse = new FetchResponse(true, data, isImage);
 
-    const appCacheDir = getAppCacheDir(appUuid);
-    const filePath = getFilePath(appCacheDir, fileUrl);
+                if (isImage) {
+                    fetchResponse.getNativeImage = () => fetchResponse.getNativeImageFromPath(filepath);
+                }
 
-    stat(filePath, (err: null | Error) => {
-        if (err) {
-            if (!appQuiting) {
-                stat(appCacheDir, (err: null | Error) => {
-                    if (err) {
-                        if (!appQuiting) {
-                            mkdir(appCacheDir, () => {
-                                download(fileUrl, filePath, callback);
-                            });
-                        }
-                    } else {
-                        download(fileUrl, filePath, callback);
-                    }
-                });
+                resolve(fetchResponse);
             }
-        } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
-            download(fileUrl, filePath, callback);
-        } else {
-            callback(null, filePath);
-        }
+        });
     });
 }
 
-function remoteFileIsYoungerThanCachedFile(remoteUrl: string, cachedFilePath: string) {
-    //todo: make a RESTful HEAD request and if file at remoteUrl is missing, return false;
-    //todo: else if file at remoteUrl is younger than file at cachedFilePath, return true;
-    //todo: else return false
-    return true; //for now we are always fetching
+function netRequester(url: string, encoding: string): Promise<FetchResponse> {
+    return new Promise((resolve, reject) => {
+        const isImage = isImageFile(url) || isICO(url);
+        const request = net.request(url);
+
+        if (isImage) {
+            encoding = 'binary';
+        }
+
+        request.on('error', reject); // this is an error making the request
+
+        request.on('response', (response: ClientResponse) => {
+            const chunks: string[] = [];
+            const fetchResponse: FetchResponse = new FetchResponse(response.statusCode === 200, undefined, isImage);
+            if (isImage) {
+                fetchResponse.getNativeImage = () => fetchResponse.getNativeImageFromCreatedPath(url);
+            }
+
+            if (!fetchResponse.success) {
+                resolve(fetchResponse); // not an error, however `success` will be false and `data` will be undefined
+                return;
+            }
+
+            response.on('error', reject); // this is an error receiving the response
+
+            response.setEncoding(encoding);
+            response.on('data', (chunk: string) => {
+                chunks.push(chunk);
+            });
+
+            response.on('end', () => {
+                fetchResponse.data = chunks.join('');
+                resolve(fetchResponse);
+            });
+        });
+
+        request.end();
+    });
+}
+
+function makeCacheDir(dir: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const appCacheDir: string = getAppCacheDir(dir);
+        stat(appCacheDir, (err: Error) => {
+            if (err) {
+                mkdir(appCacheDir, (err: Error) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(appCacheDir);
+                    }
+                });
+            } else {
+                resolve(appCacheDir);
+            }
+        });
+    });
+}
+
+const cachedFiles: { [key: string]: Promise<string> } = {};
+
+// gets filepath from when ready
+function getFile(dirPath: string, url: string, data: string | Buffer, encoding: string): Promise<string> {
+    const filePath: string = getFilePath(dirPath, url);
+    let result: Promise<string>;
+
+    if (cachedFiles[filePath]) {
+        result = Promise.resolve(cachedFiles[filePath]);
+    } else {
+        result = write(filePath, data, encoding);
+        cachedFiles[filePath] = result;
+    }
+
+    return result;
+}
+
+// initiates async file write and returns a promise of the written filepath
+function write(filePath: string, data: string | Buffer, encoding: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        stat(filePath, (err: Error) => {
+            if (err) {
+                writeFile(filePath, data, {encoding}, (err: Error) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(filePath);
+                    }
+                });
+            } else {
+                resolve(filePath);
+            }
+        });
+    });
+}
+
+function createFromPath(filePath?: string, expires: number = -1): Promise<NativeImage> {
+    const image: NativeImage = nativeImage.createFromPath(filePath);
+
+    if (expires >= 0) {
+        setTimeout(() => {
+            if (cachedFiles[filePath]) {
+                delete cachedFiles[filePath];
+                const ignoreError = (err: Error): void => undefined; // file should be there but just in case
+                unlink(filePath, ignoreError);
+            }
+        }, expires);
+    }
+
+    return Promise.resolve(image);
 }
 
 /**
  * Generates a folder name for the app to store the file in.
  */
-function getAppCacheDir(appUuid: string): string {
-    const appUuidHash = generateHash(appUuid);
+function getAppCacheDir(dir: string): string {
     const userDataDir = app.getPath('userData');
-    return join(userDataDir, 'Cache', appUuidHash);
+    return join(userDataDir, 'Cache', dir);
 }
 
 /**
@@ -112,22 +282,4 @@ function generateHash(str: string): string {
     const hash = createHash('sha256');
     hash.update(str);
     return hash.digest('hex');
-}
-
-/**
- * Downloads the file from given url using Resource Fetcher and saves it into specified path
- */
-function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
-    const fetcher = new resourceFetcher('file');
-
-    fetcher.once('fetch-complete', (event: string, status: string) => {
-        if (status === 'success') {
-            callback(null, filePath);
-        } else {
-            callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
-        }
-    });
-
-    fetcher.setFilePath(filePath);
-    fetcher.fetch(fileUrl);
 }

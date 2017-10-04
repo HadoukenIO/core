@@ -70,12 +70,47 @@ declare module 'electron' {
 
     }
 
-    export class resourceFetcher {
-        constructor(type: string);
-        on(event: string, callback: (event: string, status: string) => any): void;
-        once(event: string, callback: (event: string, status: string) => any): void;
-        setFilePath(path: string): void;
-        fetch(url: string): void;
+    export interface ClientResponse {
+        setEncoding(encoding: string): ClientResponse;
+        on(eventName: string, event: (data?: any) => void): void;
+        statusCode: number;
+        headers: { [key: string]: any }[];
+    }
+
+    export interface ClientRequest {
+        on(eventName: string, event: (response: ClientResponse | Error) => void): void;
+        end(): void;
+    }
+
+    export interface clientRequestOptions {
+        method?: string;
+        url?: string;
+        session?: object;
+        partition?: string;
+        protocol?: string;
+        host?: string;
+        hostname?: string;
+        port?: number;
+        path?: string;
+        redirect?: string;
+    }
+
+    namespace net {
+        export function request(options: clientRequestOptions | string): ClientRequest;
+    }
+
+    export class NativeImage {}
+
+    export interface NativeImageOptions {
+        width?: number;
+        height?: number;
+        scaleFactor?: number;
+    }
+
+    namespace nativeImage {
+        export function createFromBuffer(buffer: Buffer, options?: NativeImageOptions): NativeImage;
+        export function createFromPath(path: string): NativeImage;
+        export function createFromDataURL(dataURL: string): NativeImage;
     }
 
     export class chromeIpcClient {

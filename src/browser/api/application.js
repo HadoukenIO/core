@@ -24,7 +24,6 @@ let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
-let nativeImage = electron.nativeImage;
 let ProcessInfo = electron.processInfo;
 let ResourceFetcher = electron.resourceFetcher;
 let Tray = electron.Tray;
@@ -47,6 +46,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
+import * as preloadScripts from '../preload_scripts';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -446,21 +446,17 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
 
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = convertOpts.convertToElectron(app._options);
-
-    let forPreload = [];
-    if (Array.isArray(mainWindowOpts.preload) && mainWindowOpts.preload[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.preload); }
-    if (Array.isArray(mainWindowOpts.plugin) && mainWindowOpts.plugin[0] !== undefined) { forPreload = forPreload.concat(mainWindowOpts.plugin); }
-
     const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
-    const { uuid, name } = mainWindowOpts;
-    const windowIdentity = { uuid, name };
+    const { uuid, name, preload, plugin } = mainWindowOpts;
 
     if (coreState.getAppRunningState(uuid)) {
         proceed();
     } else {
         // Flow through preload script logic (eg. re-download of failed preload scripts)
         // only if app is not already running.
-        System.downloadPreloadScripts(windowIdentity, forPreload, proceed);
+        const windowIdentity = { uuid, name };
+        const preloads = [preload, plugin];
+        preloadScripts.download(windowIdentity, preloads).then(proceed);
     }
 };
 
@@ -705,6 +701,9 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     let { uuid } = identity;
 
+    if (typeof callback !== 'function') { callback = () => {}; }
+    if (typeof errorCallback !== 'function') { errorCallback = () => {}; }
+
     if (fetchingIcon[uuid]) {
         errorCallback(new Error('currently fetching icon'));
         return;
@@ -722,21 +721,16 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
-    cachedFetch(app.uuid, iconUrl, (error, iconFilepath) => {
-        if (!error) {
-            if (app) {
-                const iconImage = nativeImage.createFromPath(iconFilepath);
+    cachedFetch(iconUrl).then(fetchResponse => {
+        if (app && fetchResponse.success) {
+            fetchResponse.getNativeImage().then(iconImage => {
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = route.application('tray-icon-clicked', app.uuid);
 
                 const getData = (bounds, source) => {
-                    const data = {
-                        x: bounds.x,
-                        y: bounds.y,
-                        bounds,
-                        monitorInfo
-                    };
+                    const { x, y } = bounds;
+                    const data = { x, y, bounds, monitorInfo };
                     return Object.assign(data, source);
                 };
 
@@ -766,16 +760,13 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
                 };
                 subscriptionManager.registerSubscription(unsubscribe, app.identity, TRAY_ICON_KEY);
 
-                if (typeof callback === 'function') {
-                    callback();
-                }
-            }
-        } else {
-            if (typeof errorCallback === 'function') {
-                errorCallback(error);
-            }
+                callback();
+            });
         }
 
+        fetchingIcon[uuid] = false;
+    }).catch(error => {
+        errorCallback(error);
         fetchingIcon[uuid] = false;
     });
 };
@@ -988,7 +979,7 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         opts.url = opts.url || 'about:blank';
 
-        if (!regex.isURL(opts.url) && !isURI(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
+        if (!regex.isURL(opts.url) && !regex.isURI(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
         }
 
@@ -1074,12 +1065,8 @@ function createAppObj(uuid, opts, configUrl = '') {
     return appObj;
 }
 
-function isURI(str) {
-    return /^file:\/\/\/?/.test(str);
-}
-
 function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
 }
 
-module.exports.Application = Application;
+exports.Application = Application;

@@ -49,6 +49,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import WindowsMessages from '../../common/microsoft';
+import { getDataURL } from '../assets';
 
 // constants
 import {
@@ -394,16 +395,22 @@ Window.create = function(id, opts) {
         if (coreState.getAppObjByUuid(identity.uuid)._options.customWindowAlert) {
             handleCustomAlerts(id, opts);
         }
+
         // each window now inherits the main window's base options. this can
         // be made to be the parent's options if that makes more sense...
         baseOpts = coreState.getMainWindowOptions(id) || {};
         _options = convertOptions.convertToElectron(Object.assign({}, baseOpts, opts));
+
+        // preload should dependably be an array
+        // todo#RUN-3373: handle inhertibale option defaults in convert-options
+        _options.preload = _options.preload || [];
 
         // (taskbar) a child window should be grouped in with the application
         // if a taskbarIconGroup isn't specified
         _options.taskbarIconGroup = _options.taskbarIconGroup || baseOpts.uuid;
 
         // inherit from mainWindow unless specified
+        // todo#RUN-3373: handle inhertibale option defaults in convert-options
         _options.frameConnect = _options.frameConnect || baseOpts.frameConnect || 'last';
 
         // pass along if we should show once DOMContentLoaded. this gets used
@@ -767,11 +774,10 @@ Window.create = function(id, opts) {
     };
 
     // Set preload scripts' final loading states
-    winObj.preloadState = (_options.preload || []).map(preload => {
-        return {
-            url: getIdentifier(preload),
-            state: getPreloadScriptState(getIdentifier(preload))
-        };
+    winObj.preloadState = _options.preload.map(preload => {
+        const url = getIdentifier(preload);
+        const state = getPreloadScriptState(url);
+        return { url, state };
     });
 
     if (!coreState.getWinObjById(id)) {
@@ -2047,16 +2053,8 @@ function setTaskbar(browserWindow, forceFetch = false) {
     // we try the window options and if that fails we get the icon info
     // from the main window.
     if (!regex.isURL(options.url)) {
-        let _url = getWinOptsIconUrl(options);
-
-        // v6 needs to match v5's behavior: if the window url is a file uri,
-        // then icon can be either a file path, file uri, or url
-        if (!regex.isURL(_url) && !regex.isURI(_url)) {
-            _url = 'file:///' + _url;
-        }
-
         // try the window icon options first
-        setTaskbarIcon(browserWindow, _url, () => {
+        setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {
             if (!browserWindow.isDestroyed()) {
                 // if not, try using the main window's icon
                 setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
@@ -2078,8 +2076,8 @@ function setTaskbar(browserWindow, forceFetch = false) {
         setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {
             if (!browserWindow.isDestroyed()) {
                 // if not, try any favicons that were found
-                const _url = urls && urls[0];
-                setTaskbarIcon(browserWindow, _url, () => {
+                const url = urls && urls[0];
+                setTaskbarIcon(browserWindow, url, () => {
                     if (!browserWindow.isDestroyed()) {
                         // if not, try using the main window's icon
                         setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
@@ -2100,33 +2098,75 @@ function setTaskbar(browserWindow, forceFetch = false) {
     }
 }
 
-function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
-    let options = browserWindow._options;
-    let uuid = options.uuid;
-
-    cachedFetch(uuid, iconUrl, (error, iconFilepath) => {
-        if (!error) {
-            setIcon(browserWindow, iconFilepath, errorCallback);
-        } else {
-            errorCallback();
-        }
-    });
-}
-
-function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
-    if (!browserWindow.isDestroyed()) {
-        let icon = nativeImage.createFromPath(iconFilepath);
-        if (icon.isEmpty()) {
-            errorCallback();
-        } else {
-            browserWindow.setIcon(icon);
-        }
+function warnIconNotFound(url) {
+    if (url) {
+        log.writeToLog('warning', new Error(`Icon file unavailable: "${url}`));
     }
 }
 
+function setTaskbarIcon(browserWindow, iconUrl, fallback = () => warnIconNotFound(iconUrl)) {
+    if (!iconUrl) {
+        fallback();
+        return;
+    }
+
+    // v6 needs to match v5's behavior: if the window url is a file uri,
+    // then icon can be either a file path, file uri, or url
+    if (!regex.isURL(iconUrl) && !regex.isURI(iconUrl)) {
+        iconUrl = `file:///${iconUrl}`;
+    }
+
+    cachedFetch(iconUrl).then(fetchResponse => {
+        if (fetchResponse.success) {
+            setIcon(browserWindow, fetchResponse.getNativeImage(), fallback);
+        } else {
+            fallback();
+        }
+    }).catch(error => {
+        if (error) {
+            log.writeToLog('error', error);
+        }
+        fallback();
+    });
+}
+
+// data can be any of: Buffer, dataURL, filepath, Promise<nativeImage>
+function setIcon(browserWindow, data, fallback = () => {}) {
+    if (browserWindow.isDestroyed()) {
+        return;
+    }
+
+    let gotImage; // Promise<NativeImage>
+    let isBlank;
+
+    if (data instanceof Promise) {
+        gotImage = data;
+    } else if (data instanceof Buffer) {
+        gotImage = Promise.resolve(nativeImage.createFromBuffer(data));
+    } else if (/^data:/.test(data)) {
+        isBlank = data === getDataURL('blank-1x1.png');
+        gotImage = Promise.resolve(nativeImage.createFromDataURL(data));
+    } else if (data === 'string') {
+        gotImage = Promise.resolve(nativeImage.createFromPath(data));
+    } else {
+        log.writeToLog('error', new Error('Unexpected icon data type'));
+        fallback();
+        return;
+    }
+
+    gotImage
+        .then(icon => {
+            if (!isBlank && icon.isEmpty()) {
+                fallback();
+            } else {
+                browserWindow.setIcon(icon);
+            }
+        })
+        .catch(fallback);
+}
+
 function setBlankTaskbarIcon(browserWindow) {
-    // the file is located at ..\runtime-core\blank.ico
-    setIcon(browserWindow, path.resolve(`${__dirname}/../../../blank.ico`));
+    setIcon(browserWindow, getDataURL('blank-1x1.png'));
 }
 
 function getMainWinIconUrl(id) {
@@ -2186,4 +2226,4 @@ function getElectronBrowserWindow(identity, errDesc) {
     return browserWindow;
 }
 
-module.exports.Window = Window;
+exports.Window = Window;

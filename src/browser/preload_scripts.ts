@@ -16,163 +16,149 @@ limitations under the License.
 
 // built-in modules
 import * as fs from 'fs';
+import { join } from 'path';
 
 // local modules
-import { System } from './api/system.js';
-import { cachedFetch } from './cached_resource_fetcher';
+import { cachedFetch, FetchResponse } from './cached_resource_fetcher';
 import * as log from './log';
+import { errorToPOJO } from '../common/errors';
 import { Identity } from '../shapes';
 import ofEvents from './of_events';
 import route from '../common/route';
 import { rvmMessageBus, PluginQuery } from './rvm/rvm_message_bus';
-import { sendToRVM } from './rvm/utils';
-import { getConfigUrlByUuid } from './core_state.js';
+import { getConfigUrlByUuid } from './core_state';
 import { Timer } from '../common/timer';
 
 
 // some local type definitions
-type PreloadOption = PreloadInstance[];
-type PreloadInstance = PreloadScript | PreloadPlugin;
+type PreloadItem = PreloadScript | PluginModule;
+type PreloadOption = PreloadItem[];
 interface PreloadScript {
     url: string; // URI actually: http:// or file://
-    optional?: boolean; // not used herein but used by api_decorator at script execution time
+    optional?: boolean; // false means required for any script to run (used by Application.getPreloadScripts)
 }
-interface PreloadPlugin {
+interface PluginModule {
     name: string;
     version: string;
     optional?: boolean;
 }
-interface PreloadFetched extends PreloadScript {
-    scriptPath: string; // location on disc of cached fetch
+
+interface File extends PreloadScript, PluginModule, FetchResponse {
+    // PreloadItem with FetchResponse properties mixed in
 }
-type FetchResolver = (value?: PreloadInstance | PreloadFetched | FetchResponse) => void;
-type Resolver = (value?: any) => void;
-type Rejector = (reason?: Error) => void;
+type Fileset = File[];
 
-// Preload scripts' states are stored here. Example:
-// 'http://path.com/to/script': 'load-succeeded'
-const preloadStates = new Map();
+// store for windows' fetched preload script and plugin module files, just until eval'd
+const cache: { [key: string]: Fileset } = {};
 
-const REGEX_FILE_SCHEME = /^file:\/\//i;
-
-interface FetchResponse {
+interface PluginResponse {
+    success: boolean;
     identity: Identity;
-    preloadScript?: PreloadInstance;
-    preloadPlugin?: PreloadInstance;
-    scriptPath: string;
+    filePath: string;
+    plugin: PluginModule;
 }
 
-type LoadResponses = boolean[];
+// PreloadItem scripts' states are stored here. Example:
+// 'http://path.com/to/script': 'load-succeeded'
+type PreloadState = string;
+interface StatefulPreloadFile extends File {
+    state: string;
+}
 
-/** Returns a `Promise` once all preload scripts have been fetched and loaded or have failed to fetch or load.
+const preloadStates: Map<string, PreloadState> = new Map();
+
+/* Requests all the window's preload scripts.
+ * Successfully loaded scripts are saved via `set` before `loadUrl` is called.
+ * They are kept in memory only until api-decorator consumes them via `eval`, after which they are released.
  *
- * @param {object} identity
- * @param {PreloadInstance[]} preloadOption
- * @param {function} [proceed] - If supplied, both `catch` and `then` are called on it.
+ * The `preload` parameter may be either:
+ * 1. a single array OR
+ * 2. a nested array containing: `preload` array and/or `plugin` array and/or undefined
  *
- * If you don't supply `proceed`, call both `catch` and `then` on your own to proceed as appropriate.
- *
- * Notes:
- * 1. There is only one `catch`able error, bad preload option type, which has already been logged for you.
- * 2. The promise otherwise always resolves; fetch/load failures are not errors.
- * 3. Successfully loaded scripts are cached via `System.setPreloadScript`,
- * to be eval'd later by api_decorator as windows spin up.
- * 4. No resolve values are available to `then`; to access loaded scripts,
- * call `System.getPreloadScript` or `System.getSelectedPreloadScripts`.
+ * Errors are caught herein and logged; the caller does not need to call .catch().
+ * Per `cachedFetch`, errors are limited to actual transport errors; unexpected server responses are not
+ * considered errors. E.g., 404 status does not throw an error; rather `success` is set to false and the
+ * `data` property is undefined.
  */
-
-export function fetchAndLoadPreloadScripts(
+export function download(
     identity: Identity,
-    preloadOption: PreloadOption,
-    proceed?: () => void
-): Promise<LoadResponses> {
+    optionOrOptions: PreloadOption | PreloadOption[]
+): Promise<Fileset> {
     const timer = new Timer();
-    let result: Promise<LoadResponses>;
+    const preloads: PreloadOption = concat(optionOrOptions); // see above and also see concat for explanation
 
-    const loadedScripts: Promise<any>[] = preloadOption.map((preload: PreloadInstance) => {
-        // following if clause avoids re-fetch for remote resources already in memory
-        // todo: following if clause slated for removal (RUN-3227, blocked by RUN-3162), i.e., return always
-        if (
-            !REGEX_FILE_SCHEME.test(getIdentifier(preload)) && // not a local file AND...
-            System.getPreloadScript(getIdentifier(preload))   // ...is already in memory?
-        ) {
-            // previously downloaded
-            logPreload('info', identity, 'previously cached:', getIdentifier(preload));
-            updatePreloadState(identity, preload, 'load-succeeded');
-            return Promise.resolve(true);
+    // start overlapped downloads
+    const filePromises: Promise<File>[] = preloads.map((preload: PreloadItem): Promise<File> => {
+        const toPreloaded : (fetch: FetchResponse | PluginResponse) => File =
+            mixinFetchResults.bind(null, identity, timer, preload);
+
+        updatePreloadState(identity, preload, 'load-started');
+        logPreload('info', identity, 'load-started', preload);
+
+        if (isPreloadScript(preload)) {
+            return cachedFetch(preload.url).then(toPreloaded);
         } else {
-            // not previously downloaded *OR* previous downloaded failed
-            if (isPreloadScript(preload)) {
-                return fetchToCache(identity, preload).then(loadFromCache);
-            } else {
-                return fetchPlugin(identity, preload).then(loadFromCache);
-            }
+            return fetchPlugin(identity, preload).then(loadPlugin).then(toPreloaded);
         }
     });
 
     // wait for them all to resolve
-    result = Promise.all(loadedScripts);
+    const allLoaded: Promise<Fileset> = Promise.all(filePromises);
 
-    result.catch((error: Error | string) => {
-        logPreload('error', identity, 'error', '', error);
-        return error;
-    }).then((values: LoadResponses) => {
-        const compact = values.filter(b => b);
-        logPreload('info', identity, 'summary: fetch/load',  `${compact.length} of ${values.length} scripts`, timer);
-        return values;
-    });
+    allLoaded
+        .then(finish)
+        .catch(logError);
 
-    if (proceed) {
-        result.catch(proceed).then(proceed);
+    return allLoaded;
+
+    function finish(fileset: Fileset): Fileset {
+        // STEP 1: log a summary of how many scripts and p;lugins were successful and total time
+        const scripts: Fileset = fileset.filter(isPreloadScript);
+        const loadedScripts: Fileset = scripts.filter((file: File) => file.success);
+
+        const plugins: Fileset = fileset.filter(isPluginModule);
+        const loadedPlugins: Fileset = plugins.filter((file: File) => file.success);
+
+        const summary: string[] = [];
+        if (scripts.length) { summary.push(`${loadedScripts.length} of ${scripts.length} scripts`); }
+        if (plugins.length) { summary.push(`${loadedPlugins.length} of ${plugins.length} plugins`); }
+
+        const jointSummary = summary.join(' and ');
+        logPreload('info', identity, 'load summary', jointSummary, timer);
+
+        // STEP 2: save the fileset in memory for api-decorator eval
+        set(identity, fileset);
+
+        return fileset;
     }
 
-    return result;
-}
-
-// resolves to type `PreloadFetched` on success
-// resolves to `undefined` when fetch fails to cache the asset
-function fetchToCache(identity: Identity, preloadScript: PreloadScript): Promise<FetchResponse> {
-    const timer = new Timer();
-    const { url } = preloadScript;
-
-    logPreload('info', identity, 'fetch started', url);
-    updatePreloadState(identity, preloadScript, 'load-started');
-
-    return new Promise((resolve: FetchResolver, reject: Rejector) => {
-        cachedFetch(identity.uuid, url, (fetchError: Error, scriptPath: string) => {
-            if (!fetchError) {
-                logPreload('info', identity, 'fetch succeeded', url, timer);
-                resolve({identity, preloadScript, scriptPath});
-            } else {
-                logPreload(preloadScript.optional ? 'warning' : 'error', identity, 'fetch failed', url, fetchError);
-                updatePreloadState(identity, preloadScript, 'load-failed');
-                resolve();
-            }
-        });
-    });
+    function logError(error: Error | string | number) {
+        logPreload('error', identity, 'error', '', error);
+    }
 }
 
 // resolves to type `PreloadFetched` on success
 // resolves to `undefined` when fetch fails to download asset to Chromium cache
-function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<FetchResponse> {
+function fetchPlugin(identity: Identity, plugin: PluginModule): Promise<PluginResponse> {
     return new Promise((resolve, reject) => {
         const sourceUrl = getConfigUrlByUuid(identity.uuid);
         const msg: PluginQuery = {
             topic: 'application',
             messageId: '1',
             action: 'query-plugin',
-            name: preloadPlugin.name,
-            version: preloadPlugin.version,
-            optional: preloadPlugin.optional,
+            name: plugin.name,
+            version: plugin.version,
+            optional: plugin.optional,
             sourceUrl
         };
 
-        rvmMessageBus.publish(msg, (resp) => {
-            if (resp.payload.hasOwnProperty('path') && resp.payload.action === 'query-plugin') {
-                const scriptPath = `${resp.payload.path}\\${resp.payload.target}`;
-                resolve({identity, preloadPlugin, scriptPath});
+        rvmMessageBus.publish(msg, response => {
+            const { payload } = response;
+            if (payload.hasOwnProperty('path') && payload.action === 'query-plugin') {
+                const filePath = join(payload.path, payload.target);
+                resolve({identity, plugin, filePath});
             } else {
-                updatePreloadState(identity, preloadPlugin, 'load-failed');
+                updatePreloadState(identity, plugin, 'load-failed');
                 resolve();
             }
         });
@@ -181,60 +167,115 @@ function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<
 
 // resolves to type `PreloadLoaded` on success
 // resolves to `undefined` when above fetch failed or when successfully fetched asset fails to load from Chromium cache
-function loadFromCache(opts: FetchResponse): Promise<boolean> {
-    return new Promise((resolve: Resolver, reject: Rejector) => {
-        if (!opts || !opts.scriptPath) {
-            resolve(false); // got fetchError above OR no error but no scriptPath either; in any case don't attempt to load
-        } else {
-            const preload = opts.preloadScript ? opts.preloadScript : opts.preloadPlugin;
-            const { identity, scriptPath } = opts;
-            const id = getIdentifier(preload);
+function loadPlugin(opts: PluginResponse): FetchResponse {
+    const fetchResponse: FetchResponse = new FetchResponse();
 
-            logPreload('info', identity, 'load started', id);
-            updatePreloadState(identity, preload, 'load-started');
+    if (opts) {
+        const { identity, plugin, filePath }: { identity: Identity, plugin: PluginModule, filePath: string } = opts;
 
-            fs.readFile(scriptPath, 'utf8', (readError: Error, scriptText: string) => {
-                // todo: remove following workaround when RUN-3162 issue fixed
-                //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
-                if (!readError && /^(Cannot GET |<\?xml)/.test(scriptText)) {
-                    // got a 404 but response was cached as a
-                    logPreload(isOptional(preload) ? 'warning' : 'error', identity, 'load failed', id, 404);
-                    updatePreloadState(identity, preload, 'load-failed');
-                    resolve(false);
-                    return;
-                }
-                //END WORKAROUND
+        fs.readFile(filePath, 'utf8', (err: Error, data: string) => {
+            if (err) {
+                const state: PreloadState = 'load-failed';
+                const level: string = plugin.optional ? 'warning' : 'error';
 
-                if (!readError) {
-                    logPreload('info', identity, 'load succeeded', id);
-                    updatePreloadState(identity, preload, 'load-succeeded');
-                    System.setPreloadScript(getIdentifier(preload), scriptText);
-                } else {
-                    logPreload(isOptional(preload) ? 'warning' : 'error', identity, 'load failed', id, readError);
-                    updatePreloadState(identity, preload, 'load-failed');
-                }
+                logPreload(level, identity, state, plugin, err);
+                updatePreloadState(identity, plugin, state);
+            } else {
+                const state: PreloadState = 'load-succeeded';
 
-                resolve(!readError);
-            });
-        }
+                logPreload('info', identity, state, plugin);
+                updatePreloadState(identity, plugin, state);
+
+                fetchResponse.success = true;
+                fetchResponse.data = data;
+            }
+        });
+    }
+
+    return fetchResponse;
+}
+
+function mixinFetchResults(identity: Identity, timer: Timer, preload: PreloadItem, fetchResponse: FetchResponse) : File {
+    const state: PreloadState = fetchResponse.success ? 'load-succeeded' : 'load-failed';
+
+    updatePreloadState(identity, preload, state);
+    logPreload('info', identity, state, preload, timer);
+
+    return Object.assign(<File>{}, preload, fetchResponse);
+}
+
+function concat(preloads: PreloadOption | PreloadOption[]): PreloadOption {
+    // concatenates multiple arrays into a single array and filters out undefined
+    return Array.prototype.concat.apply([], preloads).filter((preload: PreloadItem) => preload);
+}
+
+function set(identity: Identity, fileSet: Fileset) {
+    cache[uniqueWindowKey(identity)] = fileSet;
+}
+
+// Be sure to supply a catch (`get(...).catch(...)`) as `validate` may throw an error
+export function get(identity: Identity, preloads: PreloadOption): Promise<Fileset> {
+    const fileset: Fileset = cache[uniqueWindowKey(identity)];
+    let promisedScriptSet: Promise<Fileset>;
+
+    if (fileset) {
+        // release from memory
+        // todo: consider not releasing main window's for reuse by child windows that inherit
+        delete cache[uniqueWindowKey(identity)];
+
+        // scripts were fully loaded & cached prior to window create
+        promisedScriptSet = Promise.resolve(fileset);
+    } else {
+        // scripts missing due to reload or window.open
+        promisedScriptSet = download(identity, preloads);
+    }
+
+    return promisedScriptSet.then(validate);
+}
+
+function uniqueWindowKey(identity: Identity): string {
+    return route.window('preload', identity.uuid, identity.name);
+}
+
+//validate for any missing required script(s) even one of which will preclude running any scripts at all
+function validate(fileset: Fileset): Fileset {
+    //todo: check this earlier and if any, cancel remaining in-progress downloads which could be sizable
+    const missingRequiredFiles: Fileset = fileset.filter((file: File) => {
+        return isPreloadScript(file) && !file.optional && !file.success;
     });
+
+    if (missingRequiredFiles.length) {
+        const IDs: string[] = missingRequiredFiles.map(getIdentifier);
+        const message = `Execution of preload scripts and plugin modules canceled due to missing required resource(s) ${IDs}`;
+        throw new Error(message);
+    }
+
+    return fileset;
 }
 
 function logPreload(
     level: string,
     identity: Identity,
     state: string,
-    id: string,
-    timerOrError?: Timer | Error | string | number
+    target: PreloadItem | string,
+    value?: Timer | Error | string | number
 ): void {
-    if (id) {
-        state += ` for ${id}`;
+    state = state.replace(/-/g, ' ');
+
+    if (target) {
+        if (isPreloadScript(target)) {
+            target = `preload script ${getIdentifier(target)}`;
+        } else if (isPluginModule(target)) {
+            target = `plugin module ${getIdentifier(target)}`;
+        }
+
+        state += ` for ${target}`;
     }
 
-    if (timerOrError instanceof Timer) {
-        state += timerOrError.toString(' in #.### secs.');
-    } else if (timerOrError) {
-        state += `: ${JSON.stringify(timerOrError)}`;
+    if (value instanceof Timer) {
+        state += value.toString(' in #.### secs.');
+    } else if (value) {
+        state += `: ${JSON.stringify(value instanceof Error ? errorToPOJO(value) : value)}`;
     }
 
     log.writeToLog(level, `[PRELOAD] [${identity.uuid}]-[${identity.name}] ${state}`);
@@ -242,48 +283,29 @@ function logPreload(
 
 function updatePreloadState(
     identity: Identity,
-    preload: PreloadInstance,
-    state?: string
+    preload: PreloadItem,
+    state: PreloadState
 ): void {
-    const id = getIdentifier(preload);
-
-    const { uuid, name } = identity;
+    const { uuid, name }: Identity = identity;
     const eventRoute = route.window('preload-state-changing', uuid, name);
-    const preloadState = Object.assign({}, preload, { state });
+    const preloadState: StatefulPreloadFile = Object.assign(<File>{}, preload, { state });
 
-    preloadStates.set(id, state);
+    preloadStates.set(getIdentifier(preload), state);
     ofEvents.emit(eventRoute, {name, uuid, preloadState});
-}
-
-function isPreloadOption(preloadOption: PreloadOption): preloadOption is PreloadOption {
-    return (
-        preloadOption &&
-        Array.isArray(preloadOption) &&
-        preloadOption.every(isPreloadInstance)
-    );
-}
-
-// type guard: a Preload object
-function isPreloadInstance(preload: PreloadInstance): preload is PreloadInstance {
-    return (
-        typeof preload === 'object' && typeof getIdentifier(preload) === 'string'
-    );
-}
-
-function isPreloadScript(preload: any): preload is PreloadScript {
-    return (
-        typeof preload === 'object' && preload.hasOwnProperty('url')
-    );
 }
 
 export function getPreloadScriptState(identifier: string): string {
     return preloadStates.get(identifier);
 }
 
-export function getIdentifier(preload: any) {
-    return preload.url ? preload.url : `${preload.name}-${preload.version}`;
+export function getIdentifier(preload: PreloadItem): string {
+    return isPreloadScript(preload) ? preload.url : `${preload.name}-${preload.version}`;
 }
 
-function isOptional(preload: any) {
-    return preload.optional;
+function isPreloadScript(preload: any): preload is PreloadScript {
+    return typeof preload === 'object' && preload.hasOwnProperty('url');
+}
+
+function isPluginModule(preload: any): preload is PreloadScript {
+    return typeof preload === 'object' && preload.hasOwnProperty('name') && preload.hasOwnProperty('version');
 }
