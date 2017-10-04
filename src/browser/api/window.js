@@ -394,20 +394,14 @@ Window.create = function(id, opts) {
         };
 
         browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
-            winObj.frames.delete(closedFrameName);
-
             const entityType = frameRoutingId === 1 ? 'window' : 'iframe';
-            const frameName = closedFrameName || name; //
+            const frameName = closedFrameName || name; // the parent name is considered a frame as well
             const payload = { uuid, name, frameName, entityType };
+
+            winObj.frames.delete(closedFrameName);
             ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
             ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
         };
-
-        // todo listen & create "isFrame" entry for core_state
-        // todo destroy this listener
-        browserWindow.webContents.on('create-iframe-child', (sender, data) => {
-            // bang
-        });
 
         // this is a first pass at teardown. for now, push the unsubscribe
         // function for each subscription you make, on closed, remove them all
