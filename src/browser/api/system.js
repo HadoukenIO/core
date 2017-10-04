@@ -39,7 +39,7 @@ import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
-import * as Frame from './frame';
+import { FrameInfo } from './frame';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -295,23 +295,24 @@ exports.System = {
     getDeviceId: function() {
         return electronApp.getHostToken();
     },
-    // TODO unit test me!!
     getEntityInfo: function(identity) {
         let entityInfo = coreState.getInfoByUuidFrame(identity);
 
         if (entityInfo) {
-            return new Frame.FrameInfo(entityInfo);
+            return new FrameInfo(entityInfo);
         } else if (ExternalApplication.getExternalConnectionByUuid(identity.uuid)) {
             const externalAppInfo = ExternalApplication.getInfo(identity);
-            return new Frame.FrameInfo({
+            return new FrameInfo({
                 uuid: identity.uuid,
                 entityType: 'external connection',
                 parent: externalAppInfo.parent
             });
         } else {
-            return new Frame.FrameInfo(identity);
-        }
 
+            // this covers the case of a wrapped entity that does not exist
+            // where you only know the uuid and name you gave it
+            return new FrameInfo(identity);
+        }
     },
     getEnvironmentVariable: function(varsToExpand) {
         if (Array.isArray(varsToExpand)) {
@@ -621,8 +622,6 @@ exports.System = {
         return MonitorInfo.getNearestDisplayRoot(point);
     },
     raiseEvent: function(eventName, eventArgs) {
-        log.writeToLog(1, `raising: ${eventName}`, true);
-        log.writeToLog(1, `aaaan the args: ${JSON.stringify(eventArgs)}`, true);
         return ofEvents.emit(eventName, eventArgs);
     },
     downloadAsset: function(identity, asset, cb) {

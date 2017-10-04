@@ -38,31 +38,22 @@ export class FrameInfo implements Shapes.FrameInfo {
 
 export module Frame {
     export function addEventListener (identity: Identity, targetIdentity: Identity, type: string, listener: Function) {
-        //  SAME AS WINDOW
         const eventString = route.frame(type, targetIdentity.uuid, targetIdentity.name);
         const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
-
         let unsubscribe;
         let browserWinIsDead;
 
         const safeListener = (...args: any[]) => {
-
             try {
-
                 listener.call(null, ...args);
-
             } catch (err) {
-
                 browserWinIsDead = errRegex.test(err.message);
 
-                // if we error the browser frame that this used to reference
-                // has been destroyed, just remove the listener
                 if (browserWinIsDead) {
                     ofEvents.removeListener(eventString, safeListener);
                 }
             }
         };
-
 
         ofEvents.on(eventString, safeListener);
 
@@ -70,7 +61,6 @@ export module Frame {
             ofEvents.removeListener(eventString, safeListener);
         };
         return unsubscribe;
-
     }
 
     export function removeEventListener (identity: Identity, type: string, listener: Function) {
@@ -91,18 +81,17 @@ export module Frame {
 
     export function getParentWindow(identity: Shapes.Identity) {
         const app: Shapes.App = coreState.getAppByUuid(identity.uuid);
-        const parentWindow: Shapes.Window | undefined = app.children.find((win: Shapes.Window) =>
-            win.openfinWindow &&
-            win.openfinWindow.frames &&
-            win.openfinWindow.frames.get(identity.name)
-        );
+        const parentWindow: Shapes.Window | undefined = app.children.find((win: Shapes.Window) => {
+            const ofWin = win.openfinWindow;
+            const frames = ofWin && ofWin.frames;
 
-        log.writeToLog(1, 'we in here', true);
-        log.writeToLog(1, JSON.stringify(identity), true);
+            return frames && frames.get(identity.name);
+        });
+
         if (!parentWindow || !parentWindow.openfinWindow) {
-            log.writeToLog(1, 'we in here', true);
             return new FrameInfo();
         }
+
         const { uuid, name } = parentWindow.openfinWindow;
         return getInfo({ uuid, name });
     }

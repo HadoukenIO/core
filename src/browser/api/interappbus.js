@@ -25,7 +25,6 @@ let util = require('util');
 let EventEmitter = require('events').EventEmitter;
 import SubscriptionManager from '../subscription_manager';
 import ofEvents from '../of_events';
-import * as log from '../log';
 
 const subscriptionManager = new SubscriptionManager();
 let callbacks = {};
@@ -123,8 +122,6 @@ function dispatchToSubscriptions(topic, identity, destUuid, destName, payload, s
         name: destName || ANY_NAME
     });
 
-    log.writeToLog(1, keys, true);
-
     //TODO: sendToAll is a symptom of not knowing the target identity given a set of keys.
     if (sendToAll) {
         return ofBus.emit(keys.fromAny, payload) +
@@ -159,8 +156,6 @@ function subscribe(identity, payload, listener) {
         uuid: senderUuid,
         name: senderName
     }, identity);
-
-    log.writeToLog(1, keys, true);
 
     ofBus.on(keys.toAny, listener);
     ofBus.on(keys.toWin, listener);
