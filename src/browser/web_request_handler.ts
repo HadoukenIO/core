@@ -84,16 +84,18 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
         if (wc) {
             electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler got webcontents ${wc.id}`);
             const bw = wc.getOwnerBrowserWindow();
-            const opts: Shapes.WindowOptions = coreState.getWindowOptionsById(bw.id);
-            electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts ${JSON.stringify(opts)}`);
-            if (opts.customRequestHeaders) {
-                for (const rhItem of opts.customRequestHeaders) {
-                    if (matchUrlPatterns(details.url, rhItem)) {
-                        applyHeaders(details.requestHeaders, rhItem);
-                        headerAdded = true;
+            if (bw) {
+                const opts: Shapes.WindowOptions = coreState.getWindowOptionsById(bw.id);
+                electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts ${JSON.stringify(opts)}`);
+                if (opts.customRequestHeaders) {
+                    for (const rhItem of opts.customRequestHeaders) {
+                        if (matchUrlPatterns(details.url, rhItem)) {
+                            applyHeaders(details.requestHeaders, rhItem);
+                            headerAdded = true;
+                        }
                     }
                 }
-            }
+            } // bw can be undefined during close of the window
         } else {
             electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler missing webContent`);
         }
