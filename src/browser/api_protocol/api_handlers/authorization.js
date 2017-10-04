@@ -105,6 +105,8 @@ function onRequestAuthorization(id, data) {
         externalConnObj.configUrl = authObj.authReqPayload.configUrl;
     }
 
+    //issue with older adapters where part of the data is comming from different locations;
+    const externalApplicationOptions = ExternalApplication.createExternalApplicationOptions(Object.assign({}, authObj.authReqPayload, externalConnObj));
     //Check if the file and token were written.
 
     authenticateUuid(authObj, data.payload, (success, error) => {
@@ -121,19 +123,19 @@ function onRequestAuthorization(id, data) {
 
         socketServer.send(id, JSON.stringify(authorizationResponse));
         if (success) {
-            ExternalApplication.addExternalConnection(externalConnObj);
+            ExternalApplication.addExternalConnection(externalApplicationOptions);
             socketServer.connectionAuthenticated(id, uuid);
 
             rvmMessageBus.registerLicenseInfo({
                 data: {
-                    licenseKey: authObj && authObj.authReqPayload && authObj.authReqPayload.licenseKey,
-                    client: authObj && authObj.authReqPayload && authObj.authReqPayload.client,
+                    licenseKey: externalApplicationOptions.licenseKey,
+                    client: externalApplicationOptions.client,
                     uuid,
                     parentApp: {
                         uuid: null
                     }
                 }
-            }, authObj && authObj.authReqPayload && authObj.authReqPayload.configUrl);
+            }, externalApplicationOptions.configUrl);
         } else {
             socketServer.closeConnection(id);
         }

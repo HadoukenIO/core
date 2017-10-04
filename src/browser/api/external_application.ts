@@ -10,7 +10,27 @@ import { Identity } from '../../shapes';
 import * as ProcessTracker from '../process_tracker.js';
 import route from '../../common/route';
 
-const authenticatedConnections: any[] = [];
+const authenticatedConnections: ExternalApplicationOptions[] = [];
+
+export interface ExternalApplicationClient {
+    type: 'dotnet' | 'java' | 'air' | 'node' | 'silverlight';
+    version: string;
+}
+
+export interface ExternalApplicationOptions extends Identity {
+    client?: ExternalApplicationClient;
+    configUrl?: string;
+    id: number;
+    licenseKey?: string;
+    nonPersistent: boolean;
+    pid?: number;
+    runtimeClient: boolean;
+    type?: string; // authorization type e.g., 'file-token'
+}
+
+interface ExternalProcessInfo {
+    parent: Identity;
+}
 
 export module ExternalApplication {
     export function addEventListener(identity: Identity, type: string, listener: Function) {
@@ -33,7 +53,7 @@ export module ExternalApplication {
         };
     }
 
-    export function addExternalConnection(externalConnObj: Identity) {
+    export function addExternalConnection(externalConnObj: ExternalApplicationOptions) {
         const {
             uuid
         } = externalConnObj;
@@ -48,19 +68,27 @@ export module ExternalApplication {
         });
     }
 
-    export function getExternalConnectionByUuid(uuid: string) {
+    export function getExternalConnectionByUuid(uuid: string): ExternalApplicationOptions {
         return authenticatedConnections.find(c => {
             return c.uuid === uuid;
         });
     }
 
-    export function getExternalConnectionById(id: number) {
+    export function getExternalConnectionById(id: number): ExternalApplicationOptions {
         return authenticatedConnections.find(c => {
             return c.id === id;
         });
     }
 
-    export function removeExternalConnection(externalConnection: Identity) {
+    export function isRuntimeClient(uuid: string) {
+        const target = authenticatedConnections.find(c => {
+            return c.uuid === uuid;
+        });
+
+        return target ? target.runtimeClient === true : false;
+    }
+
+    export function removeExternalConnection(externalConnection: ExternalApplicationOptions) {
         authenticatedConnections.splice(authenticatedConnections.indexOf(externalConnection), 1);
 
         ofEvents.emit(route.externalApplication('disconnected', externalConnection.uuid), {
@@ -77,7 +105,14 @@ export module ExternalApplication {
         return authenticatedConnections.slice(0);
     }
 
-    interface ExternalProcessInfo {
-        parent: Identity;
+    export function createExternalApplicationOptions(externalOpts: any): ExternalApplicationOptions {
+        const externalAppOptions: ExternalApplicationOptions = {
+            id: externalOpts.id,
+            uuid: externalOpts.uuid,
+            runtimeClient: false,
+            nonPersistent: false
+        };
+
+        return Object.assign(externalAppOptions, externalOpts);
     }
 }
