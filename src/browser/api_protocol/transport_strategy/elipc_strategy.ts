@@ -24,11 +24,10 @@ declare var require: any;
 const coreState = require('../../core_state');
 const electronIpc = require('../../transports/electron_ipc');
 const system = require('../../api/system').System;
-const frameStrategy = coreState.argo.framestrategy;
 
-// TODO PUT THIS BACK
+// this represents the future default behavior, here its opt-in
+const frameStrategy = coreState.argo.framestrategy;
 const bypassLocalFrameConnect = frameStrategy === 'frames';
-// const bypassLocalFrameConnect = true;
 
 export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
@@ -43,14 +42,16 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             } else {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
-                    // singleFrameOnly check first so to prevent frame superceding when disabled.
-                    if (bypassLocalFrameConnect || !data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
+                    // If --framestrategy=frames is set, short circuit the checks. This will
+                    // allow calls from all frames through with iframes getting auto named
+                    if (bypassLocalFrameConnect ||
+                        !data.singleFrameOnly === false ||
+                        e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data, ack, nack))
                             .then(result => {
                                 // older action calls will invoke ack internally, newer ones will return a value
                                 if (result !== undefined) {
-
                                     ack(new AckPayload(result));
                                 }
                             }).catch(err => {
@@ -76,13 +77,13 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         const { uuid, name } = identity;
         const routingInfo = coreState.getRoutingInfoByUuidFrame(uuid, name);
 
-        if (!routingInfo) { return; } // TODO handle the failed lookup
+        if (!routingInfo) {
+            system.debugLog(1, `Routing info for uuid:${uuid} name:${name} not found`);
+            return;
+        }
 
         const { browserWindow, frameRoutingId } = routingInfo;
         const payload = JSON.stringify(payloadObj);
-
-        // we need to preserve the bulk send (i think...) so if the routing id is 1
-        // send to the entire window (potentially all frame ids based on frameConnect)
         const browserWindowLocated = browserWindow;
         const browserWindowExists = !browserWindow.isDestroyed();
         const validRoutingId = typeof frameRoutingId === 'number';
@@ -91,8 +92,10 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         if (!canTrySend) {
             system.debugLog(1, `uuid:${uuid} name:${name} frameRoutingId:${frameRoutingId} not reachable, payload:${payload}`);
         } else if (frameRoutingId === 1) {
+            // this is the main window frame
             browserWindow.send(electronIpc.channels.CORE_MESSAGE, payload);
         } else {
+            // frameRoutingId != 1 implies a frame
             browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
         }
     }
@@ -121,11 +124,9 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             const identity = {
                 name: subFrameName || opts.name,
                 uuid: opts.uuid,
-                parentFrame: opts.name, //rename to 'parent'?
+                parentFrame: opts.name,
                 entityType: e.sender.getEntityType(e.frameRoutingId)
             };
-
-            system.debugLog(1, `this is my frame name ${e.sender.getFrameName(e.frameRoutingId)}`);
 
             /* tslint:disable: max-line-length */
             //message payload might contain sensitive data, mask it.

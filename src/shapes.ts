@@ -28,6 +28,10 @@ export interface FrameInfo extends Identity {
     entityType: EntityType;
 }
 
+export interface ChildFrameInfo extends FrameInfo {
+    frameRoutingId: number;
+}
+
 /**
  * Window bounds
  */
@@ -80,7 +84,7 @@ export interface App {
 }
 
 export interface Window {
-    children: Array<number|string>;
+    children: number[];
     id: number|string;
     openfinWindow: OpenFinWindow|null;
     parentId?: number;
@@ -89,14 +93,14 @@ export interface Window {
 
 export interface OpenFinWindow {
     isIframe?: boolean;
-    parentFrameId?: string|number;
+    parentFrameId?: number;
     _openListeners: (() => void)[];
     _options: WindowOptions;
     _window: BrowserWindow;
     app_uuid: string;
     browserWindow: BrowserWindow;
     children: OpenFinWindow[];
-    frames: any; // TODO type this
+    frames: Map<string, ChildFrameInfo>;
     forceClose: boolean;
     groupUuid: string|null;
     hideReason: string;

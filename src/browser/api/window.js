@@ -337,7 +337,6 @@ let optionSetters = {
 
 
 Window.create = function(id, opts) {
-    log.writeToLog('info', `just got this for the window: ${id}`);
     let name = opts.name;
     let uuid = opts.uuid;
     let identity = {
@@ -381,20 +380,23 @@ Window.create = function(id, opts) {
     if (!opts._noregister) {
 
         browserWindow = BrowserWindow.fromId(id);
+
+        // called in the WebContents class in the runtime
         browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
             const parentFrameId = id;
-            const frameInfo = Object.assign({}, {
+            const frameInfo = {
                 name: frameName,
                 uuid,
                 parentFrameId,
                 parent: { uuid, name },
                 frameRoutingId,
                 entityType: 'iframe'
-            });
+            };
 
             winObj.frames.set(frameName, frameInfo);
         };
 
+        // called in the WebContents class in the runtime
         browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
             const entityType = frameRoutingId === 1 ? 'window' : 'iframe';
             const frameName = closedFrameName || name; // the parent name is considered a frame as well
@@ -845,8 +847,6 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
     safeListener = (...args) => {
 
         try {
-            log.writeToLog(1, `da event: ${eventString}`, true);
-            log.writeToLog(1, `da args: ${JSON.stringify(...args)}`, true);
             listener.call(null, ...args);
 
         } catch (err) {
@@ -1025,11 +1025,9 @@ Window.focus = function(identity) {
     browserWindow.focus();
 };
 
-
 Window.getAllFrames = function(identity) {
-    let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
-    // Valid window with no frames returns an empty obj
-    // TODO return these as a list of frame infos
+    const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
+
     if (!openfinWindow) {
         return [];
     }
@@ -1118,11 +1116,7 @@ Window.getNativeId = function(identity) {
 
 Window.getNativeWindow = function() {};
 
-// the options are stored at to course a level....
-Window.getOptions = function(identity, iframeInfo = {}) {
-    log.writeToLog(1, 'getOptions', true);
-    log.writeToLog(1, identity, true);
-    log.writeToLog(1, iframeInfo, true);
+Window.getOptions = function(identity) {
 
     try {
         return getElectronBrowserWindow(identity, 'get options for')._options;
@@ -2230,10 +2224,6 @@ function handleCustomAlerts(id, opts) {
 //If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
 function getElectronBrowserWindow(identity, errDesc) {
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    // log.writeToLog(1, 'bleep', true);
-    // log.writeToLog(1, openfinWindow, true);
-    // log.writeToLog(1, identity, true);
-    // log.writeToLog(1, 'bloop', true);
     let browserWindow = openfinWindow && openfinWindow.browserWindow;
 
     if (errDesc && !browserWindow) {

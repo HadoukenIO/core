@@ -81,11 +81,12 @@ export module Frame {
 
     export function getParentWindow(identity: Shapes.Identity) {
         const app: Shapes.App = coreState.getAppByUuid(identity.uuid);
-        const parentWindow: Shapes.Window | undefined = app.children.find((win: Shapes.Window) => {
+        const parentWindow: Shapes.Window = app.children.find((win: Shapes.Window) => {
             const ofWin = win.openfinWindow;
             const frames = ofWin && ofWin.frames;
+            const hasFrame = frames && frames.get(identity.name);
 
-            return frames && frames.get(identity.name);
+            return !!hasFrame;
         });
 
         if (!parentWindow || !parentWindow.openfinWindow) {

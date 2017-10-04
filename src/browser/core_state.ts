@@ -29,7 +29,6 @@ import { app } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
-import * as log from './log';
 
 export interface StartManifest {
     data: Shapes.Manifest;
@@ -58,7 +57,7 @@ export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
-export const apps: Shapes.App[] = [];
+const apps: Shapes.App[] = [];
 
 let startManifest = {};
 
@@ -126,7 +125,7 @@ export function removeChildById(id: number): void {
     }
 }
 
-export function getChildrenByWinId(id: number): boolean|Array<number|string> {
+export function getChildrenByWinId(id: number): boolean|number[] {
     const win = getWinById(id);
     return win && win.children;
 }
@@ -263,7 +262,7 @@ export function setAppOptions(opts: Shapes.WindowOptions, configUrl: string = ''
     return app;
 }
 
-export function getWinById(id: number| string): Shapes.Window|undefined {
+export function getWinById(id: number): Shapes.Window|undefined {
     return getWinList().find(win => win.id === id);
 }
 
@@ -281,7 +280,6 @@ export function getChildrenByApp(id: number): Shapes.OpenFinWindow[]|void {
         .map(child => child.openfinWindow);
 }
 
-// perhaps just check parentId === child for iframe check?
 export function addChildToWin(parentId: number, childId: number): number|void {
     const app = getAppByWin(parentId);
 
@@ -303,23 +301,10 @@ export function addChildToWin(parentId: number, childId: number): number|void {
 
     return app.children.push({
         children: [],
-        id: childId, //should the be null if isIframe???
+        id: childId,
         openfinWindow: null,
         parentId: parentId
-        //isIframe
     });
-}
-
-export function updateWinName(uuid: string, name: string,  newId: number | string): boolean {
-    const winToUpdate = getOfWindowByUuidName(uuid, name);
-    const {parentId} = winToUpdate;
-    const parent = getWinById(parentId);
-
-    parent.children = parent.children.filter(id => id !== name);
-    parent.children.push(newId);
-    winToUpdate.id = newId;
-
-    return false;
 }
 
 export function getWinObjById(id: number): Shapes.OpenFinWindow|void {
@@ -327,11 +312,10 @@ export function getWinObjById(id: number): Shapes.OpenFinWindow|void {
 
     if (!win) {
         console.warn('getWinObjById - window not found', arguments);
-        return; //throw new Error('getWinObjById - window not found');
+        return;
 
     }
 
-    //console.log('\n\ngetWinObjById DONE', arguments);
     return win.openfinWindow;
 }
 
@@ -415,15 +399,15 @@ export function getMainWindowOptions(id: number): Shapes.WindowOptions|void {
 
     if (!app) {
         console.warn('getMainWindowOptions - app not found', arguments);
-        return; //throw new Error('getMainWindowOptions - app not found');
+        return;
     }
 
     if (!app.appObj) {
         console.warn('getMainWindowOptions - app opts not found', arguments);
-        return; //throw new Error('getMainWindowOptions - app opts not found');
+        return;
     }
 
-    // console.log('getMainWindowOptions', app.appObj._options);
+
     return app.appObj._options;
 }
 
@@ -622,7 +606,6 @@ export function getParentIdentity(childIdentity: Shapes.Identity): Shapes.Identi
 }
 
 export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.FrameInfo {
-    log.writeToLog(1, `go get ${JSON.stringify(targetIdentity)}`, true);
     const {uuid, name: frame} = targetIdentity;
 
     const app = appByUuid(uuid);
@@ -658,7 +641,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
     }
 
     for (const { openfinWindow } of app.children) {
-        const { name, isIframe, parentFrameId } = openfinWindow;
+        const { name, parentFrameId } = openfinWindow;
         let browserWindow: Shapes.BrowserWindow;
         browserWindow = openfinWindow.browserWindow;
 

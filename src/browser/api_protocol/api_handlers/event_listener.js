@@ -19,7 +19,6 @@ limitations under the License.
 
 // npm modules
 let _ = require('underscore');
-import * as log from '../../log';
 
 // local modules
 let apiProtocolBase = require('./api_protocol_base.js');
@@ -62,9 +61,6 @@ function EventListenerApiHandler() {
         'window': {
             name: 'window',
             subscribe: function(identity, type, payload, cb) {
-                // log.writeToLog(1, ``, true );
-                // log.writeToLog(1, `rubber meet road ${JSON.stringify(message)}`, true);
-
                 const {
                     uuid,
                     name
@@ -101,8 +97,6 @@ function EventListenerApiHandler() {
         'frame': {
             name: 'frame',
             subscribe: function(identity, type, payload, cb) {
-                log.writeToLog(1, `**** event_listener l104 args are ${JSON.stringify(identity)} ${type}${JSON.stringify(payload)}`, true);
-
                 const {
                     uuid,
                     name
@@ -207,7 +201,6 @@ function EventListenerApiHandler() {
         } else if (subTopicProvider && typeof(subTopicProvider.subscribe) === 'function') {
 
             unsubscribe = subTopicProvider.subscribe(identity, type, message.payload, (emmitedPayload) => {
-                log.writeToLog(1, `rubber meet road ${JSON.stringify(message)}`, true);
                 let eventObj = {
                     action: 'process-desktop-event',
                     payload: {
@@ -229,7 +222,6 @@ function EventListenerApiHandler() {
                 apiProtocolBase.sendToIdentity(identity, eventObj);
             });
 
-            log.writeToLog(1, `there it was... ${JSON.stringify([identity, topic, uuid, type, name])}`, true);
             apiProtocolBase.registerSubscription(unsubscribe, identity, topic, uuid, type, name);
         }
         ack(successAck);

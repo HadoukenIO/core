@@ -322,13 +322,11 @@ function hideWindow(identity, message, ack) {
 }
 
 
-function getAllFrames(identity, message, ack) {
-    var payload = message.payload,
-        dataAck = _.clone(successAck),
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+function getAllFrames(identity, message) {
+    const payload = message.payload;
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 
-    dataAck.data = Window.getAllFrames(windowIdentity);
-    ack(dataAck);
+    return Window.getAllFrames(windowIdentity);
 }
 
 function getWindowSnapshot(identity, message, ack) {
@@ -367,9 +365,7 @@ function getWindowOptions(identity, message, ack) {
 function getCurrentWindowOptions(identity, message, ack) {
     let dataAck = _.clone(successAck);
 
-    //const {payload:{isIframe, name}} = message;
-
-    dataAck.data = Window.getOptions(identity, message.payload);
+    dataAck.data = Window.getOptions(identity);
     ack(dataAck);
 }
 

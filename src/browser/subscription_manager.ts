@@ -16,7 +16,6 @@ limitations under the License.
 import ofEvents from './of_events';
 import route from '../common/route';
 import { Identity } from '../shapes';
-import * as log from './log';
 
 interface Subscription {
     fn: () => void;

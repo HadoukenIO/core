@@ -14,11 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import * as apiProtocolBase from './api_protocol_base';
-
 import { Frame } from '../../api/frame';
 import { Identity } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
-
 
 const successAck: object = {
     success: true
@@ -34,7 +32,7 @@ export class FrameApiHandler {
         apiProtocolBase.registerActionMap(this.actionMap);
     }
 
-    private getInfo(identity: Identity, message: any, ack: any) {
+    private getInfo(identity: Identity, message: any) {
         const frameIdentity: any = apiProtocolBase.getTargetWindowIdentity(message.payload);
 
         return Frame.getInfo(frameIdentity);
