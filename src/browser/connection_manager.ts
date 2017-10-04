@@ -61,7 +61,7 @@ function buildNoopConnectionManager() {
     connectionManager.connections = [];
 }
 
-function isMeshEnabled(args: ArgMap) {
+function isMeshEnabled(args: ArgMap = {}) {
     let enabled = false;
     const enableMesh = args[enableMeshCommandLineFlag];
     const securityRealm = args[securityRealmFlag];
