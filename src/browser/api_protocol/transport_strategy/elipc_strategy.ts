@@ -70,10 +70,6 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     public send(identity: any, payloadObj: any): void {
-        system.debugLog(1, `send it to this guy...
-            ${JSON.stringify(identity)}
-            ${JSON.stringify(payloadObj)}`);
-
         const { uuid, name } = identity;
         const routingInfo = coreState.getRoutingInfoByUuidFrame(uuid, name);
 

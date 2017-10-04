@@ -297,7 +297,7 @@ exports.System = {
         return electronApp.getHostToken();
     },
     getEntityInfo: function(identity) {
-        let entityInfo = coreState.getInfoByUuidFrame(identity);
+        const entityInfo = coreState.getInfoByUuidFrame(identity);
 
         if (entityInfo) {
             return new FrameInfo(entityInfo);

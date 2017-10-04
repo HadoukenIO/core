@@ -861,7 +861,7 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
         }
     };
 
-    // electronApp.vlog(1, `addEventListener ${eventString}`);
+    electronApp.vlog(1, `addEventListener ${eventString}`);
 
     ofEvents.on(eventString, safeListener);
 
@@ -1264,8 +1264,7 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
-        //return;
-        throw new Error('bad window name');
+        return;
     }
 
     let currentBounds = browserWindow.getBounds();

@@ -87,9 +87,12 @@ limitations under the License.
     }
 
     function getWindowIdentitySync() {
-        // let winOpts = getCachedWindowOptionsSync();
+        let winOpts = getWindowOptionsSync();
 
-        return getWindowOptionsSync();
+        return {
+            uuid: winOpts.uuid,
+            name: winOpts.name
+        };
     }
 
     function getSocketServerStateSync() {
@@ -325,28 +328,24 @@ limitations under the License.
     }
 
     function raiseReadyEvents(currWindowOpts) {
-        console.log('my curr opts: ');
-        console.log(currWindowOpts);
-        let winIdentity = {
-            uuid: currWindowOpts.uuid,
-            name: currWindowOpts.name
-        };
-        raiseEventSync(`window/initialized/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
+        const { uuid, name, parentFrame } = currWindowOpts;
+        const winIdentity = { uuid, name };
+        const parentFrameName = parentFrame || name;
+
+        raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
+
         // main window
-        if (currWindowOpts.uuid === currWindowOpts.name) {
-            raiseEventSync(`application/initialized/${currWindowOpts.uuid}`);
-        }
-        raiseEventSync(`window/dom-content-loaded/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
-        raiseEventSync(`window/connected/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
-
-        if (currWindowOpts.entityType && currWindowOpts.entityType === 'iframe') {
-            raiseEventSync(`window/frame-connected/${currWindowOpts.uuid}-${currWindowOpts.parentFrame}`, {
-                frameName: currWindowOpts.name,
-                entityType: currWindowOpts.entityType
-            });
+        if (uuid === name) {
+            raiseEventSync(`application/initialized/${uuid}`);
         }
 
-        raiseEventSync(`frame/connected/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
+        raiseEventSync(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
+        raiseEventSync(`window/connected/${uuid}-${name}`, winIdentity);
+        raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
+            frameName: name,
+            entityType: currWindowOpts.entityType
+        });
+        raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
     }
 
     function deferByTick(callback) {
@@ -377,13 +376,13 @@ limitations under the License.
 
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
-        // this is not the case with the updated frame strategy
-        if (!(winOpts.entityType && winOpts.entityType === 'iframe')) {
+        // this is not the case with the updated frame strategy. If the --framestrategy flag is set there
+        // will be an entityType, and if so we no longer need the openfin-api-ready
+        if (!winOpts.entityType) {
             electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
         }
 
-
-        wireUpMenu(glbl, winOpts);
+        wireUpMenu(glbl);
         wireUpZoomEvents();
         raiseReadyEvents(winOpts);
 
