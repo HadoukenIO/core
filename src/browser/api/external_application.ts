@@ -18,13 +18,13 @@ export interface ExternalApplicationClient {
 }
 
 export interface ExternalApplicationOptions extends Identity {
-    runtimeClient: boolean;
-    nonPersistent: boolean;
+    client?: ExternalApplicationClient;
+    configUrl?: string;
     id: number;
     licenseKey?: string;
-    configUrl?: string;
+    nonPersistent: boolean;
     pid?: number;
-    client?: ExternalApplicationClient;
+    runtimeClient: boolean;
     type?: string; // authorization type e.g., 'file-token'
 }
 
