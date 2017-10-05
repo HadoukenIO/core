@@ -27,10 +27,6 @@ let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
-import {
-    default as connectionManager,
-    keyFromPortInfo
-} from '../../connection_manager';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -101,7 +97,7 @@ function EventListenerApiHandler() {
                 const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
                 const localUnsub = Frame.addEventListener(identity, frameIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalClient = isBrowserClient(identity.uuid);
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
                 if (!islocalWindow && !isExternalClient) {
                     const subscription = {
