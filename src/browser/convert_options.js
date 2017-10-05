@@ -206,7 +206,6 @@ module.exports = {
         let opts = appJson['startup_app'];
         if (opts) {
             opts.plugin = appJson['plugin'];
-            opts.preload = appJson['preload'];
         }
         return opts;
     },
