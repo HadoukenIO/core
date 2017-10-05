@@ -483,8 +483,8 @@ limitations under the License.
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
+        const { preload } = 'preload' in convertedOpts ? convertedOpts : winOpts;
 
-        const { preload } = convertedOpts;
         if (!(preload && preload.length)) {
             proceed(); // short-circuit preload scripts fetch
         } else {

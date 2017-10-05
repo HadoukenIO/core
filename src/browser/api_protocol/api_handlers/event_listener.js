@@ -31,6 +31,7 @@ import {
     default as connectionManager,
     keyFromPortInfo
 } from '../../connection_manager';
+
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
 
@@ -42,12 +43,6 @@ import {
 const successAck = {
     success: true
 };
-//TODO: this needs to be owned by external connections. RUN-3363 will take care of this.
-function isBrowserClient(uuid) {
-    return connectionManager.connections.map((conn) => {
-        return keyFromPortInfo(conn.portInfo);
-    }).filter((id) => id === uuid).length > 0;
-}
 
 function EventListenerApiHandler() {
     const eventListenerActionMap = {
@@ -70,7 +65,7 @@ function EventListenerApiHandler() {
                 const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
                 const localUnsub = Window.addEventListener(identity, windowIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalClient = isBrowserClient(identity.uuid);
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
                 if (!islocalWindow && !isExternalClient) {
                     const subscription = {
@@ -141,7 +136,7 @@ function EventListenerApiHandler() {
                 const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
                 const localUnsub = Application.addEventListener(appIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalClient = isBrowserClient(identity.uuid);
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
                 if (!islocalApp && !isExternalClient) {
                     const subscription = {
