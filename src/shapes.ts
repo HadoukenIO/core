@@ -85,10 +85,9 @@ export interface App {
 
 export interface Window {
     children: number[];
-    id: number|string;
+    id: number;
     openfinWindow: OpenFinWindow|null;
     parentId?: number;
-    isIframe?: boolean;
 }
 
 export interface OpenFinWindow {
