@@ -8,6 +8,8 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import {net} from 'electron';
 import {parse as parseUrl, format as formatUrl, Url} from 'url';
 import * as log from '../log';
+import ofEvents from '../of_events';
+import route from '../../common/route';
 
 import * as nodeNet from 'net';
 
@@ -36,6 +38,13 @@ interface ProxyEvent {
     payload?: any;
 }
 
+interface ProxyAuthEvent {
+    url: string;
+    isProxy: boolean;
+}
+
+const requestMap: { [url: string]: any } = {};  // map of URL to net.request
+
 export interface CreateProxyResponse {
     success: boolean;
     data?: {localPort: number, proxyUrl: string}; // port# on localhost
@@ -45,6 +54,12 @@ export interface CreateProxyRequest {
     url: string; // URL to proxy requests to
     callback: (result: CreateProxyResponse) => void;
     errorCallback: (err: any) => void;
+}
+
+export interface AuthProxyRequest {
+    url: string; // URL for the original CreateProxyRequest
+    username: string;
+    password: string;
 }
 
 export function createChromiumSocket(req: CreateProxyRequest): void {
@@ -59,6 +74,7 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
     log.writeToLog(1, `mapped URL: ${url}`, true);
 
     const request = net.request({ url, dataSocket: true });
+    requestMap[req.url] = request;
     // fired when Chromium socket is connected
     request.on('requestSocketConnected', (response: any) => {
         log.writeToLog(1, 'requestSocketConnected', true);
@@ -80,12 +96,21 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
             }
         }, response);
     });
+    request.on('socketAuthRequired', (event: ProxyAuthEvent) => {
+        log.writeToLog(1, `proxy socket auth requested: ${event.url}`, true);
+        log.writeToLog(1, `proxy socket auth requested2: ${JSON.stringify(event.isProxy)}`, true);
+        ofEvents.emit(route.system('proxy-socket-auth-requested'), {url: event.url, isProxy: event.isProxy});
+    });
     request.on('error', (err: string) => {
         log.writeToLog(1, `proxy socket request error ${err}`, true);
         request.closeSocket();
         if (req.errorCallback) {
             req.errorCallback(err);
         }
+    });
+    request.on('close', () => {
+        log.writeToLog(1, `proxy socket request closed, clean up ${req.url}`, true);
+        delete requestMap[req.url];
     });
     request.createConnection();
 }
@@ -155,4 +180,11 @@ function startProxyConnection(proxyCallback: (event: ProxyEvent) => void, respon
     });
     server.listen(0, 'localhost');
     //server.listen(8082, 'localhost');
+}
+
+export function authenticateChromiumSocket(req: AuthProxyRequest): void {
+    const request = requestMap[req.url];
+    if (request) {
+        request.authenticateSocket(req.username, req.password);
+    }
 }

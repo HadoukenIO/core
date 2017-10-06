@@ -51,6 +51,7 @@ function SystemApiHandler() {
     let SystemApiHandlerMap = {
         'clear-cache': { apiFunc: clearCache, apiPath: '.clearCache' },
         'create-proxy-socket': createProxySocket,
+        'authenticate-proxy-socket': authenticateProxySocket,
         'convert-options': convertOptions,
         'delete-cache-request': deleteCacheRequest, // apiPath: '.deleteCacheOnRestart' -> deprecated
         'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset' },
@@ -227,6 +228,10 @@ function SystemApiHandler() {
 
     function createProxySocket(identity, message, ack, nack) {
         System.createProxySocket(message.payload, ack, nack);
+    }
+
+    function authenticateProxySocket(identity, message) {
+        System.authenticateProxySocket(message.payload);
     }
 
     function deleteCacheRequest(identity, message, ack, nack) {
