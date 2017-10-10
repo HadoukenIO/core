@@ -98,7 +98,6 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
     });
     request.on('socketAuthRequired', (event: ProxyAuthEvent) => {
         log.writeToLog(1, `proxy socket auth requested: ${event.url}`, true);
-        log.writeToLog(1, `proxy socket auth requested2: ${JSON.stringify(event.isProxy)}`, true);
         ofEvents.emit(route.system('proxy-socket-auth-requested'), {url: event.url, isProxy: event.isProxy});
     });
     request.on('error', (err: string) => {
