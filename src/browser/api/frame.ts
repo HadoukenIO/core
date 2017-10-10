@@ -15,9 +15,9 @@ limitations under the License.
 */
 
 import ofEvents from '../of_events';
-import { Identity } from '../../shapes';
+import { Identity, OpenFinWindow } from '../../shapes';
 import route from '../../common/route';
-const coreState = require('../core_state');
+import * as  coreState from '../core_state';
 import * as log from '../log';
 import * as Shapes from '../../shapes';
 
@@ -64,9 +64,11 @@ export module Frame {
     }
 
     export function removeEventListener (identity: Identity, type: string, listener: Function) {
-        const browserFrame = coreState.getWindowByUuidName(identity.uuid, identity.name);
-
-        ofEvents.removeListener(route.frame(type, browserFrame.id), listener);
+        const browserFrame = <OpenFinWindow>coreState.getWindowByUuidName(identity.uuid, identity.name);
+        if (browserFrame) {
+            const id = String(browserFrame.id);
+            ofEvents.removeListener(route.frame(type, id), listener);
+        }
     }
 
     export function getInfo (targetIdentity: Identity) {

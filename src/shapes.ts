@@ -32,16 +32,6 @@ export interface ChildFrameInfo extends FrameInfo {
     frameRoutingId: number;
 }
 
-/**
- * Window bounds
- */
-export interface WindowBounds {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
-
 export interface APIMessage {
     action: string;
     messageId: number;

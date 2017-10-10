@@ -323,7 +323,7 @@ function hideWindow(identity, message, ack) {
 
 
 function getAllFrames(identity, message) {
-    const payload = message.payload;
+    const { payload } = message;
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 
     return Window.getAllFrames(windowIdentity);

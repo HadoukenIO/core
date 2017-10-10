@@ -407,7 +407,6 @@ export function getMainWindowOptions(id: number): Shapes.WindowOptions|void {
         return;
     }
 
-
     return app.appObj._options;
 }
 

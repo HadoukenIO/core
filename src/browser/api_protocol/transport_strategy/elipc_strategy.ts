@@ -17,6 +17,7 @@ import { AckMessage,  AckFunc, AckPayload } from './ack';
 import { ApiTransportBase, MessagePackage } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
+import { Identity } from '../../../shapes';
 import * as log from '../../log';
 
 declare var require: any;
@@ -69,7 +70,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         electronIpc.ipc.on(electronIpc.channels.WINDOW_MESSAGE, this.onMessage.bind(this));
     }
 
-    public send(identity: any, payloadObj: any): void {
+    public send(identity: Identity, payloadObj: any): void {
         const { uuid, name } = identity;
         const routingInfo = coreState.getRoutingInfoByUuidFrame(uuid, name);
 
