@@ -50,6 +50,7 @@ import route from '../../common/route';
 import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import WindowsMessages from '../../common/microsoft';
 import { FrameInfo } from './frame';
+import { System } from './system';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -1117,11 +1118,12 @@ Window.getNativeId = function(identity) {
 Window.getNativeWindow = function() {};
 
 Window.getOptions = function(identity) {
-
+    // In the case that the identity passed does not exist, or is not a window,
+    // return the entity info object. The fail case is used for frame identity on spin up.
     try {
         return getElectronBrowserWindow(identity, 'get options for')._options;
     } catch (e) {
-        return Object.assign({ entityType: 'iframe' }, identity);
+        return System.getEntityInfo(identity);
     }
 };
 

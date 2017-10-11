@@ -34,6 +34,8 @@ limitations under the License.
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
+    const initialOptions = getWindowOptionsSync();
+    const entityInfo = getEntityInfoSync(initialOptions.uuid, initialOptions.name);
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
@@ -76,14 +78,15 @@ limitations under the License.
     }
 
     function getCachedWindowOptionsSync() {
-        if (!cachedOptions) {
-            cachedOptions = getWindowOptionsSync();
-        }
-        return cachedOptions;
+        return initialOptions;
     }
 
     function getWindowOptionsSync() {
         return syncApiCall('get-current-window-options');
+    }
+
+    function getEntityInfoSync(uuid, name) {
+        return syncApiCall('get-entity-info', { uuid, name });
     }
 
     function getWindowIdentitySync() {
@@ -327,10 +330,10 @@ limitations under the License.
         });
     }
 
-    function raiseReadyEvents(currWindowOpts) {
-        const { uuid, name, parentFrame } = currWindowOpts;
+    function raiseReadyEvents(entityInfo) {
+        const { uuid, name, parent, entityType } = entityInfo;
         const winIdentity = { uuid, name };
-        const parentFrameName = parentFrame || name;
+        const parentFrameName = parent.name || name;
 
         raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
 
@@ -343,7 +346,7 @@ limitations under the License.
         raiseEventSync(`window/connected/${uuid}-${name}`, winIdentity);
         raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
             frameName: name,
-            entityType: currWindowOpts.entityType
+            entityType
         });
         raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
     }
@@ -364,30 +367,25 @@ limitations under the License.
         //---------------------------------------------------------------
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
-        let winOpts = getCachedWindowOptionsSync();
 
 
         // Prevent iframes from attempting to do windowing actions, these will always be handled
         // by the main window frame.
         // TODO this needs to be revisited when we have xorigin frame api
         if (!window.frameElement) {
-            showOnReady(glbl, winOpts);
+            showOnReady(glbl, initialOptions);
         }
 
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
-        // this is not the case with the updated frame strategy. If the --framestrategy flag is set there
-        // will be an entityType, and if so we no longer need the openfin-api-ready
-        if (!winOpts.entityType) {
-            electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
-        }
+        electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
         wireUpMenu(glbl);
         wireUpZoomEvents();
-        raiseReadyEvents(winOpts);
+        raiseReadyEvents(entityInfo);
 
         //TODO:Notifications to be removed from this file.
-        if (/^notification-window/.test(winOpts.name) &&
+        if (/^notification-window/.test(initialOptions.name) &&
             !(/^about:blank/.test(location.href))) {
 
             fin.desktop.InterApplicationBus.subscribe('*',
@@ -395,8 +393,8 @@ limitations under the License.
                 function() {
 
                     fin.desktop.InterApplicationBus.publish('notification-ready', {
-                        uuid: winOpts.uuid,
-                        name: winOpts.name,
+                        uuid: initialOptions.uuid,
+                        name: initialOptions.name,
                         url: location.href,
                         some: 'other thing',
                         routingInfo: window.payload
@@ -405,8 +403,8 @@ limitations under the License.
                 });
 
             fin.desktop.InterApplicationBus.publish('notification-ready', {
-                uuid: winOpts.uuid,
-                name: winOpts.name,
+                uuid: initialOptions.uuid,
+                name: initialOptions.name,
                 url: location.href
             });
         }
@@ -416,7 +414,7 @@ limitations under the License.
 
         currPageHasLoaded = true;
 
-        if (getOpenerSuccessCallbackCalled() || window.opener === null || winOpts.rawWindowOpen) {
+        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
                     callback();
@@ -428,9 +426,7 @@ limitations under the License.
 
     function onContentReady(bindObject, callback) {
 
-        let winOpts = getCachedWindowOptionsSync();
-
-        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || winOpts.rawWindowOpen)) {
+        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen)) {
             deferByTick(() => {
                 callback();
             });
@@ -441,7 +437,6 @@ limitations under the License.
 
     function createChildWindow(options, cb) {
         let requestId = ++childWindowRequestId;
-        let winOpts = getCachedWindowOptionsSync();
         // initialize what's needed to create a child window via window.open
         let url = ((options || {}).url || undefined);
         let uniqueKey = generateGuidSync();
@@ -452,11 +447,11 @@ limitations under the License.
         options.openfin = true;
 
         // Force window to be a child of its parent application.
-        options.uuid = winOpts.uuid;
+        options.uuid = initialOptions.uuid;
 
         // Apply parent window background color to child window when child
         // window background color is unspecified.
-        options.backgroundColor = options.backgroundColor || winOpts.backgroundColor;
+        options.backgroundColor = options.backgroundColor || initialOptions.backgroundColor;
 
         let responseChannel = `${frameName}-created`;
         ipc.once(responseChannel, () => {
@@ -483,7 +478,7 @@ limitations under the License.
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
-        const { preload } = 'preload' in convertedOpts ? convertedOpts : winOpts;
+        const { preload } = 'preload' in convertedOpts ? convertedOpts : initialOptions;
 
         if (!(preload && preload.length)) {
             proceed(); // short-circuit preload scripts fetch
@@ -507,15 +502,14 @@ limitations under the License.
 
     global.chrome.desktop = {
         getDetails: cb => {
-            let winOpts = getCachedWindowOptionsSync();
             let details = {};
             let currSocketServerState = getSocketServerStateSync();
 
             details.port = currSocketServerState.port;
             details.ssl = currSocketServerState.isHttps;
-            details.uuid = winOpts.uuid;
-            details.name = winOpts.name;
-            details.options = winOpts;
+            details.uuid = initialOptions.uuid;
+            details.name = initialOptions.name;
+            details.options = initialOptions;
             details.versions = processVersions;
 
             cb(details);
@@ -556,7 +550,9 @@ limitations under the License.
             createChildWindow: createChildWindow,
             getCachedWindowOptionsSync: getCachedWindowOptionsSync,
             openerSuccessCBCalled: openerSuccessCBCalled,
-            emitNoteProxyReady: emitNoteProxyReady
+            emitNoteProxyReady: emitNoteProxyReady,
+            initialOptions,
+            entityInfo
         }
     };
 
@@ -564,10 +560,9 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const winOpts = getCachedWindowOptionsSync();
         const identity = {
-            uuid: winOpts.uuid,
-            name: winOpts.name
+            uuid: initialOptions.uuid,
+            name: initialOptions.name
         };
         let { preload: preloadOption, plugin: plugin } = convertOptionsToElectronSync(getWindowOptionsSync());
         if (Array.isArray(plugin) && plugin[0] !== undefined) { preloadOption = preloadOption.concat(plugin); }
