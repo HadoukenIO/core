@@ -104,7 +104,7 @@ function five0BaseOptions() {
         'url': 'about:blank',
         'uuid': '',
         'waitForPageLoad': true,
-        'backgroundColor': '#000',
+        'backgroundColor': '#FFF',
         'webSecurity': true
     };
 }
@@ -204,8 +204,10 @@ module.exports = {
 
     getStartupAppOptions: function(appJson) {
         let opts = appJson['startup_app'];
-        opts.plugin = appJson['plugin'];
-        opts.preload = appJson['preload'];
+        if (opts) {
+            opts.plugin = appJson['plugin'];
+            opts.preload = appJson['preload'];
+        }
         return opts;
     },
 
@@ -273,19 +275,8 @@ module.exports = {
             newOptions.permissions = options.permissions;
         }
 
-        const preload = options.preload;
-        if (preload) {
-            if (typeof preload === 'string') {
-                // convert legacy `preload` option into modern `preload` option
-                newOptions.preload = [{ url: preload }];
-            } else if (
-                Array.isArray(preload) &&
-                preload.every(eachPreload => typeof eachPreload === 'object' && typeof eachPreload.url === 'string')
-            ) {
-                newOptions.preload = preload;
-            } else {
-                log.writeToLog('warning', 'Expected `preload` option to be a string primitive OR an array of objects with `url` string properties.');
-            }
+        if ('preload' in options) {
+            newOptions.preload = normalizePreload(options.preload);
         }
 
         const plugin = options['plugin'];
@@ -367,3 +358,24 @@ module.exports = {
     }
 
 };
+
+function normalizePreload(preload) {
+    if (preload === null || preload === false) {
+        preload = '';
+    }
+
+    if (typeof preload === 'string') {
+        // convert legacy `preload` option into modern `preload` option
+        return preload === '' ? [] : [{ url: preload }];
+    }
+
+    if (
+        Array.isArray(preload) &&
+        preload.every(p => typeof p === 'object' && typeof p.url === 'string')
+    ) {
+        return preload.filter(p => p.url !== ''); // filter out empties
+    }
+
+    log.writeToLog('warning', 'Expected `preload` option to be null, false, string, or array of objects with `url` string properties.');
+    return []; // no preloads when bad option
+}
