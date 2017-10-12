@@ -17,6 +17,7 @@ import { AckMessage,  AckFunc, AckPayload } from './ack';
 import { ApiTransportBase, MessagePackage } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
+import * as log from '../../log';
 
 declare var require: any;
 
@@ -29,7 +30,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     constructor(actionMap: ActionMap, requestHandler: RequestHandler<MessagePackage>) {
         super(actionMap, requestHandler);
 
-        this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
+        this.requestHandler.addHandler((mp: any, next: () => void) => {
             const {identity, data, ack, nack, e, strategyName} = mp;
 
             if (strategyName !== this.constructor.name) {
@@ -37,11 +38,14 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             } else {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
+                    log.writeToLog(1, '>>>>>>>>>>>>>> elIPC l41 data: ' + data, true);
+                    log.writeToLog(1, '>>>>>>>>>>>>>> elIPC l42 msg.middleware: ' + mp.middleware, true);
+                    if (mp.middleware) {data.middleware = mp.middleware; }
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
                     if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data, ack, nack))
-                            .then(result => {
+                            .then((result: any) => {
                                 // older action calls will invoke ack internally, newer ones will return a value
                                 if (result !== undefined) {
                                     ack(new AckPayload(result));

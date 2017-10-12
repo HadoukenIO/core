@@ -17,8 +17,9 @@ const system = require('../../api/system').System;
 export default class RequestHandler<T> {
     private handlers: Array<any> = [];
 
-    private mkNext(fn: any, msg: T) {
-        return () => {
+    private mkNext(fn: any, msg: any) {
+        return (msg2: any) => {
+            if (msg2) {msg.middleware = msg2; }
             const currFnIdx = this.handlers.indexOf(fn);
             const handlersLen = this.handlers.length;
 

@@ -27,6 +27,14 @@ const apiMessagesToIgnore: any = {
     'subscribe-to-desktop-event': true,
     'unsubscribe-to-desktop-event': true
 };
+
+const apiMessagesToAggregate: any = {
+    'get-all-windows': true,
+    'get-all-applications': true,
+    'get-all-external-applications': true,
+    'process-snapshot': true
+};
+
 //TODO: This is a workaround for a circular dependency issue in the api handler modules.
 const subscriberTriggeredEvents: any = {
     'subscribe': true,
@@ -87,6 +95,8 @@ function publishMiddleware(msg: MessagePackage, next: () => void) {
 //on a InterAppBus send-message, forward the message to the runtime that owns the uuid.
 function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     const { data, identity, ack, nack } = msg;
+    log.writeToLog(1, '>>>>>>>>>>>>>> mesh l90 msg: ' + msg, true);
+
 
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
     if (data.action === SEND_MESSAGE_ACTION && !identity.runtimeUuid) {
@@ -148,11 +158,37 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
+function aggregateFromExternalRuntime(msg: MessagePackage, next: any) {
+    const { identity, data, ack, nack } = msg;
+    const action = data && data.action;
+    const isLocalAction = !identity.runtimeUuid;
+    const isAggregateAction = apiMessagesToAggregate[action];
+
+    try {
+        if (connectionManager.connections.length && isAggregateAction && isLocalAction) {
+            Promise.all(connectionManager.connections.map(con => con.fin.System.executeOnRemote(identity, data)))
+            .then(data => {
+                const externalData = data.reduce((result, runtime) => [...result, ...runtime.data], []);
+                next(externalData);
+            })
+            .catch(nack);
+        } else {
+            next();
+        }
+
+    } catch (e) {
+        log.writeToLog('>>>>>>>>>', e);
+        next();
+    }
+
+}
+
 function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): void {
     requestHandler.addPreProcessor(subscriberEventMiddleware);
     requestHandler.addPreProcessor(publishMiddleware);
     requestHandler.addPreProcessor(sendMessageMiddleware);
     requestHandler.addPreProcessor(ferryActionMiddleware);
+    requestHandler.addPreProcessor(aggregateFromExternalRuntime);
 }
 
 export { registerMiddleware };

@@ -16,6 +16,8 @@ limitations under the License.
 let apiProtocolBase = require('./api_protocol_base.js');
 let System = require('../../api/system.js').System;
 let _ = require('underscore');
+const coreState = require('../../core_state');
+
 
 function SystemApiHandler() {
     let successAck = {
@@ -151,13 +153,6 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
-    function getAllExternalApplications(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getAllExternalApplications();
-        ack(dataAck);
-    }
-
     function raiseEvent(identity, message, ack) {
         let evt = message.payload.eventName;
         let eventArgs = message.payload.eventArgs;
@@ -223,14 +218,41 @@ function SystemApiHandler() {
     }
 
     function getAllApplications(identity, message, ack) {
+        const meshMiddlewareResults = message.middleware;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getAllApplications();
+        if (meshMiddlewareResults) {
+            dataAck.data = [...dataAck.data, ...meshMiddlewareResults];
+        }
+        ack(dataAck);
+    }
+
+    function getAllExternalApplications(identity, message, ack) {
+        const meshMiddlewareResults = message.middleware;
+        let dataAck = _.clone(successAck);
+        dataAck.data = System.getAllExternalApplications();
+
+        if (meshMiddlewareResults) {
+            // USED TO EXCLUDE THE CURRENT APPLICATION - IS THIS HOW WE WANT AN EXTERNAL RUNTIME TO SHOW UP?  SHOULD BE UUID.....?
+            const version = System.getVersion();
+            const portInfo = coreState.getSocketServerState();
+            const { port, securityRealm } = portInfo;
+            const currentApplication = securityRealm ? `${version}/${port}/${securityRealm}` : `${version}/${port}/`;
+
+            const filteredMiddlewareResults = meshMiddlewareResults.filter(result => (result.uuid !== currentApplication));
+            dataAck.data = [...dataAck.data, ...filteredMiddlewareResults];
+        }
         ack(dataAck);
     }
 
     function getAllWindows(identity, message, ack) {
+        const meshMiddlewareResults = message.middleware;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getAllWindows(identity);
+
+        if (meshMiddlewareResults) {
+            dataAck.data = [...dataAck.data, ...meshMiddlewareResults];
+        }
         ack(dataAck);
     }
 
@@ -313,8 +335,12 @@ function SystemApiHandler() {
     }
 
     function processSnapshot(identity, message, ack) {
+        const meshMiddlewareResults = message.middleware;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getProcessList();
+        if (meshMiddlewareResults) {
+            dataAck.data = [...dataAck.data, ...meshMiddlewareResults];
+        }
         ack(dataAck);
     }
 
