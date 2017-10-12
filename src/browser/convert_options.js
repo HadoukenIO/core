@@ -36,6 +36,7 @@ import {
     DEFAULT_RESIZE_REGION_SIZE,
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
 } from '../shapes';
+const TRANSPARENT_WHITE = '#0FFF';
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
@@ -293,7 +294,7 @@ module.exports = {
 
         // implicitly set the backgroundColor if the window is transparent
         if (newOptions.transparent) {
-            newOptions.backgroundColor = '#0FFF';
+            newOptions.backgroundColor = TRANSPARENT_WHITE;
         }
 
         if (returnAsString) {
