@@ -22,13 +22,9 @@ import { ArgMap, PortInfo } from './port_discovery';
 import * as log from './log';
 import * as  coreState from './core_state';
 
-//TODO: pre-release flag, this will go away once we release multi runtime.
-const multiRuntimeCommandLineFlag = 'enable-multi-runtime';
-const enableMeshCommandLineFlag = 'enable-mesh';
+const enableMeshFlag = 'enable-mesh';
 const securityRealmFlag = 'security-realm';
 
-//TODO: pre-release flag, this will go away once we release multi runtime
-const multiRuntimeEnabled = coreState.argo[multiRuntimeCommandLineFlag];
 let connectionManager: any;
 let meshEnabled = false;
 
@@ -63,7 +59,7 @@ function buildNoopConnectionManager() {
 
 function isMeshEnabled(args: ArgMap = {}) {
     let enabled = false;
-    const enableMesh = args[enableMeshCommandLineFlag];
+    const enableMesh = args[enableMeshFlag];
     const securityRealm = args[securityRealmFlag];
 
     if (!securityRealm || enableMesh) {
@@ -73,12 +69,16 @@ function isMeshEnabled(args: ArgMap = {}) {
     return enabled;
 }
 
+function isMeshEnabledRuntime(portInfo: PortInfo) {
+    return portInfo.multiRuntime === true;
+}
+
 function keyFromPortInfo(portInfo: PortInfo): string {
     const { version, port, securityRealm = '' } = portInfo;
     return `${version}/${port}/${securityRealm}`;
 }
 
-if (multiRuntimeEnabled && isMeshEnabled(coreState.argo)) {
+if (isMeshEnabled(coreState.argo)) {
     startConnectionManager();
 }
 
@@ -110,4 +110,4 @@ interface ConnectionManager extends EventEmitter {
 }
 
 export default <ConnectionManager>connectionManager;
-export { meshEnabled, PeerRuntime, isMeshEnabled, keyFromPortInfo, getMeshUuid };
+export { meshEnabled, PeerRuntime, isMeshEnabled, keyFromPortInfo, getMeshUuid, isMeshEnabledRuntime };
