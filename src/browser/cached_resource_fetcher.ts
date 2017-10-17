@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {app, resourceFetcher} from 'electron'; // Electron app
-import {stat, mkdir} from 'fs';
+import {app, resourceFetcher, net} from 'electron'; // Electron app
+import {stat, mkdir, writeFileSync} from 'fs';
 import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
 import {isURL, isURI, uriToPath} from '../common/regex';
+import * as log from './log';
 
 let appQuiting: Boolean = false;
 
@@ -118,16 +119,34 @@ function generateHash(str: string): string {
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
 function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
-    const fetcher = new resourceFetcher('file');
+    // const fetcher = new resourceFetcher('file');
+    const request = net.request(fileUrl);
+    let res = '';
+    request.on('response', (response: any) => {
+      // console.log(`STATUS: ${response.statusCode}`);
+      // console.log(`HEADERS: ${JSON.stringify(response.headers)}`)
+      response.on('data', (chunk: any) => {
+        // console.log(`BODY: ${chunk}`);
+        res += chunk;
+      });
+      response.on('end', () => {
+        log.writeToLog(1, 'done!', true);
+        log.writeToLog(1, fileUrl, true);
 
-    fetcher.once('fetch-complete', (event: string, status: string) => {
-        if (status === 'success') {
-            callback(null, filePath);
-        } else {
-            callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
-        }
+        writeFileSync(filePath, res);
+        callback(null, filePath);
+      });
     });
+    request.end();
 
-    fetcher.setFilePath(filePath);
-    fetcher.fetch(fileUrl);
+    // fetcher.once('fetch-complete', (event: string, status: string) => {
+    //     if (status === 'success') {
+    //         callback(null, filePath);
+    //     } else {
+    //         callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
+    //     }
+    // });
+
+    // fetcher.setFilePath(filePath);
+    // fetcher.fetch(fileUrl);
 }

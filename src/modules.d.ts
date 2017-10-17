@@ -33,6 +33,10 @@ declare module 'electron' {
         export function vlog(level: number, message: any): any;
     }
 
+    export namespace net {
+        export function request(url: string): any;
+    }
+
     export interface Rectangle {
         x: number;
         y: number;
