@@ -40,6 +40,7 @@ export interface Route {
     externalApplication: SimpleRoute;
     'external-application': SimpleRoute;
 
+    frame: WindowRoute;
     window: WindowRoute;
     externalWindow: WindowRoute;
     'external-window': WindowRoute;
@@ -91,6 +92,7 @@ const route: Route = <Route>router.bind(null);
 route.application = <SimpleRoute>route.bind(null, 'application');
 route.externalApplication = route['external-application'] = <SimpleRoute>router.bind(null, 'external-application');
 
+route.frame = <WindowRoute>router.bind(HYPHEN, 'frame');
 route.window = <WindowRoute>router.bind(HYPHEN, 'window');
 route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
 

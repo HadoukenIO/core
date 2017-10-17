@@ -35,6 +35,10 @@ export default class SubscriptionManager {
         ofEvents.on(route('externalconn', 'closed'), (identity: Identity) => {
             this.removeAllSubscriptions(identity);
         });
+
+        ofEvents.on(route.frame('disconnected'), (identity: Identity) => {
+            this.removeAllSubscriptions(identity);
+        });
     }
 
     private identityToKey(identity: Identity): string {

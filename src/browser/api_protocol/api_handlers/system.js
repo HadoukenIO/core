@@ -40,6 +40,7 @@ function SystemApiHandler() {
         'get-device-id': { apiFunc: getDeviceId, apiPath: '.getDeviceId' },
         'get-device-user-id': getDeviceUserId,
         'get-el-ipc-config': getElIPCConfig,
+        'get-entity-info': getEntityInfo,
         'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
         'get-focused-window': getFocusedWindow,
         'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
@@ -250,6 +251,12 @@ function SystemApiHandler() {
         var dataAck = _.clone(successAck);
         dataAck.data = System.getDeviceId();
         ack(dataAck);
+    }
+
+    function getEntityInfo(identity, message, ack, nack) {
+        const { uuid, name } = message.payload;
+
+        return System.getEntityInfo({ uuid, name });
     }
 
     function getFocusedWindow(identity, message, ack) {

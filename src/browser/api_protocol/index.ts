@@ -22,6 +22,7 @@ import {
     registerMiddleware as registerExternalConnAuthMiddleware
 } from './api_handlers/authorization';
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
+import { FrameApiHandler } from './api_handlers/frame';
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
 const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
@@ -45,6 +46,7 @@ export function initApiHandlers() {
     const externalApplicationApiHandler = new ExternalApplicationApiHandler();
     initAuthorizationApiHandler();
     initClipboardAPIHandler();
+    const frameApiHandler = new FrameApiHandler();
     const eventListenerApiHandler = new EventListenerApiHandler();
     const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
     const notificationApiHandler = new NotificationApiHandler();

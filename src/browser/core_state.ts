@@ -298,7 +298,6 @@ export function addChildToWin(parentId: number, childId: number): number|void {
     }
 
     parent.children.push(childId);
-    //		}
 
     return app.children.push({
         children: [],
@@ -313,11 +312,10 @@ export function getWinObjById(id: number): Shapes.OpenFinWindow|void {
 
     if (!win) {
         console.warn('getWinObjById - window not found', arguments);
-        return; //throw new Error('getWinObjById - window not found');
+        return;
 
     }
 
-    //console.log('\n\ngetWinObjById DONE', arguments);
     return win.openfinWindow;
 }
 
@@ -401,15 +399,14 @@ export function getMainWindowOptions(id: number): Shapes.WindowOptions|void {
 
     if (!app) {
         console.warn('getMainWindowOptions - app not found', arguments);
-        return; //throw new Error('getMainWindowOptions - app not found');
+        return;
     }
 
     if (!app.appObj) {
         console.warn('getMainWindowOptions - app opts not found', arguments);
-        return; //throw new Error('getMainWindowOptions - app opts not found');
+        return;
     }
 
-    // console.log('getMainWindowOptions', app.appObj._options);
     return app.appObj._options;
 }
 
@@ -566,5 +563,102 @@ export function getLicenseKey(identity: Shapes.Identity): string|null {
         return externalConnection.licenseKey;
     } else {
         return null;
+    }
+}
+
+export function getParentWindow(childIdentity: Shapes.Identity): Shapes.Window {
+    const { uuid, name } = childIdentity;
+
+    const app = appByUuid(uuid);
+
+    const childWin = getOfWindowByUuidName(uuid, name);
+
+    if (!childWin) {
+        return;
+    }
+
+    return getWinById(childWin.parentId);
+
+}
+
+export function getParentOpenFinWindow(childIdentity: Shapes.Identity): Shapes.OpenFinWindow {
+    const parentWin = getParentWindow(childIdentity);
+
+    if (!parentWin) {
+        return;
+    }
+
+    return parentWin.openfinWindow;
+}
+
+export function getParentIdentity(childIdentity: Shapes.Identity): Shapes.Identity {
+    const parentOpenFinWin = getParentOpenFinWindow(childIdentity);
+
+    if (!parentOpenFinWin) {
+        return;
+    }
+
+    return {
+        uuid: parentOpenFinWin.uuid,
+        name: parentOpenFinWin.name
+    };
+}
+
+export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.FrameInfo {
+    const {uuid, name: frame} = targetIdentity;
+
+    const app = appByUuid(uuid);
+
+    if (!app) {
+        return;
+    }
+
+    for (const { openfinWindow } of app.children) {
+        const { name, parentFrameId } = openfinWindow;
+
+        if (name === frame) {
+            const winParent = getWinById(parentFrameId);
+            const parent = getParentIdentity({uuid, name});
+
+            return {
+                name,
+                uuid,
+                parent,
+                entityType: 'window'
+            };
+        } else if (openfinWindow.frames.get(frame)) {
+            return openfinWindow.frames.get(frame);
+        }
+    }
+}
+
+export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
+    const app = appByUuid(uuid);
+
+    if (!app) {
+        return;
+    }
+
+    for (const { openfinWindow } of app.children) {
+        const { name, parentFrameId } = openfinWindow;
+        let browserWindow: Shapes.BrowserWindow;
+        browserWindow = openfinWindow.browserWindow;
+
+        if (name === frame) {
+            return {
+                name,
+                browserWindow,
+                frameRoutingId: 1,
+                frameName: name
+            };
+        } else if (openfinWindow.frames.get(frame)) {
+            const {name, frameRoutingId} = openfinWindow.frames.get(frame);
+            return {
+                name,
+                browserWindow,
+                frameRoutingId,
+                frameName: name
+            };
+        }
     }
 }
