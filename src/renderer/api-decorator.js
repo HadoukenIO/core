@@ -34,7 +34,7 @@ limitations under the License.
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
-    const initialOptions = getWindowOptionsSync();
+    const initialOptions = getCurrentWindowOptionsSync();
     const entityInfo = getEntityInfoSync(initialOptions.uuid, initialOptions.name);
 
     let getOpenerSuccessCallbackCalled = () => {
@@ -81,8 +81,12 @@ limitations under the License.
         return initialOptions;
     }
 
-    function getWindowOptionsSync() {
+    function getCurrentWindowOptionsSync() {
         return syncApiCall('get-current-window-options');
+    }
+
+    function getWindowOptionsSync(identity) {
+        return syncApiCall('get-window-options', identity);
     }
 
     function getEntityInfoSync(uuid, name) {
@@ -90,7 +94,7 @@ limitations under the License.
     }
 
     function getWindowIdentitySync() {
-        let winOpts = getWindowOptionsSync();
+        let winOpts = getCurrentWindowOptionsSync();
 
         return {
             uuid: winOpts.uuid,
@@ -313,7 +317,7 @@ limitations under the License.
             if (!e.defaultPrevented) {
                 e.preventDefault();
 
-                const options = getWindowOptionsSync();
+                const options = getCurrentWindowOptionsSync();
 
                 if (options.contextMenu) {
                     const identity = getWindowIdentitySync();
@@ -562,7 +566,8 @@ limitations under the License.
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const { uuid, name } = initialOptions;
         const identity = { uuid, name };
-        const windowOptions = getWindowOptionsSync();
+        const windowOptions = entityInfo.entityType === 'iframe' ? getWindowOptionsSync(entityInfo.parent) :
+            getCurrentWindowOptionsSync();
 
         let { plugin, preload } = convertOptionsToElectronSync(windowOptions);
 
