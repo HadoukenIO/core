@@ -794,6 +794,8 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
+    winObj.pluginState = []; // TODO
+
     // Set preload scripts' final loading states
     winObj.preloadState = (_options.preload || []).map(preload => {
         return {
@@ -1086,12 +1088,13 @@ Window.getGroup = function(identity) {
 
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const openfinWindow = Window.wrap(identity.uuid, identity.name);
+    const { pluginState, preloadState } = Window.wrap(identity.uuid, identity.name);
     const webContents = browserWindow.webContents;
     const windowInfo = {
         canNavigateBack: webContents.canGoBack(),
         canNavigateForward: webContents.canGoForward(),
-        preloadState: openfinWindow.preloadState,
+        pluginState,
+        preloadState,
         title: webContents.getTitle(),
         url: webContents.getURL()
     };
@@ -1137,26 +1140,39 @@ Window.getParentApplication = function() {
 Window.getParentWindow = function() {};
 
 /**
+ * Sets/updates window's plugin state and emits relevant events
+ */
+Window.setWindowPluginState = function(identity, payload) {
+    const { uuid, name } = identity;
+    const { name: pluginName, version, state, allDone } = payload;
+    const updateTopic = allDone ? 'plugin-state-changed' : 'plugin-state-changing';
+    let { pluginState } = Window.wrap(uuid, name);
+
+    // Single plugin state change
+    if (!allDone) {
+        pluginState = pluginState.find(e => e.name === pluginName && e.version === version);
+        pluginState.state = state;
+    }
+
+    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, pluginState });
+};
+
+/**
  * Sets/updates window's preload script state and emits relevant events
  */
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
-    const { state, allDone } = payload;
-    const openfinWindow = Window.wrap(uuid, name);
-    let preloadState = openfinWindow.preloadState;
-    const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
+    const { url, state, allDone } = payload;
+    const updateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
+    let { preloadState } = Window.wrap(uuid, name);
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === getIdentifier(payload));
+        preloadState = preloadState.find(e => e.url === url);
         preloadState.state = state;
     }
 
-    ofEvents.emit(route.window(preloadStateUpdateTopic, uuid, name), {
-        name,
-        uuid,
-        preloadState
-    });
+    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, preloadState });
 };
 
 Window.getSnapshot = function(identity, callback = () => {}) {

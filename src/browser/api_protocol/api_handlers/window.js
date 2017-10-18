@@ -66,6 +66,7 @@ module.exports.windowApiMap = {
     'show-window': showWindow,
     'set-foreground-window': setForegroundWindow,
     'set-window-bounds': setWindowBounds,
+    'set-window-plugin-state': setWindowPluginState,
     'set-window-preload-state': setWindowPreloadState,
     'set-zoom-level': setZoomLevel,
     'show-at-window': showAtWindow,
@@ -131,6 +132,14 @@ function setWindowBounds(identity, message, ack) {
 
     Window.setBounds(windowIdentity, payload.left, payload.top, payload.width, payload.height);
     ack(successAck);
+}
+
+function setWindowPluginState(identity, message, ack) {
+    const payload = message.payload;
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
+
+    Window.setWindowPreloadState(windowIdentity, payload);
+    ack();
 }
 
 function setWindowPreloadState(identity, message, ack) {
