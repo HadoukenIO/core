@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import {app, resourceFetcher, net} from 'electron'; // Electron app
-import {stat, mkdir, writeFileSync} from 'fs';
+import {stat, mkdir, writeFileSync, createWriteStream} from 'fs';
 import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
@@ -38,20 +38,20 @@ export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: 
         return;
     }
 
-    if (!isURL(fileUrl)) {
-        if (isURI(fileUrl)) {
-            callback(null, uriToPath(fileUrl));
-        } else {
-            stat(fileUrl, (err: null|Error) => {
-                if (err) {
-                    callback(new Error(`Invalid file url: '${fileUrl}'`));
-                } else {
-                    callback(null, fileUrl);
-                }
-            });
-        }
-        return;
-    }
+    // if (!isURL(fileUrl)) {
+    //     if (isURI(fileUrl)) {
+    //         callback(null, uriToPath(fileUrl));
+    //     } else {
+    //         stat(fileUrl, (err: null|Error) => {
+    //             if (err) {
+    //                 callback(new Error(`Invalid file url: '${fileUrl}'`));
+    //             } else {
+    //                 callback(null, fileUrl);
+    //             }
+    //         });
+    //     }
+    //     return;
+    // }
 
     const appCacheDir = getAppCacheDir(appUuid);
     const filePath = getFilePath(appCacheDir, fileUrl);
@@ -120,21 +120,32 @@ function generateHash(str: string): string {
  */
 function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
     // const fetcher = new resourceFetcher('file');
+    // file uris are not getting cached??
     const request = net.request(fileUrl);
     let res = '';
+    const bws = createWriteStream(filePath, {
+        // encoding: 'binary',
+        defaultEncoding: 'binary'
+    });
     request.on('response', (response: any) => {
       // console.log(`STATUS: ${response.statusCode}`);
       // console.log(`HEADERS: ${JSON.stringify(response.headers)}`)
+      response.setEncoding('binary');
       response.on('data', (chunk: any) => {
         // console.log(`BODY: ${chunk}`);
         res += chunk;
+        bws.write(chunk, 'binary');
       });
       response.on('end', () => {
         log.writeToLog(1, 'done!', true);
         log.writeToLog(1, fileUrl, true);
 
-        writeFileSync(filePath, res);
-        callback(null, filePath);
+        // writeFileSync(filePath, res);
+        bws.end();
+        setTimeout(() => { // wtf do we need to time out here?!?!?
+            callback(null, filePath);
+        }, 1000);
+
       });
     });
     request.end();
