@@ -121,6 +121,7 @@ function generateHash(str: string): string {
 function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
     // const fetcher = new resourceFetcher('file');
     // file uris are not getting cached??
+    // WE NEED TO HANDLE THE ERR CASE AS WELL LIKE REAL PROGRAMMERS!!
     const request = net.request(fileUrl);
     let res = '';
     const bws = createWriteStream(filePath, {
@@ -141,10 +142,11 @@ function download(fileUrl: string, filePath: string, callback: (error: null|Erro
         log.writeToLog(1, fileUrl, true);
 
         // writeFileSync(filePath, res);
+        bws.once('close', callback.bind(null, null, filePath));
         bws.end();
-        setTimeout(() => { // wtf do we need to time out here?!?!?
-            callback(null, filePath);
-        }, 1000);
+        // setTimeout(() => { // wtf do we need to time out here?!?!?
+        //     callback(null, filePath);
+        // }, 1000);
 
       });
     });
