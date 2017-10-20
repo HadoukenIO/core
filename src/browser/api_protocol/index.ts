@@ -35,10 +35,11 @@ import { registerMiddleware as registerMeshMiddleware } from './api_handlers/mes
 import {
     registerMiddleware as registerProcessExternalAppMiddleware,
     legacyWindowingEnabled
-} from './api_handlers/legacy_external_app_middleware';
+} from './api_handlers/deprecated_external_windowing_middleware';
 
 // Middleware registration. The order is important.
 registerEntityExistenceMiddleware(getDefaultRequestHandler());
+//re-enable support for process-external-app-action
 if (legacyWindowingEnabled()) {
     registerProcessExternalAppMiddleware(getDefaultRequestHandler());
 }
