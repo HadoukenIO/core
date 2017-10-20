@@ -569,11 +569,9 @@ limitations under the License.
         const windowOptions = entityInfo.entityType === 'iframe' ? getWindowOptionsSync(entityInfo.parent) :
             getCurrentWindowOptionsSync();
 
-        let { plugin, preload } = convertOptionsToElectronSync(windowOptions);
+        let { preload } = convertOptionsToElectronSync(windowOptions);
 
-        if (plugin.length) {
-            evalPlugins(identity, plugin);
-        }
+        evalPlugins(identity);
 
         if (preload.length) {
             evalPreloadScripts(identity, preload);
@@ -581,39 +579,33 @@ limitations under the License.
     });
 
     /**
-     * Requests plugin contents from the Core and evals them in the current window
+     * Requests plugin modules from the Core and evals them in the current window
      */
-    function evalPlugins(identity, pluginOption) {
+    function evalPlugins(identity) {
         const action = 'set-window-plugin-state';
+        const plugins = syncApiCall('get-plugin-modules');
         let logBase = `[plugin] [${identity.uuid}]-[${identity.name}]: `;
-        let plugins;
-
-        try {
-            plugins = syncApiCall('get-selected-preload-scripts', pluginOption);
-        } catch (error) {
-            return syncApiCall('write-to-log', { level: 'error', message: logBase + error });
-        }
 
         plugins.forEach((plugin) => {
-            const { name, version, content } = plugin;
+            const { name, version, _content } = plugin;
 
-            if (content !== null) {
-                // TODO: handle empty script for bad urls
+            if (!_content) {
+                return;
+            }
 
-                try {
-                    window.eval(content); /* jshint ignore:line */
-                    asyncApiCall(action, { name, version, state: 'succeeded' });
-                    syncApiCall('write-to-log', {
-                        level: 'info',
-                        message: logBase + `eval succeeded for ${name} ${version}`
-                    });
-                } catch (err) {
-                    asyncApiCall(action, { name, version, state: 'failed' });
-                    syncApiCall('write-to-log', {
-                        level: 'info',
-                        message: logBase + `eval failed for ${name} ${version}`
-                    });
-                }
+            try {
+                window.eval(_content); /* jshint ignore:line */
+                asyncApiCall(action, { name, version, state: 'succeeded' });
+                syncApiCall('write-to-log', {
+                    level: 'info',
+                    message: logBase + `eval succeeded for ${name} ${version}`
+                });
+            } catch (err) {
+                asyncApiCall(action, { name, version, state: 'failed' });
+                syncApiCall('write-to-log', {
+                    level: 'info',
+                    message: logBase + `eval failed for ${name} ${version}`
+                });
             }
         });
 
