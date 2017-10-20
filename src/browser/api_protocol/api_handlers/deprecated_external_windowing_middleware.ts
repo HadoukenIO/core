@@ -80,9 +80,9 @@ function handleExternalApiAction(msg: MessagePackage, next: () => void): void {
             sendToIdentity({ uuid: externalConn.uuid }, {
                 action: EXTERNAL_APP_ACTION,
                 payload: {
-                    action: action,
+                    action,
                     messageId: data.messageId,
-                    payload: payload,
+                    payload,
                     destinationToken: identity.uuid
                 }
             });
@@ -129,7 +129,6 @@ function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): vo
 
 function legacyWindowingEnabled(): boolean {
     const enabled = coreState.argo[LEGACY_WINDOW_FLAG];
-
     return enabled !== void 0;
 }
 
