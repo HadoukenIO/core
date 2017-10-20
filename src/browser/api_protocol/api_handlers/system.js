@@ -218,40 +218,44 @@ function SystemApiHandler() {
     }
 
     function getAllApplications(identity, message, ack) {
-        const meshMiddlewareResults = message.middleware;
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getAllApplications();
-        if (meshMiddlewareResults) {
-            dataAck.data = [...dataAck.data, ...meshMiddlewareResults];
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            dataAck.data = [...dataAck.data, ...aggregate];
         }
         ack(dataAck);
     }
 
     function getAllExternalApplications(identity, message, ack) {
-        const meshMiddlewareResults = message.middleware;
+        const { locals } = message;
         let dataAck = _.clone(successAck);
         dataAck.data = System.getAllExternalApplications();
 
-        if (meshMiddlewareResults) {
-            // USED TO EXCLUDE THE CURRENT APPLICATION - IS THIS HOW WE WANT AN EXTERNAL RUNTIME TO SHOW UP?  SHOULD BE UUID.....?
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            // USED TO EXCLUDE THE CURRENT APPLICATION - IS THIS HOW WE WANT AN EXTERNAL RUNTIME TO SHOW UP?  SHOULD BE CALLED UUID.....?
             const version = System.getVersion();
             const portInfo = coreState.getSocketServerState();
             const { port, securityRealm } = portInfo;
             const currentApplication = securityRealm ? `${version}/${port}/${securityRealm}` : `${version}/${port}/`;
 
-            const filteredMiddlewareResults = meshMiddlewareResults.filter(result => (result.uuid !== currentApplication));
-            dataAck.data = [...dataAck.data, ...filteredMiddlewareResults];
+            const filteredAggregate = aggregate.filter(result => (result.uuid !== currentApplication));
+            const filteredAggregateSet = [...new Set(filteredAggregate)];
+            dataAck.data = [...dataAck.data, ...filteredAggregateSet];
         }
         ack(dataAck);
     }
 
     function getAllWindows(identity, message, ack) {
-        const meshMiddlewareResults = message.middleware;
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getAllWindows(identity);
 
-        if (meshMiddlewareResults) {
-            dataAck.data = [...dataAck.data, ...meshMiddlewareResults];
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            dataAck.data = [...dataAck.data, ...aggregate];
         }
         ack(dataAck);
     }
@@ -335,11 +339,13 @@ function SystemApiHandler() {
     }
 
     function processSnapshot(identity, message, ack) {
-        const meshMiddlewareResults = message.middleware;
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getProcessList();
-        if (meshMiddlewareResults) {
-            dataAck.data = [...dataAck.data, ...meshMiddlewareResults];
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            const aggregateSet = [...new Set(aggregate)];
+            dataAck.data = [...dataAck.data, ...aggregateSet];
         }
         ack(dataAck);
     }

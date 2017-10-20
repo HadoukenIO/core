@@ -95,8 +95,6 @@ function publishMiddleware(msg: MessagePackage, next: () => void) {
 //on a InterAppBus send-message, forward the message to the runtime that owns the uuid.
 function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     const { data, identity, ack, nack } = msg;
-    log.writeToLog(1, '>>>>>>>>>>>>>> mesh l90 msg: ' + msg, true);
-
 
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
     if (data.action === SEND_MESSAGE_ACTION && !identity.runtimeUuid) {
@@ -166,10 +164,11 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: any) {
 
     try {
         if (connectionManager.connections.length && isAggregateAction && isLocalAction) {
-            Promise.all(connectionManager.connections.map(con => con.fin.System.executeOnRemote(identity, data)))
+            Promise.all(connectionManager.connections.map(runtime => runtime.fin.System.executeOnRemote(identity, data)))
             .then(data => {
-                const externalData = data.reduce((result, runtime) => [...result, ...runtime.data], []);
-                next(externalData);
+                const externalRuntimeData = data.reduce((result, runtime) => [...result, ...runtime.data], []);
+                const locals = { aggregate: externalRuntimeData };
+                next(locals);
             })
             .catch(nack);
         } else {
@@ -177,7 +176,7 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: any) {
         }
 
     } catch (e) {
-        log.writeToLog('>>>>>>>>>', e);
+        log.writeToLog('info', e);
         next();
     }
 

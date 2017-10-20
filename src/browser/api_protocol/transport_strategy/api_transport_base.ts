@@ -32,6 +32,7 @@ export interface MessagePackage {
     ack: AckFunc;
     nack: NackFunc;
     e?: any;
+    locals?: any;
     strategyName: any; // ws / elipc
 }
 

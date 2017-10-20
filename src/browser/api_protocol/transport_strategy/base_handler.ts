@@ -18,8 +18,10 @@ export default class RequestHandler<T> {
     private handlers: Array<any> = [];
 
     private mkNext(fn: any, msg: any) {
-        return (msg2: any) => {
-            if (msg2) {msg.middleware = msg2; }
+        return (locals?: any) => {
+            if (locals) {
+                msg.data.locals = msg.data.locals ? Object.assign(msg.data.locals, locals) : locals;
+            }
             const currFnIdx = this.handlers.indexOf(fn);
             const handlersLen = this.handlers.length;
 

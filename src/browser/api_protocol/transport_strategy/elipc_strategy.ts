@@ -30,7 +30,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     constructor(actionMap: ActionMap, requestHandler: RequestHandler<MessagePackage>) {
         super(actionMap, requestHandler);
 
-        this.requestHandler.addHandler((mp: any, next: () => void) => {
+        this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
             const {identity, data, ack, nack, e, strategyName} = mp;
 
             if (strategyName !== this.constructor.name) {
@@ -38,9 +38,6 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             } else {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
-                    log.writeToLog(1, '>>>>>>>>>>>>>> elIPC l41 data: ' + data, true);
-                    log.writeToLog(1, '>>>>>>>>>>>>>> elIPC l42 msg.middleware: ' + mp.middleware, true);
-                    if (mp.middleware) {data.middleware = mp.middleware; }
                     // singleFrameOnly check first so to prevent frame superceding when disabled.
                     if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
