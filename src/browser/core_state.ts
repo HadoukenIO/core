@@ -391,7 +391,7 @@ export function removeApp(id: number): void {
 
 export function getWindowOptionsById(id: number): Shapes.WindowOptions|boolean {
     const win = getWinById(id);
-    return win.openfinWindow && win.openfinWindow._options;
+    return win && win.openfinWindow && win.openfinWindow._options;
 }
 
 export function getMainWindowOptions(id: number): Shapes.WindowOptions|void {

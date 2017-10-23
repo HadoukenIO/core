@@ -99,8 +99,10 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
         skipTaskbar: true,
         resizable: false,
         alwaysOnTop: true,
-        nodeIntegration: true,
-        openfinIntegration: false
+        webPreferences: {
+            nodeIntegration: true,
+            openfinIntegration: false
+        }
     });
 
     let ipcUuid = app.generateGUID();
