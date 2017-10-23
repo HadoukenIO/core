@@ -156,7 +156,7 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
-function aggregateFromExternalRuntime(msg: MessagePackage, next: any) {
+function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: object) => void) {
     const { identity, data, ack, nack } = msg;
     const action = data && data.action;
     const isAggregateAction = apiMessagesToAggregate[action];

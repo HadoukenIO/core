@@ -17,7 +17,6 @@ import { AckMessage,  AckFunc, AckPayload } from './ack';
 import { ApiTransportBase, MessagePackage } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
-import * as log from '../../log';
 
 declare var require: any;
 
@@ -42,7 +41,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                     if (!data.singleFrameOnly === false || e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data, ack, nack))
-                            .then((result: any) => {
+                            .then(result => {
                                 // older action calls will invoke ack internally, newer ones will return a value
                                 if (result !== undefined) {
                                     ack(new AckPayload(result));

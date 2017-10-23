@@ -235,7 +235,6 @@ function SystemApiHandler() {
 
         if (locals && locals.aggregate) {
             const { aggregate } = locals;
-            // USED TO EXCLUDE THE CURRENT APPLICATION - IS THIS HOW WE WANT AN EXTERNAL RUNTIME TO SHOW UP?  SHOULD BE CALLED UUID.....?
             const version = System.getVersion();
             const portInfo = coreState.getSocketServerState();
             const { port, securityRealm } = portInfo;
