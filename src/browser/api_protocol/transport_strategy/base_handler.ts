@@ -19,6 +19,7 @@ export default class RequestHandler<T> {
 
     private mkNext(fn: any, msg: any) {
         return (locals?: any) => {
+            // Add any middleware data to the message in locals property to be utilized in the api handlers
             if (locals) {
                 msg.data.locals = msg.data.locals ? Object.assign(msg.data.locals, locals) : locals;
             }

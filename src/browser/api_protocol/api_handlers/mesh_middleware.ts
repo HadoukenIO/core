@@ -159,8 +159,9 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
 function aggregateFromExternalRuntime(msg: MessagePackage, next: any) {
     const { identity, data, ack, nack } = msg;
     const action = data && data.action;
-    const isLocalAction = !identity.runtimeUuid;
     const isAggregateAction = apiMessagesToAggregate[action];
+    //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
+    const isLocalAction = !identity.runtimeUuid;
 
     try {
         if (connectionManager.connections.length && isAggregateAction && isLocalAction) {
