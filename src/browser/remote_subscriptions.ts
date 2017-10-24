@@ -38,7 +38,7 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
  * Shape of remote subscription props
  */
 interface RemoteSubscriptionProps extends Identity {
-    className: 'application'|'window'|'system'; // names of the class event emitters, used for subscriptions
+    className: 'application'|'window'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
 }
@@ -92,63 +92,6 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
             });
 
         }).then(() => {
-            // Resolving with a subscription cleanup function
-            const unsubscribe = cleanUpSubscription.bind(null, subscription);
-            resolve(unsubscribe);
-        });
-    });
-}
-
-export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
-    return new Promise(resolve => {
-        // If there aren't any external runtimes, return undefined
-        if (!connectionManager.connections.length) {
-            return;
-        }
-
-        const clonedProps = Object.create(subscriptionProps);
-        const subscription: RemoteSubscription = Object.assign(clonedProps, {isCleaned: false});
-        const { className, eventName, listenType, unSubscriptions } = subscription;
-        const fullEventName = route(className, eventName);
-
-        // Only generate an ID for new subscriptions
-        if (!subscription._id) {
-            subscription._id = getId();
-        }
-
-        // Create a new un-subscription map only for new subscriptions
-        if (typeof subscription.unSubscriptions !== 'object') {
-            subscription.unSubscriptions = new Map();
-        }
-
-        // PENDING REMOTE SUBSCRIPTIONS? FOR FUTURE RUNTIMES?
-        // Looks like we don't technically need the remote subscriptions to finish before resolving the unsubscribe...
-        Promise.all(connectionManager.connections.map(runtime => {
-            const runtimeKey = keyFromPortInfo(runtime.portInfo);
-            pendingRemoteSubscriptions.set(subscription._id, subscription);
-
-            const listener = (data: any) => {
-                if (!data.runtimeUuid) {
-                    data.runtimeUuid = getMeshUuid();
-                    ofEvents.emit(fullEventName, data);
-                }
-            };
-            // Subscribe to an event on a remote runtime
-            return runtime.fin.System[listenType](eventName, listener)
-            .then(() => {
-                // Store a cleanup function for the added listener in
-                // un-subscription map, so that later we can remove extra subscriptions
-                if (!Array.isArray(unSubscriptions.get(runtimeKey))) {
-                    unSubscriptions.set(runtimeKey, []);
-                }
-                unSubscriptions.get(runtimeKey).push(() => {
-                    runtime.fin.System.removeListener(eventName, listener);
-                });
-                // IS THIS RETURN NECESSARY?
-                return;
-            });
-        }))
-        .then(() => {
             // Resolving with a subscription cleanup function
             const unsubscribe = cleanUpSubscription.bind(null, subscription);
             resolve(unsubscribe);
