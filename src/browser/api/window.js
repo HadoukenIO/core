@@ -1089,7 +1089,8 @@ Window.getGroup = function(identity) {
 
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const { pluginState, preloadState } = Window.wrap(identity.uuid, identity.name);
+    const openfinWindow = Window.wrap(identity.uuid, identity.name);
+    const { pluginState, preloadState } = openfinWindow;
     const webContents = browserWindow.webContents;
     const windowInfo = {
         canNavigateBack: webContents.canGoBack(),
@@ -1099,7 +1100,7 @@ Window.getWindowInfo = function(identity) {
         title: webContents.getTitle(),
         url: webContents.getURL()
     };
-    if (Object.keys(openfinWindow.preloadState).length > 0) {
+    if (Object.keys(openfinWindow.framePreloadState).length > 0) {
         windowInfo.framePreloadState = openfinWindow.framePreloadState;
     }
     return windowInfo;
