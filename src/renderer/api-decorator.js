@@ -27,6 +27,11 @@ limitations under the License.
     let glbl = global;
 
     const electron = require('electron');
+    setTimeout(() => {
+        console.log('Entering crash report mode, non-production build');
+        window.crashReporter = electron.crashReporter;
+        console.log(window.crashReporter.startOFCrashReporter({ diagnosticMode: true, configUrl: null }));
+    }, 1000);
     const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
     const ipc = electron.ipcRenderer;
 

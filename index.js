@@ -400,6 +400,21 @@ function initializeCrashReporter(argo) {
 
     const configUrl = argo['startup-url'] || argo['config'];
     const diagnosticMode = argo['diagnostics'] || false;
+    const crashMode = argo['crash'] || false;
+
+    if (crashMode) {
+        setTimeout(() => {
+            const arr = [];
+
+            while (1) {
+                arr.push(Date.now());
+            }
+        }, 2000);
+    }
+
+    if (diagnosticMode) {
+        app.commandLine.appendSwitch('no-sandbox');
+    }
 
     crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
 }
