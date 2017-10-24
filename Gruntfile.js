@@ -33,7 +33,7 @@ const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
 
 //optional dependencies that we ship.
 const optionalDependencies = [
-    'node-adapter/**',
+    'hadouken-js-adapter/**',
     'runtime-p2p/**'
 ];
 
