@@ -135,7 +135,7 @@ function setWindowBounds(identity, message, ack) {
 }
 
 function setWindowPluginState(identity, message, ack) {
-    const payload = message.payload;
+    const { payload } = message;
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
 
     Window.setWindowPreloadState(windowIdentity, payload);
