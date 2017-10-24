@@ -1100,9 +1100,6 @@ Window.getWindowInfo = function(identity) {
         title: webContents.getTitle(),
         url: webContents.getURL()
     };
-    if (Object.keys(openfinWindow.framePreloadState).length > 0) {
-        windowInfo.framePreloadState = openfinWindow.framePreloadState;
-    }
     return windowInfo;
 };
 
@@ -1177,7 +1174,7 @@ Window.setWindowPreloadState = function(identity, payload) {
     }
 
     if (openfinWindow) {
-        let preloadState;
+        let { preloadState } = openfinWindow;
 
         // Single preload script state change
         if (!allDone) {
@@ -1200,11 +1197,13 @@ Window.setWindowPreloadState = function(identity, payload) {
             }
         }
 
-        ofEvents.emit(route.window(updateTopic, uuid, name), {
-            name,
-            uuid,
-            preloadState
-        });
+        if (frameInfo.entityType === 'window') {
+            ofEvents.emit(route.window(updateTopic, uuid, name), {
+                name,
+                uuid,
+                preloadState
+            });
+        }  // @TODO ofEvents.emit(route.frame for iframes
     } else {
         log.writeToLog('info', `setWindowPreloadState missing openfinWindow ${uuid} ${name}`);
     }
