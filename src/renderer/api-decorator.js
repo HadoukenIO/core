@@ -560,52 +560,93 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const identity = {
-            uuid: initialOptions.uuid,
-            name: initialOptions.name
-        };
-        let { preload: preloadOption, plugin: plugin } = convertOptionsToElectronSync(getWindowOptionsSync());
-        if (Array.isArray(plugin) && plugin[0] !== undefined) { preloadOption = preloadOption.concat(plugin); }
-        const action = 'set-window-preload-state';
+        const { uuid, name } = initialOptions;
+        const identity = { uuid, name };
+        const windowOptions = getWindowOptionsSync();
 
-        if (preloadOption.length) { // short-circuit
-            let response;
-            try {
-                response = syncApiCall('get-selected-preload-scripts', preloadOption);
-            } catch (error) {
-                logPreload('error', identity, 'error', '', error);
-            }
+        let { plugin, preload } = convertOptionsToElectronSync(windowOptions);
 
-            if (response) {
-                response.forEach((script, index) => {
-                    if (script !== null) {
-                        const { id } = preloadOption[index].url ? preloadOption[index].url : `${preloadOption[index].name}-${preloadOption[index].version}`;
-
-                        try {
-                            const val = window.eval(script); /* jshint ignore:line */
-                            logPreload('info', identity, `eval succeeded`, id, val);
-                            asyncApiCall(action, { id, state: 'succeeded' });
-                        } catch (err) {
-                            logPreload('error', identity, 'eval failed', id, err);
-                            asyncApiCall(action, { id, state: 'failed' });
-                        }
-                    }
-                });
-            }
+        if (plugin.length) {
+            evalPlugins(identity, plugin);
         }
 
-        asyncApiCall(action, { allDone: true });
+        if (preload.length) {
+            evalPreloadScripts(identity, preload);
+        }
     });
 
-    function logPreload(level, identity, state, url, data) {
-        if (url) {
-            state += ` for ${url}`;
+    /**
+     * Requests plugin contents from the Core and evals them in the current window
+     */
+    function evalPlugins(identity, pluginOption) {
+        const action = 'set-window-plugin-state';
+        let logBase = `[plugin] [${identity.uuid}]-[${identity.name}]: `;
+        let plugins;
+
+        try {
+            plugins = syncApiCall('get-selected-preload-scripts', pluginOption);
+        } catch (error) {
+            return syncApiCall('write-to-log', { level: 'error', message: logBase + error });
         }
-        if (data) {
-            state += ` with ${JSON.stringify(data)}`;
+
+        plugins.forEach((plugin) => {
+            const { name, version, content } = plugin;
+
+            if (content !== null) {
+                // TODO: handle empty script for bad urls
+
+                try {
+                    window.eval(content); /* jshint ignore:line */
+                    asyncApiCall(action, { name, version, state: 'succeeded' });
+                    syncApiCall('write-to-log', {
+                        level: 'info',
+                        message: logBase + `eval succeeded for ${name} ${version}`
+                    });
+                } catch (err) {
+                    asyncApiCall(action, { name, version, state: 'failed' });
+                    syncApiCall('write-to-log', {
+                        level: 'info',
+                        message: logBase + `eval failed for ${name} ${version}`
+                    });
+                }
+            }
+        });
+
+        asyncApiCall(action, { allDone: true });
+    }
+
+    /**
+     * Requests preload scripts contents from the Core and evals them in the current window
+     */
+    function evalPreloadScripts(identity, preloadOption) {
+        const action = 'set-window-preload-state';
+        let logBase = `[preload] [${identity.uuid}]-[${identity.name}]: `;
+        let preloadScripts;
+
+        try {
+            preloadScripts = syncApiCall('get-selected-preload-scripts', preloadOption);
+        } catch (error) {
+            return syncApiCall('write-to-log', { level: 'error', message: logBase + error });
         }
-        const message = `[PRELOAD] [${identity.uuid}]-[${identity.name}] ${state}`;
-        syncApiCall('write-to-log', { level, message });
+
+        preloadScripts.forEach((preloadScript) => {
+            const { url, content } = preloadScript;
+
+            if (content !== null) {
+                // TODO: handle empty script for bad urls
+
+                try {
+                    window.eval(content); /* jshint ignore:line */
+                    asyncApiCall(action, { url, state: 'succeeded' });
+                    syncApiCall('write-to-log', { level: 'info', message: logBase + `eval succeeded for ${url}` });
+                } catch (err) {
+                    asyncApiCall(action, { url, state: 'failed' });
+                    syncApiCall('write-to-log', { level: 'error', message: logBase + `eval failed for ${err}` });
+                }
+            }
+        });
+
+        asyncApiCall(action, { allDone: true });
     }
 
 }());

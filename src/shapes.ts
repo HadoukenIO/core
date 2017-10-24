@@ -95,12 +95,19 @@ export interface OpenFinWindow {
     hideReason: string;
     id: number;
     name: string;
-    uuid: string;
+    pluginState: {
+        link?: string;
+        name: string;
+        optional?: boolean;
+        state: 'load-failed'|'load-succeeded'|'failed'|'succeeded';
+        version: string;
+    }[];
     preloadState: {
         optional?: boolean;
         state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
         url: string;
     }[];
+    uuid: string;
 }
 
 export interface BrowserWindow {
