@@ -61,6 +61,7 @@ function SystemApiHandler() {
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
         'raise-event': raiseEvent,
+        'read-registry-value': readRegistryValue,
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
@@ -79,6 +80,19 @@ function SystemApiHandler() {
 
     function didFail(e) {
         return e !== undefined && e.constructor === Error;
+    }
+
+    function readRegistryValue(identity, message, ack, nack) {
+        const { payload: { rootKey, subkey, value } } = message;
+        const response = System.readRegistryValue(rootKey, subkey, value);
+
+        if (_.isEmpty(response)) {
+            nack(new Error('There was an error reading the registry.'));
+        } else {
+            const dataAck = _.clone(successAck);
+            dataAck.data = response;
+            ack(dataAck);
+        }
     }
 
     function setMinLogLevel(identity, message, ack, nack) {

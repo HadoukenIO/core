@@ -534,6 +534,9 @@ exports.System = {
     openUrlWithBrowser: function(url) {
         shell.openExternal(url);
     },
+    readRegistryValue: function(rootKey, subkey, value) {
+        return electronApp.readRegistryValue(rootKey, subkey, value);
+    },
     releaseExternalProcess: function(processUuid) {
         ProcessTracker.release(processUuid);
     },
