@@ -399,7 +399,8 @@ function initializeCrashReporter(argo) {
     }
 
     const configUrl = argo['startup-url'] || argo['config'];
-    const diagnosticMode = argo['diagnostics'] || false;
+    let diagnosticMode = argo['diagnostics'] || false;
+    const noSandbox = argo['no-sandbox'] || false;
     const crashMode = argo['crash'] || false;
 
     if (crashMode) {
@@ -412,7 +413,12 @@ function initializeCrashReporter(argo) {
         }, 2000);
     }
 
-    if (diagnosticMode) {
+    if (!diagnosticMode) {
+        app.commandLine.appendSwitch('diagnostics');
+        diagnosticMode = true;
+    }
+
+    if (!noSandbox) {
         app.commandLine.appendSwitch('no-sandbox');
     }
 
