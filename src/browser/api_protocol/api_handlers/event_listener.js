@@ -25,9 +25,12 @@ let apiProtocolBase = require('./api_protocol_base.js');
 let Window = require('../../api/window.js').Window;
 let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
-import { ExternalApplication } from '../../api/external_application';
-import { Frame } from '../../api/frame';
-
+import {
+    ExternalApplication
+} from '../../api/external_application';
+import {
+    default as connectionManager
+} from '../../connection_manager';
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
 
@@ -39,6 +42,12 @@ import {
 const successAck = {
     success: true
 };
+
+function isBrowserClient(uuid) {
+    return connectionManager.connections.map((conn) => {
+        return conn.portInfo.version + ':' + conn.portInfo.port;
+    }).filter((id) => id === uuid).length > 0;
+}
 
 function EventListenerApiHandler() {
     const eventListenerActionMap = {
@@ -61,7 +70,7 @@ function EventListenerApiHandler() {
                 const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
                 const localUnsub = Window.addEventListener(identity, windowIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+                const isExternalClient = isBrowserClient(identity.uuid);
 
                 if (!islocalWindow && !isExternalClient) {
                     const subscription = {
@@ -69,42 +78,6 @@ function EventListenerApiHandler() {
                         name,
                         listenType: 'on',
                         className: 'window',
-                        eventName: type
-                    };
-
-                    addRemoteSubscription(subscription).then(unSubscribe => {
-                        remoteUnSub = unSubscribe;
-                    });
-                }
-
-                return () => {
-                    localUnsub();
-                    if (typeof remoteUnSub === 'function') {
-                        remoteUnSub();
-                    }
-                };
-            }
-        },
-        'frame': {
-            name: 'frame',
-            subscribe: function(identity, type, payload, cb) {
-                const {
-                    uuid,
-                    name
-                } = payload;
-                const frameIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-                const targetUuid = frameIdentity.uuid;
-                const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
-                const localUnsub = Frame.addEventListener(identity, frameIdentity, type, cb);
-                let remoteUnSub;
-                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
-
-                if (!islocalWindow && !isExternalClient) {
-                    const subscription = {
-                        uuid,
-                        name,
-                        listenType: 'on',
-                        className: 'frame',
                         eventName: type
                     };
 
@@ -132,7 +105,7 @@ function EventListenerApiHandler() {
                 const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
                 const localUnsub = Application.addEventListener(appIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+                const isExternalClient = isBrowserClient(identity.uuid);
 
                 if (!islocalApp && !isExternalClient) {
                     const subscription = {
