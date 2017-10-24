@@ -35,6 +35,7 @@ module.exports.windowApiMap = {
     'flash-window': flashWindow,
     'focus-window': focusWindow,
     'get-current-window-options': getCurrentWindowOptions,
+    'get-all-frames': getAllFrames,
     'get-window-bounds': getWindowBounds,
     'get-window-group': getWindowGroup,
     'get-window-info': getWindowInfo,
@@ -65,6 +66,7 @@ module.exports.windowApiMap = {
     'show-window': showWindow,
     'set-foreground-window': setForegroundWindow,
     'set-window-bounds': setWindowBounds,
+    'set-window-plugin-state': setWindowPluginState,
     'set-window-preload-state': setWindowPreloadState,
     'set-zoom-level': setZoomLevel,
     'show-at-window': showAtWindow,
@@ -130,6 +132,14 @@ function setWindowBounds(identity, message, ack) {
 
     Window.setBounds(windowIdentity, payload.left, payload.top, payload.width, payload.height);
     ack(successAck);
+}
+
+function setWindowPluginState(identity, message, ack) {
+    const { payload } = message;
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
+
+    Window.setWindowPreloadState(windowIdentity, payload);
+    ack();
 }
 
 function setWindowPreloadState(identity, message, ack) {
@@ -318,6 +328,14 @@ function hideWindow(identity, message, ack) {
 
     Window.hide(windowIdentity);
     ack(successAck);
+}
+
+
+function getAllFrames(identity, message) {
+    const { payload } = message;
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+    return Window.getAllFrames(windowIdentity);
 }
 
 function getWindowSnapshot(identity, message, ack) {

@@ -49,7 +49,8 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import WindowsMessages from '../../common/microsoft';
-
+import { FrameInfo } from './frame';
+import { System } from './system';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -380,6 +381,32 @@ Window.create = function(id, opts) {
     if (!opts._noregister) {
 
         browserWindow = BrowserWindow.fromId(id);
+
+        // called in the WebContents class in the runtime
+        browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
+            const parentFrameId = id;
+            const frameInfo = {
+                name: frameName,
+                uuid,
+                parentFrameId,
+                parent: { uuid, name },
+                frameRoutingId,
+                entityType: 'iframe'
+            };
+
+            winObj.frames.set(frameName, frameInfo);
+        };
+
+        // called in the WebContents class in the runtime
+        browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
+            const entityType = frameRoutingId === 1 ? 'window' : 'iframe';
+            const frameName = closedFrameName || name; // the parent name is considered a frame as well
+            const payload = { uuid, name, frameName, entityType };
+
+            winObj.frames.delete(closedFrameName);
+            ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
+            ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
+        };
 
         // this is a first pass at teardown. for now, push the unsubscribe
         // function for each subscription you make, on closed, remove them all
@@ -760,11 +787,14 @@ Window.create = function(id, opts) {
         /* jshint ignore:end */
 
         children: [],
+        frames: new Map(),
 
         // TODO this should be removed once it's safe in favor of the
         //      more descriptive browserWindow key
         _window: browserWindow
     };
+
+    winObj.pluginState = []; // TODO
 
     // Set preload scripts' final loading states
     winObj.preloadState = (_options.preload || []).map(preload => {
@@ -820,7 +850,6 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
     safeListener = (...args) => {
 
         try {
-
             listener.call(null, ...args);
 
         } catch (err) {
@@ -836,6 +865,7 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
     };
 
     electronApp.vlog(1, `addEventListener ${eventString}`);
+
     ofEvents.on(eventString, safeListener);
 
     unsubscribe = () => {
@@ -998,6 +1028,23 @@ Window.focus = function(identity) {
     browserWindow.focus();
 };
 
+Window.getAllFrames = function(identity) {
+    const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
+
+    if (!openfinWindow) {
+        return [];
+    }
+
+    const framesArr = [coreState.getInfoByUuidFrame(identity)];
+    const subFrames = [];
+
+    for (let [, info] of openfinWindow.frames) {
+        subFrames.push(new FrameInfo(info));
+    }
+
+    return framesArr.concat(subFrames);
+};
+
 Window.getBounds = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 
@@ -1041,12 +1088,13 @@ Window.getGroup = function(identity) {
 
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const openfinWindow = Window.wrap(identity.uuid, identity.name);
+    const { pluginState, preloadState } = Window.wrap(identity.uuid, identity.name);
     const webContents = browserWindow.webContents;
     const windowInfo = {
         canNavigateBack: webContents.canGoBack(),
         canNavigateForward: webContents.canGoForward(),
-        preloadState: openfinWindow.preloadState,
+        pluginState,
+        preloadState,
         title: webContents.getTitle(),
         url: webContents.getURL()
     };
@@ -1072,11 +1120,14 @@ Window.getNativeId = function(identity) {
 
 Window.getNativeWindow = function() {};
 
-
 Window.getOptions = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'get options for');
-
-    return browserWindow._options;
+    // In the case that the identity passed does not exist, or is not a window,
+    // return the entity info object. The fail case is used for frame identity on spin up.
+    try {
+        return getElectronBrowserWindow(identity, 'get options for')._options;
+    } catch (e) {
+        return System.getEntityInfo(identity);
+    }
 };
 
 Window.getParentApplication = function() {
@@ -1089,26 +1140,39 @@ Window.getParentApplication = function() {
 Window.getParentWindow = function() {};
 
 /**
+ * Sets/updates window's plugin state and emits relevant events
+ */
+Window.setWindowPluginState = function(identity, payload) {
+    const { uuid, name } = identity;
+    const { name: pluginName, version, state, allDone } = payload;
+    const updateTopic = allDone ? 'plugin-state-changed' : 'plugin-state-changing';
+    let { pluginState } = Window.wrap(uuid, name);
+
+    // Single plugin state change
+    if (!allDone) {
+        pluginState = pluginState.find(e => e.name === pluginName && e.version === version);
+        pluginState.state = state;
+    }
+
+    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, pluginState });
+};
+
+/**
  * Sets/updates window's preload script state and emits relevant events
  */
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
-    const { state, allDone } = payload;
-    const openfinWindow = Window.wrap(uuid, name);
-    let preloadState = openfinWindow.preloadState;
-    const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
+    const { url, state, allDone } = payload;
+    const updateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
+    let { preloadState } = Window.wrap(uuid, name);
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === getIdentifier(payload));
+        preloadState = preloadState.find(e => e.url === url);
         preloadState.state = state;
     }
 
-    ofEvents.emit(route.window(preloadStateUpdateTopic, uuid, name), {
-        name,
-        uuid,
-        preloadState
-    });
+    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, preloadState });
 };
 
 Window.getSnapshot = function(identity, callback = () => {}) {

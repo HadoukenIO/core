@@ -53,8 +53,8 @@ import {
 import {
     default as connectionManager,
     meshEnabled,
-    isMeshEnabled,
-    getMeshUuid
+    getMeshUuid,
+    isMeshEnabledRuntime
 } from './src/browser/connection_manager';
 
 import * as log from './src/browser/log';
@@ -142,7 +142,7 @@ portDiscovery.on('runtime/launched', (portInfo) => {
     log.writeToLog('info', `Port discovery message received ${JSON.stringify(portInfo)}`);
 
     //TODO include old runtimes in the determination.
-    if (meshEnabled && portInfo.port !== myPortInfo.port && isMeshEnabled(portInfo.options)) {
+    if (meshEnabled && portInfo.port !== myPortInfo.port && isMeshEnabledRuntime(portInfo)) {
 
         connectionManager.connectToRuntime(myUuid, portInfo).then((runtimePeer) => {
             //one connected we broadcast our port discovery message.

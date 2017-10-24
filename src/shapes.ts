@@ -20,6 +20,18 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
+export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
+
+export interface FrameInfo extends Identity {
+    name: string;
+    parent: Identity;
+    entityType: EntityType;
+}
+
+export interface ChildFrameInfo extends FrameInfo {
+    frameRoutingId: number;
+}
+
 export interface APIMessage {
     action: string;
     messageId: number;
@@ -69,23 +81,33 @@ export interface Window {
 }
 
 export interface OpenFinWindow {
+    isIframe?: boolean;
+    parentFrameId?: number;
     _openListeners: (() => void)[];
     _options: WindowOptions;
     _window: BrowserWindow;
     app_uuid: string;
     browserWindow: BrowserWindow;
     children: OpenFinWindow[];
+    frames: Map<string, ChildFrameInfo>;
     forceClose: boolean;
     groupUuid: string|null;
     hideReason: string;
     id: number;
     name: string;
-    uuid: string;
+    pluginState: {
+        link?: string;
+        name: string;
+        optional?: boolean;
+        state: 'load-failed'|'load-succeeded'|'failed'|'succeeded';
+        version: string;
+    }[];
     preloadState: {
         optional?: boolean;
         state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
         url: string;
     }[];
+    uuid: string;
 }
 
 export interface BrowserWindow {
@@ -103,6 +125,9 @@ export interface BrowserWindow {
     _eventsCount: number;
     _options: WindowOptions;
     devToolsWebContents: null;
+    webContents: {
+        hasFrame: (frameName: string) => boolean;
+    };
 }
 
 export interface AppObj {
