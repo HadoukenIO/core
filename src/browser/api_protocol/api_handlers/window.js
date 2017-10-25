@@ -146,7 +146,7 @@ function setWindowPreloadState(identity, message, ack) {
     const payload = message.payload;
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(identity);
 
-    Window.setWindowPluginState(windowIdentity, payload);
+    Window.setWindowPreloadState(windowIdentity, payload);
     ack();
 }
 
