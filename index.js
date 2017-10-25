@@ -517,6 +517,8 @@ function launchApp(argo, startExternalAdapterServer) {
             configObject: { licenseKey }
         } = configuration;
 
+        coreState.setManifest(configUrl, configObject);
+
         if (argo['user-app-config-args']) {
             const tempUrl = configObject['startup_app'].url;
             const delimiter = tempUrl.indexOf('?') < 0 ? '?' : '&';
