@@ -67,28 +67,6 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
     }
 
     callback(err, filePath);
-
-    // stat(filePath, (err: null | Error) => {
-    //     if (err) {
-    //         if (!appQuiting) {
-    //             stat(appCacheDir, (err: null | Error) => {
-    //                 if (err) {
-    //                     if (!appQuiting) {
-    //                         mkdir(appCacheDir, () => {
-    //                             download(fileUrl, filePath, callback);
-    //                         });
-    //                     }
-    //                 } else {
-    //                     download(fileUrl, filePath, callback);
-    //                 }
-    //             });
-    //         }
-    //     } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
-    //         download(fileUrl, filePath, callback);
-    //     } else {
-    //         callback(null, filePath);
-    //     }
-    // });
 }
 
 function prepDownloadLocation(appCacheDir: string, filePath: string) {
