@@ -317,10 +317,10 @@ limitations under the License.
             if (!e.defaultPrevented) {
                 e.preventDefault();
 
-                const options = getCurrentWindowOptionsSync();
+                const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
+                const options = getWindowOptionsSync(identity);
 
                 if (options.contextMenu) {
-                    const identity = getWindowIdentitySync();
                     syncApiCall('show-menu', {
                         uuid: identity.uuid,
                         name: identity.name,
