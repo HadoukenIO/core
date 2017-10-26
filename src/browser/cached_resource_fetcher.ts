@@ -28,7 +28,7 @@ app.on('quit', () => { appQuiting = true; });
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
-export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): void {
+export async function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
     if (!fileUrl || typeof fileUrl !== 'string') {
         callback(new Error(`Bad file url: '${fileUrl}'`));
         return;
@@ -38,44 +38,80 @@ export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: 
         return;
     }
 
-    // if (!isURL(fileUrl)) {
-    //     if (isURI(fileUrl)) {
-    //         callback(null, uriToPath(fileUrl));
-    //     } else {
-    //         stat(fileUrl, (err: null|Error) => {
-    //             if (err) {
-    //                 callback(new Error(`Invalid file url: '${fileUrl}'`));
-    //             } else {
-    //                 callback(null, fileUrl);
-    //             }
-    //         });
-    //     }
-    //     return;
-    // }
+    if (!isURL(fileUrl)) {
+
+        // this is the case where file:///
+        if (isURI(fileUrl)) {
+            callback(null, uriToPath(fileUrl));
+        } else {
+            // this is c:\whatever\
+            stat(fileUrl, (err: null|Error) => {
+                if (err) {
+                    callback(new Error(`Invalid file url: '${fileUrl}'`));
+                } else {
+                    callback(null, fileUrl);
+                }
+            });
+        }
+        return;
+    }
 
     const appCacheDir = getAppCacheDir(appUuid);
     const filePath = getFilePath(appCacheDir, fileUrl);
+    let err: Error;
+    try {
+        await prepDownloadLocation(appCacheDir, filePath);
+        await download(fileUrl, filePath);
+    } catch (e) {
+        err = e;
+    }
 
-    stat(filePath, (err: null | Error) => {
-        if (err) {
-            if (!appQuiting) {
-                stat(appCacheDir, (err: null | Error) => {
-                    if (err) {
-                        if (!appQuiting) {
-                            mkdir(appCacheDir, () => {
-                                download(fileUrl, filePath, callback);
-                            });
+    callback(err, filePath);
+
+    // stat(filePath, (err: null | Error) => {
+    //     if (err) {
+    //         if (!appQuiting) {
+    //             stat(appCacheDir, (err: null | Error) => {
+    //                 if (err) {
+    //                     if (!appQuiting) {
+    //                         mkdir(appCacheDir, () => {
+    //                             download(fileUrl, filePath, callback);
+    //                         });
+    //                     }
+    //                 } else {
+    //                     download(fileUrl, filePath, callback);
+    //                 }
+    //             });
+    //         }
+    //     } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
+    //         download(fileUrl, filePath, callback);
+    //     } else {
+    //         callback(null, filePath);
+    //     }
+    // });
+}
+
+function prepDownloadLocation(appCacheDir: string, filePath: string) {
+    return new Promise((resolve, reject) => {
+        stat(filePath, (err: null | Error) => {
+            if (err) {
+                if (!appQuiting) {
+                    stat(appCacheDir, (err: null | Error) => {
+                        if (err) {
+                            if (!appQuiting) {
+                                mkdir(appCacheDir, () => {
+                                    resolve();
+                                });
+                            }
+                        } else {
+                            resolve();
                         }
-                    } else {
-                        download(fileUrl, filePath, callback);
-                    }
-                });
+                    });
+                }
+            } else {
+                resolve();
             }
-        } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
-            download(fileUrl, filePath, callback);
-        } else {
-            callback(null, filePath);
-        }
+        });
     });
 }
 
@@ -118,48 +154,30 @@ function generateHash(str: string): string {
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
-    // const fetcher = new resourceFetcher('file');
-    // file uris are not getting cached??
-    // WE NEED TO HANDLE THE ERR CASE AS WELL LIKE REAL PROGRAMMERS!!
-    const request = net.request(fileUrl);
-    let res = '';
-    const bws = createWriteStream(filePath, {
-        // encoding: 'binary',
-        defaultEncoding: 'binary'
+function download(fileUrl: string, filePath: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        const request = net.request(fileUrl);
+        const binaryWriteStream = createWriteStream(filePath, {
+            // encoding: 'binary',
+            defaultEncoding: 'binary'
+        });
+
+        request.once('response', (response: any) => {
+            response.setEncoding('binary');
+            response.on('data', (chunk: any) => {
+                binaryWriteStream.write(chunk, 'binary');
+            });
+            response.on('end', () => {
+                binaryWriteStream.once('close', () => {
+                    resolve();
+                });
+                binaryWriteStream.once('error', (err: Error) => {
+                    reject(err);
+                });
+                binaryWriteStream.end();
+            });
+        });
+        request.end();
     });
-    request.on('response', (response: any) => {
-      // console.log(`STATUS: ${response.statusCode}`);
-      // console.log(`HEADERS: ${JSON.stringify(response.headers)}`)
-      response.setEncoding('binary');
-      response.on('data', (chunk: any) => {
-        // console.log(`BODY: ${chunk}`);
-        res += chunk;
-        bws.write(chunk, 'binary');
-      });
-      response.on('end', () => {
-        log.writeToLog(1, 'done!', true);
-        log.writeToLog(1, fileUrl, true);
 
-        // writeFileSync(filePath, res);
-        bws.once('close', callback.bind(null, null, filePath));
-        bws.end();
-        // setTimeout(() => { // wtf do we need to time out here?!?!?
-        //     callback(null, filePath);
-        // }, 1000);
-
-      });
-    });
-    request.end();
-
-    // fetcher.once('fetch-complete', (event: string, status: string) => {
-    //     if (status === 'success') {
-    //         callback(null, filePath);
-    //     } else {
-    //         callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
-    //     }
-    // });
-
-    // fetcher.setFilePath(filePath);
-    // fetcher.fetch(fileUrl);
 }
