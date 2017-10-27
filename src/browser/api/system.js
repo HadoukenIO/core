@@ -610,6 +610,36 @@ exports.System = {
             }
         });
     },
+    getCookies: function(opts, callback, errorCallback) {
+        const { url, name } = opts;
+        if (url && url.length > 0) {
+            session.defaultSession.cookies.get({ url, name }, (error, cookies) => {
+                if (error) {
+                    log.writeToLog(1, error, true);
+                    errorCallback(`Error getting cookie ${name}`);
+                } else if (cookies.length > 0) {
+                    const data = [];
+                    for (let cookie of cookies) {
+                        if (cookie.httpOnly !== true) {
+                            data.push({
+                                name: cookie.name,
+                                value: cookie.value,
+                                expirationDate: cookie.expirationDate,
+                                path: cookie.path,
+                                domain: cookie.domain
+                            });
+                        } else {
+                            log.writeToLog(1, `skip cookie ${cookie.name} httpOnly`, true);
+                        }
+                    }
+                    callback(data);
+                } else {
+                    log.writeToLog(1, `cookies result ${cookies.length}`, true);
+                    errorCallback(`Error getting cookie ${name}`);
+                }
+            });
+        }
+    },
     getWebSocketServerState: function() {
         return coreState.getSocketServerState();
     },

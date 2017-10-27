@@ -63,6 +63,7 @@ function SystemApiHandler() {
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
+        'get-cookies': getCookies,
         'set-cookie': setCookie,
         'set-min-log-level': setMinLogLevel,
         'show-developer-tools': showDeveloperTools,
@@ -393,6 +394,17 @@ function SystemApiHandler() {
     function setCookie(identity, message, ack, nack) {
         System.setCookie(message.payload, function() {
             ack(successAck);
+        }, function(err) {
+            nack(err);
+        });
+
+    }
+
+    function getCookies(identity, message, ack, nack) {
+        System.getCookies(message.payload, function(data) {
+            let dataAck = _.clone(successAck);
+            dataAck.data = data;
+            ack(dataAck);
         }, function(err) {
             nack(err);
         });
