@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {app, resourceFetcher, net} from 'electron'; // Electron app
+import {app, net} from 'electron'; // Electron app
 import {stat, mkdir, writeFileSync, createWriteStream} from 'fs';
 import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
@@ -133,7 +133,7 @@ function generateHash(str: string): string {
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(fileUrl: string, filePath: string): Promise<any> {
+function download(fileUrl: string, filePath: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const request = net.request(fileUrl);
         const binaryWriteStream = createWriteStream(filePath, {

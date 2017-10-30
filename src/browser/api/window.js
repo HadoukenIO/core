@@ -2162,14 +2162,11 @@ function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
 }
 
 function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
-    log.writeToLog(1, `GO GET IT! ${iconFilepath}`, true);
     if (!browserWindow.isDestroyed()) {
         let icon = nativeImage.createFromPath(iconFilepath);
         if (icon.isEmpty()) {
-            log.writeToLog(1, 'yeah it was empty', true);
             errorCallback();
         } else {
-            browserWindow.setIcon(icon);
         }
     }
 }
