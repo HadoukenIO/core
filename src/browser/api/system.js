@@ -701,8 +701,8 @@ exports.System = {
         }
     },
 
-    getPluginModules: function(cb) {
-        return plugins.getModules().then(cb);
+    getPluginModules: function() {
+        return plugins.getModules();
     },
 
     // identitier is preload script url or plugin name

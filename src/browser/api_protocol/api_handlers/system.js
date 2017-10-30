@@ -481,11 +481,13 @@ function SystemApiHandler() {
     }
 
     function getPluginModules(identity, message, ack, nack) {
-        System.getPluginModules((pluginModules) => {
-            const dataAck = _.clone(successAck);
-            dataAck.data = pluginModules;
-            ack(dataAck);
-        });
+        System.getPluginModules()
+            .then((pluginModules) => {
+                const dataAck = _.clone(successAck);
+                dataAck.data = pluginModules;
+                ack(dataAck);
+            })
+            .catch(nack);
     }
 }
 
