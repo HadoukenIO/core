@@ -44,7 +44,7 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
         if (isURI(fileUrl)) {
             callback(null, uriToPath(fileUrl));
         } else {
-            // this is c:\whatever\
+            // this is C:\whatever\
             stat(fileUrl, (err: null|Error) => {
                 if (err) {
                     callback(new Error(`Invalid file url: '${fileUrl}'`));
@@ -59,6 +59,7 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
     const appCacheDir = getAppCacheDir(appUuid);
     const filePath = getFilePath(appCacheDir, fileUrl);
     let err: Error;
+
     try {
         await prepDownloadLocation(appCacheDir, filePath);
         await download(fileUrl, filePath);
@@ -136,8 +137,7 @@ function download(fileUrl: string, filePath: string): Promise<any> {
     return new Promise((resolve, reject) => {
         const request = net.request(fileUrl);
         const binaryWriteStream = createWriteStream(filePath, {
-            // encoding: 'binary',
-            defaultEncoding: 'binary'
+            encoding: 'binary'
         });
 
         request.once('response', (response: any) => {
@@ -157,5 +157,4 @@ function download(fileUrl: string, filePath: string): Promise<any> {
         });
         request.end();
     });
-
 }
