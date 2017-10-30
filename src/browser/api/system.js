@@ -535,7 +535,13 @@ exports.System = {
         shell.openExternal(url);
     },
     readRegistryValue: function(rootKey, subkey, value) {
-        return electronApp.readRegistryValue(rootKey, subkey, value);
+        const registryPayload = electronApp.readRegistryValue(rootKey, subkey, value);
+
+        if (registryPayload && registryPayload.error) {
+            throw new Error(registryPayload.error);
+        }
+
+        return registryPayload;
     },
     releaseExternalProcess: function(processUuid) {
         ProcessTracker.release(processUuid);

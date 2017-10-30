@@ -82,17 +82,11 @@ function SystemApiHandler() {
         return e !== undefined && e.constructor === Error;
     }
 
-    function readRegistryValue(identity, message, ack, nack) {
+    function readRegistryValue(identity, message, ack) {
+        const dataAck = _.clone(successAck);
         const { payload: { rootKey, subkey, value } } = message;
-        const response = System.readRegistryValue(rootKey, subkey, value);
-
-        if (_.isEmpty(response)) {
-            nack(new Error('There was an error reading the registry.'));
-        } else {
-            const dataAck = _.clone(successAck);
-            dataAck.data = response;
-            ack(dataAck);
-        }
+        dataAck.data = System.readRegistryValue(rootKey, subkey, value);
+        ack(dataAck);
     }
 
     function setMinLogLevel(identity, message, ack, nack) {
