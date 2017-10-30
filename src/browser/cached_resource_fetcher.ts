@@ -28,7 +28,7 @@ app.on('quit', () => { appQuiting = true; });
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
-export async function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): Promise<void> {
+export async function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
     if (!fileUrl || typeof fileUrl !== 'string') {
         callback(new Error(`Bad file url: '${fileUrl}'`));
         return;
@@ -133,7 +133,7 @@ function generateHash(str: string): string {
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(fileUrl: string, filePath: string): Promise<void> {
+function download(fileUrl: string, filePath: string): Promise<any> {
     return new Promise((resolve, reject) => {
         const request = net.request(fileUrl);
         const binaryWriteStream = createWriteStream(filePath, {
