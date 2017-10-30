@@ -587,6 +587,7 @@ limitations under the License.
         let logBase = `[plugin] [${identity.uuid}]-[${identity.name}]: `;
 
         plugins.forEach((plugin) => {
+            // _content - contains module code as a string to eval in this window
             const { name, version, _content } = plugin;
 
             if (!_content) {
