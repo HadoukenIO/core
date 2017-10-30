@@ -38,17 +38,15 @@ export async function getModules(): Promise<PluginWithContent[]> {
  */
 async function getModule(sourceUrl: string, plugin: Plugin): Promise<PluginWithContent> {
     const id = `${plugin.name}: ${plugin.version}`;
+    let pluginPath;
 
-    // Plugin path is already available
     if (pluginPaths.has(id)) {
-        const pluginPath = pluginPaths.get(id);
-        return await addContent(plugin, pluginPath);
+        pluginPath = pluginPaths.get(id);
+    } else {
+        const {payload} = await rvmMessageBus.getPluginInfo(sourceUrl, plugin);
+        pluginPath = !payload.error ? path.join(payload.path, payload.target) : '';
+        pluginPaths.set(id, pluginPath);
     }
-
-    const {payload} = await rvmMessageBus.getPluginInfo(sourceUrl, plugin);
-    const pluginPath = !payload.error ? path.join(payload.path, payload.target) : '';
-
-    pluginPaths.set(id, pluginPath);
 
     return await addContent(plugin, pluginPath);
 }
