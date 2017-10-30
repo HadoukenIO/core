@@ -28,7 +28,7 @@ app.on('quit', () => { appQuiting = true; });
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
-export async function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
+export async function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): Promise<void> {
     if (!fileUrl || typeof fileUrl !== 'string') {
         callback(new Error(`Bad file url: '${fileUrl}'`));
         return;

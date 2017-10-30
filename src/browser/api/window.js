@@ -2167,6 +2167,7 @@ function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
         if (icon.isEmpty()) {
             errorCallback();
         } else {
+            browserWindow.setIcon(icon);
         }
     }
 }
