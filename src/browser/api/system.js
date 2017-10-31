@@ -612,7 +612,7 @@ exports.System = {
     },
     getCookies: function(opts, callback, errorCallback) {
         const { url, name } = opts;
-        if (url && url.length > 0) {
+        if (url && url.length > 0 && name && name.length > 0) {
             session.defaultSession.cookies.get({ url, name }, (error, cookies) => {
                 if (error) {
                     log.writeToLog(1, error, true);
@@ -621,9 +621,9 @@ exports.System = {
                     const data = [];
                     for (let cookie of cookies) {
                         if (cookie.httpOnly !== true) {
+                            // excluding value here for security.  Value should be retrieved from document.cookie
                             data.push({
                                 name: cookie.name,
-                                value: cookie.value,
                                 expirationDate: cookie.expirationDate,
                                 path: cookie.path,
                                 domain: cookie.domain
@@ -638,6 +638,8 @@ exports.System = {
                     errorCallback(`Error getting cookie ${name}`);
                 }
             });
+        } else {
+            errorCallback(`Error getting cookies`);
         }
     },
     getWebSocketServerState: function() {
