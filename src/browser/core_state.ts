@@ -209,13 +209,13 @@ export function getUuidBySourceUrl(sourceUrl: string): string|boolean {
     return app && app.appObj && app.appObj.uuid;
 }
 
-export function getConfigUrlByUuid(uuid: string): string|boolean {
+export function getConfigUrlByUuid(uuid: string): string {
     const app = getAppAncestor(uuid);
     if  (app && app._configUrl) {
         return app._configUrl;
     } else {
         const externalApp = getExternalAncestor(uuid);
-        return externalApp && externalApp.configUrl;
+        return (externalApp && externalApp.configUrl) || '';
     }
 }
 
