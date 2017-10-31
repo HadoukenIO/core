@@ -24,23 +24,15 @@ import * as log from './log';
 import { Identity } from '../shapes';
 import ofEvents from './of_events';
 import route from '../common/route';
-import { rvmMessageBus, PluginQuery } from './rvm/rvm_message_bus';
-import { sendToRVM } from './rvm/utils';
-import { getConfigUrlByUuid } from './core_state.js';
 import { Timer } from '../common/timer';
 
 
 // some local type definitions
 type PreloadOption = PreloadInstance[];
-type PreloadInstance = PreloadScript | PreloadPlugin;
+type PreloadInstance = PreloadScript;
 interface PreloadScript {
     url: string; // URI actually: http:// or file://
     optional?: boolean; // not used herein but used by api_decorator at script execution time
-}
-interface PreloadPlugin {
-    name: string;
-    version: string;
-    optional?: boolean;
 }
 interface PreloadFetched extends PreloadScript {
     scriptPath: string; // location on disc of cached fetch
@@ -58,7 +50,6 @@ const REGEX_FILE_SCHEME = /^file:\/\//i;
 interface FetchResponse {
     identity: Identity;
     preloadScript?: PreloadInstance;
-    preloadPlugin?: PreloadInstance;
     scriptPath: string;
 }
 
@@ -102,11 +93,7 @@ export function fetchAndLoadPreloadScripts(
             return Promise.resolve(true);
         } else {
             // not previously downloaded *OR* previous downloaded failed
-            if (isPreloadScript(preload)) {
-                return fetchToCache(identity, preload).then(loadFromCache);
-            } else {
-                return fetchPlugin(identity, preload).then(loadFromCache);
-            }
+            return fetchToCache(identity, preload).then(loadFromCache);
         }
     });
 
@@ -152,33 +139,6 @@ function fetchToCache(identity: Identity, preloadScript: PreloadScript): Promise
     });
 }
 
-// resolves to type `PreloadFetched` on success
-// resolves to `undefined` when fetch fails to download asset to Chromium cache
-function fetchPlugin(identity: Identity, preloadPlugin: PreloadPlugin): Promise<FetchResponse> {
-    return new Promise((resolve, reject) => {
-        const sourceUrl = getConfigUrlByUuid(identity.uuid);
-        const msg: PluginQuery = {
-            topic: 'application',
-            messageId: '1',
-            action: 'query-plugin',
-            name: preloadPlugin.name,
-            version: preloadPlugin.version,
-            optional: preloadPlugin.optional,
-            sourceUrl
-        };
-
-        rvmMessageBus.publish(msg, (resp) => {
-            if (resp.payload.hasOwnProperty('path') && resp.payload.action === 'query-plugin') {
-                const scriptPath = `${resp.payload.path}\\${resp.payload.target}`;
-                resolve({identity, preloadPlugin, scriptPath});
-            } else {
-                updatePreloadState(identity, preloadPlugin, 'load-failed');
-                resolve();
-            }
-        });
-    });
-}
-
 // resolves to type `PreloadLoaded` on success
 // resolves to `undefined` when above fetch failed or when successfully fetched asset fails to load from Chromium cache
 function loadFromCache(opts: FetchResponse): Promise<boolean> {
@@ -186,7 +146,7 @@ function loadFromCache(opts: FetchResponse): Promise<boolean> {
         if (!opts || !opts.scriptPath) {
             resolve(false); // got fetchError above OR no error but no scriptPath either; in any case don't attempt to load
         } else {
-            const preload = opts.preloadScript ? opts.preloadScript : opts.preloadPlugin;
+            const preload = opts.preloadScript;
             const { identity, scriptPath } = opts;
             const id = getIdentifier(preload);
 
@@ -267,12 +227,6 @@ function isPreloadOption(preloadOption: PreloadOption): preloadOption is Preload
 function isPreloadInstance(preload: PreloadInstance): preload is PreloadInstance {
     return (
         typeof preload === 'object' && typeof getIdentifier(preload) === 'string'
-    );
-}
-
-function isPreloadScript(preload: any): preload is PreloadScript {
-    return (
-        typeof preload === 'object' && preload.hasOwnProperty('url')
     );
 }
 

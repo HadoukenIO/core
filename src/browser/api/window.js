@@ -803,6 +803,7 @@ Window.create = function(id, opts) {
             state: getPreloadScriptState(getIdentifier(preload))
         };
     });
+    winObj.framePreloadState = {}; // frame ID => [{url, state}]
 
     if (!coreState.getWinObjById(id)) {
         coreState.setWindowObj(id, winObj);
@@ -1098,7 +1099,6 @@ Window.getWindowInfo = function(identity) {
         title: webContents.getTitle(),
         url: webContents.getURL()
     };
-
     return windowInfo;
 };
 
@@ -1164,15 +1164,47 @@ Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
     const { url, state, allDone } = payload;
     const updateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
-    let { preloadState } = Window.wrap(uuid, name);
+    const frameInfo = coreState.getInfoByUuidFrame(identity);
+    let openfinWindow;
+    if (frameInfo.entityType === 'iframe') {
+        openfinWindow = Window.wrap(frameInfo.parent.uuid, frameInfo.parent.name);
+    } else {
+        openfinWindow = Window.wrap(uuid, name);
+    }
+
+    if (!openfinWindow) {
+        return log.writeToLog('info', `setWindowPreloadState missing openfinWindow ${uuid} ${name}`);
+    }
+    let { preloadState } = openfinWindow;
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === url);
-        preloadState.state = state;
+        if (frameInfo.entityType === 'iframe') {
+            let frameState = openfinWindow.framePreloadState[name];
+            if (!frameState) {
+                frameState = openfinWindow.framePreloadState[name] = [];
+            }
+            preloadState = frameState.find(e => e.url === getIdentifier(payload));
+            if (!preloadState) {
+                frameState.push(preloadState = { url: getIdentifier(payload) });
+            }
+        } else {
+            preloadState = openfinWindow.preloadState.find(e => e.url === url);
+        }
+        if (preloadState) {
+            preloadState.state = state;
+        } else {
+            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${getIdentifier(payload)} `);
+        }
     }
 
-    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, preloadState });
+    if (frameInfo.entityType === 'window') {
+        ofEvents.emit(route.window(updateTopic, uuid, name), {
+            name,
+            uuid,
+            preloadState
+        });
+    } // @TODO ofEvents.emit(route.frame for iframes
 };
 
 Window.getSnapshot = function(identity, callback = () => {}) {
