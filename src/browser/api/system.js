@@ -41,6 +41,7 @@ const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 import { FrameInfo } from './frame';
+import * as plugins from '../plugins';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -698,6 +699,10 @@ exports.System = {
         } else {
             fetchAndLoadPreloadScripts(identity, preloadOption, cb);
         }
+    },
+
+    getPluginModules: function() {
+        return plugins.getModules();
     },
 
     // identitier is preload script url or plugin name

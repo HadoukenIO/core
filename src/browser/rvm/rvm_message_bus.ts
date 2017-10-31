@@ -8,6 +8,7 @@ import { WMCopyData } from '../transport';
 import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
+import { Plugin } from '../../shapes';
 
 import { app } from 'electron';
 const _ = require('underscore');
@@ -131,11 +132,14 @@ export interface AppAssetsDownloadAsset extends RvmMsgBase {
 export interface PluginQuery extends RvmMsgBase {
     topic: applicationTopic;
     action: pluginQueryAction;
-    messageId: string;
     name: string;
     version: string;
     optional?: boolean;
-    sourceUrl: string | boolean;
+    sourceUrl: string;
+}
+
+export interface PluginQueryResponse extends RvmMsgBase {
+    payload: any;
 }
 
 // topic: cleanup -----
@@ -351,6 +355,26 @@ export class RVMMessageBus extends EventEmitter  {
                 }, timeToLiveInMS);
             }
         }
+    }
+
+    /**
+     * Retrieves information about a plugin
+     */
+    public getPluginInfo(manifestUrl: string, opts: Plugin): Promise<PluginQueryResponse> {
+        return new Promise((resolve) => {
+            const {name, version, optional} = opts;
+
+            const rvmMsg: PluginQuery = {
+                topic: 'application',
+                action: 'query-plugin',
+                name,
+                version,
+                optional,
+                sourceUrl: manifestUrl
+            };
+
+            this.publish(rvmMsg, resolve);
+        });
     }
 }
 
