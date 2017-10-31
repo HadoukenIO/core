@@ -660,13 +660,10 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
  * Run an application via RVM
  */
 Application.runWithRVM = function(identity, manifestUrl) {
-    const ancestor = coreState.getAppAncestor(identity.uuid);
-    const ancestorManifestUrl = ancestor && ancestor._configUrl;
-
     return sendToRVM({
         topic: 'application',
         action: 'launch-app',
-        sourceUrl: ancestorManifestUrl,
+        sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
         data: {
             configUrl: manifestUrl
         }
