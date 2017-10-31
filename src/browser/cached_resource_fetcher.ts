@@ -94,13 +94,6 @@ function prepDownloadLocation(appCacheDir: string, filePath: string) {
     });
 }
 
-function remoteFileIsYoungerThanCachedFile(remoteUrl: string, cachedFilePath: string) {
-    //todo: make a RESTful HEAD request and if file at remoteUrl is missing, return false;
-    //todo: else if file at remoteUrl is younger than file at cachedFilePath, return true;
-    //todo: else return false
-    return true; //for now we are always fetching
-}
-
 /**
  * Generates a folder name for the app to store the file in.
  */
