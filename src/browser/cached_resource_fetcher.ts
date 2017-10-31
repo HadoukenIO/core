@@ -19,7 +19,6 @@ import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
 import {isURL, isURI, uriToPath} from '../common/regex';
-import * as log from './log';
 
 let appQuiting: Boolean = false;
 
