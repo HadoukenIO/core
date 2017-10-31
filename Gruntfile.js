@@ -33,7 +33,7 @@ const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
 
 //optional dependencies that we ship.
 const optionalDependencies = [
-    'node-adapter/**',
+    'hadouken-js-adapter/**',
     'runtime-p2p/**'
 ];
 
@@ -357,6 +357,7 @@ module.exports = (grunt) => {
             'src/browser/rvm/utils.ts',
             'src/browser/external_window_event_adapter.js',
             'src/browser/connection_manager.ts',
+            'src/browser/plugins.ts',
             'src/browser/transport.ts',
             'src/browser/transports/socket_server.js',
             'src/browser/transports/wm_copydata.ts',

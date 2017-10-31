@@ -794,6 +794,8 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
+    winObj.pluginState = []; // TODO
+
     // Set preload scripts' final loading states
     winObj.preloadState = (_options.preload || []).map(preload => {
         return {
@@ -801,6 +803,7 @@ Window.create = function(id, opts) {
             state: getPreloadScriptState(getIdentifier(preload))
         };
     });
+    winObj.framePreloadState = {}; // frame ID => [{url, state}]
 
     if (!coreState.getWinObjById(id)) {
         coreState.setWindowObj(id, winObj);
@@ -1086,16 +1089,16 @@ Window.getGroup = function(identity) {
 
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const openfinWindow = Window.wrap(identity.uuid, identity.name);
+    const { pluginState, preloadState } = Window.wrap(identity.uuid, identity.name);
     const webContents = browserWindow.webContents;
     const windowInfo = {
         canNavigateBack: webContents.canGoBack(),
         canNavigateForward: webContents.canGoForward(),
-        preloadState: openfinWindow.preloadState,
+        pluginState,
+        preloadState,
         title: webContents.getTitle(),
         url: webContents.getURL()
     };
-
     return windowInfo;
 };
 
@@ -1137,26 +1140,71 @@ Window.getParentApplication = function() {
 Window.getParentWindow = function() {};
 
 /**
+ * Sets/updates window's plugin state and emits relevant events
+ */
+Window.setWindowPluginState = function(identity, payload) {
+    const { uuid, name } = identity;
+    const { name: pluginName, version, state, allDone } = payload;
+    const updateTopic = allDone ? 'plugin-state-changed' : 'plugin-state-changing';
+    let { pluginState } = Window.wrap(uuid, name);
+
+    // Single plugin state change
+    if (!allDone) {
+        pluginState = pluginState.find(e => e.name === pluginName && e.version === version);
+        pluginState.state = state;
+    }
+
+    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, pluginState });
+};
+
+/**
  * Sets/updates window's preload script state and emits relevant events
  */
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
-    const { state, allDone } = payload;
-    const openfinWindow = Window.wrap(uuid, name);
-    let preloadState = openfinWindow.preloadState;
-    const preloadStateUpdateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
+    const { url, state, allDone } = payload;
+    const updateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
+    const frameInfo = coreState.getInfoByUuidFrame(identity);
+    let openfinWindow;
+    if (frameInfo.entityType === 'iframe') {
+        openfinWindow = Window.wrap(frameInfo.parent.uuid, frameInfo.parent.name);
+    } else {
+        openfinWindow = Window.wrap(uuid, name);
+    }
+
+    if (!openfinWindow) {
+        return log.writeToLog('info', `setWindowPreloadState missing openfinWindow ${uuid} ${name}`);
+    }
+    let { preloadState } = openfinWindow;
 
     // Single preload script state change
     if (!allDone) {
-        preloadState = preloadState.find(e => e.url === getIdentifier(payload));
-        preloadState.state = state;
+        if (frameInfo.entityType === 'iframe') {
+            let frameState = openfinWindow.framePreloadState[name];
+            if (!frameState) {
+                frameState = openfinWindow.framePreloadState[name] = [];
+            }
+            preloadState = frameState.find(e => e.url === getIdentifier(payload));
+            if (!preloadState) {
+                frameState.push(preloadState = { url: getIdentifier(payload) });
+            }
+        } else {
+            preloadState = openfinWindow.preloadState.find(e => e.url === url);
+        }
+        if (preloadState) {
+            preloadState.state = state;
+        } else {
+            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${getIdentifier(payload)} `);
+        }
     }
 
-    ofEvents.emit(route.window(preloadStateUpdateTopic, uuid, name), {
-        name,
-        uuid,
-        preloadState
-    });
+    if (frameInfo.entityType === 'window') {
+        ofEvents.emit(route.window(updateTopic, uuid, name), {
+            name,
+            uuid,
+            preloadState
+        });
+    } // @TODO ofEvents.emit(route.frame for iframes
 };
 
 Window.getSnapshot = function(identity, callback = () => {}) {

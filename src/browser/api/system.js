@@ -41,6 +41,7 @@ const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 import { FrameInfo } from './frame';
+import * as plugins from '../plugins';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -700,6 +701,10 @@ exports.System = {
         }
     },
 
+    getPluginModules: function() {
+        return plugins.getModules();
+    },
+
     // identitier is preload script url or plugin name
     setPreloadScript: function(identitier, scriptText) {
         preloadScriptsCache[identitier] = scriptText;
@@ -727,7 +732,10 @@ exports.System = {
         }
 
         // when load/fetch failed, mapped object will be `undefined` (stringifies as `null`)
-        const scriptSet = preloadOption.map(preload => preloadScriptsCache[getIdentifier(preload)]);
+        const scriptSet = preloadOption.map((preload) => {
+            preload.content = preloadScriptsCache[getIdentifier(preload)];
+            return preload;
+        });
         return Promise.resolve(scriptSet);
     }
 };
