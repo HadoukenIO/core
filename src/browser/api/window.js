@@ -48,7 +48,6 @@ import { validateNavigation, navigationValidator } from '../navigation_validatio
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
-import WindowsMessages from '../../common/microsoft';
 
 // constants
 import {
@@ -60,6 +59,12 @@ const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
 const userCache = electronApp.getPath('userCache');
+const WindowsMessages = {
+    WM_KEYDOWN: 0x0100,
+    WM_KEYUP: 0x0101,
+    WM_SYSKEYDOWN: 0x0104,
+    WM_SYSKEYUP: 0x0105,
+};
 
 let Window = {};
 

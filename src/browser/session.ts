@@ -15,7 +15,6 @@ limitations under the License.
 */
 import { EventEmitter } from 'events';
 import { BrowserWindow, app, idleState, nativeTimer } from 'electron';
-import { WindowsMessages } from '../common/microsoft';
 
 class Session extends EventEmitter {
     private idleState: idleState;
@@ -63,9 +62,10 @@ class Session extends EventEmitter {
         // Windows-only
         if (process.platform === 'win32') {
             const bw = new BrowserWindow({ show: false });
+            const WM_WTSSESSION_CHANGE = 0x02B1;
 
             // Listen to session changes using hidden Electron's browser window
-            bw.hookWindowMessage(WindowsMessages.WM_WTSSESSION_CHANGE, wParam => {
+            bw.hookWindowMessage(WM_WTSSESSION_CHANGE, wParam => {
                 let reason: string;
 
                 switch (wParam.readIntLE()) {
