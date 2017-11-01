@@ -63,7 +63,7 @@ function SystemApiHandler() {
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
-        'get-cookies': getCookies,
+        'get-cookies': { apiFunc: getCookies, apiPath: '.getCookies' },
         'set-cookie': setCookie,
         'set-min-log-level': setMinLogLevel,
         'show-developer-tools': showDeveloperTools,
