@@ -799,7 +799,9 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
-    winObj.pluginState = []; // TODO
+    const { data } = coreState.getStartManifest();
+    const { plugin: plugins } = (data || {});
+    winObj.pluginState = JSON.parse(JSON.stringify(plugins || []));
 
     // Set preload scripts' final loading states
     winObj.preloadState = (_options.preload || []).map(preload => {

@@ -481,7 +481,7 @@ function SystemApiHandler() {
     }
 
     function getPluginModules(identity, message, ack, nack) {
-        System.getPluginModules()
+        System.getPluginModules(identity)
             .then((pluginModules) => {
                 const dataAck = _.clone(successAck);
                 dataAck.data = pluginModules;
