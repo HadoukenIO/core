@@ -53,16 +53,11 @@ async function getModule(identity: Identity, sourceUrl: string, plugin: Plugin):
 }
 
 /**
- * Reads and adds module content to plugin
+ * Reads and adds module content to plugin while updating plugin state
  */
 function addContent(identity: Identity, plugin: Plugin, pluginPath: string): Promise<PluginWithContent> {
     return new Promise((resolve) => {
         Window.setWindowPluginState(identity, {...plugin, state: 'load-started'});
-
-        if (!pluginPath) {
-            Window.setWindowPluginState(identity, {...plugin, state: 'load-failed'});
-            return resolve({...plugin, _content: ''});
-        }
 
         readFile(pluginPath, 'utf8', (err, data) => {
             if (err) {
