@@ -61,7 +61,7 @@ function SystemApiHandler() {
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
         'raise-event': raiseEvent,
-        'read-registry-value': readRegistryValue,
+        'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue' },
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
