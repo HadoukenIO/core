@@ -571,16 +571,19 @@ limitations under the License.
             if (response) {
                 response.forEach((script, index) => {
                     if (script !== null) {
+                        const payload = preloadOption[index];
                         const { id } = preloadOption[index].url ? preloadOption[index].url : `${preloadOption[index].name}-${preloadOption[index].version}`;
 
                         try {
                             const val = window.eval(script); /* jshint ignore:line */
                             logPreload('info', identity, `eval succeeded`, id, val);
-                            asyncApiCall(action, { id, state: 'succeeded' });
+                            payload.state = 'succeeded';
                         } catch (err) {
                             logPreload('error', identity, 'eval failed', id, err);
-                            asyncApiCall(action, { id, state: 'failed' });
+                            payload.state = 'failed';
                         }
+
+                        asyncApiCall(action, payload);
                     }
                 });
             }
