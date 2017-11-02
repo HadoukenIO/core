@@ -615,27 +615,27 @@ exports.System = {
         if (url && url.length > 0 && name && name.length > 0) {
             session.defaultSession.cookies.get({ url, name }, (error, cookies) => {
                 if (error) {
-                    log.writeToLog(1, error, true);
-                    errorCallback(`Error getting cookie ${name}`);
+                    log.writeToLog(1, `cookies.get error ${error}`, true);
+                    errorCallback(error);
                 } else if (cookies.length > 0) {
-                    const data = [];
-                    for (let cookie of cookies) {
-                        if (cookie.httpOnly !== true) {
-                            // excluding value here for security.  Value should be retrieved from document.cookie
-                            data.push({
+                    const data =
+                        cookies.filter(cookie => cookie.httpOnly !== true).map(cookie => {
+                            return {
                                 name: cookie.name,
                                 expirationDate: cookie.expirationDate,
                                 path: cookie.path,
                                 domain: cookie.domain
-                            });
-                        } else {
-                            log.writeToLog(1, `skip cookie ${cookie.name} httpOnly`, true);
-                        }
+                            };
+                        });
+                    log.writeToLog(1, `cookies filtered ${data.length}`, true);
+                    if (data.length > 0) {
+                        callback(data);
+                    } else {
+                        errorCallback(`Cookie not found ${name}`);
                     }
-                    callback(data);
                 } else {
                     log.writeToLog(1, `cookies result ${cookies.length}`, true);
-                    errorCallback(`Error getting cookie ${name}`);
+                    errorCallback(`Cookie not found ${name}`);
                 }
             });
         } else {
