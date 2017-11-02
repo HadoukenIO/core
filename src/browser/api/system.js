@@ -41,6 +41,7 @@ const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 import { FrameInfo } from './frame';
+import * as plugins from '../plugins';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -533,6 +534,15 @@ exports.System = {
     openUrlWithBrowser: function(url) {
         shell.openExternal(url);
     },
+    readRegistryValue: function(rootKey, subkey, value) {
+        const registryPayload = electronApp.readRegistryValue(rootKey, subkey, value);
+
+        if (registryPayload && registryPayload.error) {
+            throw new Error(registryPayload.error);
+        }
+
+        return registryPayload;
+    },
     releaseExternalProcess: function(processUuid) {
         ProcessTracker.release(processUuid);
     },
@@ -698,6 +708,10 @@ exports.System = {
         } else {
             fetchAndLoadPreloadScripts(identity, preloadOption, cb);
         }
+    },
+
+    getPluginModules: function(identity) {
+        return plugins.getModules(identity);
     },
 
     // identitier is preload script url or plugin name

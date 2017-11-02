@@ -34,7 +34,7 @@ limitations under the License.
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
-    const initialOptions = getWindowOptionsSync();
+    const initialOptions = getCurrentWindowOptionsSync();
     const entityInfo = getEntityInfoSync(initialOptions.uuid, initialOptions.name);
 
     let getOpenerSuccessCallbackCalled = () => {
@@ -81,8 +81,12 @@ limitations under the License.
         return initialOptions;
     }
 
-    function getWindowOptionsSync() {
+    function getCurrentWindowOptionsSync() {
         return syncApiCall('get-current-window-options');
+    }
+
+    function getWindowOptionsSync(identity) {
+        return syncApiCall('get-window-options', identity);
     }
 
     function getEntityInfoSync(uuid, name) {
@@ -90,7 +94,7 @@ limitations under the License.
     }
 
     function getWindowIdentitySync() {
-        let winOpts = getWindowOptionsSync();
+        let winOpts = getCurrentWindowOptionsSync();
 
         return {
             uuid: winOpts.uuid,
@@ -313,7 +317,7 @@ limitations under the License.
             if (!e.defaultPrevented) {
                 e.preventDefault();
 
-                const options = getWindowOptionsSync();
+                const options = getCurrentWindowOptionsSync();
 
                 if (options.contextMenu) {
                     const identity = getWindowIdentitySync();
@@ -562,13 +566,12 @@ limitations under the License.
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const { uuid, name } = initialOptions;
         const identity = { uuid, name };
-        const windowOptions = getWindowOptionsSync();
+        const windowOptions = entityInfo.entityType === 'iframe' ? getWindowOptionsSync(entityInfo.parent) :
+            getCurrentWindowOptionsSync();
 
-        let { plugin, preload } = convertOptionsToElectronSync(windowOptions);
+        let { preload } = convertOptionsToElectronSync(windowOptions);
 
-        if (plugin.length) {
-            evalPlugins(identity, plugin);
-        }
+        evalPlugins(identity);
 
         if (preload.length) {
             evalPreloadScripts(identity, preload);
@@ -576,39 +579,34 @@ limitations under the License.
     });
 
     /**
-     * Requests plugin contents from the Core and evals them in the current window
+     * Requests plugin modules from the Core and evals them in the current window
      */
-    function evalPlugins(identity, pluginOption) {
+    function evalPlugins(identity) {
         const action = 'set-window-plugin-state';
+        const plugins = syncApiCall('get-plugin-modules');
         let logBase = `[plugin] [${identity.uuid}]-[${identity.name}]: `;
-        let plugins;
-
-        try {
-            plugins = syncApiCall('get-selected-preload-scripts', pluginOption);
-        } catch (error) {
-            return syncApiCall('write-to-log', { level: 'error', message: logBase + error });
-        }
 
         plugins.forEach((plugin) => {
-            const { name, version, content } = plugin;
+            // _content - contains module code as a string to eval in this window
+            const { name, version, _content } = plugin;
 
-            if (content !== null) {
-                // TODO: handle empty script for bad urls
+            if (!_content) {
+                return;
+            }
 
-                try {
-                    window.eval(content); /* jshint ignore:line */
-                    asyncApiCall(action, { name, version, state: 'succeeded' });
-                    syncApiCall('write-to-log', {
-                        level: 'info',
-                        message: logBase + `eval succeeded for ${name} ${version}`
-                    });
-                } catch (err) {
-                    asyncApiCall(action, { name, version, state: 'failed' });
-                    syncApiCall('write-to-log', {
-                        level: 'info',
-                        message: logBase + `eval failed for ${name} ${version}`
-                    });
-                }
+            try {
+                window.eval(_content); /* jshint ignore:line */
+                asyncApiCall(action, { name, version, state: 'succeeded' });
+                syncApiCall('write-to-log', {
+                    level: 'info',
+                    message: logBase + `eval succeeded for ${name} ${version}`
+                });
+            } catch (err) {
+                asyncApiCall(action, { name, version, state: 'failed' });
+                syncApiCall('write-to-log', {
+                    level: 'info',
+                    message: logBase + `eval failed for ${name} ${version}`
+                });
             }
         });
 

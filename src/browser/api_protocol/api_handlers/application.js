@@ -28,7 +28,30 @@ let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
-import { WindowsMessages, SetWindowPosition, SysCommands } from '../../../common/microsoft';
+
+const SetWindowPosition = {
+    SWP_HIDEWINDOW: 0x0080,
+    SWP_SHOWWINDOW: 0x0040
+};
+
+const SysCommands = {
+    SC_MAXIMIZE: 0xF030,
+    SC_MINIMIZE: 0xF020,
+    SC_RESTORE: 0xF120
+};
+
+const WindowsMessages = {
+    WM_DESTROY: 0x0002,
+    WM_SETFOCUS: 0x0007,
+    WM_KILLFOCUS: 0x0008,
+    WM_WINDOWPOSCHANGED: 0x0047,
+    WM_SYSCOMMAND: 0x0112,
+    WM_NCLBUTTONDBLCLK: 0x00A3,
+    WM_SIZING: 0x0214,
+    WM_MOVING: 0x0216,
+    WM_ENTERSIZEMOVE: 0x0231,
+    WM_EXITSIZEMOVE: 0x0232
+};
 
 let successAck = {
     success: true
