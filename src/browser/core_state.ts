@@ -53,6 +53,11 @@ interface WindowMeta {
     uuid: string;
 }
 
+interface ManifestInfo {
+    url: string;
+    manifest?: Shapes.Manifest;
+}
+
 export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
@@ -60,6 +65,7 @@ export const argo = minimist(argv); // arguments as an object
 const apps: Shapes.App[] = [];
 
 let startManifest = {};
+const manifests: Map <string, Shapes.Manifest> = new Map();
 
 // TODO: This needs to go go away, pending socket server refactor.
 let socketServerState = {};
@@ -69,6 +75,17 @@ const manifestProxySettings: Shapes.ProxySettings = {
     proxyPort: 0,
     type: 'system'
 };
+
+export function setManifest(url: string, manifest: Shapes.Manifest): void {
+    const manifestCopy = JSON.parse(JSON.stringify(manifest));
+    manifests.set(url, manifestCopy);
+}
+
+export function getManifest(identity: Shapes.Identity): ManifestInfo {
+    const url = getConfigUrlByUuid(identity.uuid);
+    const manifest = manifests.get(url);
+    return { url, manifest };
+}
 
 export function setStartManifest(url: string, data: Shapes.Manifest): void {
     startManifest = { url, data };
