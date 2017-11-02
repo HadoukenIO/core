@@ -534,6 +534,15 @@ exports.System = {
     openUrlWithBrowser: function(url) {
         shell.openExternal(url);
     },
+    readRegistryValue: function(rootKey, subkey, value) {
+        const registryPayload = electronApp.readRegistryValue(rootKey, subkey, value);
+
+        if (registryPayload && registryPayload.error) {
+            throw new Error(registryPayload.error);
+        }
+
+        return registryPayload;
+    },
     releaseExternalProcess: function(processUuid) {
         ProcessTracker.release(processUuid);
     },
@@ -701,8 +710,8 @@ exports.System = {
         }
     },
 
-    getPluginModules: function() {
-        return plugins.getModules();
+    getPluginModules: function(identity) {
+        return plugins.getModules(identity);
     },
 
     // identitier is preload script url or plugin name

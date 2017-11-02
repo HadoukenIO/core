@@ -63,6 +63,7 @@ function SystemApiHandler() {
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
         'raise-event': raiseEvent,
+        'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue' },
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
@@ -81,6 +82,13 @@ function SystemApiHandler() {
 
     function didFail(e) {
         return e !== undefined && e.constructor === Error;
+    }
+
+    function readRegistryValue(identity, message, ack) {
+        const dataAck = _.clone(successAck);
+        const { payload: { rootKey, subkey, value } } = message;
+        dataAck.data = System.readRegistryValue(rootKey, subkey, value);
+        ack(dataAck);
     }
 
     function setMinLogLevel(identity, message, ack, nack) {
@@ -512,7 +520,7 @@ function SystemApiHandler() {
     }
 
     function getPluginModules(identity, message, ack, nack) {
-        System.getPluginModules()
+        System.getPluginModules(identity)
             .then((pluginModules) => {
                 const dataAck = _.clone(successAck);
                 dataAck.data = pluginModules;

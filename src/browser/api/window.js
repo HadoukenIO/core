@@ -48,7 +48,6 @@ import { validateNavigation, navigationValidator } from '../navigation_validatio
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
-import WindowsMessages from '../../common/microsoft';
 import { FrameInfo } from './frame';
 import { System } from './system';
 // constants
@@ -61,6 +60,12 @@ const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
 const userCache = electronApp.getPath('userCache');
+const WindowsMessages = {
+    WM_KEYDOWN: 0x0100,
+    WM_KEYUP: 0x0101,
+    WM_SYSKEYDOWN: 0x0104,
+    WM_SYSKEYUP: 0x0105,
+};
 
 let Window = {};
 
@@ -794,7 +799,9 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
-    winObj.pluginState = []; // TODO
+    const { data } = coreState.getStartManifest();
+    const { plugin: plugins } = (data || {});
+    winObj.pluginState = JSON.parse(JSON.stringify(plugins || []));
 
     // Set preload scripts' final loading states
     winObj.preloadState = (_options.preload || []).map(preload => {
