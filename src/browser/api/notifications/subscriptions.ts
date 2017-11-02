@@ -97,7 +97,7 @@ ofEvents.on(route.window('closed', '*'), (e: any) => {
             if (/\//.test(source)) {
                 let [uuid, name] = source.split('/');
 
-                if (windowIsNotification(name)) {
+                if (Window.isNotification(name)) {
                     seqs.removes.onNext({uuid, name});
                 }
             }
@@ -155,7 +155,7 @@ ofEvents.on(route.application('window-end-load', '*'), (e: any) => {
             try {
                 Window.close({
                     uuid,
-                    name: 'queueCounter'
+                    name: Window.QUEUE_COUNTER_NAME
                 });
             } catch (e){
                 writeToLog('info', e)
@@ -243,7 +243,7 @@ function noteStackCount() {
                         --pendingNotYetCounted;
                     }
 
-                    return windowIsNotification(name);
+                    return Window.isNotification(name);
                 });
 
             return prev.concat(childNoteWindows);
@@ -264,7 +264,7 @@ function getCurrNotes (): Array<Identity> {
 
 function childWindowsAsIdentities(childWindows: Array<any>, appUuid: string): Array<Identity> {
     return childWindows
-        .filter((win: any) => windowIsNotification(win.name))
+        .filter((win: any) => Window.isNotification(win.name))
         .map((win: any) => {
 
             return {
@@ -682,12 +682,6 @@ function noteTopicStr(uuid: string, name: string, isGeneral?: boolean): string {
     return isGeneral
         ? route('notifications', 'listener/') // legacy trailing slash; do not remove!
         : route('notifications', 'listener', uuid, name, true);
-}
-
-function windowIsNotification(name: string ): boolean {
-    const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
-
-    return noteGuidRegex.test(name);
 }
 
 function closeNotification(req: NotificationMessage): void {
