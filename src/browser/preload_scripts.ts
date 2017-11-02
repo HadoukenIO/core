@@ -150,8 +150,6 @@ function loadFromCache(opts: FetchResponse): Promise<boolean> {
             const { identity, scriptPath } = opts;
             const id = getIdentifier(preload);
 
-            logPreload('info', identity, 'load started', id);
-
             fs.readFile(scriptPath, 'utf8', (readError: Error, scriptText: string) => {
                 // todo: remove following workaround when RUN-3162 issue fixed
                 //BEGIN WORKAROUND (RUN-3162 fetchError null on 404)
