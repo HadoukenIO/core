@@ -619,7 +619,7 @@ exports.System = {
                     errorCallback(error);
                 } else if (cookies.length > 0) {
                     const data =
-                        cookies.filter(cookie => cookie.httpOnly !== true).map(cookie => {
+                        cookies.filter(cookie => !cookie.httpOnly).map(cookie => {
                             return {
                                 name: cookie.name,
                                 expirationDate: cookie.expirationDate,
