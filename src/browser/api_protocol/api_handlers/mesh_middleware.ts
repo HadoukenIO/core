@@ -166,8 +166,8 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
     try {
         if (connectionManager.connections.length && isAggregateAction && isLocalAction) {
             Promise.all(connectionManager.connections.map(runtime => runtime.fin.System.executeOnRemote(identity, data)))
-            .then(data => {
-                const externalRuntimeData = data.reduce((result, runtime) => [...result, ...runtime.data], []);
+            .then(externalResults => {
+                const externalRuntimeData = externalResults.reduce((result, runtime) => [...result, ...runtime.data], []);
                 const locals = { aggregate: externalRuntimeData };
                 next(locals);
             })

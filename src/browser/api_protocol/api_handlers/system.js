@@ -16,7 +16,7 @@ limitations under the License.
 let apiProtocolBase = require('./api_protocol_base.js');
 let System = require('../../api/system.js').System;
 let _ = require('underscore');
-const coreState = require('../../core_state');
+const connectionManager = require('../../connection_manager');
 
 
 function SystemApiHandler() {
@@ -245,10 +245,7 @@ function SystemApiHandler() {
 
         if (locals && locals.aggregate) {
             const { aggregate } = locals;
-            const version = System.getVersion();
-            const portInfo = coreState.getSocketServerState();
-            const { port, securityRealm } = portInfo;
-            const currentApplication = securityRealm ? `${version}/${port}/${securityRealm}` : `${version}/${port}/`;
+            const currentApplication = connectionManager.getMeshUuid();
 
             const filteredAggregate = aggregate.filter(result => (result.uuid !== currentApplication));
             const filteredAggregateSet = [...new Set(filteredAggregate)];
