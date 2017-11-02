@@ -31,6 +31,10 @@ declare module 'electron' {
         export function on(event: string, callback: () => void): void;
         export function setMinLogLevel(level: number): void;
         export function vlog(level: number, message: any): any;
+
+        export function readRegistryValue(root: string, key: string, value: string): any;
+
+        export function matchesURL(url: string, patterns: [string]): boolean;
     }
 
     export namespace net {
@@ -111,5 +115,9 @@ declare module 'electron' {
         export function readRtf(type?: string): string;
         export function readHtml(type?: string): string;
         export function readText(type?: string): string;
+    }
+
+    export namespace net {
+        export function request(url: string): any;
     }
 }
