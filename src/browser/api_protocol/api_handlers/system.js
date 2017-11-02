@@ -16,6 +16,8 @@ limitations under the License.
 let apiProtocolBase = require('./api_protocol_base.js');
 let System = require('../../api/system.js').System;
 let _ = require('underscore');
+const connectionManager = require('../../connection_manager');
+
 
 function SystemApiHandler() {
     let successAck = {
@@ -161,13 +163,6 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
-    function getAllExternalApplications(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getAllExternalApplications();
-        ack(dataAck);
-    }
-
     function raiseEvent(identity, message, ack) {
         let evt = message.payload.eventName;
         let eventArgs = message.payload.eventArgs;
@@ -233,14 +228,41 @@ function SystemApiHandler() {
     }
 
     function getAllApplications(identity, message, ack) {
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getAllApplications();
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            dataAck.data = [...dataAck.data, ...aggregate];
+        }
+        ack(dataAck);
+    }
+
+    function getAllExternalApplications(identity, message, ack) {
+        const { locals } = message;
+        let dataAck = _.clone(successAck);
+        dataAck.data = System.getAllExternalApplications();
+
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            const currentApplication = connectionManager.getMeshUuid();
+
+            const filteredAggregate = aggregate.filter(result => (result.uuid !== currentApplication));
+            const filteredAggregateSet = [...new Set(filteredAggregate)];
+            dataAck.data = [...dataAck.data, ...filteredAggregateSet];
+        }
         ack(dataAck);
     }
 
     function getAllWindows(identity, message, ack) {
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getAllWindows(identity);
+
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            dataAck.data = [...dataAck.data, ...aggregate];
+        }
         ack(dataAck);
     }
 
@@ -329,8 +351,14 @@ function SystemApiHandler() {
     }
 
     function processSnapshot(identity, message, ack) {
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getProcessList();
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            const aggregateSet = [...new Set(aggregate)];
+            dataAck.data = [...dataAck.data, ...aggregateSet];
+        }
         ack(dataAck);
     }
 
