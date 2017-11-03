@@ -81,6 +81,11 @@ export function fetchAndLoadPreloadScripts(
     let result: Promise<LoadResponses>;
 
     const loadedScripts: Promise<any>[] = preloadOption.map((preload: PreloadInstance) => {
+        const { url } = preload;
+
+        logPreload('info', identity, 'fetch started', url);
+        updatePreloadState(identity, preload, 'load-started');
+
         // following if clause avoids re-fetch for remote resources already in memory
         // todo: following if clause slated for removal (RUN-3227, blocked by RUN-3162), i.e., return always
         if (
@@ -121,9 +126,6 @@ export function fetchAndLoadPreloadScripts(
 function fetchToCache(identity: Identity, preloadScript: PreloadScript): Promise<FetchResponse> {
     const timer = new Timer();
     const { url } = preloadScript;
-
-    logPreload('info', identity, 'fetch started', url);
-    updatePreloadState(identity, preloadScript, 'load-started');
 
     return new Promise((resolve: FetchResolver, reject: Rejector) => {
         cachedFetch(identity.uuid, url, (fetchError: Error, scriptPath: string) => {
