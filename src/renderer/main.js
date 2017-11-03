@@ -19,8 +19,7 @@ let fs = require('fs');
 let path = require('path');
 let coreState = require('../browser/core_state.js');
 let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
-let jsAdapter2Path = path.join(process.resourcesPath, 'adapter-new.asar', 'bundle.js');
-let log = require('../browser/log');
+let jsAdapter2Path = path.join(process.resourcesPath, 'js-adapter.asar', 'js-adapter.js');
 const API_NEXT_OPTION = 'apiNext';
 
 let newAdapter = '';

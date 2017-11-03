@@ -118,8 +118,8 @@ module.exports = (grunt) => {
             },
             adapter: {
                 files: [{
-                    src:['node_modules/hadouken-js-adapter/out/adapter-new.asar'],
-                    dest: 'out/adapter-new.asar'
+                    src:['node_modules/hadouken-js-adapter/out/js-adapter.asar'],
+                    dest: 'out/js-adapter.asar'
                 }]
             }
         },
