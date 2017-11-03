@@ -630,9 +630,7 @@ limitations under the License.
         preloadScripts.forEach((preloadScript) => {
             const { url, content } = preloadScript;
 
-            if (content !== null) {
-                // TODO: handle empty script for bad urls
-
+            if (content) {
                 try {
                     window.eval(content); /* jshint ignore:line */
                     asyncApiCall(action, { url, state: 'succeeded' });

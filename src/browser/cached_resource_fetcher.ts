@@ -119,9 +119,10 @@ function generateHash(str: string): string {
  */
 function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
     const fetcher = new resourceFetcher('file');
+    const expectedStatusCode = /^[23]/; // 2xx & 3xx HTTP status codes are ok
 
-    fetcher.once('fetch-complete', (event: string, status: string) => {
-        if (status === 'success') {
+    fetcher.once('fetch-complete', (event: string, status: string, data: string, headers: any) => {
+        if (status === 'success' && expectedStatusCode.test(headers.statusCode)) {
             callback(null, filePath);
         } else {
             callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
