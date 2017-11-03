@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {app, resourceFetcher} from 'electron'; // Electron app
-import {stat, mkdir} from 'fs';
+import {app, net} from 'electron'; // Electron app
+import {stat, mkdir, writeFileSync, createWriteStream} from 'fs';
 import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
@@ -27,7 +27,7 @@ app.on('quit', () => { appQuiting = true; });
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
-export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): void {
+export async function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
     if (!fileUrl || typeof fileUrl !== 'string') {
         callback(new Error(`Bad file url: '${fileUrl}'`));
         return;
@@ -38,9 +38,12 @@ export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: 
     }
 
     if (!isURL(fileUrl)) {
+
+        // this is the case where file:///
         if (isURI(fileUrl)) {
             callback(null, uriToPath(fileUrl));
         } else {
+            // this is C:\whatever\
             stat(fileUrl, (err: null|Error) => {
                 if (err) {
                     callback(new Error(`Invalid file url: '${fileUrl}'`));
@@ -54,35 +57,40 @@ export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: 
 
     const appCacheDir = getAppCacheDir(appUuid);
     const filePath = getFilePath(appCacheDir, fileUrl);
+    let err: Error;
 
-    stat(filePath, (err: null | Error) => {
-        if (err) {
-            if (!appQuiting) {
-                stat(appCacheDir, (err: null | Error) => {
-                    if (err) {
-                        if (!appQuiting) {
-                            mkdir(appCacheDir, () => {
-                                download(fileUrl, filePath, callback);
-                            });
-                        }
-                    } else {
-                        download(fileUrl, filePath, callback);
-                    }
-                });
-            }
-        } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
-            download(fileUrl, filePath, callback);
-        } else {
-            callback(null, filePath);
-        }
-    });
+    try {
+        await prepDownloadLocation(appCacheDir, filePath);
+        await download(fileUrl, filePath);
+    } catch (e) {
+        err = e;
+    }
+
+    callback(err, filePath);
 }
 
-function remoteFileIsYoungerThanCachedFile(remoteUrl: string, cachedFilePath: string) {
-    //todo: make a RESTful HEAD request and if file at remoteUrl is missing, return false;
-    //todo: else if file at remoteUrl is younger than file at cachedFilePath, return true;
-    //todo: else return false
-    return true; //for now we are always fetching
+function prepDownloadLocation(appCacheDir: string, filePath: string) {
+    return new Promise((resolve, reject) => {
+        stat(filePath, (err: null | Error) => {
+            if (err) {
+                if (!appQuiting) {
+                    stat(appCacheDir, (err: null | Error) => {
+                        if (err) {
+                            if (!appQuiting) {
+                                mkdir(appCacheDir, () => {
+                                    resolve();
+                                });
+                            }
+                        } else {
+                            resolve();
+                        }
+                    });
+                }
+            } else {
+                resolve();
+            }
+        });
+    });
 }
 
 /**
@@ -117,17 +125,28 @@ function generateHash(str: string): string {
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
-    const fetcher = new resourceFetcher('file');
+function download(fileUrl: string, filePath: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        const request = net.request(fileUrl);
+        const binaryWriteStream = createWriteStream(filePath, {
+            encoding: 'binary'
+        });
 
-    fetcher.once('fetch-complete', (event: string, status: string) => {
-        if (status === 'success') {
-            callback(null, filePath);
-        } else {
-            callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
-        }
+        request.once('response', (response: any) => {
+            response.setEncoding('binary');
+            response.on('data', (chunk: any) => {
+                binaryWriteStream.write(chunk, 'binary');
+            });
+            response.on('end', () => {
+                binaryWriteStream.once('close', () => {
+                    resolve();
+                });
+                binaryWriteStream.once('error', (err: Error) => {
+                    reject(err);
+                });
+                binaryWriteStream.end();
+            });
+        });
+        request.end();
     });
-
-    fetcher.setFilePath(filePath);
-    fetcher.fetch(fileUrl);
 }
