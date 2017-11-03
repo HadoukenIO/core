@@ -482,19 +482,19 @@ limitations under the License.
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
-        const { preload } = 'preload' in convertedOpts ? convertedOpts : initialOptions;
+        const { preloadScripts } = 'preloadScripts' in convertedOpts ? convertedOpts : initialOptions;
         const windowIsNotification = syncApiCall('window-is-notification-type', {
             uuid: convertedOpts.uuid,
             name: convertedOpts.name
         });
 
-        if (!(preload && preload.length) || windowIsNotification) {
+        if (!(preloadScripts && preloadScripts.length) || windowIsNotification) {
             proceed(); // short-circuit preload scripts fetch
         } else {
             const preloadScriptsPayload = {
                 uuid: options.uuid,
                 name: options.name,
-                scripts: preload
+                scripts: preloadScripts
             };
             fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, proceed, proceed);
         }
@@ -582,12 +582,12 @@ limitations under the License.
             return;
         }
 
-        let { preload } = convertOptionsToElectronSync(windowOptions);
+        let { preloadScripts } = convertOptionsToElectronSync(windowOptions);
 
         evalPlugins(identity);
 
-        if (preload.length) {
-            evalPreloadScripts(identity, preload);
+        if (preloadScripts.length) {
+            evalPreloadScripts(identity, preloadScripts);
         }
     });
 

@@ -207,11 +207,11 @@ function updatePreloadState(
     const id = getIdentifier(preload);
 
     const { uuid, name } = identity;
-    const eventRoute = route.window('preload-state-changing', uuid, name);
-    const preloadState = Object.assign({}, preload, { state });
+    const eventRoute = route.window('preload-scripts-state-changing', uuid, name);
+    const preloadScripts = [Object.assign({}, preload, { state })];
 
     preloadStates.set(id, state);
-    ofEvents.emit(eventRoute, {name, uuid, preloadState});
+    ofEvents.emit(eventRoute, {name, uuid, preloadScripts});
 }
 
 function isPreloadOption(preloadOption: PreloadOption): preloadOption is PreloadOption {

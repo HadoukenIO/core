@@ -456,7 +456,7 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     } else {
         // Flow through preload script logic (eg. re-download of failed preload scripts)
         // only if app is not already running.
-        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preload, proceed);
+        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts, proceed);
     }
 };
 
