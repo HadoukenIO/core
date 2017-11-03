@@ -620,6 +620,38 @@ exports.System = {
             }
         });
     },
+    getCookies: function(opts, callback, errorCallback) {
+        const { url, name } = opts;
+        if (url && url.length > 0 && name && name.length > 0) {
+            session.defaultSession.cookies.get({ url, name }, (error, cookies) => {
+                if (error) {
+                    log.writeToLog(1, `cookies.get error ${error}`, true);
+                    errorCallback(error);
+                } else if (cookies.length > 0) {
+                    const data =
+                        cookies.filter(cookie => !cookie.httpOnly).map(cookie => {
+                            return {
+                                name: cookie.name,
+                                expirationDate: cookie.expirationDate,
+                                path: cookie.path,
+                                domain: cookie.domain
+                            };
+                        });
+                    log.writeToLog(1, `cookies filtered ${data.length}`, true);
+                    if (data.length > 0) {
+                        callback(data);
+                    } else {
+                        errorCallback(`Cookie not found ${name}`);
+                    }
+                } else {
+                    log.writeToLog(1, `cookies result ${cookies.length}`, true);
+                    errorCallback(`Cookie not found ${name}`);
+                }
+            });
+        } else {
+            errorCallback(`Error getting cookies`);
+        }
+    },
     getWebSocketServerState: function() {
         return coreState.getSocketServerState();
     },
