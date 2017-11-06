@@ -39,7 +39,7 @@ export const noteStack = Rx.Observable.merge(
             create: 1,
             name: x.identity.name,
             uuid: x.identity.uuid,
-            opacity: x.options.opacity
+            opacity: x.options.finalOpacity
         };
     }),
     removes.map((x: Identity) => {
