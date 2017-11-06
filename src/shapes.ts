@@ -95,8 +95,8 @@ export interface OpenFinWindow {
     hideReason: string;
     id: number;
     name: string;
-    pluginState: PluginState[];
-    preloadState: {
+    plugins: PluginState[];
+    preloadScripts: {
         optional?: boolean;
         state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
         url: string;

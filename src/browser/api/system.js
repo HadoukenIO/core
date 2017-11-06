@@ -180,7 +180,7 @@ exports.System = {
         */
         var settings = options || {};
 
-        if (settings.preload) {
+        if (settings.preloadScripts) {
             clearPreloadCache();
         }
 
