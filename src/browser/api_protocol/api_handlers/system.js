@@ -18,7 +18,6 @@ let System = require('../../api/system.js').System;
 let _ = require('underscore');
 const connectionManager = require('../../connection_manager');
 import * as log from '../../log';
-import * as path from 'path';
 
 const ReadRegistryValuePolicyDelegate = {
     //checkPermissions(ApiPolicyDelegateArgs): boolean;
@@ -30,10 +29,10 @@ const ReadRegistryValuePolicyDelegate = {
             if (Array.isArray(args.permissionSettings.registryKeys)) {
                 let fullPath = args.payload.rootKey;
                 if (args.payload.subkey) {
-                    fullPath = path.join(fullPath, args.payload.subkey);
+                    fullPath = fullPath.concat('\\' + args.payload.subkey);
                 }
                 if (args.payload.value) {
-                    fullPath = path.join(fullPath, args.payload.value);
+                    fullPath = fullPath.concat('\\' + args.payload.value);
                 }
                 permitted = args.permissionSettings.registryKeys.some(specKey => specKey === fullPath);
             }
