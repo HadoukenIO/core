@@ -17,6 +17,35 @@ let apiProtocolBase = require('./api_protocol_base.js');
 let System = require('../../api/system.js').System;
 let _ = require('underscore');
 const connectionManager = require('../../connection_manager');
+const log = require('../../log');
+
+const ReadRegistryValuePolicyDelegate = {
+    //checkPermissions(ApiPolicyDelegateArgs): boolean;
+    checkPermissions: function(args) {
+        // permissionSettings has following format
+        // { "enabled": true, "registryKeys": [ "HKEY_CURRENT_USER\\Software\\OpenFin\\RVM" ] }
+        let permitted = false; // default to false
+        if (args.payload && args.permissionSettings && args.permissionSettings.enabled === true) {
+            if (Array.isArray(args.permissionSettings.registryKeys)) {
+                let fullPath = args.payload.rootKey;
+                if (args.payload.subkey) {
+                    fullPath = fullPath.concat('\\' + args.payload.subkey);
+                }
+                if (args.payload.value) {
+                    fullPath = fullPath.concat('\\' + args.payload.value);
+                }
+                for (const specKey of args.permissionSettings.registryKeys) {
+                    if (specKey === fullPath) {
+                        permitted = true;
+                        break;
+                    }
+                }
+            }
+        }
+        log.writeToLog(1, `ReadRegistryValueDelegate returning ${permitted}`, true);
+        return permitted;
+    }
+};
 
 
 function SystemApiHandler() {
@@ -63,7 +92,7 @@ function SystemApiHandler() {
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
         'raise-event': raiseEvent,
-        'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue' },
+        'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue', apiPolicyDelegate: ReadRegistryValuePolicyDelegate },
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
