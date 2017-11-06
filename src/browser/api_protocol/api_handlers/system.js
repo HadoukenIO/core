@@ -34,7 +34,7 @@ const ReadRegistryValuePolicyDelegate = {
                 if (args.payload.value) {
                     fullPath = fullPath.concat('\\' + args.payload.value);
                 }
-                permitted = args.permissionSettings.registryKeys.some(specKey => specKey === fullPath);
+                permitted = args.permissionSettings.registryKeys.some(specKey => fullPath.startsWith(specKey));
             }
         }
         log.writeToLog(1, `ReadRegistryValueDelegate returning ${permitted}`, true);
