@@ -391,15 +391,16 @@ function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: a
     return (noteWin: any, idx: number) => {
         const {name, uuid} = noteWin;
         const identity: Identity = {name, uuid};
+        const opacity = noteWin.opacity || 1;
         const animationTransitions = {
             opacity: {
                 duration: 1000,
-                opacity: 1,
+                opacity
             },
             position: {
                 duration: POSITION_ANIMATION_DURATION,
                 top: (defaultTop - (numNotes - idx) * NOTE_HEIGHT) + NOTE_TOP_MARGIN,
-            },
+            }
         };
         const animationCallback = () => {
 
@@ -507,6 +508,8 @@ function handleNoteCreate(msg: NotificationMessage): void {
 
 function handleNoteCreated(msg: NotificationMessage): void {
     const {data} = msg;
+    const { uuid, name } = data;
+    const identity = { uuid, name };
 
     ++created;
 
@@ -515,7 +518,7 @@ function handleNoteCreated(msg: NotificationMessage): void {
     if (idx !== -1) {
         notesToBeCreated.splice(idx, 1);
     }
-    seqs.createdNotes.onNext(data.options);
+    seqs.createdNotes.onNext({ identity, options: data.options });
 }
 
 function routeRequest(id: any, msg: NotificationMessage, ack: any) {

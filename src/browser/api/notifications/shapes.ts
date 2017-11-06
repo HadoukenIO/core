@@ -31,6 +31,10 @@ export interface NotificationMessage {
     data: any;
 }
 
+export interface IdentityPlusOpacity extends Identity {
+    opacity?: number;
+}
+
 export interface AvailableRect {
     bottom: number;
     right: number;

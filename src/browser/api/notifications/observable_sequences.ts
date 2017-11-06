@@ -18,6 +18,10 @@ import * as Rx from 'rx';
 
 /// <reference path="./shapes.ts" />
 import {Identity} from './shapes';
+<<<<<<< HEAD
+=======
+
+>>>>>>> fixed imports
 
 export const createdNotes = new Rx.Subject();
 export const creates = new Rx.Subject();
@@ -33,18 +37,21 @@ export const runningTotal = Rx.Observable.merge(removesCounter, createsCounter)
     .scan((acc: number, value: number) => acc + value);
 
 export const noteStack = Rx.Observable.merge(
-    createdNotes.map((x: Identity) => {
+    createdNotes.map((x: { identity: Identity, options: any }) => {
+        // opacity added here to change the property in genAnimationFunction
         return {
             create: 1,
-            name: x.name,
-            uuid: x.uuid,
+            name: x.identity.name,
+            uuid: x.identity.uuid,
+            opacity: x.options.opacity
         };
     }),
-    removes.map((x: Identity) => {
+    removes.map((x: any) => {
         return {
             create: 0,
             name: x.name,
             uuid: x.uuid,
+            opacity: x.opacity
         };
     }))
     .distinctUntilChanged()
@@ -57,6 +64,7 @@ export const noteStack = Rx.Observable.merge(
                 acc.push({
                     name: value.name,
                     uuid: value.uuid,
+                    opacity: value.opacity
                 });
             }
 
