@@ -18,10 +18,6 @@ import * as Rx from 'rx';
 
 /// <reference path="./shapes.ts" />
 import {Identity} from './shapes';
-<<<<<<< HEAD
-=======
-
->>>>>>> fixed imports
 
 export const createdNotes = new Rx.Subject();
 export const creates = new Rx.Subject();
