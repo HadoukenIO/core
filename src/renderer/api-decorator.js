@@ -483,8 +483,12 @@ limitations under the License.
 
         const convertedOpts = convertOptionsToElectronSync(options);
         const { preload } = 'preload' in convertedOpts ? convertedOpts : initialOptions;
+        const windowIsNotification = syncApiCall('window-is-notification-type', {
+            uuid: convertedOpts.uuid,
+            name: convertedOpts.name
+        });
 
-        if (!(preload && preload.length)) {
+        if (!(preload && preload.length) || windowIsNotification) {
             proceed(); // short-circuit preload scripts fetch
         } else {
             const preloadScriptsPayload = {
@@ -568,6 +572,15 @@ limitations under the License.
         const identity = { uuid, name };
         const windowOptions = entityInfo.entityType === 'iframe' ? getWindowOptionsSync(entityInfo.parent) :
             getCurrentWindowOptionsSync();
+        const windowIsNotification = syncApiCall('window-is-notification-type', {
+            uuid: windowOptions.uuid,
+            name: windowOptions.name
+        });
+
+        // Don't execute preload scripts and plugin modules in notifications
+        if (windowIsNotification) {
+            return;
+        }
 
         let { preload } = convertOptionsToElectronSync(windowOptions);
 
@@ -630,9 +643,7 @@ limitations under the License.
         preloadScripts.forEach((preloadScript) => {
             const { url, content } = preloadScript;
 
-            if (content !== null) {
-                // TODO: handle empty script for bad urls
-
+            if (content) {
                 try {
                     window.eval(content); /* jshint ignore:line */
                     asyncApiCall(action, { url, state: 'succeeded' });

@@ -67,7 +67,9 @@ const WindowsMessages = {
     WM_SYSKEYUP: 0x0105,
 };
 
-let Window = {};
+let Window = {
+    QUEUE_COUNTER_NAME: 'queueCounter'
+};
 
 let browserWindowEventMap = {
     'api-injection-failed': {
@@ -1251,6 +1253,21 @@ Window.hide = function(identity) {
     browserWindow.hide();
 };
 
+Window.isNotification = function(name) {
+    const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
+    return noteGuidRegex.test(name);
+};
+
+Window.isNotificationType = function(identity, callback = () => {}) {
+    const { name } = identity;
+
+    const isNotification = Window.isNotification(name);
+    const isQueueCounter = name === Window.QUEUE_COUNTER_NAME;
+    const isNotificationType = isNotification || isQueueCounter;
+
+    callback(isNotificationType);
+    return isNotificationType;
+};
 
 Window.isShowing = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);

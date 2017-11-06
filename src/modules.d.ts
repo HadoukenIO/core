@@ -76,8 +76,8 @@ declare module 'electron' {
 
     export class resourceFetcher {
         constructor(type: string);
-        on(event: string, callback: (event: string, status: string) => any): void;
-        once(event: string, callback: (event: string, status: string) => any): void;
+        on(event: string, callback: (event: string, status: string, data: string, headers: any) => any): void;
+        once(event: string, callback: (event: string, status: string, data: string, headers: any) => any): void;
         setFilePath(path: string): void;
         fetch(url: string): void;
     }
