@@ -42,12 +42,12 @@ export const noteStack = Rx.Observable.merge(
             opacity: x.options.opacity
         };
     }),
-    removes.map((x: any) => {
+    removes.map((x: Identity) => {
         return {
             create: 0,
             name: x.name,
             uuid: x.uuid,
-            opacity: x.opacity
+            opacity: null
         };
     }))
     .distinctUntilChanged()
