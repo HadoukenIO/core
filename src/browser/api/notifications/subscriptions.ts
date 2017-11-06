@@ -508,7 +508,7 @@ function handleNoteCreate(msg: NotificationMessage): void {
 
 function handleNoteCreated(msg: NotificationMessage): void {
     const {data} = msg;
-    const { uuid, name } = data;
+    const { options: { uuid, name }} = data;
     const identity = { uuid, name };
 
     ++created;
