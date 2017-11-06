@@ -127,12 +127,15 @@ function generateHash(str: string): string {
  */
 function download(fileUrl: string, filePath: string): Promise<any> {
     return new Promise((resolve, reject) => {
+        const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
         const request = net.request(fileUrl);
         const binaryWriteStream = createWriteStream(filePath, {
             encoding: 'binary'
         });
 
         request.once('response', (response: any) => {
+            const { statusCode } = response;
+
             response.setEncoding('binary');
             response.on('data', (chunk: any) => {
                 binaryWriteStream.write(chunk, 'binary');
@@ -145,6 +148,11 @@ function download(fileUrl: string, filePath: string): Promise<any> {
                     reject(err);
                 });
                 binaryWriteStream.end();
+
+                if (!expectedStatusCode.test(statusCode)) {
+                    const error = new Error(`Failed to download resource. Status code: ${statusCode}`);
+                    reject(error);
+                }
             });
         });
         request.end();
