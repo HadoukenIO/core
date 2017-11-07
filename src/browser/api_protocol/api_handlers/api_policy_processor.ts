@@ -44,8 +44,8 @@ function getApiPath(action: string) : string {
  *  permissions": {
  *      "System": { "launchExternalProcess": true },
  *      "System": { "Clipboard" : { "availableFormats": true } },
- *      "Window": { "getNativeId": true,
- *                  "readRegistryValue":
+ *      "Window": { "getNativeId": true },
+ *                { "readRegistryValue":
  *                      { "enabled": true,
  *                        "registryKeys": [ "HKEY_CURRENT_USER\\Software\\OpenFin\\RVM", "HKEY_CURRENT_USER\\Software\\Oracle" ]
  *                      }
