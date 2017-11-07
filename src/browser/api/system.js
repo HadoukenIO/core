@@ -167,7 +167,7 @@ exports.System = {
 
         return unsubscribe;
     },
-    clearCache: function(options, resolve) {
+    clearCache: function(identity, options, resolve) {
         /*
         fin.desktop.System.clearCache({
             cache: true,
@@ -181,7 +181,7 @@ exports.System = {
         var settings = options || {};
 
         if (settings.preloadScripts) {
-            clearPreloadCache();
+            clearPreloadCache(identity);
         }
 
         var availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
@@ -781,6 +781,16 @@ exports.System = {
     }
 };
 
-function clearPreloadCache() {
-    preloadScriptsCache = {};
+function clearPreloadCache(identity) {
+    const ofWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
+
+    ofWindow.preloadScripts = (ofWindow._options.preloadScripts || ofWindow._options.preload || []).map(preload => {
+        delete preloadScriptsCache[getIdentifier(preload)];
+        return {
+            url: getIdentifier(preload),
+        };
+    });
+    fetchAndLoadPreloadScripts(identity, preloadOption, cb);
+    downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts, proceed);
+
 }

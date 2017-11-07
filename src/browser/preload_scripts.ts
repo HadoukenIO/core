@@ -237,6 +237,10 @@ export function getIdentifier(preload: any) {
     return preload.url ? preload.url : `${preload.name}-${preload.version}`;
 }
 
+export function deletePreloadScriptState(identifier: string): void {
+    preloadStates.delete(identifier);
+}
+
 function isOptional(preload: any) {
     return preload.optional;
 }
