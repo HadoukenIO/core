@@ -60,7 +60,7 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
     let err: Error;
 
     try {
-        await prepDownloadLocation(appCacheDir, filePath);
+        await prepDownloadLocation(appCacheDir);
         await download(fileUrl, filePath);
     } catch (e) {
         err = e;
@@ -69,23 +69,23 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
     callback(err, filePath);
 }
 
-function prepDownloadLocation(appCacheDir: string, filePath: string) {
+function pathExists (location: string) {
     return new Promise((resolve, reject) => {
-        stat(filePath, (err: null | Error) => {
+        stat(location, (err: null | Error) => {
             if (err) {
-                if (!appQuiting) {
-                    stat(appCacheDir, (err: null | Error) => {
-                        if (err) {
-                            if (!appQuiting) {
-                                mkdir(appCacheDir, () => {
-                                    resolve();
-                                });
-                            }
-                        } else {
-                            resolve();
-                        }
-                    });
-                }
+                resolve(false);
+            } else {
+                resolve(true);
+            }
+        });
+    });
+}
+
+function makeDirectory(location: string) {
+    return new Promise((resolve, reject) => {
+        mkdir(location, (err: null | Error) => {
+            if (err) {
+                reject(err);
             } else {
                 resolve();
             }
@@ -93,13 +93,46 @@ function prepDownloadLocation(appCacheDir: string, filePath: string) {
     });
 }
 
+let makingCacheDir = false;
+let makingAppDir = false;
+
+async function prepDownloadLocation(appCacheDir: string) {
+    const appCacheDirExists = await pathExists(appCacheDir);
+
+    if (appCacheDirExists) {
+        return;
+    }
+
+    const rootCachePath = getRootCachePath();
+    const cacheRootPathExists = await pathExists(rootCachePath);
+
+    if (!cacheRootPathExists && !makingCacheDir) {
+        makingCacheDir = true;
+        await makeDirectory(rootCachePath);
+        makingCacheDir = false;
+    }
+
+    if (!makingAppDir) {
+        makingAppDir = true;
+        await makeDirectory(appCacheDir);
+        makingAppDir = false;
+    }
+
+    return;
+}
+
+
+function getRootCachePath () {
+    return join(app.getPath('userData') , 'Cache');
+}
+
 /**
  * Generates a folder name for the app to store the file in.
  */
 function getAppCacheDir(appUuid: string): string {
     const appUuidHash = generateHash(appUuid);
-    const userDataDir = app.getPath('userData');
-    return join(userDataDir, 'Cache', appUuidHash);
+    const rootCachePath = getRootCachePath();
+    return join(rootCachePath, appUuidHash);
 }
 
 /**
