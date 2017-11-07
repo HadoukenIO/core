@@ -637,7 +637,8 @@ limitations under the License.
         try {
             preloadScripts = syncApiCall('get-selected-preload-scripts', preloadOption);
         } catch (error) {
-            return syncApiCall('write-to-log', { level: 'error', message: logBase + error });
+            preloadScripts = [];
+            syncApiCall('write-to-log', { level: 'error', message: logBase + error });
         }
 
         preloadScripts.forEach((preloadScript) => {

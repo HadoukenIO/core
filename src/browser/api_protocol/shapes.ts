@@ -26,6 +26,7 @@ export type ApiPath = string; // path in dot notation
 export type Endpoint = {
     apiFunc: ApiFunc;
     apiPath?: ApiPath;
+    apiPolicyDelegate?: ApiPolicyDelegate;
     // future endpoint properties go here
 };
 export interface ActionMap {
@@ -36,4 +37,15 @@ export interface ActionMap {
 export type EndpointSpec = ApiFunc | Endpoint;
 export interface ActionSpecMap {
     [key: string]: EndpointSpec;
+}
+
+// delegate to check policy for an API
+export type ApiPolicyDelegateArgs = {
+    apiPath: ApiPath;
+    permissionSettings: any; // from group policy or window options
+    payload: any // API message payload
+};
+
+export interface ApiPolicyDelegate {
+    checkPermissions(args: ApiPolicyDelegateArgs): boolean;
 }
