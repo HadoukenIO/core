@@ -57,6 +57,7 @@ export interface GetDesktopOwnerSettings extends RvmMsgBase {
     topic: applicationTopic;
     action: getDesktopOwnerSettingsAction;
     sourceUrl: string;
+    isGlobal?: boolean;
 }
 
 export interface DownloadRuntimeOptions {

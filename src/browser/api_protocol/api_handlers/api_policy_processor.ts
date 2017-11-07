@@ -26,12 +26,10 @@ let desktopOwnerSettingsTimeout: number = 2000;  // in ms
 let desktopOwnerSettingEnabled: boolean = false;
 
 type ApiPolicy = {
-    applicationSettings: {
-        // for backwards compatible, policyName can be config URL
-        [policyName: string]: {
-            urls?: [string];  // support wildcard patterns. If missing, policyName is URL (no wildcard)
-            permissions: any;
-        }
+    // for backwards compatible, policyName can be config URL
+    [policyName: string]: {
+        urls?: [string];  // support wildcard patterns. If missing, policyName is URL (no wildcard)
+        permissions: any;
     }
 };
 let apiPolicies: ApiPolicy;  // policies for all APIs
@@ -50,9 +48,9 @@ function getApiPath(action: string) : string {
 
 function searchPolicyByConfigUrl(url: string): any {
     writeToLog(1, `searchPolicyByConfigUrl ${url}`, true);
-    if (apiPolicies && apiPolicies.applicationSettings) {
-        for (const policyName of Object.keys(apiPolicies.applicationSettings)) {
-            const policy = apiPolicies.applicationSettings[policyName];
+    if (apiPolicies) {
+        for (const policyName of Object.keys(apiPolicies)) {
+            const policy = apiPolicies[policyName];
             if (Array.isArray(policy.urls) &&
                     electronApp.matchesURL(url, policy.urls)) {
                 writeToLog(1, `searchPolicyByConfigUrl matched by policy name ${policyName}`, true);
@@ -329,45 +327,26 @@ function registerDelegate(apiPath: ApiPath, delegate: ApiPolicyDelegate) {
     delegateMap.set(apiPath, delegate);
 }
 
-function retrieveAPIPolicyUrl(): Promise<string> {
-    writeToLog(1, 'retrieveAPIPolicyUrl', true);
-    return new Promise((resolve, reject) => {
-        const registryPayload = electronApp.readRegistryValue('HKEY_CURRENT_USER', 'Software\\OpenFin\\RVM\\Settings',
-            'DesktopOwnerSettings');
-        if (registryPayload) {
-            if (registryPayload.error) {
-                writeToLog('error', `Error reading API policy URL ${registryPayload.error}`);
-                reject(registryPayload.error);
-            } else if (registryPayload.value) {
-                writeToLog(1, `Policy URL ${registryPayload.data}`, true);
-                resolve(registryPayload.data);
-            } else {
-                reject(new Error('Error getting policy URL from Registry'));
-            }
-        } else {
-            reject(new Error('Error getting policy URL from Registry'));
-        }
-    });
-}
-
-function retrieveAPIPolicyContent(url: string): Promise<string> {
+function retrieveAPIPolicyContent(): Promise<any> {
     writeToLog(1, 'retrieveAPIPolicyContent', true);
     return new Promise((resolve, reject) => {
-        const request = net.request(url);
-        request.once('response', (response: any) => {
-            response.on('data', (chunk: string) => {
-                writeToLog(1, `Policy content ${chunk}`, true);
-                resolve(chunk);
-            });
-        });
-        request.end();
+        const msg: GetDesktopOwnerSettings = {
+            topic: 'application',
+            action: 'get-desktop-owner-settings',
+            sourceUrl: 'https://openfin.co', // ignored by RVM is isGlobal is true
+            isGlobal: true // get all polices
+        };
+        rvmBus.publish(msg, (rvmResponse: any) => {
+            writeToLog('info', `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
+            if (rvmResponse.payload && rvmResponse.payload.success === true &&
+                rvmResponse.payload.payload) {
+                resolve(rvmResponse.payload.payload);
+            } else {
+                writeToLog('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
+                reject(rvmResponse);  // false indicates request to RVM failed
+            }
+        }, desktopOwnerSettingsTimeout / 1000);
     });
-}
-
-async function retrieveAPIPolicies() {
-    writeToLog(1, 'retrieveAPIPolicies', true);
-    const url = await retrieveAPIPolicyUrl();
-    return await retrieveAPIPolicyContent(url);
 }
 
 if (coreState.argo['enable-strict-api-permissions']) {
@@ -387,8 +366,8 @@ if (coreState.argo['enable-strict-api-permissions']) {
     }
 
     if (desktopOwnerSettingEnabled === true) {
-        retrieveAPIPolicies().then(content => {
-            apiPolicies = JSON.parse(content);
+        retrieveAPIPolicyContent().then((content: ApiPolicy) => {
+            apiPolicies = content;
         }).catch(e => {
             writeToLog(1, `Error retrieveAPIPolicies ${e}`, true);
         });
