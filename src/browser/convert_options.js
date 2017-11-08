@@ -244,6 +244,13 @@ module.exports = {
                 newOptions.width = defaultWidth;
             }
 
+            if (maxHeight === -1) {
+                delete newOptions.maxHeight;
+            }
+            if (maxWidth === -1) {
+                delete newOptions.maxWidth;
+            }
+
             newOptions.center = newOptions.defaultCentered;
             if (!newOptions.center) {
                 newOptions.x = newOptions.defaultLeft;
