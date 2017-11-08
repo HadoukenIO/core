@@ -39,7 +39,7 @@ const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
-import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
+import { fetchAndLoadPreloadScripts, getIdentifier, deletePreloadScriptState } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 
@@ -77,7 +77,6 @@ const defaultProc = {
 };
 
 let preloadScriptsCache;
-clearPreloadCache();
 
 let MonitorInfo;
 let Session;
@@ -732,8 +731,6 @@ exports.System = {
         }
     },
 
-    clearPreloadCache,
-
     downloadPreloadScripts: function(identity, preloadOption, cb) {
         if (!preloadOption) {
             cb();
@@ -778,19 +775,18 @@ exports.System = {
             return preload;
         });
         return Promise.resolve(scriptSet);
-    }
+    },
 };
 
 function clearPreloadCache(identity) {
     const ofWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
-
     ofWindow.preloadScripts = (ofWindow._options.preloadScripts || ofWindow._options.preload || []).map(preload => {
+        electronApp.vlog(1, `clear preload script ${getIdentifier(preload)}`);
         delete preloadScriptsCache[getIdentifier(preload)];
+        deletePreloadScriptState(getIdentifier(preload));
         return {
             url: getIdentifier(preload),
         };
     });
-    fetchAndLoadPreloadScripts(identity, preloadOption, cb);
-    downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts, proceed);
-
+    fetchAndLoadPreloadScripts(identity, ofWindow._options.preloadScripts);
 }
