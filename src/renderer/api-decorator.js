@@ -30,7 +30,6 @@ limitations under the License.
     const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
     const ipc = electron.ipcRenderer;
 
-    let cachedOptions;
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
@@ -191,7 +190,7 @@ limitations under the License.
         });
 
         document.addEventListener('mousewheel', event => {
-            if (!event.ctrlKey || !cachedOptions.accelerator.zoom) {
+            if (!event.ctrlKey || !initialOptions.accelerator.zoom) {
                 return;
             }
 
