@@ -86,20 +86,9 @@ export function fetchAndLoadPreloadScripts(
         logPreload('info', identity, 'fetch started', url);
         updatePreloadState(identity, preload, 'load-started');
 
-        // following if clause avoids re-fetch for remote resources already in memory
         // todo: following if clause slated for removal (RUN-3227, blocked by RUN-3162), i.e., return always
-        if (
-            !REGEX_FILE_SCHEME.test(getIdentifier(preload)) && // not a local file AND...
-            System.getPreloadScript(getIdentifier(preload))   // ...is already in memory?
-        ) {
-            // previously downloaded
-            logPreload('info', identity, 'previously cached:', getIdentifier(preload));
-            updatePreloadState(identity, preload, 'load-succeeded');
-            return Promise.resolve(true);
-        } else {
-            // not previously downloaded *OR* previous downloaded failed
-            return fetchToCache(identity, preload).then(loadFromCache);
-        }
+        // todo: removed check for memory cache here,  need to remove memory cache entirely
+        return fetchToCache(identity, preload).then(loadFromCache);
     });
 
     // wait for them all to resolve
@@ -205,13 +194,14 @@ function updatePreloadState(
     state?: string
 ): void {
     const id = getIdentifier(preload);
+    const {uuid, name} = identity;
+    if (name) {
+        const eventRoute = route.window('preload-scripts-state-changing', uuid, name);
+        const preloadScripts = [Object.assign({}, preload, {state})];
 
-    const { uuid, name } = identity;
-    const eventRoute = route.window('preload-scripts-state-changing', uuid, name);
-    const preloadScripts = [Object.assign({}, preload, { state })];
-
-    preloadStates.set(id, state);
-    ofEvents.emit(eventRoute, {name, uuid, preloadScripts});
+        preloadStates.set(id, state);
+        ofEvents.emit(eventRoute, {name, uuid, preloadScripts});
+    }
 }
 
 function isPreloadOption(preloadOption: PreloadOption): preloadOption is PreloadOption {

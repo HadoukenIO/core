@@ -39,7 +39,7 @@ const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
-import { fetchAndLoadPreloadScripts, getIdentifier, deletePreloadScriptState } from '../preload_scripts';
+import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 
@@ -76,7 +76,7 @@ const defaultProc = {
     }
 };
 
-let preloadScriptsCache;
+let preloadScriptsCache = {};
 
 let MonitorInfo;
 let Session;
@@ -174,17 +174,13 @@ exports.System = {
             localStorage: true,
             appcache: true,
             userData: true, // TODO: userData is the window bounds cache
-            preload: true
+            preload: true   // TODO: ignored here, but clearCache does cause issues with preload scripts
         });
         */
         var settings = options || {};
 
-        if (settings.preloadScripts) {
-            clearPreloadCache(identity);
-        }
-
-        var availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
-        var storages = [];
+        const availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
+        const storages = [];
 
         if (typeof settings.localStorage === 'boolean') {
             settings.localstorage = settings.localStorage;
@@ -208,7 +204,7 @@ exports.System = {
             }
         });
 
-        var cacheOptions = {
+        const cacheOptions = {
             /* origin? */
             storages: storages,
             quotas: ['temporary', 'persistent', 'syncable']
@@ -777,16 +773,3 @@ exports.System = {
         return Promise.resolve(scriptSet);
     },
 };
-
-function clearPreloadCache(identity) {
-    const ofWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
-    ofWindow.preloadScripts = (ofWindow._options.preloadScripts || ofWindow._options.preload || []).map(preload => {
-        electronApp.vlog(1, `clear preload script ${getIdentifier(preload)}`);
-        delete preloadScriptsCache[getIdentifier(preload)];
-        deletePreloadScriptState(getIdentifier(preload));
-        return {
-            url: getIdentifier(preload),
-        };
-    });
-    fetchAndLoadPreloadScripts(identity, ofWindow._options.preloadScripts);
-}

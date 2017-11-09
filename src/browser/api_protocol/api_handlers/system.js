@@ -230,7 +230,7 @@ function SystemApiHandler() {
     }
 
     function clearCache(identity, message, ack, nack) {
-        System.clearCache(message.payload, (err) => {
+        System.clearCache(identity, message.payload, (err) => {
             if (!err) {
                 ack(successAck);
             } else {
