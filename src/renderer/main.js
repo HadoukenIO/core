@@ -19,10 +19,7 @@ let fs = require('fs');
 let path = require('path');
 let coreState = require('../browser/core_state.js');
 let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
-let jsAdapter2Path = path.join(process.resourcesPath, 'js-adapter.asar', 'js-adapter.js');
-const API_NEXT_OPTION = 'apiNext';
-
-let newAdapter = '';
+const jsAdapter2Path = path.join(process.resourcesPath, 'js-adapter.asar', 'js-adapter.js');
 
 // check resources/adapter/openfin-desktop.js then
 // resources/adapter.asar/openfin-desktop.js
@@ -38,14 +35,14 @@ for (let adapterPath of searchPaths) {
     }
 }
 
+const newAdapter = fs.readFileSync(jsAdapter2Path, 'utf8');
+
 // Remove strict (Prevents, as of now, poorly understood memory lifetime scoping issues with remote module)
 me = me.slice(13);
 
-module.exports.api = (uuid) => {
-    const app = coreState.getAppObjByUuid(uuid);
-
-    if (app._options[API_NEXT_OPTION]) {
-        newAdapter = fs.readFileSync(jsAdapter2Path, 'utf8');
-    }
-    return `${me} ; ${jsAdapter}; ${newAdapter} ; fin.__internal_.ipc = null;`;
+module.exports.api = (windowId) => {
+    const mainWindowOptions = coreState.getMainWindowOptions(windowId);
+    const enableV2Api = ((mainWindowOptions || {}).experimental || {}).enableV2Api;
+    const v2AdapterShim = (!enableV2Api ? '' : newAdapter);
+    return `${me} ; ${jsAdapter}; ${v2AdapterShim} ; fin.__internal_.ipc = null;`;
 };
