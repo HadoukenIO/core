@@ -398,7 +398,7 @@ Window.create = function(id, opts) {
                 parentFrameId,
                 parent: { uuid, name },
                 frameRoutingId,
-                entityType: 'iframe'
+                entityType: frameName === name ? 'window' : 'iframe'
             };
 
             winObj.frames.set(frameName, frameInfo);
@@ -406,13 +406,18 @@ Window.create = function(id, opts) {
 
         // called in the WebContents class in the runtime
         browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
-            const entityType = frameRoutingId === 1 ? 'window' : 'iframe';
-            const frameName = closedFrameName || name; // the parent name is considered a frame as well
-            const payload = { uuid, name, frameName, entityType };
+            const frameInfo = winObj.frames.get(closedFrameName);
+            if (frameInfo) {
+                const frameName = closedFrameName || name; // the parent name is considered a frame as well
+                const entityType = frameName === name ? 'window' : 'iframe';
+                const payload = { uuid, name, frameName, entityType };
 
-            winObj.frames.delete(closedFrameName);
-            ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
-            ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
+                winObj.frames.delete(closedFrameName);
+                ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
+                ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
+            } else {
+                electronApp.vlog(1, `unregisterIframe missign frame ${closedFrameName}`);
+            }
         };
 
         // this is a first pass at teardown. for now, push the unsubscribe

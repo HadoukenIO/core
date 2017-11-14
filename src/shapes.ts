@@ -121,6 +121,7 @@ export interface BrowserWindow {
     devToolsWebContents: null;
     webContents: {
         hasFrame: (frameName: string) => boolean;
+        mainFrameRoutingId: number;
     };
 }
 

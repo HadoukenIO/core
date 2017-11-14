@@ -665,7 +665,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             return {
                 name,
                 browserWindow,
-                frameRoutingId: 1,
+                frameRoutingId: browserWindow.webContents.mainFrameRoutingId,
                 frameName: name
             };
         } else if (openfinWindow.frames.get(frame)) {
