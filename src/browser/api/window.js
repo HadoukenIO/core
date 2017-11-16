@@ -47,7 +47,6 @@ let WindowGroups = require('../window_groups.js');
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
-import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import { System } from './system';
 // constants
@@ -806,12 +805,7 @@ Window.create = function(id, opts) {
     winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
 
     // Set preload scripts' final loading states
-    winObj.preloadScripts = (_options.preloadScripts || _options.preload || []).map(preload => {
-        return {
-            url: getIdentifier(preload),
-            state: getPreloadScriptState(getIdentifier(preload))
-        };
-    });
+    winObj.preloadScripts = (_options.preloadScripts || []);
     winObj.framePreloadScripts = {}; // frame ID => [{url, state}]
 
     if (!coreState.getWinObjById(id)) {
@@ -1193,9 +1187,9 @@ Window.setWindowPreloadState = function(identity, payload) {
             if (!frameState) {
                 frameState = openfinWindow.framePreloadScripts[name] = [];
             }
-            preloadScripts = frameState.find(e => e.url === getIdentifier(payload));
+            preloadScripts = frameState.find(e => e.url === url);
             if (!preloadScripts) {
-                frameState.push(preloadScripts = { url: getIdentifier(payload) });
+                frameState.push(preloadScripts = { url });
             }
             preloadScripts = [preloadScripts];
         } else {
@@ -1204,7 +1198,7 @@ Window.setWindowPreloadState = function(identity, payload) {
         if (preloadScripts) {
             preloadScripts[0].state = state;
         } else {
-            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${getIdentifier(payload)} `);
+            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${url} `);
         }
     }
 

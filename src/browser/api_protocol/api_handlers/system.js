@@ -53,6 +53,7 @@ function SystemApiHandler() {
         'convert-options': convertOptions,
         'delete-cache-request': deleteCacheRequest, // apiPath: '.deleteCacheOnRestart' -> deprecated
         'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset' },
+        'download-preload-scripts': downloadPreloadScripts,
         'download-runtime': { apiFunc: downloadRuntime, apiPath: '.downloadRuntime' },
         'exit-desktop': { apiFunc: exitDesktop, apiPath: '.exitDesktop' },
         'generate-guid': generateGuid,
@@ -78,7 +79,7 @@ function SystemApiHandler() {
         'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
         'get-rvm-info': getRvmInfo,
         'get-plugin-modules': getPluginModules,
-        'get-selected-preload-scripts': getSelectedPreloadScripts,
+        'get-preload-scripts': getPreloadScripts,
         'get-version': getVersion,
         'get-websocket-state': getWebSocketState,
         'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
@@ -99,8 +100,7 @@ function SystemApiHandler() {
         'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess' },
         'update-proxy': updateProxy,
         'view-log': { apiFunc: viewLog, apiPath: '.getLog' },
-        'write-to-log': writeToLog,
-        'download-preload-scripts': downloadPreloadScripts //internal function
+        'write-to-log': writeToLog
     };
 
     apiProtocolBase.registerActionMap(SystemApiHandlerMap, 'System');
@@ -155,18 +155,14 @@ function SystemApiHandler() {
     }
 
     function downloadPreloadScripts(identity, message, ack, nack) {
-        const { payload } = message;
-        const { uuid, name, scripts } = payload;
-        const windowIdentity = { uuid, name };
+        const { scripts } = message.payload;
 
-        System.downloadPreloadScripts(windowIdentity, scripts, err => {
-            if (!err) {
+        System.downloadPreloadScripts(identity, scripts)
+            .then(() => {
                 const dataAck = _.clone(successAck);
                 ack(dataAck);
-            } else {
-                nack(err);
-            }
-        });
+            })
+            .catch(nack);
     }
 
     function getAppAssetInfo(identity, message, ack, nack) {
@@ -540,13 +536,11 @@ function SystemApiHandler() {
         });
     }
 
-    function getSelectedPreloadScripts(identity, message, ack, nack) {
-        const { payload } = message;
-
-        System.getSelectedPreloadScripts(payload)
-            .then(scriptSet => {
+    function getPreloadScripts(identity, message, ack, nack) {
+        System.getPreloadScripts(identity)
+            .then((preloadScripts) => {
                 const dataAck = _.clone(successAck);
-                dataAck.data = scriptSet;
+                dataAck.data = preloadScripts;
                 ack(dataAck);
             })
             .catch(nack);

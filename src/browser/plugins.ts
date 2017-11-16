@@ -11,6 +11,7 @@ import { getManifest } from './core_state';
 import { Identity, Plugin } from '../shapes';
 import { readFile } from 'fs';
 import { rvmMessageBus } from './rvm/rvm_message_bus';
+import { writeToLog } from './log';
 
 interface PluginWithContent extends Plugin {
     _content: string;
@@ -58,13 +59,22 @@ async function getModule(identity: Identity, sourceUrl: string, plugin: Plugin):
  */
 function addContent(identity: Identity, plugin: Plugin, pluginPath: string): Promise<PluginWithContent> {
     return new Promise((resolve) => {
+        const { uuid, name } = identity;
+        const { name: pluginName, version } = plugin;
+        const log = (msg: string) => {
+            writeToLog('info', `[plugins] [${uuid}]-[${name}]: ${msg}`);
+        };
+
+        log(`Started loading plugin module [${pluginName} ${version}]`);
         Window.setWindowPluginState(identity, {...plugin, state: 'load-started'});
 
-        readFile(pluginPath, 'utf8', (err, data) => {
-            if (err) {
+        readFile(pluginPath, 'utf8', (error, data) => {
+            if (error) {
+                log(`Failed loading plugin module [${pluginName} ${version}]: ${error}`);
                 Window.setWindowPluginState(identity, {...plugin, state: 'load-failed'});
                 resolve({...plugin, _content: ''});
             } else {
+                log(`Succeeded loading plugin module [${pluginName} ${version}]`);
                 Window.setWindowPluginState(identity, {...plugin, state: 'load-succeeded'});
                 resolve({...plugin, _content: data});
             }

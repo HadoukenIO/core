@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import {app, net} from 'electron'; // Electron app
-import {stat, mkdir, writeFileSync, createWriteStream} from 'fs';
+import {stat, mkdir, createWriteStream} from 'fs';
 import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
