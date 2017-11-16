@@ -77,7 +77,6 @@ module.exports.applicationApiMap = {
     'register-custom-data': registerCustomData,
     'register-external-window': registerExternalWindow,
     'relaunch-on-close': relaunchOnClose,
-    'redownload-preload-scripts': downloadPreloadScripts, // download-preload-scripts already used
     'remove-tray-icon': removeTrayIcon,
     'restart-application': restartApplication,
     'run-application': runApplication,
@@ -442,20 +441,4 @@ function relaunchOnClose(identity, message, ack, nack) {
     Application.scheduleRestart(appIdentity, () => {
         ack(successAck);
     }, nack);
-}
-
-function downloadPreloadScripts(identity, message, ack, nack) {
-    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
-    const { payload } = message;
-    // not pass name in Identity here to prevent preload script events from firing
-    Application.reloadPreloadScripts({ uuid: appIdentity.uuid }, payload.scripts, err => {
-        electronApp.vlog(1, `reloadPreloadScripts ${JSON.stringify(err)}`);
-        if (Array.isArray(err)) {
-            const dataAck = _.clone(successAck);
-            dataAck.data = err;
-            ack(dataAck);
-        } else {
-            nack(err);
-        }
-    });
 }
