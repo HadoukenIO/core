@@ -188,6 +188,11 @@ function download(fileUrl: string, filePath: string): Promise<any> {
                 }
             });
         });
+
+        request.once('error', (error: Error) => {
+            reject(error);
+        });
+
         request.end();
     });
 }
