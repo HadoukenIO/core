@@ -72,7 +72,7 @@ function five0BaseOptions() {
         'draggable': false,
         'exitOnClose': false,
         'expiremental': {
-            'enableV2Api': false
+            'v2Api': false
         },
         'frame': true,
         'frameConnect': '',
