@@ -391,6 +391,8 @@ Window.create = function(id, opts) {
 
         // called in the WebContents class in the runtime
         browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
+            // called for all iframes, but not for main frame of windows
+            electronApp.vlog(1, `registerIframe ${frameName} ${frameRoutingId}`);
             const parentFrameId = id;
             const frameInfo = {
                 name: frameName,
@@ -398,7 +400,7 @@ Window.create = function(id, opts) {
                 parentFrameId,
                 parent: { uuid, name },
                 frameRoutingId,
-                entityType: frameName === name ? 'window' : 'iframe'
+                entityType: 'iframe'
             };
 
             winObj.frames.set(frameName, frameInfo);
@@ -406,18 +408,16 @@ Window.create = function(id, opts) {
 
         // called in the WebContents class in the runtime
         browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
+            // called for all iframes AND for main frames
+            electronApp.vlog(1, `unregisterIframe ${frameRoutingId} ${closedFrameName}`);
+            const frameName = closedFrameName || name; // the parent name is considered a frame as well
             const frameInfo = winObj.frames.get(closedFrameName);
-            if (frameInfo) {
-                const frameName = closedFrameName || name; // the parent name is considered a frame as well
-                const entityType = frameName === name ? 'window' : 'iframe';
-                const payload = { uuid, name, frameName, entityType };
+            const entityType = frameInfo ? 'iframe' : 'window';
+            const payload = { uuid, name, frameName, entityType };
 
-                winObj.frames.delete(closedFrameName);
-                ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
-                ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
-            } else {
-                electronApp.vlog(1, `unregisterIframe missign frame ${closedFrameName}`);
-            }
+            winObj.frames.delete(closedFrameName);
+            ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
+            ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
         };
 
         // this is a first pass at teardown. for now, push the unsubscribe

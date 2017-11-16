@@ -88,7 +88,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
         if (!canTrySend) {
             system.debugLog(1, `uuid:${uuid} name:${name} frameRoutingId:${frameRoutingId} not reachable, payload:${payload}`);
-        } else if (frameRoutingId === browserWindow.webContents.mainFrameRoutingId) {
+        } else if (frameRoutingId === routingInfo.mainFrameRoutingId) {
             // this is the main window frame
             if (coreState.argo.framestrategy === 'frames') {
                 browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);

@@ -102,6 +102,7 @@ export interface OpenFinWindow {
         url: string;
     }[];
     uuid: string;
+    mainFrameRoutingId: number;
 }
 
 export interface BrowserWindow {
@@ -123,6 +124,7 @@ export interface BrowserWindow {
         hasFrame: (frameName: string) => boolean;
         mainFrameRoutingId: number;
     };
+    isDestroyed(): boolean;
 }
 
 export interface AppObj {
