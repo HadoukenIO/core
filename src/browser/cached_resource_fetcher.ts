@@ -173,6 +173,9 @@ function download(fileUrl: string, filePath: string): Promise<any> {
             response.on('data', (chunk: any) => {
                 binaryWriteStream.write(chunk, 'binary');
             });
+            response.once('error', (err: Error) => {
+                reject(err);
+            });
             response.on('end', () => {
                 binaryWriteStream.once('close', () => {
                     resolve();
@@ -189,8 +192,8 @@ function download(fileUrl: string, filePath: string): Promise<any> {
             });
         });
 
-        request.once('error', (error: Error) => {
-            reject(error);
+        request.once('error', (err: Error) => {
+            reject(err);
         });
 
         request.end();
