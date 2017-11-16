@@ -278,8 +278,9 @@ module.exports = {
             newOptions.permissions = options.permissions;
         }
 
-        if ('preload' in options) {
-            newOptions.preload = normalizePreload(options.preload);
+        if ('preloadScripts' in options || 'preload' in options) {
+            const preloadScripts = options.preloadScripts || options.preload;
+            newOptions.preloadScripts = normalizePreload(preloadScripts);
         }
 
         const plugin = options['plugin'];

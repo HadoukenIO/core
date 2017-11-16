@@ -97,7 +97,7 @@ ofEvents.on(route.window('closed', '*'), (e: any) => {
             if (/\//.test(source)) {
                 let [uuid, name] = source.split('/');
 
-                if (windowIsNotification(name)) {
+                if (Window.isNotification(name)) {
                     seqs.removes.onNext({uuid, name});
                 }
             }
@@ -155,7 +155,7 @@ ofEvents.on(route.application('window-end-load', '*'), (e: any) => {
             try {
                 Window.close({
                     uuid,
-                    name: 'queueCounter'
+                    name: Window.QUEUE_COUNTER_NAME
                 });
             } catch (e){
                 writeToLog('info', e)
@@ -243,7 +243,7 @@ function noteStackCount() {
                         --pendingNotYetCounted;
                     }
 
-                    return windowIsNotification(name);
+                    return Window.isNotification(name);
                 });
 
             return prev.concat(childNoteWindows);
@@ -264,7 +264,7 @@ function getCurrNotes (): Array<Identity> {
 
 function childWindowsAsIdentities(childWindows: Array<any>, appUuid: string): Array<Identity> {
     return childWindows
-        .filter((win: any) => windowIsNotification(win.name))
+        .filter((win: any) => Window.isNotification(win.name))
         .map((win: any) => {
 
             return {
@@ -391,15 +391,16 @@ function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: a
     return (noteWin: any, idx: number) => {
         const {name, uuid} = noteWin;
         const identity: Identity = {name, uuid};
+        const opacity = isNaN(noteWin.opacity) ? 1 : noteWin.opacity;
         const animationTransitions = {
             opacity: {
                 duration: 1000,
-                opacity: 1,
+                opacity
             },
             position: {
                 duration: POSITION_ANIMATION_DURATION,
                 top: (defaultTop - (numNotes - idx) * NOTE_HEIGHT) + NOTE_TOP_MARGIN,
-            },
+            }
         };
         const animationCallback = () => {
 
@@ -506,16 +507,18 @@ function handleNoteCreate(msg: NotificationMessage): void {
 }
 
 function handleNoteCreated(msg: NotificationMessage): void {
-    const {data} = msg;
+    const { data: { options }} = msg;
+    const { uuid, name } = options;
+    const identity = { uuid, name };
 
     ++created;
 
-    let idx = notesToBeCreated.indexOf(data.options.name);
+    let idx = notesToBeCreated.indexOf(options.name);
 
     if (idx !== -1) {
         notesToBeCreated.splice(idx, 1);
     }
-    seqs.createdNotes.onNext(data.options);
+    seqs.createdNotes.onNext({ identity, options });
 }
 
 function routeRequest(id: any, msg: NotificationMessage, ack: any) {
@@ -682,12 +685,6 @@ function noteTopicStr(uuid: string, name: string, isGeneral?: boolean): string {
     return isGeneral
         ? route('notifications', 'listener/') // legacy trailing slash; do not remove!
         : route('notifications', 'listener', uuid, name, true);
-}
-
-function windowIsNotification(name: string ): boolean {
-    const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
-
-    return noteGuidRegex.test(name);
 }
 
 function closeNotification(req: NotificationMessage): void {

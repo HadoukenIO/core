@@ -81,6 +81,11 @@ export function fetchAndLoadPreloadScripts(
     let result: Promise<LoadResponses>;
 
     const loadedScripts: Promise<any>[] = preloadOption.map((preload: PreloadInstance) => {
+        const { url } = preload;
+
+        logPreload('info', identity, 'fetch started', url);
+        updatePreloadState(identity, preload, 'load-started');
+
         // following if clause avoids re-fetch for remote resources already in memory
         // todo: following if clause slated for removal (RUN-3227, blocked by RUN-3162), i.e., return always
         if (
@@ -122,9 +127,6 @@ function fetchToCache(identity: Identity, preloadScript: PreloadScript): Promise
     const timer = new Timer();
     const { url } = preloadScript;
 
-    logPreload('info', identity, 'fetch started', url);
-    updatePreloadState(identity, preloadScript, 'load-started');
-
     return new Promise((resolve: FetchResolver, reject: Rejector) => {
         cachedFetch(identity.uuid, url, (fetchError: Error, scriptPath: string) => {
             if (!fetchError) {
@@ -149,9 +151,6 @@ function loadFromCache(opts: FetchResponse): Promise<boolean> {
             const preload = opts.preloadScript;
             const { identity, scriptPath } = opts;
             const id = getIdentifier(preload);
-
-            logPreload('info', identity, 'load started', id);
-            updatePreloadState(identity, preload, 'load-started');
 
             fs.readFile(scriptPath, 'utf8', (readError: Error, scriptText: string) => {
                 // todo: remove following workaround when RUN-3162 issue fixed
@@ -208,11 +207,11 @@ function updatePreloadState(
     const id = getIdentifier(preload);
 
     const { uuid, name } = identity;
-    const eventRoute = route.window('preload-state-changing', uuid, name);
-    const preloadState = Object.assign({}, preload, { state });
+    const eventRoute = route.window('preload-scripts-state-changing', uuid, name);
+    const preloadScripts = [Object.assign({}, preload, { state })];
 
     preloadStates.set(id, state);
-    ofEvents.emit(eventRoute, {name, uuid, preloadState});
+    ofEvents.emit(eventRoute, {name, uuid, preloadScripts});
 }
 
 function isPreloadOption(preloadOption: PreloadOption): preloadOption is PreloadOption {

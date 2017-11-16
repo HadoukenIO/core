@@ -67,7 +67,9 @@ const WindowsMessages = {
     WM_SYSKEYUP: 0x0105,
 };
 
-let Window = {};
+let Window = {
+    QUEUE_COUNTER_NAME: 'queueCounter'
+};
 
 let browserWindowEventMap = {
     'api-injection-failed': {
@@ -799,18 +801,18 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
-    const { data } = coreState.getStartManifest();
-    const { plugin: plugins } = (data || {});
-    winObj.pluginState = JSON.parse(JSON.stringify(plugins || []));
+    const { manifest } = coreState.getManifest(identity);
+    const { plugin: plugins } = manifest || {};
+    winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
 
     // Set preload scripts' final loading states
-    winObj.preloadState = (_options.preload || []).map(preload => {
+    winObj.preloadScripts = (_options.preloadScripts || _options.preload || []).map(preload => {
         return {
             url: getIdentifier(preload),
             state: getPreloadScriptState(getIdentifier(preload))
         };
     });
-    winObj.framePreloadState = {}; // frame ID => [{url, state}]
+    winObj.framePreloadScripts = {}; // frame ID => [{url, state}]
 
     if (!coreState.getWinObjById(id)) {
         coreState.setWindowObj(id, winObj);
@@ -1096,13 +1098,13 @@ Window.getGroup = function(identity) {
 
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const { pluginState, preloadState } = Window.wrap(identity.uuid, identity.name);
+    const { plugins, preloadScripts } = Window.wrap(identity.uuid, identity.name);
     const webContents = browserWindow.webContents;
     const windowInfo = {
         canNavigateBack: webContents.canGoBack(),
         canNavigateForward: webContents.canGoForward(),
-        pluginState,
-        preloadState,
+        plugins,
+        preloadScripts,
         title: webContents.getTitle(),
         url: webContents.getURL()
     };
@@ -1152,16 +1154,16 @@ Window.getParentWindow = function() {};
 Window.setWindowPluginState = function(identity, payload) {
     const { uuid, name } = identity;
     const { name: pluginName, version, state, allDone } = payload;
-    const updateTopic = allDone ? 'plugin-state-changed' : 'plugin-state-changing';
-    let { pluginState } = Window.wrap(uuid, name);
+    const updateTopic = allDone ? 'plugins-state-changed' : 'plugins-state-changing';
+    let { plugins } = Window.wrap(uuid, name);
 
     // Single plugin state change
     if (!allDone) {
-        pluginState = pluginState.find(e => e.name === pluginName && e.version === version);
-        pluginState.state = state;
+        plugins = plugins.filter(e => e.name === pluginName && e.version === version);
+        plugins[0].state = state;
     }
 
-    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, pluginState });
+    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, plugins });
 };
 
 /**
@@ -1170,7 +1172,7 @@ Window.setWindowPluginState = function(identity, payload) {
 Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
     const { url, state, allDone } = payload;
-    const updateTopic = allDone ? 'preload-state-changed' : 'preload-state-changing';
+    const updateTopic = allDone ? 'preload-scripts-state-changed' : 'preload-scripts-state-changing';
     const frameInfo = coreState.getInfoByUuidFrame(identity);
     let openfinWindow;
     if (frameInfo.entityType === 'iframe') {
@@ -1182,24 +1184,25 @@ Window.setWindowPreloadState = function(identity, payload) {
     if (!openfinWindow) {
         return log.writeToLog('info', `setWindowPreloadState missing openfinWindow ${uuid} ${name}`);
     }
-    let { preloadState } = openfinWindow;
+    let { preloadScripts } = openfinWindow;
 
     // Single preload script state change
     if (!allDone) {
         if (frameInfo.entityType === 'iframe') {
-            let frameState = openfinWindow.framePreloadState[name];
+            let frameState = openfinWindow.framePreloadScripts[name];
             if (!frameState) {
-                frameState = openfinWindow.framePreloadState[name] = [];
+                frameState = openfinWindow.framePreloadScripts[name] = [];
             }
-            preloadState = frameState.find(e => e.url === getIdentifier(payload));
-            if (!preloadState) {
-                frameState.push(preloadState = { url: getIdentifier(payload) });
+            preloadScripts = frameState.find(e => e.url === getIdentifier(payload));
+            if (!preloadScripts) {
+                frameState.push(preloadScripts = { url: getIdentifier(payload) });
             }
+            preloadScripts = [preloadScripts];
         } else {
-            preloadState = openfinWindow.preloadState.find(e => e.url === url);
+            preloadScripts = openfinWindow.preloadScripts.filter(e => e.url === url);
         }
-        if (preloadState) {
-            preloadState.state = state;
+        if (preloadScripts) {
+            preloadScripts[0].state = state;
         } else {
             log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${getIdentifier(payload)} `);
         }
@@ -1209,7 +1212,7 @@ Window.setWindowPreloadState = function(identity, payload) {
         ofEvents.emit(route.window(updateTopic, uuid, name), {
             name,
             uuid,
-            preloadState
+            preloadScripts
         });
     } // @TODO ofEvents.emit(route.frame for iframes
 };
@@ -1251,6 +1254,21 @@ Window.hide = function(identity) {
     browserWindow.hide();
 };
 
+Window.isNotification = function(name) {
+    const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
+    return noteGuidRegex.test(name);
+};
+
+Window.isNotificationType = function(identity, callback = () => {}) {
+    const { name } = identity;
+
+    const isNotification = Window.isNotification(name);
+    const isQueueCounter = name === Window.QUEUE_COUNTER_NAME;
+    const isNotificationType = isNotification || isQueueCounter;
+
+    callback(isNotificationType);
+    return isNotificationType;
+};
 
 Window.isShowing = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);

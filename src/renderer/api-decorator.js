@@ -30,7 +30,6 @@ limitations under the License.
     const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
     const ipc = electron.ipcRenderer;
 
-    let cachedOptions;
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
@@ -191,7 +190,7 @@ limitations under the License.
         });
 
         document.addEventListener('mousewheel', event => {
-            if (!event.ctrlKey || !cachedOptions.accelerator.zoom) {
+            if (!event.ctrlKey || !initialOptions.accelerator.zoom) {
                 return;
             }
 
@@ -317,10 +316,10 @@ limitations under the License.
             if (!e.defaultPrevented) {
                 e.preventDefault();
 
-                const options = getCurrentWindowOptionsSync();
+                const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
+                const options = getWindowOptionsSync(identity);
 
                 if (options.contextMenu) {
-                    const identity = getWindowIdentitySync();
                     syncApiCall('show-menu', {
                         uuid: identity.uuid,
                         name: identity.name,
@@ -482,15 +481,19 @@ limitations under the License.
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
-        const { preload } = 'preload' in convertedOpts ? convertedOpts : initialOptions;
+        const { preloadScripts } = 'preloadScripts' in convertedOpts ? convertedOpts : initialOptions;
+        const windowIsNotification = syncApiCall('window-is-notification-type', {
+            uuid: convertedOpts.uuid,
+            name: convertedOpts.name
+        });
 
-        if (!(preload && preload.length)) {
+        if (!(preloadScripts && preloadScripts.length) || windowIsNotification) {
             proceed(); // short-circuit preload scripts fetch
         } else {
             const preloadScriptsPayload = {
                 uuid: options.uuid,
                 name: options.name,
-                scripts: preload
+                scripts: preloadScripts
             };
             fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, proceed, proceed);
         }
@@ -568,13 +571,22 @@ limitations under the License.
         const identity = { uuid, name };
         const windowOptions = entityInfo.entityType === 'iframe' ? getWindowOptionsSync(entityInfo.parent) :
             getCurrentWindowOptionsSync();
+        const windowIsNotification = syncApiCall('window-is-notification-type', {
+            uuid: windowOptions.uuid,
+            name: windowOptions.name
+        });
 
-        let { preload } = convertOptionsToElectronSync(windowOptions);
+        // Don't execute preload scripts and plugin modules in notifications
+        if (windowIsNotification) {
+            return;
+        }
+
+        let { preloadScripts } = convertOptionsToElectronSync(windowOptions);
 
         evalPlugins(identity);
 
-        if (typeof preload === 'object' && preload.length) {
-            evalPreloadScripts(identity, preload);
+        if (typeof preloadScripts === 'object' && preloadScripts.length) {
+            evalPreloadScripts(identity, preloadScripts);
         }
     });
 
@@ -624,15 +636,14 @@ limitations under the License.
         try {
             preloadScripts = syncApiCall('get-selected-preload-scripts', preloadOption);
         } catch (error) {
-            return syncApiCall('write-to-log', { level: 'error', message: logBase + error });
+            preloadScripts = [];
+            syncApiCall('write-to-log', { level: 'error', message: logBase + error });
         }
 
         preloadScripts.forEach((preloadScript) => {
             const { url, content } = preloadScript;
 
-            if (content !== null) {
-                // TODO: handle empty script for bad urls
-
+            if (content) {
                 try {
                     window.eval(content); /* jshint ignore:line */
                     asyncApiCall(action, { url, state: 'succeeded' });

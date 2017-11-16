@@ -7,7 +7,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 
 const Window = require('./api/window.js').Window;
 import * as path from 'path';
-import { getStartManifest, StartManifest } from './core_state';
+import { getManifest } from './core_state';
 import { Identity, Plugin } from '../shapes';
 import { readFile } from 'fs';
 import { rvmMessageBus } from './rvm/rvm_message_bus';
@@ -29,7 +29,8 @@ const pluginPaths: Map<string, string> = new Map();
  * Gets all plugins defined in app's manifest
  */
 export async function getModules(identity: Identity): Promise<PluginWithContent[]> {
-    const {url, data: {plugin: plugins = []}} = <StartManifest>getStartManifest();
+    const { url, manifest } = getManifest(identity);
+    const { plugin: plugins = [] } = manifest || {};
     const promises = plugins.map((plugin: Plugin) => getModule(identity, url, plugin));
     return await Promise.all(promises);
 }
