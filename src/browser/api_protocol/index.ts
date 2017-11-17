@@ -32,9 +32,17 @@ import { init as initApiProtocol, getDefaultRequestHandler } from './api_handler
 import { meshEnabled } from '../connection_manager';
 import { registerMiddleware as registerEntityExistenceMiddleware } from './api_handlers/middleware_entity_existence';
 import { registerMiddleware as registerMeshMiddleware } from './api_handlers/mesh_middleware';
+import {
+    registerMiddleware as registerProcessExternalAppMiddleware,
+    legacyWindowingEnabled
+} from './api_handlers/deprecated_external_windowing_middleware';
 
 // Middleware registration. The order is important.
 registerEntityExistenceMiddleware(getDefaultRequestHandler());
+//re-enable support for process-external-app-action
+if (legacyWindowingEnabled()) {
+    registerProcessExternalAppMiddleware(getDefaultRequestHandler());
+}
 if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
 }

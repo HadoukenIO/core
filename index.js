@@ -99,8 +99,10 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
         skipTaskbar: true,
         resizable: false,
         alwaysOnTop: true,
-        nodeIntegration: true,
-        openfinIntegration: false
+        webPreferences: {
+            nodeIntegration: true,
+            openfinIntegration: false
+        }
     });
 
     let ipcUuid = app.generateGUID();
@@ -514,6 +516,8 @@ function launchApp(argo, startExternalAdapterServer) {
             configObject,
             configObject: { licenseKey }
         } = configuration;
+
+        coreState.setManifest(configUrl, configObject);
 
         if (argo['user-app-config-args']) {
             const tempUrl = configObject['startup_app'].url;

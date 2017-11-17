@@ -95,14 +95,8 @@ export interface OpenFinWindow {
     hideReason: string;
     id: number;
     name: string;
-    pluginState: {
-        link?: string;
-        name: string;
-        optional?: boolean;
-        state: 'load-failed'|'load-succeeded'|'failed'|'succeeded';
-        version: string;
-    }[];
-    preloadState: {
+    plugins: PluginState[];
+    preloadScripts: {
         optional?: boolean;
         state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
         url: string;
@@ -268,6 +262,7 @@ export interface Manifest {
     };
     licenseKey: string;
     offlineAccess?: boolean;
+    plugin?: Plugin[];
     proxy?: ProxySettings;
     runtime: {
         arguments?: string;
@@ -295,4 +290,15 @@ export interface Manifest {
         forwardErrorReports?: boolean;
         enableErrorReporting?: boolean;
     };
+}
+
+export interface Plugin {
+    link?: string;
+    name: string;
+    optional?: boolean;
+    version: string;
+}
+
+export interface PluginState extends Plugin {
+    state: 'load-failed'|'load-succeeded'|'failed'|'succeeded';
 }

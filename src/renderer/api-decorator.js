@@ -30,11 +30,10 @@ limitations under the License.
     const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
     const ipc = electron.ipcRenderer;
 
-    let cachedOptions;
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
-    const initialOptions = getWindowOptionsSync();
+    const initialOptions = getCurrentWindowOptionsSync();
     const entityInfo = getEntityInfoSync(initialOptions.uuid, initialOptions.name);
 
     let getOpenerSuccessCallbackCalled = () => {
@@ -81,8 +80,12 @@ limitations under the License.
         return initialOptions;
     }
 
-    function getWindowOptionsSync() {
+    function getCurrentWindowOptionsSync() {
         return syncApiCall('get-current-window-options');
+    }
+
+    function getWindowOptionsSync(identity) {
+        return syncApiCall('get-window-options', identity);
     }
 
     function getEntityInfoSync(uuid, name) {
@@ -90,7 +93,7 @@ limitations under the License.
     }
 
     function getWindowIdentitySync() {
-        let winOpts = getWindowOptionsSync();
+        let winOpts = getCurrentWindowOptionsSync();
 
         return {
             uuid: winOpts.uuid,
@@ -187,7 +190,7 @@ limitations under the License.
         });
 
         document.addEventListener('mousewheel', event => {
-            if (!event.ctrlKey || !cachedOptions.accelerator.zoom) {
+            if (!event.ctrlKey || !initialOptions.accelerator.zoom) {
                 return;
             }
 
@@ -313,10 +316,10 @@ limitations under the License.
             if (!e.defaultPrevented) {
                 e.preventDefault();
 
-                const options = getWindowOptionsSync();
+                const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
+                const options = getWindowOptionsSync(identity);
 
                 if (options.contextMenu) {
-                    const identity = getWindowIdentitySync();
                     syncApiCall('show-menu', {
                         uuid: identity.uuid,
                         name: identity.name,
@@ -478,15 +481,19 @@ limitations under the License.
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
-        const { preload } = 'preload' in convertedOpts ? convertedOpts : initialOptions;
+        const { preloadScripts } = 'preloadScripts' in convertedOpts ? convertedOpts : initialOptions;
+        const windowIsNotification = syncApiCall('window-is-notification-type', {
+            uuid: convertedOpts.uuid,
+            name: convertedOpts.name
+        });
 
-        if (!(preload && preload.length)) {
+        if (!(preloadScripts && preloadScripts.length) || windowIsNotification) {
             proceed(); // short-circuit preload scripts fetch
         } else {
             const preloadScriptsPayload = {
                 uuid: options.uuid,
                 name: options.name,
-                scripts: preload
+                scripts: preloadScripts
             };
             fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, proceed, proceed);
         }
@@ -562,53 +569,56 @@ limitations under the License.
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const { uuid, name } = initialOptions;
         const identity = { uuid, name };
-        const windowOptions = getWindowOptionsSync();
+        const windowOptions = entityInfo.entityType === 'iframe' ? getWindowOptionsSync(entityInfo.parent) :
+            getCurrentWindowOptionsSync();
+        const windowIsNotification = syncApiCall('window-is-notification-type', {
+            uuid: windowOptions.uuid,
+            name: windowOptions.name
+        });
 
-        let { plugin, preload } = convertOptionsToElectronSync(windowOptions);
-
-        if (plugin.length) {
-            evalPlugins(identity, plugin);
+        // Don't execute preload scripts and plugin modules in notifications
+        if (windowIsNotification) {
+            return;
         }
 
-        if (preload.length) {
-            evalPreloadScripts(identity, preload);
+        let { preloadScripts } = convertOptionsToElectronSync(windowOptions);
+
+        evalPlugins(identity);
+
+        if (preloadScripts.length) {
+            evalPreloadScripts(identity, preloadScripts);
         }
     });
 
     /**
-     * Requests plugin contents from the Core and evals them in the current window
+     * Requests plugin modules from the Core and evals them in the current window
      */
-    function evalPlugins(identity, pluginOption) {
+    function evalPlugins(identity) {
         const action = 'set-window-plugin-state';
+        const plugins = syncApiCall('get-plugin-modules');
         let logBase = `[plugin] [${identity.uuid}]-[${identity.name}]: `;
-        let plugins;
-
-        try {
-            plugins = syncApiCall('get-selected-preload-scripts', pluginOption);
-        } catch (error) {
-            return syncApiCall('write-to-log', { level: 'error', message: logBase + error });
-        }
 
         plugins.forEach((plugin) => {
-            const { name, version, content } = plugin;
+            // _content - contains module code as a string to eval in this window
+            const { name, version, _content } = plugin;
 
-            if (content !== null) {
-                // TODO: handle empty script for bad urls
+            if (!_content) {
+                return;
+            }
 
-                try {
-                    window.eval(content); /* jshint ignore:line */
-                    asyncApiCall(action, { name, version, state: 'succeeded' });
-                    syncApiCall('write-to-log', {
-                        level: 'info',
-                        message: logBase + `eval succeeded for ${name} ${version}`
-                    });
-                } catch (err) {
-                    asyncApiCall(action, { name, version, state: 'failed' });
-                    syncApiCall('write-to-log', {
-                        level: 'info',
-                        message: logBase + `eval failed for ${name} ${version}`
-                    });
-                }
+            try {
+                window.eval(_content); /* jshint ignore:line */
+                asyncApiCall(action, { name, version, state: 'succeeded' });
+                syncApiCall('write-to-log', {
+                    level: 'info',
+                    message: logBase + `eval succeeded for ${name} ${version}`
+                });
+            } catch (err) {
+                asyncApiCall(action, { name, version, state: 'failed' });
+                syncApiCall('write-to-log', {
+                    level: 'info',
+                    message: logBase + `eval failed for ${name} ${version}`
+                });
             }
         });
 
@@ -626,15 +636,14 @@ limitations under the License.
         try {
             preloadScripts = syncApiCall('get-selected-preload-scripts', preloadOption);
         } catch (error) {
-            return syncApiCall('write-to-log', { level: 'error', message: logBase + error });
+            preloadScripts = [];
+            syncApiCall('write-to-log', { level: 'error', message: logBase + error });
         }
 
         preloadScripts.forEach((preloadScript) => {
             const { url, content } = preloadScript;
 
-            if (content !== null) {
-                // TODO: handle empty script for bad urls
-
+            if (content) {
                 try {
                     window.eval(content); /* jshint ignore:line */
                     asyncApiCall(action, { url, state: 'succeeded' });

@@ -41,6 +41,7 @@ const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 import { FrameInfo } from './frame';
+import * as plugins from '../plugins';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -179,7 +180,7 @@ exports.System = {
         */
         var settings = options || {};
 
-        if (settings.preload) {
+        if (settings.preloadScripts) {
             clearPreloadCache();
         }
 
@@ -533,6 +534,15 @@ exports.System = {
     openUrlWithBrowser: function(url) {
         shell.openExternal(url);
     },
+    readRegistryValue: function(rootKey, subkey, value) {
+        const registryPayload = electronApp.readRegistryValue(rootKey, subkey, value);
+
+        if (registryPayload && registryPayload.error) {
+            throw new Error(registryPayload.error);
+        }
+
+        return registryPayload;
+    },
     releaseExternalProcess: function(processUuid) {
         ProcessTracker.release(processUuid);
     },
@@ -609,6 +619,38 @@ exports.System = {
                 errorCallback(error);
             }
         });
+    },
+    getCookies: function(opts, callback, errorCallback) {
+        const { url, name } = opts;
+        if (url && url.length > 0 && name && name.length > 0) {
+            session.defaultSession.cookies.get({ url, name }, (error, cookies) => {
+                if (error) {
+                    log.writeToLog(1, `cookies.get error ${error}`, true);
+                    errorCallback(error);
+                } else if (cookies.length > 0) {
+                    const data =
+                        cookies.filter(cookie => !cookie.httpOnly).map(cookie => {
+                            return {
+                                name: cookie.name,
+                                expirationDate: cookie.expirationDate,
+                                path: cookie.path,
+                                domain: cookie.domain
+                            };
+                        });
+                    log.writeToLog(1, `cookies filtered ${data.length}`, true);
+                    if (data.length > 0) {
+                        callback(data);
+                    } else {
+                        errorCallback(`Cookie not found ${name}`);
+                    }
+                } else {
+                    log.writeToLog(1, `cookies result ${cookies.length}`, true);
+                    errorCallback(`Cookie not found ${name}`);
+                }
+            });
+        } else {
+            errorCallback(`Error getting cookies`);
+        }
     },
     getWebSocketServerState: function() {
         return coreState.getSocketServerState();
@@ -698,6 +740,10 @@ exports.System = {
         } else {
             fetchAndLoadPreloadScripts(identity, preloadOption, cb);
         }
+    },
+
+    getPluginModules: function(identity) {
+        return plugins.getModules(identity);
     },
 
     // identitier is preload script url or plugin name

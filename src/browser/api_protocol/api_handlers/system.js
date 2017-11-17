@@ -16,6 +16,32 @@ limitations under the License.
 let apiProtocolBase = require('./api_protocol_base.js');
 let System = require('../../api/system.js').System;
 let _ = require('underscore');
+const connectionManager = require('../../connection_manager');
+import * as log from '../../log';
+
+const ReadRegistryValuePolicyDelegate = {
+    //checkPermissions(ApiPolicyDelegateArgs): boolean;
+    checkPermissions: function(args) {
+        // permissionSettings has following format
+        // { "enabled": true, "registryKeys": [ "HKEY_CURRENT_USER\\Software\\OpenFin\\RVM" ] }
+        let permitted = false; // default to false
+        if (args.payload && args.permissionSettings && args.permissionSettings.enabled === true) {
+            if (Array.isArray(args.permissionSettings.registryKeys)) {
+                let fullPath = args.payload.rootKey;
+                if (args.payload.subkey) {
+                    fullPath = fullPath.concat('\\' + args.payload.subkey);
+                }
+                if (args.payload.value) {
+                    fullPath = fullPath.concat('\\' + args.payload.value);
+                }
+                permitted = args.permissionSettings.registryKeys.some(specKey => fullPath.startsWith(specKey));
+            }
+        }
+        log.writeToLog(1, `ReadRegistryValueDelegate returning ${permitted}`, true);
+        return permitted;
+    }
+};
+
 
 function SystemApiHandler() {
     let successAck = {
@@ -51,6 +77,7 @@ function SystemApiHandler() {
         'get-proxy-settings': getProxySettings,
         'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
         'get-rvm-info': getRvmInfo,
+        'get-plugin-modules': getPluginModules,
         'get-selected-preload-scripts': getSelectedPreloadScripts,
         'get-version': getVersion,
         'get-websocket-state': getWebSocketState,
@@ -60,9 +87,11 @@ function SystemApiHandler() {
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
         'raise-event': raiseEvent,
+        'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue', apiPolicyDelegate: ReadRegistryValuePolicyDelegate },
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
+        'get-cookies': { apiFunc: getCookies, apiPath: '.getCookies' },
         'set-cookie': setCookie,
         'set-min-log-level': setMinLogLevel,
         'show-developer-tools': showDeveloperTools,
@@ -78,6 +107,13 @@ function SystemApiHandler() {
 
     function didFail(e) {
         return e !== undefined && e.constructor === Error;
+    }
+
+    function readRegistryValue(identity, message, ack) {
+        const dataAck = _.clone(successAck);
+        const { payload: { rootKey, subkey, value } } = message;
+        dataAck.data = System.readRegistryValue(rootKey, subkey, value);
+        ack(dataAck);
     }
 
     function setMinLogLevel(identity, message, ack, nack) {
@@ -152,13 +188,6 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
-    function getAllExternalApplications(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getAllExternalApplications();
-        ack(dataAck);
-    }
-
     function raiseEvent(identity, message, ack) {
         let evt = message.payload.eventName;
         let eventArgs = message.payload.eventArgs;
@@ -224,14 +253,41 @@ function SystemApiHandler() {
     }
 
     function getAllApplications(identity, message, ack) {
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getAllApplications();
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            dataAck.data = [...dataAck.data, ...aggregate];
+        }
+        ack(dataAck);
+    }
+
+    function getAllExternalApplications(identity, message, ack) {
+        const { locals } = message;
+        let dataAck = _.clone(successAck);
+        dataAck.data = System.getAllExternalApplications();
+
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            const currentApplication = connectionManager.getMeshUuid();
+
+            const filteredAggregate = aggregate.filter(result => (result.uuid !== currentApplication));
+            const filteredAggregateSet = [...new Set(filteredAggregate)];
+            dataAck.data = [...dataAck.data, ...filteredAggregateSet];
+        }
         ack(dataAck);
     }
 
     function getAllWindows(identity, message, ack) {
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getAllWindows(identity);
+
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            dataAck.data = [...dataAck.data, ...aggregate];
+        }
         ack(dataAck);
     }
 
@@ -320,8 +376,14 @@ function SystemApiHandler() {
     }
 
     function processSnapshot(identity, message, ack) {
+        const { locals } = message;
         var dataAck = _.clone(successAck);
         dataAck.data = System.getProcessList();
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            const aggregateSet = [...new Set(aggregate)];
+            dataAck.data = [...dataAck.data, ...aggregateSet];
+        }
         ack(dataAck);
     }
 
@@ -393,6 +455,17 @@ function SystemApiHandler() {
     function setCookie(identity, message, ack, nack) {
         System.setCookie(message.payload, function() {
             ack(successAck);
+        }, function(err) {
+            nack(err);
+        });
+
+    }
+
+    function getCookies(identity, message, ack, nack) {
+        System.getCookies(message.payload, function(data) {
+            let dataAck = _.clone(successAck);
+            dataAck.data = data;
+            ack(dataAck);
         }, function(err) {
             nack(err);
         });
@@ -474,6 +547,16 @@ function SystemApiHandler() {
             .then(scriptSet => {
                 const dataAck = _.clone(successAck);
                 dataAck.data = scriptSet;
+                ack(dataAck);
+            })
+            .catch(nack);
+    }
+
+    function getPluginModules(identity, message, ack, nack) {
+        System.getPluginModules(identity)
+            .then((pluginModules) => {
+                const dataAck = _.clone(successAck);
+                dataAck.data = pluginModules;
                 ack(dataAck);
             })
             .catch(nack);

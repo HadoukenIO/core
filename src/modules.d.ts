@@ -33,6 +33,10 @@ declare module 'electron' {
         export function vlog(level: number, message: any): any;
     }
 
+    export namespace net {
+        export function request(url: string): any;
+    }
+
     export interface Rectangle {
         x: number;
         y: number;
@@ -72,8 +76,8 @@ declare module 'electron' {
 
     export class resourceFetcher {
         constructor(type: string);
-        on(event: string, callback: (event: string, status: string) => any): void;
-        once(event: string, callback: (event: string, status: string) => any): void;
+        on(event: string, callback: (event: string, status: string, data: string, headers: any) => any): void;
+        once(event: string, callback: (event: string, status: string, data: string, headers: any) => any): void;
         setFilePath(path: string): void;
         fetch(url: string): void;
     }

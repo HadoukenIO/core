@@ -13,12 +13,18 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
  */
 
 const system = require('../../api/system').System;
+import { MessagePackage } from './api_transport_base';
+
 
 export default class RequestHandler<T> {
     private handlers: Array<any> = [];
 
-    private mkNext(fn: any, msg: T) {
-        return () => {
+    private mkNext(fn: any, msg: MessagePackage) {
+        return (locals?: object) => {
+            // Add any middleware data to the message in locals property to be utilized in the individual api handlers
+            if (locals) {
+                msg.data.locals = msg.data.locals ? Object.assign(msg.data.locals, locals) : locals;
+            }
             const currFnIdx = this.handlers.indexOf(fn);
             const handlersLen = this.handlers.length;
 
@@ -36,7 +42,7 @@ export default class RequestHandler<T> {
     /**
      * Add a handler to the end of the handlers array.
      */
-    public addHandler(cb: (msg: T, next: () => void) => any): RequestHandler<T> {
+    public addHandler(cb: (msg: MessagePackage, next: () => void) => any): RequestHandler<T> {
         this.handlers.push(cb);
 
         return this;
@@ -47,13 +53,13 @@ export default class RequestHandler<T> {
      * functions will be fired before ANY of the functions added via the
      * addHandler method
      */
-    public addPreProcessor(cb: (msg: T, next: () => void) => any): RequestHandler<T> {
+    public addPreProcessor(cb: (msg: MessagePackage, next: () => void) => any): RequestHandler<T> {
         this.handlers.unshift(cb);
 
         return this;
     }
 
-    public handle(msg: T): RequestHandler<T> {
+    public handle(msg: MessagePackage): RequestHandler<T> {
         if (this.handlers.length) {
             const firstHandler = this.handlers[0];
             firstHandler(msg, this.mkNext(firstHandler, msg));
