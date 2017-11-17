@@ -256,7 +256,7 @@ module.exports = (grunt) => {
 
     grunt.registerTask('sign-asar', function() {
         openfinSign('out/app.asar');
-        openfinSign('out/adapter-new.asar');
+        openfinSign('out/js-adapter.asar');
         grunt.log.ok('Finished signing asar.');
     });
 
