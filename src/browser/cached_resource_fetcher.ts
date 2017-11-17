@@ -46,6 +46,7 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
             // this is C:\whatever\
             stat(fileUrl, (err: null|Error) => {
                 if (err) {
+                    app.vlog(1, `cachedFetch invalid file url ${fileUrl}`);
                     callback(new Error(`Invalid file url: '${fileUrl}'`));
                 } else {
                     callback(null, fileUrl);
@@ -64,12 +65,13 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
         await download(fileUrl, filePath);
     } catch (e) {
         err = e;
+        app.vlog(1, `cachedFetch uuid ${appUuid} url ${fileUrl} file ${filePath} err ${e.message}`);
     }
 
     callback(err, filePath);
 }
 
-function pathExists (location: string) {
+function pathExists (location: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
         stat(location, (err: null | Error) => {
             if (err) {
@@ -85,7 +87,12 @@ function makeDirectory(location: string) {
     return new Promise((resolve, reject) => {
         mkdir(location, (err: null | Error) => {
             if (err) {
-                reject(err);
+                // EEXIST not an error
+                pathExists(location).then(value => value ? resolve() : reject(err))
+                    .catch(() => {
+                        app.vlog(1, `cachedFetch makeDirectory error ${err.message}`);
+                        reject(err);
+                    });
             } else {
                 resolve();
             }
@@ -174,6 +181,7 @@ function download(fileUrl: string, filePath: string): Promise<any> {
                 binaryWriteStream.write(chunk, 'binary');
             });
             response.once('error', (err: Error) => {
+                app.vlog(1, `cachedFetch download url ${fileUrl} filePath ${filePath} response error ${err.message} `);
                 reject(err);
             });
             response.on('end', () => {
@@ -181,18 +189,21 @@ function download(fileUrl: string, filePath: string): Promise<any> {
                     resolve();
                 });
                 binaryWriteStream.once('error', (err: Error) => {
+                    app.vlog(1, `cachedFetch download url ${fileUrl} filePath ${filePath} binaryWriteStream error ${err.message} `);
                     reject(err);
                 });
                 binaryWriteStream.end();
 
                 if (!expectedStatusCode.test(statusCode)) {
                     const error = new Error(`Failed to download resource. Status code: ${statusCode}`);
+                    app.vlog(1, `cachedFetch download url ${fileUrl} filePath ${filePath} error ${statusCode} `);
                     reject(error);
                 }
             });
         });
 
         request.once('error', (err: Error) => {
+            app.vlog(1, `cachedFetch download url ${fileUrl} filePath ${filePath} request error ${err.message} `);
             reject(err);
         });
 
