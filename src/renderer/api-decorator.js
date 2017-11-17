@@ -585,7 +585,7 @@ limitations under the License.
 
         evalPlugins(identity);
 
-        if (preloadScripts.length) {
+        if (typeof preloadScripts === 'object' && preloadScripts.length) {
             evalPreloadScripts(identity, preloadScripts);
         }
     });
