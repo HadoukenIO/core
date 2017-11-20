@@ -802,7 +802,7 @@ Window.create = function(id, opts) {
     };
 
     const { manifest } = coreState.getManifest(identity);
-    const { plugin: plugins } = manifest || {};
+    const { plugins } = manifest || {};
     winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
 
     // Set preload scripts' final loading states
