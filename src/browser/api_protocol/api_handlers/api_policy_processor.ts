@@ -288,37 +288,12 @@ function requestAppPermissions(configUrl: string): Promise<any> {
         } else {
             const policy = searchPolicyByConfigUrl(configUrl);
             if (policy && policy.permissions) {
-                    configUrlPermissionsMap[configUrl] = {permissions: policy.permissions};
-                } else {
-                    configUrlPermissionsMap[configUrl] = {};
-                }
-                resolve(configUrlPermissionsMap[configUrl]);
+                configUrlPermissionsMap[configUrl] = {permissions: policy.permissions};
+            } else {
+                configUrlPermissionsMap[configUrl] = {};
             }
-
-            const msg: GetDesktopOwnerSettings =  {
-                topic: 'application',
-                action: 'get-desktop-owner-settings',
-                sourceUrl: configUrl
-            };
-            /*
-            rvmBus.publish(msg, (rvmResponse: any) => {
-                writeToLog('info', `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
-
-                if (rvmResponse.payload && rvmResponse.payload.success === true &&
-                    rvmResponse.payload.payload) {
-                    if (rvmResponse.payload.payload.permissions) {
-                        configUrlPermissionsMap[configUrl] = {permissions: rvmResponse.payload.payload.permissions};
-                                                                // cache it
-                    } else {
-                        // if permissions is missing, startup URL is not defined in desktop-owner-settings.  Not an error
-                        configUrlPermissionsMap[configUrl] = {};
-                    }
-                    resolve(configUrlPermissionsMap[configUrl]);
-                } else {
-                    writeToLog('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
-                    reject(rvmResponse);  // false indicates request to RVM failed
-                }
-            }, desktopOwnerSettingsTimeout / 1000); */
+            resolve(configUrlPermissionsMap[configUrl]);
+        }
     });
 }
 
@@ -333,7 +308,7 @@ function retrieveAPIPolicyContent(): Promise<any> {
         const msg: GetDesktopOwnerSettings = {
             topic: 'application',
             action: 'get-desktop-owner-settings',
-            sourceUrl: 'https://openfin.co', // ignored by RVM is isGlobal is true
+            sourceUrl: 'https://openfin.co', // ignored by RVM if isGlobal is true
             isGlobal: true // get all polices
         };
         rvmBus.publish(msg, (rvmResponse: any) => {

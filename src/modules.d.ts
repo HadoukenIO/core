@@ -116,8 +116,4 @@ declare module 'electron' {
         export function readHtml(type?: string): string;
         export function readText(type?: string): string;
     }
-
-    export namespace net {
-        export function request(url: string): any;
-    }
 }
