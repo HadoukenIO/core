@@ -262,7 +262,7 @@ export interface Manifest {
     };
     licenseKey: string;
     offlineAccess?: boolean;
-    plugin?: Plugin[];
+    plugins?: Plugin[];
     proxy?: ProxySettings;
     runtime: {
         arguments?: string;
