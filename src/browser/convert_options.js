@@ -207,11 +207,7 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 module.exports = {
 
     getStartupAppOptions: function(appJson) {
-        let opts = appJson['startup_app'];
-        if (opts) {
-            opts.plugin = appJson['plugin'];
-        }
-        return opts;
+        return appJson['startup_app'];
     },
 
     convertToElectron: function(options, returnAsString) {
