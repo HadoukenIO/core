@@ -30,7 +30,7 @@ const pluginPaths: Map<string, string> = new Map();
  */
 export async function getModules(identity: Identity): Promise<PluginWithContent[]> {
     const { url, manifest } = getManifest(identity);
-    const { plugin: plugins = [] } = manifest || {};
+    const { plugins = [] } = manifest || {};
     const promises = plugins.map((plugin: Plugin) => getModule(identity, url, plugin));
     return await Promise.all(promises);
 }
