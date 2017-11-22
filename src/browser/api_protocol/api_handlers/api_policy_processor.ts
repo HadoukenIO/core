@@ -12,7 +12,7 @@ import {ApiPath, ApiPolicyDelegate, Endpoint} from '../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
 import { GetDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
 import { writeToLog } from '../../log';
-import {app as electronApp, net} from 'electron';
+import {app as electronApp} from 'electron';
 
 const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUrl => permission object, retrieved from RVM
                                             // if a configUrl is mapped to a boolean true, request to RVM is successful
