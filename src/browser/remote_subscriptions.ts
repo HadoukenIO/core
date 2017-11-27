@@ -28,6 +28,8 @@ import { Identity } from '../shapes';
 import route from '../common/route';
 import * as coreState from './core_state';
 import { PortInfo } from './port_discovery';
+import * as log from './log';
+
 
 // id count to generate IDs for subscriptions
 let subscriptionIdCount = 0;
@@ -49,8 +51,15 @@ interface RemoteSubscriptionProps extends Identity {
 interface RemoteSubscription extends RemoteSubscriptionProps {
     _id: number; // ID of the subscription
     isCleaned: boolean; // helps prevents repetitive un-subscriptions and other cleanup
+    isSystemEvent?: boolean; // helps prevents repetitive un-subscriptions and other cleanup
     unSubscriptions: Map<string, (() => void)[]>; // a map of un-subscriptions assigned to runtime versions
 }
+
+const systemEventsToIgnore: any = {
+    'idle-state-changed': true,
+    'monitor-info-changed': true,
+    'session-changed': true
+};
 
 /**
  * Handles addition of a remote subscription.
@@ -101,59 +110,42 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
 
 export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
     return new Promise(resolve => {
-        // If there aren't any external runtimes, resolve undefined
-        if (!connectionManager.connections.length) {
-            return;
+        if (systemEventsToIgnore[subscriptionProps.eventName]) {
+            resolve();
         }
 
         const clonedProps = Object.create(subscriptionProps);
-        const subscription: RemoteSubscription = Object.assign(clonedProps, {isCleaned: false});
-        const { className, eventName, listenType, unSubscriptions } = subscription;
-        const fullEventName = route(className, eventName);
+        const subscription: RemoteSubscription = Object.assign(clonedProps, {isSystemEvent: true});
 
         // Only generate an ID for new subscriptions
-        if (!subscription._id) {
+        // if (!subscription._id) {
             subscription._id = getId();
-        }
+        // }
 
         // Create a new un-subscription map only for new subscriptions
-        if (typeof subscription.unSubscriptions !== 'object') {
+        // if (typeof subscription.unSubscriptions !== 'object') {
             subscription.unSubscriptions = new Map();
+        // }
+
+        if (connectionManager.connections.length) {
+            connectionManager.connections.forEach(runtime => applySystemSubscription(subscription, runtime));
         }
 
-        // PENDING REMOTE SUBSCRIPTIONS? FOR FUTURE RUNTIMES?
-        // Looks like we don't technically need the remote subscriptions to finish before resolving the unsubscribe...
-        Promise.all(connectionManager.connections.map(runtime => {
-            const runtimeKey = keyFromPortInfo(runtime.portInfo);
-            pendingRemoteSubscriptions.set(subscription._id, subscription);
+        pendingRemoteSubscriptions.set(subscription._id, subscription);
 
-            const listener = (data: any) => {
-                if (!data.runtimeUuid) {
-                    data.runtimeUuid = getMeshUuid();
-                    ofEvents.emit(fullEventName, data);
-                }
-            };
-            // Subscribe to an event on a remote runtime
-            return runtime.fin.System[listenType](eventName, listener)
-            .then(() => {
-                // Store a cleanup function for the added listener in
-                // un-subscription map, so that later we can remove extra subscriptions
-                if (!Array.isArray(unSubscriptions.get(runtimeKey))) {
-                    unSubscriptions.set(runtimeKey, []);
-                }
-                unSubscriptions.get(runtimeKey).push(() => {
-                    runtime.fin.System.removeListener(eventName, listener);
-                });
-                // IS THIS RETURN NECESSARY?
-                return;
-            });
-        }))
-        .then(() => {
-            // Resolving with a subscription cleanup function
-            const unsubscribe = cleanUpSubscription.bind(null, subscription);
-            resolve(unsubscribe);
-        });
+        // DO THESE GET CLEANED UP WHEN A EXTERNAL RUNTIME EXITS?
+        const unsubscribe = systemUnsubscribe.bind(null, subscription);
+        resolve(unsubscribe);
     });
+}
+
+function systemUnsubscribe(subscription: any) {
+    subscription.unSubscriptions.forEach((runtime: any[]) => {
+        if (runtime.length) {
+            runtime.forEach((removeListener: any) => removeListener());
+        }
+    });
+    pendingRemoteSubscriptions.delete(subscription._id);
 }
 
 /**
@@ -161,7 +153,35 @@ export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProp
  */
 export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
     pendingRemoteSubscriptions.forEach(subscription => {
-        applyRemoteSubscription(subscription, runtime);
+        if (!subscription.isSystemEvent) {
+            applyRemoteSubscription(subscription, runtime);
+        } else {
+            applySystemSubscription(subscription, runtime);
+        }
+    });
+}
+
+function applySystemSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
+    const { className, eventName, listenType } = subscription;
+    const fullEventName = route(className, eventName);
+    const runtimeKey = keyFromPortInfo(runtime.portInfo);
+
+    const listener = (data: any) => {
+        if (!data.runtimeUuid) {
+            data.runtimeUuid = getMeshUuid();
+            ofEvents.emit(fullEventName, data);
+        }
+    };
+    // Subscribe to an event on a remote runtime
+    runtime.fin.System[listenType](eventName, listener);
+
+    // Store a cleanup function for the added listener in
+    // un-subscription map, so that we can remove all subscriptions
+    if (!Array.isArray(subscription.unSubscriptions.get(runtimeKey))) {
+        subscription.unSubscriptions.set(runtimeKey, []);
+    }
+    subscription.unSubscriptions.get(runtimeKey).push(() => {
+        runtime.fin.System.removeListener(eventName, listener);
     });
 }
 
