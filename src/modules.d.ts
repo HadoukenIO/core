@@ -31,6 +31,10 @@ declare module 'electron' {
         export function on(event: string, callback: () => void): void;
         export function setMinLogLevel(level: number): void;
         export function vlog(level: number, message: any): any;
+
+        export function readRegistryValue(root: string, key: string, value: string): any;
+
+        export function matchesURL(url: string, patterns: [string]): boolean;
     }
 
     export namespace net {
