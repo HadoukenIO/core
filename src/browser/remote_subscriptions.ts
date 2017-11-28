@@ -28,8 +28,6 @@ import { Identity } from '../shapes';
 import route from '../common/route';
 import * as coreState from './core_state';
 import { PortInfo } from './port_discovery';
-import * as log from './log';
-
 
 // id count to generate IDs for subscriptions
 let subscriptionIdCount = 0;
@@ -243,13 +241,15 @@ export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProp
         // Create an un-subscription map
         subscription.unSubscriptions = new Map();
 
+        // Subscribe in all connected runtimes
         if (connectionManager.connections.length) {
             connectionManager.connections.forEach(runtime => applySystemSubscription(subscription, runtime));
         }
 
+        // Add the subscription to pending to cover any runtimes launched in the future
         pendingRemoteSubscriptions.set(subscription._id, subscription);
 
-        // DO THESE GET CLEANED UP WHEN A EXTERNAL RUNTIME EXITS?
+        // Resolving with a subscription cleanup function
         const unsubscribe = systemUnsubscribe.bind(null, subscription);
         resolve(unsubscribe);
     });
