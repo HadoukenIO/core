@@ -22,6 +22,8 @@ import {isURL, isURI, uriToPath} from '../common/regex';
 
 let appQuiting: Boolean = false;
 
+const fetchMap: Map<string, Promise<any>> = new Map();
+
 app.on('quit', () => { appQuiting = true; });
 
 /**
@@ -60,15 +62,27 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
     const filePath = getFilePath(appCacheDir, fileUrl);
     let err: Error;
 
-    try {
-        await prepDownloadLocation(appCacheDir);
-        await download(fileUrl, filePath);
-    } catch (e) {
-        err = e;
-        app.vlog(1, `cachedFetch uuid ${appUuid} url ${fileUrl} file ${filePath} err ${e.message}`);
+    app.vlog(1, `cachedFetch ${fileUrl} ${filePath}`);
+    if (fetchMap.has(filePath)) {
+        fetchMap.get(filePath).then(() => callback(null, filePath)).catch(callback);
+    } else {
+        const p = new Promise( async (resolve, reject) => {
+            try {
+                await prepDownloadLocation(appCacheDir);
+                await download(fileUrl, filePath);
+                callback(null, filePath);
+                resolve(filePath);
+            } catch (e) {
+                err = e;
+                app.vlog(1, `cachedFetch uuid ${appUuid} url ${fileUrl} file ${filePath} err ${e.message}`);
+                callback(err, filePath);
+                reject(err);
+            } finally {
+                fetchMap.delete(filePath);
+            }
+        });
+        fetchMap.set(filePath, p);
     }
-
-    callback(err, filePath);
 }
 
 function pathExists (location: string): Promise<boolean> {
@@ -175,6 +189,7 @@ function download(fileUrl: string, filePath: string): Promise<any> {
 
         request.once('response', (response: any) => {
             const { statusCode } = response;
+            app.vlog(1, `cachedFetch download status ${filePath} ${statusCode} `);
 
             response.setEncoding('binary');
             response.on('data', (chunk: any) => {
