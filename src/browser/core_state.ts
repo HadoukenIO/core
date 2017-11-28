@@ -29,7 +29,7 @@ import { app } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
-const electronApp = app;
+import { writeToLog } from './log';
 
 export interface StartManifest {
     data: Shapes.Manifest;
@@ -666,9 +666,9 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             // mainFrameRoutingId is wrong during setWindowObj
             if (!browserWindow.isDestroyed()) {
                 openfinWindow.mainFrameRoutingId = browserWindow.webContents.mainFrameRoutingId;
-                electronApp.vlog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId} `);
+                writeToLog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId}`, true);
             } else {
-                electronApp.vlog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`);
+                writeToLog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`, true);
             }
         }
 
