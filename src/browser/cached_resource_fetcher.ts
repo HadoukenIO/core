@@ -77,6 +77,8 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
                 app.vlog(1, `cachedFetch uuid ${appUuid} url ${fileUrl} file ${filePath} err ${e.message}`);
                 callback(err, filePath);
                 reject(err);
+            } finally {
+                fetchMap.delete(filePath);
             }
         });
         fetchMap.set(filePath, p);
