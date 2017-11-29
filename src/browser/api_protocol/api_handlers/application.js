@@ -75,6 +75,7 @@ module.exports.applicationApiMap = {
     'notify-on-content-loaded': notifyOnContentLoaded,
     'ping-child-window': pingChildWindow,
     'register-custom-data': registerCustomData,
+    'register-user': registerUser,
     'register-external-window': registerExternalWindow,
     'relaunch-on-close': relaunchOnClose,
     'redownload-preload-scripts': downloadPreloadScripts, // download-preload-scripts already used
@@ -432,6 +433,15 @@ function registerCustomData(identity, message, ack, nack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
     Application.registerCustomData(appIdentity, payload.data, () => {
+        ack(successAck);
+    }, nack);
+}
+
+function registerUser(identity, message, ack, nack) {
+    const payload = message.payload;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+
+    Application.registerUser(appIdentity, payload.userName, payload.appName, () => {
         ack(successAck);
     }, nack);
 }
