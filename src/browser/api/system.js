@@ -76,8 +76,7 @@ const defaultProc = {
     }
 };
 
-let preloadScriptsCache;
-clearPreloadCache();
+let preloadScriptsCache = {};
 
 let MonitorInfo;
 let Session;
@@ -167,7 +166,7 @@ exports.System = {
 
         return unsubscribe;
     },
-    clearCache: function(options, resolve) {
+    clearCache: function(identity, options, resolve) {
         /*
         fin.desktop.System.clearCache({
             cache: true,
@@ -175,17 +174,13 @@ exports.System = {
             localStorage: true,
             appcache: true,
             userData: true, // TODO: userData is the window bounds cache
-            preload: true
+            preload: true   // TODO: ignored here, but clearCache does cause issues with preload scripts
         });
         */
         var settings = options || {};
 
-        if (settings.preloadScripts) {
-            clearPreloadCache();
-        }
-
-        var availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
-        var storages = [];
+        const availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
+        const storages = [];
 
         if (typeof settings.localStorage === 'boolean') {
             settings.localstorage = settings.localStorage;
@@ -209,7 +204,7 @@ exports.System = {
             }
         });
 
-        var cacheOptions = {
+        const cacheOptions = {
             /* origin? */
             storages: storages,
             quotas: ['temporary', 'persistent', 'syncable']
@@ -732,8 +727,6 @@ exports.System = {
         }
     },
 
-    clearPreloadCache,
-
     downloadPreloadScripts: function(identity, preloadOption, cb) {
         if (!preloadOption) {
             cb();
@@ -778,9 +771,5 @@ exports.System = {
             return preload;
         });
         return Promise.resolve(scriptSet);
-    }
+    },
 };
-
-function clearPreloadCache() {
-    preloadScriptsCache = {};
-}
