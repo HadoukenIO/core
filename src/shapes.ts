@@ -290,8 +290,8 @@ export interface Manifest {
 
 export interface Plugin {
     link?: string;
+    mandatory?: boolean;
     name: string;
-    optional?: boolean;
     version: string;
 }
 
@@ -300,7 +300,7 @@ export interface PluginState extends Plugin {
 }
 
 export interface PreloadScript {
-    optional?: boolean;
+    mandatory?: boolean;
     url: string;
 }
 
