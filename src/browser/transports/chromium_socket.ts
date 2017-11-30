@@ -16,14 +16,18 @@ import * as nodeNet from 'net';
 interface RequestProtocol {
     port: number;
     proxyProtocol: string; // protocol that proxy socket should be accessed with
-    chromiumProtocol: string; // protocol Chromium network layer should use to create connection
+    chromiumProtocol?: string; // protocol Chromium network layer should use to create connection
 }
 
 const ProtocolMap: { [index: string]: RequestProtocol } = {
     // tslint:disable-next-line:no-http-string
     'rtmp:' :  { port: 1935, proxyProtocol: 'rtmp:', chromiumProtocol: 'http:'},
     // tslint:disable-next-line:no-http-string
-    'rtmps:' : { port: 443,  proxyProtocol: 'rtmp:', chromiumProtocol: 'https:'}
+    'rtmps:' : { port: 443,  proxyProtocol: 'rtmp:', chromiumProtocol: 'https:'},
+    // tslint:disable-next-line:no-http-string
+    'http:' : { port: 80,  proxyProtocol: 'http:' },
+    // tslint:disable-next-line:no-http-string
+    'https:' : { port: 443,  proxyProtocol: 'http:'}
 };
 
 enum ProxyEventType {
@@ -66,9 +70,11 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
     const originalUrl: Url = parseUrl(req.url);
     const mappedUrl: Url = parseUrl(req.url);
     if (ProtocolMap.hasOwnProperty(originalUrl.protocol)) {
-        mappedUrl.protocol = ProtocolMap[originalUrl.protocol].chromiumProtocol;
-        // setting mappedUrl.port does not work.  Have to append to host
-        mappedUrl.host = originalUrl.host + ':' + ProtocolMap[originalUrl.protocol].port;
+        if (ProtocolMap[originalUrl.protocol].chromiumProtocol) {
+            mappedUrl.protocol = ProtocolMap[originalUrl.protocol].chromiumProtocol;
+            // setting mappedUrl.port does not work.  Have to append to host
+            mappedUrl.host = originalUrl.host + ':' + ProtocolMap[originalUrl.protocol].port;
+        }
     }
     const url: string = formatUrl(mappedUrl);
     log.writeToLog(1, `mapped URL: ${url}`, true);
@@ -149,6 +155,7 @@ function startProxyConnection(proxyCallback: (event: ProxyEvent) => void, respon
             response.on('data', (data: Buffer) => {
                 const flushed: boolean = conn.write(data);
                 log.writeToLog(1, `proxy socket input chromium data: ${data.length} flushed ${flushed}`, true);
+                log.writeToLog(1, `proxy socket input chromium data: ${data.toString('utf8')}`, true);
             });
         } else {
             log.writeToLog(1, `proxy socket duplicate connection: ${JSON.stringify(server.address())}`, true);
