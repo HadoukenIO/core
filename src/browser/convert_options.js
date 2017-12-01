@@ -21,8 +21,6 @@ limitations under the License.
 let fs = require('fs');
 let path = require('path');
 
-let ResourceFetcher = require('electron').resourceFetcher;
-
 // npm modules
 let _ = require('underscore');
 
@@ -30,6 +28,7 @@ let _ = require('underscore');
 let coreState = require('./core_state.js');
 let log = require('./log');
 let regex = require('../common/regex');
+const resourceFetcher = require('./cached_resource_fetcher');
 
 // constants
 import {
@@ -142,27 +141,8 @@ function readFile(filePath, done, onError) {
 }
 
 function getURL(url, done, onError) {
-    const fetcher = new ResourceFetcher('string');
-
-    fetcher.once('fetch-complete', (object, status, data) => {
-        if (status !== 'success') {
-            onError(new Error(`Could not retrieve ${url}`));
-            return;
-        }
-
-        log.writeToLog(1, `Contents from ${url}`, true);
-        log.writeToLog(1, data, true);
-
-        try {
-            const config = JSON.parse(data);
-            done(config);
-        } catch (e) {
-            onError(new Error(`Error parsing JSON from ${url}`));
-        }
-    });
-
     log.writeToLog(1, `Fetching ${url}`, true);
-    fetcher.fetch(url);
+    resourceFetcher.fetchURL(url, done, onError);
 }
 
 function validateOptions(options) {

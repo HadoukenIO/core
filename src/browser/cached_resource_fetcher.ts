@@ -19,9 +19,11 @@ import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
 import {isURL, isURI, uriToPath} from '../common/regex';
+import * as log from './log';
 
 let appQuiting: Boolean = false;
 
+const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 const fetchMap: Map<string, Promise<any>> = new Map();
 
 app.on('quit', () => { appQuiting = true; });
@@ -181,7 +183,6 @@ function generateHash(str: string): string {
  */
 function download(fileUrl: string, filePath: string): Promise<any> {
     return new Promise((resolve, reject) => {
-        const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
         const request = net.request(fileUrl);
         const binaryWriteStream = createWriteStream(filePath, {
             encoding: 'binary'
@@ -220,4 +221,32 @@ function download(fileUrl: string, filePath: string): Promise<any> {
 
         request.end();
     });
+}
+
+export function fetchURL(url: string, done: (resp: any) => void, onError: (err: Error) => void ): void {
+    const request = net.request(url);
+    request.once('response', (response: any) => {
+        let data = '';
+        const { statusCode } = response;
+        log.writeToLog(1, `fetchURL statusCode: ${statusCode} for ${url}`, true);
+        if (!expectedStatusCode.test(statusCode)) {
+            const error = new Error(`Failed to download resource. Status code: ${statusCode}`);
+            onError(error);
+        }
+        response.setEncoding('utf8');
+        response.on('data', (chunk: string) => {
+            data = data.concat(chunk);
+        });
+        response.on('end', () => {
+            log.writeToLog(1, `Contents from ${url}`, true);
+            log.writeToLog(1, data, true);
+            try {
+                const obj = JSON.parse(data);
+                done(obj);
+            } catch (e) {
+                onError(new Error(`Error parsing JSON from ${url}`));
+            }
+        });
+    });
+    request.end();
 }
