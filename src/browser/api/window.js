@@ -391,6 +391,8 @@ Window.create = function(id, opts) {
 
         // called in the WebContents class in the runtime
         browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
+            // called for all iframes, but not for main frame of windows
+            electronApp.vlog(1, `registerIframe ${frameName} ${frameRoutingId}`);
             const parentFrameId = id;
             const frameInfo = {
                 name: frameName,
@@ -406,8 +408,11 @@ Window.create = function(id, opts) {
 
         // called in the WebContents class in the runtime
         browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
-            const entityType = frameRoutingId === 1 ? 'window' : 'iframe';
+            // called for all iframes AND for main frames
+            electronApp.vlog(1, `unregisterIframe ${frameRoutingId} ${closedFrameName}`);
             const frameName = closedFrameName || name; // the parent name is considered a frame as well
+            const frameInfo = winObj.frames.get(closedFrameName);
+            const entityType = frameInfo ? 'iframe' : 'window';
             const payload = { uuid, name, frameName, entityType };
 
             winObj.frames.delete(closedFrameName);
