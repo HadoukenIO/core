@@ -234,6 +234,9 @@ export function fetchURL(url: string, done: (resp: any) => void, onError: (err: 
             onError(error);
         }
         response.setEncoding('utf8');
+        response.once('error', (err: Error) => {
+            onError(err);
+        });
         response.on('data', (chunk: string) => {
             data = data.concat(chunk);
         });
@@ -247,6 +250,9 @@ export function fetchURL(url: string, done: (resp: any) => void, onError: (err: 
                 onError(new Error(`Error parsing JSON from ${url}`));
             }
         });
+    });
+    request.once('error', (err: Error) => {
+        onError(err);
     });
     request.end();
 }
