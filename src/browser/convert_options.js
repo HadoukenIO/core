@@ -28,7 +28,8 @@ let _ = require('underscore');
 let coreState = require('./core_state.js');
 let log = require('./log');
 let regex = require('../common/regex');
-const resourceFetcher = require('./cached_resource_fetcher');
+
+import { fetchURL } from './cached_resource_fetcher';
 
 // constants
 import {
@@ -142,7 +143,7 @@ function readFile(filePath, done, onError) {
 
 function getURL(url, done, onError) {
     log.writeToLog(1, `Fetching ${url}`, true);
-    resourceFetcher.fetchURL(url, done, onError);
+    fetchURL(url, done, onError);
 }
 
 function validateOptions(options) {
