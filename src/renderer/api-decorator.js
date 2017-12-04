@@ -614,6 +614,7 @@ limitations under the License.
                     message: logBase + `eval succeeded for ${name} ${version}`
                 });
             } catch (err) {
+                window.console.error(`${err.name}: ${err.message}\nPlugin: ${name} ${version}`);
                 asyncApiCall(action, { name, version, state: 'failed' });
                 syncApiCall('write-to-log', {
                     level: 'info',
@@ -649,6 +650,7 @@ limitations under the License.
                     asyncApiCall(action, { url, state: 'succeeded' });
                     syncApiCall('write-to-log', { level: 'info', message: logBase + `eval succeeded for ${url}` });
                 } catch (err) {
+                    window.console.error(`${err.name}: ${err.message}\nPreload script: ${url}`);
                     asyncApiCall(action, { url, state: 'failed' });
                     syncApiCall('write-to-log', { level: 'error', message: logBase + `eval failed for ${err}` });
                 }
