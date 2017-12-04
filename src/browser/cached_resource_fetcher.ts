@@ -214,6 +214,12 @@ function download(fileUrl: string, filePath: string): Promise<any> {
             });
         });
 
+        request.once('login', (authInfo: any, callback: Function) => {
+            //Simply provide empty credentials to raise the authentication error.
+            //https://github.com/rdepena/electron/blob/master/docs/api/client-request.md#event-login
+            callback();
+        });
+
         request.once('error', (err: Error) => {
             reject(err);
         });
