@@ -49,7 +49,7 @@ interface RemoteSubscriptionProps extends Identity {
 interface RemoteSubscription extends RemoteSubscriptionProps {
     _id: number; // ID of the subscription
     isCleaned: boolean; // helps prevents repetitive un-subscriptions and other cleanup
-    isSystemEvent?: boolean; // helps prevents repetitive un-subscriptions and other cleanup
+    isSystemEvent?: boolean; // helps point applyAllRemoteSubscriptions to the correct function
     unSubscriptions: Map<string, (() => void)[]>; // a map of un-subscriptions assigned to runtime versions
 }
 
