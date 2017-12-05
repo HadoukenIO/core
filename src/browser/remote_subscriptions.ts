@@ -57,6 +57,7 @@ interface SystemEventsToIgnore {
     'idle-state-changed': boolean;
     'monitor-info-changed': boolean;
     'session-changed': boolean;
+    [index: string] : boolean;
 }
 
 const systemEventsToIgnore: SystemEventsToIgnore = {
