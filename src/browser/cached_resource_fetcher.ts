@@ -224,6 +224,7 @@ function download(fileUrl: string, filePath: string): Promise<any> {
 }
 
 export function fetchURL(url: string, done: (resp: any) => void, onError: (err: Error) => void ): void {
+    log.writeToLog(1, `fetchURL ${url}`, true);
     const request = net.request(url);
     request.once('response', (response: any) => {
         let data = '';
@@ -250,6 +251,12 @@ export function fetchURL(url: string, done: (resp: any) => void, onError: (err: 
                 onError(new Error(`Error parsing JSON from ${url}`));
             }
         });
+    });
+    request.once('login', (authInfo: any, callback: Function) => {
+        //Simply provide empty credentials to raise the authentication error.
+        //https://github.com/electron/blob/master/docs/api/client-request.md#event-login
+        log.writeToLog(1, `fetchURL login event ${url}`, true);
+        callback();
     });
     request.once('error', (err: Error) => {
         onError(err);
