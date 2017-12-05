@@ -386,7 +386,7 @@ Application.registerUser = function(identity, userName, appName, callback, error
     }
 
     let licenseKey = app.licenseKey;
-    let configUrl = app._configUrl || app.configUrl;
+    let configUrl = coreState.getConfigUrlByUuid(uuid);
 
     if (!licenseKey) {
         errorCallback(new Error(`application with uuid ${uuid} has no licenseKey specified`));
@@ -413,7 +413,7 @@ Application.registerUser = function(identity, userName, appName, callback, error
         sendToRVM({
                 topic: 'application',
                 action: 'register-user',
-                sourceUrl: app._configUrl,
+                sourceUrl: configUrl,
                 runtimeVersion: System.getVersion(),
                 payload: {
                     userName: userName,
