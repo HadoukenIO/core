@@ -53,14 +53,7 @@ interface RemoteSubscription extends RemoteSubscriptionProps {
     unSubscriptions: Map<string, (() => void)[]>; // a map of un-subscriptions assigned to runtime versions
 }
 
-interface SystemEventsToIgnore {
-    'idle-state-changed': boolean;
-    'monitor-info-changed': boolean;
-    'session-changed': boolean;
-    [index: string] : boolean;
-}
-
-const systemEventsToIgnore: SystemEventsToIgnore = {
+const systemEventsToIgnore: {[index: string]: boolean} = {
     'idle-state-changed': true,
     'monitor-info-changed': true,
     'session-changed': true
