@@ -74,9 +74,8 @@ module.exports.applicationApiMap = {
     'notify-on-app-connected': notifyOnAppConnected,
     'notify-on-content-loaded': notifyOnContentLoaded,
     'ping-child-window': pingChildWindow,
-    'register-custom-data': registerCustomData,
-    'register-user': registerUser,
     'register-external-window': registerExternalWindow,
+    'register-user': registerUser,
     'relaunch-on-close': relaunchOnClose,
     'redownload-preload-scripts': downloadPreloadScripts, // download-preload-scripts already used
     'remove-tray-icon': removeTrayIcon,
@@ -426,15 +425,6 @@ function externalWindowAction(identity, message, ack) {
 
     ack(successAck);
     /* jshint bitwise: true */
-}
-
-function registerCustomData(identity, message, ack, nack) {
-    const payload = message.payload;
-    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-
-    Application.registerCustomData(appIdentity, payload.data, () => {
-        ack(successAck);
-    }, nack);
 }
 
 function registerUser(identity, message, ack, nack) {

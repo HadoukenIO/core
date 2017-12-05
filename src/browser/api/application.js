@@ -371,22 +371,17 @@ Application.isRunning = function(identity) {
 Application.pingChildWindow = function() {
     console.warn('Deprecated');
 };
-Application.registerCustomData = function(identity, data, callback, errorCallback) {
-    console.warn('Deprecated');
-    errorCallback(new Error('This function has been deprecated - please use Application.registerUser instead.'));
-};
-
 Application.registerUser = function(identity, userName, appName, callback, errorCallback) {
-    let uuid = identity.uuid;
-    let app = coreState.getAppByUuid(uuid) || coreState.getExternalAppObjByUuid(uuid);
+    const uuid = identity.uuid;
+    const app = coreState.getAppByUuid(uuid) || coreState.getExternalAppObjByUuid(uuid);
 
     if (!app) {
         errorCallback(new Error(`application with uuid ${uuid} does not exist`));
         return;
     }
 
-    let licenseKey = app.licenseKey;
-    let configUrl = coreState.getConfigUrlByUuid(uuid);
+    const licenseKey = app.licenseKey;
+    const configUrl = coreState.getConfigUrlByUuid(uuid);
 
     if (!licenseKey) {
         errorCallback(new Error(`application with uuid ${uuid} has no licenseKey specified`));
