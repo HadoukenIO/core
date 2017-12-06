@@ -26,7 +26,6 @@ let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
 let nativeImage = electron.nativeImage;
 let ProcessInfo = electron.processInfo;
-let ResourceFetcher = electron.resourceFetcher;
 let Tray = electron.Tray;
 
 // npm modules
@@ -38,7 +37,7 @@ let Window = require('./window.js').Window;
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
-import { cachedFetch } from '../cached_resource_fetcher';
+import { cachedFetch, fetchURL } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
@@ -291,25 +290,9 @@ Application.getManifest = function(identity, manifestUrl, callback, errCallback)
     }
 
     if (manifestUrl) {
-        const fetcher = new ResourceFetcher('string');
-
-        fetcher.once('fetch-complete', (obj, status, data) => {
-            try {
-                log.writeToLog(1, `application manifest ${manifestUrl}`, true);
-                log.writeToLog(1, data, true);
-
-                const manifest = JSON.parse(data);
-                if (typeof callback === 'function') {
-                    callback(manifest);
-                }
-            } catch (err) {
-                errCallback(new Error(`Error parsing JSON from ${manifestUrl}`));
-            }
-        });
-
-        // start async fetch
-        fetcher.fetch(manifestUrl);
-
+        fetchURL(manifestUrl, manifest => {
+            callback(manifest);
+        }, errCallback);
     } else {
         errCallback(new Error('App not started from manifest'));
     }

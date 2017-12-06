@@ -20,7 +20,6 @@ const os = require('os');
 const electron = require('electron');
 const electronApp = electron.app;
 const electronBrowserWindow = electron.BrowserWindow;
-const ResourceFetcher = electron.resourceFetcher;
 const session = electron.session;
 const shell = electron.shell;
 const { crashReporter } = electron;
@@ -42,6 +41,7 @@ import route from '../../common/route';
 import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
+import { fetchURL } from '../cached_resource_fetcher';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -462,22 +462,7 @@ exports.System = {
         };
     },
     getRemoteConfig: function(url, callback, errorCallback) {
-        const fetcher = new ResourceFetcher('string');
-
-        fetcher.once('fetch-complete', (obj, status, data) => {
-            if (status === 'success') {
-                try {
-                    const res = JSON.parse(data);
-                    callback(res);
-                } catch (e) {
-                    errorCallback(e);
-                }
-            } else {
-                errorCallback('Error retrieving remote config.');
-            }
-        });
-
-        fetcher.fetch(url);
+        fetchURL(url, callback, errorCallback);
     },
     getVersion: function() {
         return process.versions['openfin'];
