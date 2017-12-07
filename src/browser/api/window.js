@@ -299,6 +299,13 @@ let optionSetters = {
         browserWin.setResizable(resizeBool);
         setOptOnBrowserWin('resizable', resizeBool, browserWin);
     },
+    resizeSides: function(newVal, browserWin) {
+        if (typeof newVal !== 'string') {
+            return;
+        }
+        browserWin.setResizeSides(newVal);
+        setOptOnBrowserWin('resizeSides', newVal, browserWin);
+    },
     icon: function(newVal, browserWin) {
         if (typeof newVal !== 'string') {
             return;
