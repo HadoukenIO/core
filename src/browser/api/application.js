@@ -55,6 +55,7 @@ let rvmBus;
 let MonitorInfo;
 var Application = {};
 let fetchingIcon = {};
+let registeredUsersByApp = {};
 
 // var OfEvents = [
 //     'closed',
@@ -352,29 +353,51 @@ Application.isRunning = function(identity) {
 Application.pingChildWindow = function() {
     console.warn('Deprecated');
 };
-Application.registerCustomData = function(identity, data, callback, errorCallback) {
-    let app = Application.wrap(identity.uuid);
+Application.registerUser = function(identity, userName, appName, callback, errorCallback) {
+    const uuid = identity.uuid;
+    const app = coreState.getAppByUuid(uuid) || coreState.getExternalAppObjByUuid(uuid);
 
     if (!app) {
-        errorCallback(new Error(`application with uuid ${identity.uuid} does not exist`));
+        errorCallback(new Error(`application with uuid ${uuid} does not exist`));
+        return;
+    }
+
+    const licenseKey = app.licenseKey;
+    const configUrl = coreState.getConfigUrlByUuid(uuid);
+
+    if (!licenseKey) {
+        errorCallback(new Error(`application with uuid ${uuid} has no licenseKey specified`));
+    } else if (!configUrl) {
+        errorCallback(new Error(`application with uuid ${uuid} has no _configUrl specified`));
     } else if (!rvmBus) {
         errorCallback(new Error('cannot connect to the RVM'));
-    } else if (!data || !data.userId || !data.organization) {
-        errorCallback(new Error('\'userId\' and \'organization\' fields are required to send custom data'));
+    } else if (!userName) {
+        errorCallback(new Error('\'userId\' field is required to register user'));
+    } else if (!appName) {
+        errorCallback(new Error('\'appName\' field is required to register user'));
+    } else if (userName.length > 128) {
+        errorCallback(new Error('\'userName\' is too long; must be <= 128 characters'));
+    } else if (appName.length > 32) {
+        errorCallback(new Error('\'appName\' is too long; must be <= 32 characters'));
+    } else if (uuid in registeredUsersByApp && registeredUsersByApp[uuid].has(userName)) {
+        errorCallback(new Error(`userName ${userName} is already registered for appName ${appName} with app uuid ${uuid}`));
     } else {
-        let success = rvmBus.publish({
-            topic: 'application',
-            action: 'register-custom-data',
-            sourceUrl: app._configUrl,
-            runtimeVersion: System.getVersion(),
-            data
-        });
-
-        if (success) {
-            callback();
-        } else {
-            errorCallback(new Error('there was an issue sending a message to the RVM'));
+        if (!(uuid in registeredUsersByApp)) {
+            registeredUsersByApp[uuid] = new Set();
         }
+        registeredUsersByApp[uuid].add(userName);
+
+        sendToRVM({
+                topic: 'application',
+                action: 'register-user',
+                sourceUrl: configUrl,
+                runtimeVersion: System.getVersion(),
+                payload: {
+                    userName: userName,
+                    appName: appName
+                }
+            }).then(callback, errorCallback)
+            .catch(errorCallback);
     }
 };
 
@@ -586,6 +609,10 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     ofEvents.once(route.window('closed', uuid, uuid), () => {
         delete fetchingIcon[uuid];
         removeTrayIcon(app);
+
+        if (uuid in registeredUsersByApp) {
+            delete registeredUsersByApp[uuid];
+        }
 
         ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
 
