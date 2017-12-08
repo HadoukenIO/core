@@ -363,14 +363,13 @@ export class RVMMessageBus extends EventEmitter  {
      */
     public getPluginInfo(manifestUrl: string, opts: Plugin): Promise<PluginQueryResponse> {
         return new Promise((resolve) => {
-            const {name, version, optional} = opts;
+            const {name, version} = opts;
 
             const rvmMsg: PluginQuery = {
                 topic: 'application',
                 action: 'query-plugin',
                 name,
                 version,
-                optional,
                 sourceUrl: manifestUrl
             };
 

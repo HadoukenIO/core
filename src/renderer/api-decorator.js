@@ -619,7 +619,19 @@ limitations under the License.
     function evalPreloadScripts(uuid, name) {
         const action = 'set-window-preload-state';
         const preloadScripts = syncApiCall('get-preload-scripts');
-        const requiredScriptsFailed = preloadScripts.some(e => !e._content && !e.optional);
+
+        const requiredScriptsFailed = preloadScripts.some((e) => {
+            let isRequired = true;
+
+            if (typeof e.mandatory === 'boolean') {
+                isRequired = e.mandatory;
+            } else if (typeof e.optional === 'boolean') {
+                isRequired = !e.optional; // backwards compatibility
+            }
+
+            return !e._content && isRequired;
+        });
+
         const log = (msg) => {
             asyncApiCall('write-to-log', {
                 level: 'info',
