@@ -46,7 +46,6 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { getIdentifier, deletePreloadScriptState } from '../preload_scripts';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -440,7 +439,9 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     } else {
         // Flow through preload script logic (eg. re-download of failed preload scripts)
         // only if app is not already running.
-        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts, proceed);
+        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts)
+            .then(proceed)
+            .catch(proceed);
     }
 };
 
@@ -819,15 +820,6 @@ Application.emitRunRequested = function(identity, userAppConfigArgs) {
             userAppConfigArgs
         });
     }
-};
-
-Application.reloadPreloadScripts = function(identity, preloadScripts, callback) {
-    (preloadScripts || []).map(preload => {
-        electronApp.vlog(1, `clear preload script ${getIdentifier(preload)}`);
-        deletePreloadScriptState(getIdentifier(preload));
-    });
-    System.downloadPreloadScripts(identity, preloadScripts, callback);
-
 };
 
 Application.wait = function() {

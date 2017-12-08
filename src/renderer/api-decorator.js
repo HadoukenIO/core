@@ -564,62 +564,49 @@ limitations under the License.
     };
 
     /**
-     * Preload script eval
+     * An event indicating the moment OpenFin API is injected
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const { uuid, name } = initialOptions;
-        const identity = { uuid, name };
-        const windowOptions = entityInfo.entityType === 'iframe' ? getWindowOptionsSync(entityInfo.parent) :
-            getCurrentWindowOptionsSync();
-        const windowIsNotification = syncApiCall('window-is-notification-type', {
-            uuid: windowOptions.uuid,
-            name: windowOptions.name
-        });
+        const windowIsNotification = syncApiCall('window-is-notification-type', { uuid, name });
 
-        // Don't execute preload scripts and plugin modules in notifications
-        if (windowIsNotification) {
-            return;
-        }
-
-        let { preloadScripts } = convertOptionsToElectronSync(windowOptions);
-
-        evalPlugins(identity);
-
-        if (typeof preloadScripts === 'object' && preloadScripts.length) {
-            evalPreloadScripts(identity, preloadScripts);
+        if (!windowIsNotification) {
+            evalPlugins(uuid, name);
+            evalPreloadScripts(uuid, name);
         }
     });
 
     /**
-     * Requests plugin modules from the Core and evals them in the current window
+     * Request plugin modules from the Core and execute them in the current window
      */
-    function evalPlugins(identity) {
+    function evalPlugins(uuid, name) {
         const action = 'set-window-plugin-state';
         const plugins = syncApiCall('get-plugin-modules');
-        let logBase = `[plugin] [${identity.uuid}]-[${identity.name}]: `;
+        const log = (msg) => {
+            asyncApiCall('write-to-log', {
+                level: 'info',
+                message: `[plugins] [${uuid}]-[${name}]: ${msg}`
+            });
+        };
 
         plugins.forEach((plugin) => {
-            // _content - contains module code as a string to eval in this window
+            // _content: contains plugin module code as a string to eval in this window
             const { name, version, _content } = plugin;
 
             if (!_content) {
+                log(`Skipped execution of plugin module [${name} ${version}], ` +
+                    `because the content is not available`);
                 return;
             }
 
             try {
                 window.eval(_content); /* jshint ignore:line */
+                log(`Succeeded execution of plugin module [${name} ${version}]`);
                 asyncApiCall(action, { name, version, state: 'succeeded' });
-                syncApiCall('write-to-log', {
-                    level: 'info',
-                    message: logBase + `eval succeeded for ${name} ${version}`
-                });
-            } catch (err) {
-                window.console.error(`${err.name}: ${err.message}\nPlugin: ${name} ${version}`);
+            } catch (error) {
+                window.console.error(`${error.name}: ${error.message}\nPlugin: ${name} ${version}`);
+                log(`Failed execution of plugin module [${name} ${version}]`);
                 asyncApiCall(action, { name, version, state: 'failed' });
-                syncApiCall('write-to-log', {
-                    level: 'info',
-                    message: logBase + `eval failed for ${name} ${version}`
-                });
             }
         });
 
@@ -627,35 +614,47 @@ limitations under the License.
     }
 
     /**
-     * Requests preload scripts contents from the Core and evals them in the current window
+     * Request preload scripts from the Core and execute them in the current window
      */
-    function evalPreloadScripts(identity, preloadOption) {
+    function evalPreloadScripts(uuid, name) {
         const action = 'set-window-preload-state';
-        let logBase = `[preload] [${identity.uuid}]-[${identity.name}]: `;
-        let preloadScripts;
+        const preloadScripts = syncApiCall('get-preload-scripts');
+        const requiredScriptsFailed = preloadScripts.some(e => !e._content && !e.optional);
+        const log = (msg) => {
+            asyncApiCall('write-to-log', {
+                level: 'info',
+                message: `[preloadScripts] [${uuid}]-[${name}]: ${msg}`
+            });
+        };
 
-        try {
-            preloadScripts = syncApiCall('get-selected-preload-scripts', preloadOption);
-        } catch (error) {
-            preloadScripts = [];
-            syncApiCall('write-to-log', { level: 'error', message: logBase + error });
-        }
+        if (requiredScriptsFailed) {
+            // Don't evaluate preload scripts when there
+            // is at least one load-failed that is required
+            log(`Aborted execution of preload scripts, ` +
+                `because at least one required preload script failed to load`);
 
-        preloadScripts.forEach((preloadScript) => {
-            const { url, content } = preloadScript;
+        } else {
+            preloadScripts.forEach((preloadScript) => {
+                // _content: contains preload script code as a string to eval in this window
+                const { url, _content } = preloadScript;
 
-            if (content) {
-                try {
-                    window.eval(content); /* jshint ignore:line */
-                    asyncApiCall(action, { url, state: 'succeeded' });
-                    syncApiCall('write-to-log', { level: 'info', message: logBase + `eval succeeded for ${url}` });
-                } catch (err) {
-                    window.console.error(`${err.name}: ${err.message}\nPreload script: ${url}`);
-                    asyncApiCall(action, { url, state: 'failed' });
-                    syncApiCall('write-to-log', { level: 'error', message: logBase + `eval failed for ${err}` });
+                if (!_content) {
+                    log(`Skipped execution of preload script for URL [${url}], ` +
+                        `because the content is not available`);
+                    return;
                 }
-            }
-        });
+
+                try {
+                    window.eval(_content); /* jshint ignore:line */
+                    log(`Succeeded execution of preload script for URL [${url}]`);
+                    asyncApiCall(action, { url, state: 'succeeded' });
+                } catch (error) {
+                    window.console.error(`${error.name}: ${error.message}\nPreload script: ${url}`);
+                    log(`Failed execution of preload script for URL [${url}]: ${error}`);
+                    asyncApiCall(action, { url, state: 'failed' });
+                }
+            });
+        }
 
         asyncApiCall(action, { allDone: true });
     }
