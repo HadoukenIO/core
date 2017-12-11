@@ -115,12 +115,6 @@ module.exports = (grunt) => {
                     src: ['src/certificate/*'],
                     dest: 'staging/core/'
                 }]
-            },
-            adapter: {
-                files: [{
-                    src:['node_modules/hadouken-js-adapter/out/js-adapter.asar'],
-                    dest: 'out/js-adapter.asar'
-                }]
             }
         },
 
@@ -207,7 +201,6 @@ module.exports = (grunt) => {
         'copy:etc',
         'copy:login',
         'copy:certificate',
-        'copy:adapter',
         'sign-files'
     ]);
 
@@ -256,7 +249,6 @@ module.exports = (grunt) => {
 
     grunt.registerTask('sign-asar', function() {
         openfinSign('out/app.asar');
-        openfinSign('out/js-adapter.asar');
         grunt.log.ok('Finished signing asar.');
     });
 
