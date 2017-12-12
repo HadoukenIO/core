@@ -13,27 +13,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// built-in modules
 const fs = require('fs');
 const os = require('os');
+const electron = require('electron');
+const electronApp = electron.app;
+const electronBrowserWindow = electron.BrowserWindow;
+const ResourceFetcher = electron.resourceFetcher;
+const session = electron.session;
+const shell = electron.shell;
+const { crashReporter } = electron;
+
+// npm modules
 const path = require('path');
 const crypto = require('crypto');
-
-const electronApp = require('electron').app;
-const ResourceFetcher = require('electron').resourceFetcher;
-const session = require('electron').session;
-const shell = require('electron').shell;
-
 const _ = require('underscore');
+
+// local modules
 const convertOptions = require('../convert_options.js');
 const coreState = require('../core_state.js');
 const electronIPC = require('../transports/electron_ipc.js');
-import {
-    ExternalApplication
-} from './external_application';
+import { ExternalApplication } from './external_application';
 const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
+import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
+import { FrameInfo } from './frame';
+import * as plugins from '../plugins';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -67,6 +75,9 @@ const defaultProc = {
         return 0;
     }
 };
+
+let preloadScriptsCache;
+clearPreloadCache();
 
 let MonitorInfo;
 let Session;
@@ -146,7 +157,7 @@ ofEvents.on(route.externalApplication('disconnected'), payload => {
     });
 });
 
-module.exports.System = {
+exports.System = {
     addEventListener: function(type, listener) {
         ofEvents.on(route.system(type), listener);
 
@@ -163,16 +174,21 @@ module.exports.System = {
             cookies: true,
             localStorage: true,
             appcache: true,
-            userData: true // TODO: userData is the window bounds cache
+            userData: true, // TODO: userData is the window bounds cache
+            preload: true
         });
         */
         var settings = options || {};
+
+        if (settings.preloadScripts) {
+            clearPreloadCache();
+        }
 
         var availableStorages = ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers'];
         var storages = [];
 
         if (typeof settings.localStorage === 'boolean') {
-            settings['localstorage'] = settings.localStorage;
+            settings.localstorage = settings.localStorage;
         }
 
         // 5.0 defaults cache true if not specified
@@ -202,11 +218,12 @@ module.exports.System = {
         electronApp.vlog(1, `clearCache ${JSON.stringify(storages)}`);
 
         defaultSession.clearCache(() => {
-
             defaultSession.clearStorageData(cacheOptions, () => {
                 resolve();
             });
         });
+
+
     },
     deleteCacheOnExit: function(callback, errorCallback) {
         const folders = [{
@@ -236,11 +253,21 @@ module.exports.System = {
     getAllApplications: function() {
         return coreState.getAllApplications();
     },
+    getAppAssetInfo: function(identity, options, callback, errorCallback) {
+        options.srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
+        // TODO: Move this require to the top of file during future 'dependency injection refactor'
+        // Must require here otherwise runtime error Cannot create browser window before app is ready
+        var appAssetsFetcher = require('../rvm/runtime_initiated_topics/app_assets').appAssetsFetcher;
+        appAssetsFetcher.fetchAppAsset(options.srcUrl, options.alias, callback, errorCallback);
+    },
     getCommandLineArguments: function() {
         return electronApp.getCommandLineArguments();
     },
     getConfig: function() {
         return coreState.getStartManifest();
+    },
+    getCrashReporterState: function() {
+        return crashReporter.crashReporterState();
     },
     getDeviceUserId: function() {
         const hash = crypto.createHash('sha256');
@@ -270,6 +297,25 @@ module.exports.System = {
     getDeviceId: function() {
         return electronApp.getHostToken();
     },
+    getEntityInfo: function(identity) {
+        const entityInfo = coreState.getInfoByUuidFrame(identity);
+
+        if (entityInfo) {
+            return new FrameInfo(entityInfo);
+        } else if (ExternalApplication.getExternalConnectionByUuid(identity.uuid)) {
+            const externalAppInfo = ExternalApplication.getInfo(identity);
+            return new FrameInfo({
+                uuid: identity.uuid,
+                entityType: 'external connection',
+                parent: externalAppInfo.parent
+            });
+        } else {
+
+            // this covers the case of a wrapped entity that does not exist
+            // where you only know the uuid and name you gave it
+            return new FrameInfo(identity);
+        }
+    },
     getEnvironmentVariable: function(varsToExpand) {
         if (Array.isArray(varsToExpand)) {
             return varsToExpand.reduce(function(result, envVar) {
@@ -279,6 +325,11 @@ module.exports.System = {
         } else {
             return process.env[varsToExpand] || null;
         }
+    },
+    getFocusedWindow: function() {
+        const { id } = electronBrowserWindow.getFocusedWindow() || {};
+        const { uuid, name } = coreState.getWinObjById(id) || {};
+        return uuid ? { uuid, name } : null;
     },
     getHostSpecs: function() {
         return {
@@ -362,6 +413,15 @@ module.exports.System = {
             }
         });
     },
+    getMinLogLevel: function() {
+        try {
+            const logLevel = electronApp.getMinLogLevel();
+
+            return log.logLevelMappings.get(logLevel);
+        } catch (e) {
+            return e;
+        }
+    },
     getMonitorInfo: function() {
         return MonitorInfo.getInfo('api-query');
     },
@@ -437,13 +497,12 @@ module.exports.System = {
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
     },
     launchExternalProcess: function(identity, options, errDataCallback) { // Node-style callback used here
-        var appObject = coreState.getAppObjByUuid(identity.uuid);
-        options.srcUrl = (appObject || {})._configUrl;
+        options.srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
 
         ProcessTracker.launch(identity, options, errDataCallback);
     },
     monitorExternalProcess: function(identity, options, callback, errorCallback) {
-        var payload = ProcessTracker.monitor(identity, Object.assign({
+        const payload = ProcessTracker.monitor(identity, Object.assign({
             monitor: true
         }, options));
 
@@ -456,11 +515,33 @@ module.exports.System = {
     log: function(level, message) {
         return log.writeToLog(level, message, false);
     },
+    setMinLogLevel: function(level) {
+        try {
+            const levelAsString = String(level); // We only accept log levels as strings here
+            const mappedLevel = log.logLevelMappings.get(levelAsString);
+
+            if (mappedLevel === undefined) {
+                throw new Error(`Invalid logging level: ${level}`);
+            }
+            electronApp.setMinLogLevel(mappedLevel);
+        } catch (e) {
+            return e;
+        }
+    },
     debugLog: function(level, message) {
         return log.writeToLog(level, message, true);
     },
     openUrlWithBrowser: function(url) {
         shell.openExternal(url);
+    },
+    readRegistryValue: function(rootKey, subkey, value) {
+        const registryPayload = electronApp.readRegistryValue(rootKey, subkey, value);
+
+        if (registryPayload && registryPayload.error) {
+            throw new Error(registryPayload.error);
+        }
+
+        return registryPayload;
     },
     releaseExternalProcess: function(processUuid) {
         ProcessTracker.release(processUuid);
@@ -485,6 +566,15 @@ module.exports.System = {
     },
 
     showChromeNotificationCenter: function() {},
+    startCrashReporter: function(identity, options) {
+        const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
+        const reporterOptions = Object.assign({ configUrl }, options);
+
+        log.setToVerbose();
+        crashReporter.startOFCrashReporter(reporterOptions);
+
+        return crashReporter.crashReporterState();
+    },
     terminateExternalProcess: function(processUuid, timeout = 3000, child = false) {
         let status = ProcessTracker.terminate(processUuid, timeout, child);
 
@@ -530,6 +620,38 @@ module.exports.System = {
             }
         });
     },
+    getCookies: function(opts, callback, errorCallback) {
+        const { url, name } = opts;
+        if (url && url.length > 0 && name && name.length > 0) {
+            session.defaultSession.cookies.get({ url, name }, (error, cookies) => {
+                if (error) {
+                    log.writeToLog(1, `cookies.get error ${error}`, true);
+                    errorCallback(error);
+                } else if (cookies.length > 0) {
+                    const data =
+                        cookies.filter(cookie => !cookie.httpOnly).map(cookie => {
+                            return {
+                                name: cookie.name,
+                                expirationDate: cookie.expirationDate,
+                                path: cookie.path,
+                                domain: cookie.domain
+                            };
+                        });
+                    log.writeToLog(1, `cookies filtered ${data.length}`, true);
+                    if (data.length > 0) {
+                        callback(data);
+                    } else {
+                        errorCallback(`Cookie not found ${name}`);
+                    }
+                } else {
+                    log.writeToLog(1, `cookies result ${cookies.length}`, true);
+                    errorCallback(`Cookie not found ${name}`);
+                }
+            });
+        } else {
+            errorCallback(`Error getting cookies`);
+        }
+    },
     getWebSocketServerState: function() {
         return coreState.getSocketServerState();
     },
@@ -551,8 +673,7 @@ module.exports.System = {
         return ofEvents.emit(eventName, eventArgs);
     },
     downloadAsset: function(identity, asset, cb) {
-        const appObject = coreState.getAppObjByUuid(identity.uuid);
-        const srcUrl = (appObject || {})._configUrl;
+        const srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
         const downloadId = asset.downloadId;
 
         //setup defaults.
@@ -583,6 +704,7 @@ module.exports.System = {
     downloadRuntime: function(identity, options, cb) {
         options.sourceUrl = coreState.getConfigUrlByUuid(identity.uuid);
         rvmBus.downloadRuntime(options, cb);
+
     },
     getAllExternalApplications: function() {
         return ExternalApplication.getAllExternalConnctions().map(eApp => {
@@ -608,6 +730,57 @@ module.exports.System = {
         } else {
             cb(new Error('uuid not found.'));
         }
-    }
+    },
 
+    clearPreloadCache,
+
+    downloadPreloadScripts: function(identity, preloadOption, cb) {
+        if (!preloadOption) {
+            cb();
+        } else {
+            fetchAndLoadPreloadScripts(identity, preloadOption, cb);
+        }
+    },
+
+    getPluginModules: function(identity) {
+        return plugins.getModules(identity);
+    },
+
+    // identitier is preload script url or plugin name
+    setPreloadScript: function(identitier, scriptText) {
+        preloadScriptsCache[identitier] = scriptText;
+    },
+
+    // identitier is preload script url or plugin name
+    getPreloadScript: function(identitier) {
+        return preloadScriptsCache[identitier];
+    },
+
+    // identitiers are preload script url or plugin name
+    getSelectedPreloadScripts: function(preloadOption) {
+        const missingRequiredScripts = preloadOption.reduce((identifiers, preload) => {
+            if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
+                identifiers.push(getIdentifier(preload));
+            }
+            return identifiers;
+        }, []);
+
+        if (missingRequiredScripts.length) {
+            const list = JSON.stringify(missingRequiredScripts);
+            const message = `Execution of preload scripts canceled because of missing required script(s) ${list}`;
+            const err = new Error(message);
+            return Promise.reject(err);
+        }
+
+        // when load/fetch failed, mapped object will be `undefined` (stringifies as `null`)
+        const scriptSet = preloadOption.map((preload) => {
+            preload.content = preloadScriptsCache[getIdentifier(preload)];
+            return preload;
+        });
+        return Promise.resolve(scriptSet);
+    }
 };
+
+function clearPreloadCache() {
+    preloadScriptsCache = {};
+}

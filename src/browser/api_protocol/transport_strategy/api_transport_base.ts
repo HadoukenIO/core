@@ -47,7 +47,7 @@ export abstract class ApiTransportBase<T> {
 
     public abstract registerMessageHandlers(): void;
 
-    public abstract send(identity: any, payload: any): void
+    public abstract send(identity: any, payload: any): void;
 
     public abstract onClientAuthenticated(cb: Function): void;
 
@@ -64,4 +64,14 @@ export abstract class ApiTransportBase<T> {
             ackFunction(new NackPayload(err));
         };
     }
+
+    protected payloadReplacer(key: string, value: any): any {
+        if (key === 'payload') {
+            return '***masked payload***';
+        } else {
+            return value;
+        }
+    }
+
+
 }

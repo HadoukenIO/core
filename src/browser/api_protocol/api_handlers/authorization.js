@@ -26,166 +26,173 @@ const AUTH_TYPE = {
     sponsored: 1
 };
 
-function AuthorizationApiHandler() {
-    var pendingAuthentications = new Map(),
-        electronApp = require('app'),
-        authenticationApiMap = {
-            'request-external-authorization': onRequestExternalAuth,
-            'request-authorization': onRequestAuthorization,
-            'register-external-connection': {
-                apiFunc: registerExternalConnection,
-                apiPath: 'System.registerExternalConnection'
-            }
-        };
+var pendingAuthentications = new Map(),
+    electronApp = require('app'),
+    authenticationApiMap = {
+        'request-external-authorization': onRequestExternalAuth,
+        'request-authorization': onRequestAuthorization,
+        'register-external-connection': {
+            apiFunc: registerExternalConnection,
+            apiPath: 'System.registerExternalConnection'
+        }
+    };
 
-    function registerExternalConnection(identity, message, ack) {
-        let uuidToRegister = message.payload.uuid;
-        let token = electronApp.generateGUID();
-        let dataAck = _.clone(successAck);
-        dataAck.data = {
-            uuid: uuidToRegister,
-            token
-        };
+function registerExternalConnection(identity, message, ack) {
+    let uuidToRegister = message.payload.uuid;
+    let token = electronApp.generateGUID();
+    let dataAck = _.clone(successAck);
+    dataAck.data = {
+        uuid: uuidToRegister,
+        token
+    };
 
-        addPendingAuthentication(uuidToRegister, token, null, identity);
-        ack(dataAck);
+    addPendingAuthentication(uuidToRegister, token, null, identity, null);
+    ack(dataAck);
+}
+
+function onRequestExternalAuth(id, message) {
+    console.log('processing request-external-authorization', message);
+
+    let {
+        uuid: uuidRequested,
+        pid
+    } = message.payload;
+
+    let extProcess, file, token;
+
+    if (pid) {
+        extProcess =
+            ProcessTracker.getProcessByPid(pid) ||
+            ProcessTracker.monitor({
+                uuid: null,
+                name: null
+            }, {
+                pid,
+                uuid: uuidRequested,
+                monitor: false
+            });
     }
 
-    function onRequestExternalAuth(id, message) {
-        console.log('processing request-external-authorization', message);
+    // UUID assignment priority: mapped process, client-requested, then auto-generated
+    const uuid = (extProcess || {}).uuid || uuidRequested || electronApp.generateGUID();
 
-        let {
-            uuid: uuidRequested,
-            pid
-        } = message.payload;
+    if (pendingAuthentications.has(uuid)) {
+        return;
+    }
 
-        let extProcess, file, token;
+    file = getAuthFile();
+    token = electronApp.generateGUID();
 
-        if (pid) {
-            extProcess =
-                ProcessTracker.getProcessByPid(pid) ||
-                ProcessTracker.monitor({
-                    uuid: null,
-                    name: null
-                }, {
-                    pid,
-                    uuid: uuidRequested,
-                    monitor: false
-                });
+    addPendingAuthentication(uuid, token, file, null, message.payload);
+
+    socketServer.send(id, JSON.stringify({
+        action: 'external-authorization-response',
+        payload: {
+            file,
+            token,
+            uuid
         }
+    }));
+}
 
-        // UUID assignment priority: mapped process, client-requested, then auto-generated
-        var uuid = (extProcess || {}).uuid || uuidRequested || electronApp.generateGUID();
+function onRequestAuthorization(id, data) {
+    const uuid = data.payload.uuid;
+    const authObj = pendingAuthentications.get(uuid);
+    const externalConnObj = Object.assign({}, data.payload, {
+        id
+    });
+    if (authObj && authObj.authReqPayload) {
+        externalConnObj.configUrl = authObj.authReqPayload.configUrl;
+    }
 
-        if (pendingAuthentications.has(uuid)) {
-            return;
-        }
+    //issue with older adapters where part of the data is comming from different locations;
+    const externalApplicationOptions = ExternalApplication.createExternalApplicationOptions(Object.assign({}, authObj.authReqPayload, externalConnObj));
+    //Check if the file and token were written.
 
-        file = getAuthFile();
-        token = electronApp.generateGUID();
-
-        addPendingAuthentication(uuid, token, file);
-
-        socketServer.send(id, JSON.stringify({
-            action: 'external-authorization-response',
+    authenticateUuid(authObj, data.payload, (success, error) => {
+        let authorizationResponse = {
+            action: 'authorization-response',
             payload: {
-                file,
-                token,
-                uuid
+                success: success
             }
-        }));
-    }
+        };
 
-    function onRequestAuthorization(id, data) {
-        const uuid = data.payload.uuid;
-        const authObj = pendingAuthentications.get(uuid);
-        const externalConnObj = Object.assign({}, data.payload, {
-            id
-        });
+        if (!success) {
+            authorizationResponse.payload.reason = error || 'Invalid token or file';
+        }
 
-        //Check if the file and token were written.
-
-        authenticateUuid(authObj, data.payload, (success, error) => {
-            let authorizationResponse = {
-                action: 'authorization-response',
-                payload: {
-                    success: success
-                }
-            };
-
-            if (!success) {
-                authorizationResponse.payload.reason = error || 'Invalid token or file';
-            }
-
-            socketServer.send(id, JSON.stringify(authorizationResponse));
-
-            ExternalApplication.addExternalConnection(externalConnObj);
+        socketServer.send(id, JSON.stringify(authorizationResponse));
+        if (success) {
+            ExternalApplication.addExternalConnection(externalApplicationOptions);
             socketServer.connectionAuthenticated(id, uuid);
 
             rvmMessageBus.registerLicenseInfo({
                 data: {
-                    licenseKey: externalConnObj.licenseKey,
-                    client: externalConnObj.client,
+                    licenseKey: externalApplicationOptions.licenseKey,
+                    client: externalApplicationOptions.client,
                     uuid,
                     parentApp: {
                         uuid: null
                     }
                 }
+            }, externalApplicationOptions.configUrl);
+        } else {
+            socketServer.closeConnection(id);
+        }
+
+        cleanPendingRequest(authObj);
+
+    });
+}
+
+function getAuthFile() {
+    //make sure the folder exists
+    return `${electronApp.getPath('userData')}-${electronApp.generateGUID()}`;
+}
+
+function addPendingAuthentication(uuid, token, file, sponsor, authReqPayload) {
+    let authObj = {
+        uuid,
+        token,
+        file,
+        sponsor,
+        authReqPayload
+    };
+
+    authObj.type = file ? AUTH_TYPE.file : AUTH_TYPE.sponsored;
+    pendingAuthentications.set(uuid, authObj);
+}
+
+function authenticateUuid(authObj, authRequest, cb) {
+    if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid) || coreState.getAppByUuid(authRequest.uuid)) {
+        cb(false, 'Application with specified UUID already exists: ' + authRequest.uuid);
+    } else if (!authObj) {
+        cb(false, 'Invalid UUID: ' + authRequest.uuid);
+    } else if (authObj.type === AUTH_TYPE.file) {
+        try {
+            fs.readFile(authObj.file, (err, data) => {
+                cb(data.toString().indexOf(authObj.token) >= 0);
             });
+        } catch (err) {
+            //TODO: Error Strategy.
+            console.log(err);
+        }
+    } else {
+        cb(authObj.token === authRequest.token);
+    }
+}
 
-            if (!success) {
-                socketServer.closeConnection(id);
-            }
-
-            cleanPendingRequest(authObj);
-
+function cleanPendingRequest(authObj) {
+    if (authObj && authObj.type === AUTH_TYPE.file) {
+        fs.unlink(authObj.file, err => {
+            //really don't care about this error but log it either way.
+            log.writeToLog('info', err);
+            pendingAuthentications.delete(authObj.uuid);
         });
     }
+}
 
-    function getAuthFile() {
-        //make sure the folder exists
-        return `${electronApp.getPath('userData')}-${electronApp.generateGUID()}`;
-    }
-
-    function addPendingAuthentication(uuid, token, file, sponsor) {
-        let authObj = {
-            uuid,
-            token,
-            file,
-            sponsor
-        };
-
-        authObj.type = file ? AUTH_TYPE.file : AUTH_TYPE.sponsored;
-        pendingAuthentications.set(uuid, authObj);
-    }
-
-    function authenticateUuid(authObj, authRequest, cb) {
-        if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid)) {
-            cb(false, 'Application with specified UUID already exists: ' + authRequest.uuid);
-        } else if (authObj.type === AUTH_TYPE.file) {
-            try {
-                fs.readFile(authObj.file, (err, data) => {
-                    cb(data.toString().indexOf(authObj.token) >= 0);
-                });
-            } catch (err) {
-                //TODO: Error Strategy.
-                console.log(err);
-            }
-        } else {
-            cb(authObj.token === authRequest.token);
-        }
-    }
-
-    function cleanPendingRequest(authObj) {
-        if (authObj.type === AUTH_TYPE.file) {
-            fs.unlink(authObj.file, err => {
-                //really don't care about this error but log it either way.
-                log.writeToLog('info', err);
-                pendingAuthentications.delete(authObj.uuid);
-            });
-        }
-    }
-
+module.exports.init = function() {
     socketServer.on(route.connection('close'), id => {
         var keyToDelete,
             externalConnection;
@@ -211,6 +218,27 @@ function AuthorizationApiHandler() {
 
     /*jshint unused:false */
     apiProtocolBase.registerActionMap(authenticationApiMap);
-}
+};
 
-module.exports.AuthorizationApiHandler = AuthorizationApiHandler;
+const isConnectionAuthenticated = (msg, next) => {
+    const { data, nack, identity, strategyName } = msg;
+    const { runtimeUuid, uuid } = identity;
+    const action = data && data.action;
+    const uuidToCheck = runtimeUuid || uuid; //determine if the msg came as a forwarded action from a peer runtime.
+
+    // Prevent all API calls from unauthenticated external connections,
+    // except for authentication APIs
+    if (
+        strategyName === 'WebSocketStrategy' && // external connection
+        !authenticationApiMap.hasOwnProperty(action) && // not an authentication action
+        !ExternalApplication.getExternalConnectionByUuid(uuidToCheck) // connection not authenticated
+    ) {
+        return nack(new Error('This connection must be authenticated first'));
+    }
+
+    next();
+};
+
+module.exports.registerMiddleware = function(requestHandler) {
+    requestHandler.addPreProcessor(isConnectionAuthenticated);
+};

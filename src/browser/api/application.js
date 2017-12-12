@@ -38,23 +38,17 @@ let Window = require('./window.js').Window;
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
-import {
-    cachedFetch
-} from '../cached_resource_fetcher';
+import { cachedFetch } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
-import {
-    sendToRVM
-} from '../rvm/utils';
-import {
-    validateNavigationRules
-} from '../navigation_validation';
+import { sendToRVM } from '../rvm/utils';
+import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
-let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
+import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
 
-// locals
+const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
 let runtimeIsClosing = false;
 let hasPlugins = false;
@@ -139,7 +133,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
         throw new Error(`Invalid application name: ${name}`);
     }
 
-    const isAppRunning = coreState.getAppRunningState(uuid);
+    const isAppRunning = coreState.getAppRunningState(uuid) || coreState.getExternalAppObjByUuid(uuid);
     if (isAppRunning) {
         throw new Error(`Application with specified UUID already exists: ${uuid}`);
     }
@@ -443,19 +437,34 @@ Application.revokeWindowAccess = function() {
     console.warn('Deprecated');
 };
 
-Application.run = function(identity, configUrl = '') {
-
+// userAppConfigArgs must be set to 'undefined' because
+// regular parameters cannot come after default parameters.
+Application.run = function(identity, configUrl = '', userAppConfigArgs = undefined) {
     if (!identity) {
         return;
     }
 
-    createAppObj(identity.uuid, null, configUrl);
+    const app = createAppObj(identity.uuid, null, configUrl);
+    const mainWindowOpts = convertOpts.convertToElectron(app._options);
 
+    const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
+    const { uuid, name } = mainWindowOpts;
+    const windowIdentity = { uuid, name };
+
+    if (coreState.getAppRunningState(uuid)) {
+        proceed();
+    } else {
+        // Flow through preload script logic (eg. re-download of failed preload scripts)
+        // only if app is not already running.
+        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts, proceed);
+    }
+};
+
+function run(identity, mainWindowOpts, userAppConfigArgs) {
     const uuid = identity.uuid;
     const app = Application.wrap(uuid);
     const appState = coreState.appByUuid(uuid);
     let sourceUrl = appState.appObj._configUrl;
-    const mainWindowOpts = _.clone(app._options);
     const hideSplashTopic = route.application('hide-splashscreen', uuid);
     const eventListenerStrings = [];
     const hideSplashListener = () => {
@@ -499,34 +508,34 @@ Application.run = function(identity, configUrl = '') {
         rvmBus.registerLicenseInfo({ data: genLicensePayload() }, sourceUrl);
     };
     const sendAppsEventsToRVMListener = (appEvent) => {
-            if (!sourceUrl) {
-                return; // Most likely an adapter, RVM can't do anything with what it didn't load(determined by sourceUrl) so ignore
-            }
-            let type = appEvent.type,
-                rvmPayload = {
-                    topic: 'application-event',
-                    type,
-                    sourceUrl
-                };
+        if (!sourceUrl) {
+            return; // Most likely an adapter, RVM can't do anything with what it didn't load(determined by sourceUrl) so ignore
+        }
+        let type = appEvent.type,
+            rvmPayload = {
+                topic: 'application-event',
+                type,
+                sourceUrl
+            };
 
-            if (type === 'ready' || type === 'run-requested') {
-                rvmPayload.hideSplashScreenSupported = true;
-            } else if (type === 'closed') {
+        if (type === 'ready' || type === 'run-requested') {
+            rvmPayload.hideSplashScreenSupported = true;
+        } else if (type === 'closed') {
 
-                // Don't send 'closed' event to RVM when app is restarting.
-                // This solves the problem of apps not being able to make API
-                // calls that rely on RVM and manifest URL
-                if (appState.isRestarting) {
-                    return;
-                }
-
-                rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
+            // Don't send 'closed' event to RVM when app is restarting.
+            // This solves the problem of apps not being able to make API
+            // calls that rely on RVM and manifest URL
+            if (appState.isRestarting) {
+                return;
             }
 
-            if (rvmBus) {
-                rvmBus.publish(rvmPayload);
-            }
-};
+            rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
+        }
+
+        if (rvmBus) {
+            rvmBus.publish(rvmPayload);
+        }
+    };
 
     // if the runtime is in offline mode, the RVM still expects the
     // startup-url/config for communication
@@ -540,7 +549,7 @@ Application.run = function(identity, configUrl = '') {
             // only resend if we've sent once before(meaning 1 window has shown)
             Application.emitHideSplashScreen(identity);
         }
-        Application.emitRunRequested(identity);
+        Application.emitRunRequested(identity, userAppConfigArgs);
         return;
     }
 
@@ -553,9 +562,10 @@ Application.run = function(identity, configUrl = '') {
 
 
     //for backwards compatibility main window needs to have name === uuid
-    mainWindowOpts.name = uuid;
+    mainWindowOpts = Object.assign({}, mainWindowOpts, { name: uuid }); //avoid mutating original object
 
-    coreState.setWindowObj(app.id, Window.create(app.id, mainWindowOpts));
+    const win = Window.create(app.id, mainWindowOpts);
+    coreState.setWindowObj(app.id, win);
 
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
@@ -571,6 +581,7 @@ Application.run = function(identity, configUrl = '') {
         ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
     });
 
+    // function finish() {
     // turn on plugins for the main window
     hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
 
@@ -643,19 +654,16 @@ Application.run = function(identity, configUrl = '') {
     coreState.setAppRunningState(uuid, true);
 
     ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
-};
+}
 
 /**
  * Run an application via RVM
  */
 Application.runWithRVM = function(identity, manifestUrl) {
-    const ancestor = coreState.getAppAncestor(identity.uuid);
-    const ancestorManifestUrl = ancestor && ancestor._configUrl;
-
     return sendToRVM({
         topic: 'application',
         action: 'launch-app',
-        sourceUrl: ancestorManifestUrl,
+        sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
         data: {
             configUrl: manifestUrl
         }
@@ -688,9 +696,7 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
 
 
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
-    let {
-        uuid
-    } = identity;
+    let { uuid } = identity;
 
     if (fetchingIcon[uuid]) {
         errorCallback(new Error('currently fetching icon'));
@@ -819,13 +825,14 @@ Application.emitHideSplashScreen = function(identity) {
     }
 };
 
-Application.emitRunRequested = function(identity) {
+Application.emitRunRequested = function(identity, userAppConfigArgs) {
     var uuid = identity && identity.uuid;
     if (uuid) {
         ofEvents.emit(route.application('run-requested', uuid), {
             topic: 'application',
             type: 'run-requested',
-            uuid
+            uuid,
+            userAppConfigArgs
         });
     }
 };
@@ -900,6 +907,7 @@ function broadcastOnAppConnected(targetIdentity) {
 ofEvents.on(route.window('dom-content-loaded', '*'), payload => {
     broadcastAppLoaded(payload.data[0]);
 });
+
 ofEvents.on(route.window('connected', '*'), payload => {
     broadcastOnAppConnected(payload.data[0]);
 });
@@ -908,6 +916,7 @@ Application.notifyOnContentLoaded = function(target, identity) {
     registerAppLoadedListener(target, identity);
     console.warn('Deprecated. Please addEventListener');
 };
+
 Application.notifyOnAppConnected = function(target, identity) {
     registerAppConnectedListener(target, identity);
     console.warn('Deprecated. Please addEventListener');
@@ -915,7 +924,6 @@ Application.notifyOnAppConnected = function(target, identity) {
 
 
 function removeTrayIcon(app) {
-
     if (app && app.tray) {
         try {
             app.tray.destroy();
@@ -995,9 +1003,10 @@ function createAppObj(uuid, opts, configUrl = '') {
                     log.writeToLog(1, `ignoring net error ${errorCode} for ${opts.uuid}`, true);
                 } else {
                     log.writeToLog(1, `receiving net error ${errorCode} for ${opts.uuid}`, true);
-                    if (!coreState.argo['noerrdialog'] && configUrl) {
+                    if (!coreState.argo['noerrdialogs'] && configUrl) {
+                        const errorMsgForDialog = errorDescription || `error code ${ errorCode }`;
                         // NOTE: don't show this dialog if the app is created via the api
-                        const errorMessage = opts.loadErrorMessage || 'There was an error loading the application: ${ errorDescription }';
+                        const errorMessage = opts.loadErrorMessage || `There was an error loading the application: ${ errorMsgForDialog }`;
                         dialog.showErrorBox('Fatal Error', errorMessage);
                     }
                     _.defer(() => {

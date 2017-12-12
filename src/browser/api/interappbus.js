@@ -23,9 +23,10 @@ limitations under the License.
 
 let util = require('util');
 let EventEmitter = require('events').EventEmitter;
-let subScriptionManager = new require('../subscription_manager.js').SubscriptionManager();
+import SubscriptionManager from '../subscription_manager';
 import ofEvents from '../of_events';
 
+const subscriptionManager = new SubscriptionManager();
 let callbacks = {};
 
 const NO_SUBS_ERR_STR = 'No subscriptions match';
@@ -174,7 +175,7 @@ function subscribe(identity, payload, listener) {
             busEventing.emit(ofEvents.subscriber.REMOVED, eventingPayload);
         }
     };
-    subScriptionManager.registerSubscription(unsubItem.unsubscribe, identity, payload);
+    subscriptionManager.registerSubscription(unsubItem.unsubscribe, identity, payload);
 
     return unsubItem;
 }
@@ -241,7 +242,7 @@ function subscriberAdded(identity, listener) {
         }
     };
 
-    subScriptionManager.registerSubscription(unsubItem.unsubscribe,
+    subscriptionManager.registerSubscription(unsubItem.unsubscribe,
         identity,
         subMgrStr);
     return unsubItem;
@@ -294,7 +295,7 @@ function subscriberRemoved(identity, listener) {
         }
     };
 
-    subScriptionManager.registerSubscription(unsubItem.unsubscribe, identity, subMgrStr);
+    subscriptionManager.registerSubscription(unsubItem.unsubscribe, identity, subMgrStr);
 
     return unsubItem;
 }

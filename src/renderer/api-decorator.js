@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 /* global fin, window*/
-
 // These are relative to the preload execution, the root of the proj
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
@@ -27,25 +26,33 @@ limitations under the License.
     let customData = global.getFrameData(renderFrameId);
     let glbl = global;
 
-    let rqr = require;
-    let webFrame = rqr('electron').webFrame.createForRenderFrame(renderFrameId);
-    let ipc = rqr('electron').ipcRenderer;
+    const electron = require('electron');
+    const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
+    const ipc = electron.ipcRenderer;
 
-    let cachedOptions;
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
+    const initialOptions = getCurrentWindowOptionsSync();
+    const entityInfo = getEntityInfoSync(initialOptions.uuid, initialOptions.name);
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
         return customData.openerSuccessCalled;
     };
 
-    const windowOptions = getWindowOptionsSync();
-
     // used by the notification service to emit the ready event
     function emitNoteProxyReady() {
         raiseEventSync('notification-service-ready', true);
+    }
+
+    function asyncApiCall(action, payload = {}) {
+        ipc.send(renderFrameId, 'of-window-message', {
+            action,
+            payload,
+            isSync: false,
+            singleFrameOnly: true
+        });
     }
 
     function syncApiCall(action, payload, singleFrameOnly = true, channel = 'of-window-message') {
@@ -69,15 +76,24 @@ limitations under the License.
         }
     }
 
-    function getWindowOptionsSync() {
-        if (!cachedOptions) {
-            cachedOptions = syncApiCall('get-current-window-options');
-        }
-        return cachedOptions;
+    function getCachedWindowOptionsSync() {
+        return initialOptions;
+    }
+
+    function getCurrentWindowOptionsSync() {
+        return syncApiCall('get-current-window-options');
+    }
+
+    function getWindowOptionsSync(identity) {
+        return syncApiCall('get-window-options', identity);
+    }
+
+    function getEntityInfoSync(uuid, name) {
+        return syncApiCall('get-entity-info', { uuid, name });
     }
 
     function getWindowIdentitySync() {
-        let winOpts = getWindowOptionsSync();
+        let winOpts = getCurrentWindowOptionsSync();
 
         return {
             uuid: winOpts.uuid,
@@ -149,14 +165,14 @@ limitations under the License.
     ///THESE CALLS NEED TO BE DONE WITH REMOTE, AS THEY ARE DONE BEFORE THE CORE HAS ID's
     function getWindowId() {
         if (!windowId) {
-            windowId = rqr('electron').remote.getCurrentWindow(renderFrameId).id;
+            windowId = electron.remote.getCurrentWindow(renderFrameId).id;
         }
         return windowId;
     }
 
     function getWebContentsId() {
         if (!webContentsId) {
-            webContentsId = rqr('electron').remote.getCurrentWebContents(renderFrameId).getId();
+            webContentsId = electron.remote.getCurrentWebContents(renderFrameId).getId();
         }
         return webContentsId;
     }
@@ -165,17 +181,16 @@ limitations under the License.
     function wireUpZoomEvents() {
         // listen for zoom-in/out keyboard shortcut
         // messages sent from the browser process
-        ipc.on(`zoom-${renderFrameId}`, (event, zoomIn, reset) => {
-            if (reset) {
-                webFrame.setZoomLevel(0);
-            } else {
-                let level = Math.floor(webFrame.getZoomLevel());
-                webFrame.setZoomLevel(zoomIn ? ++level : --level);
+        ipc.on(`zoom-${renderFrameId}`, (event, zoom) => {
+            if ('level' in zoom) {
+                webFrame.setZoomLevel(zoom.level);
+            } else if ('increment' in zoom) {
+                webFrame.setZoomLevel(zoom.increment ? Math.floor(webFrame.getZoomLevel()) + zoom.increment : 0);
             }
         });
 
         document.addEventListener('mousewheel', event => {
-            if (!event.ctrlKey || !cachedOptions.accelerator.zoom) {
+            if (!event.ctrlKey || !initialOptions.accelerator.zoom) {
                 return;
             }
 
@@ -259,9 +274,6 @@ limitations under the License.
             updateWindowOptionsSync(currWindowOpts.name, currWindowOpts.uuid, {
                 hasLoaded: true
             });
-
-            // Notify WebContent that frame routing can now be counted
-            rqr('electron').remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
         };
 
         if (currWindowOpts.saveWindowState && !currWindowOpts.hasLoaded) {
@@ -299,13 +311,15 @@ limitations under the License.
         }
     }
 
-    function wireUpMenu(global, options) {
+    function wireUpMenu(global) {
         global.addEventListener('contextmenu', e => {
             if (!e.defaultPrevented) {
                 e.preventDefault();
 
+                const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
+                const options = getWindowOptionsSync(identity);
+
                 if (options.contextMenu) {
-                    const identity = getWindowIdentitySync();
                     syncApiCall('show-menu', {
                         uuid: identity.uuid,
                         name: identity.name,
@@ -319,18 +333,25 @@ limitations under the License.
         });
     }
 
-    function raiseReadyEvents(currWindowOpts) {
-        let winIdentity = {
-            uuid: currWindowOpts.uuid,
-            name: currWindowOpts.name
-        };
-        raiseEventSync(`window/initialized/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
+    function raiseReadyEvents(entityInfo) {
+        const { uuid, name, parent, entityType } = entityInfo;
+        const winIdentity = { uuid, name };
+        const parentFrameName = parent.name || name;
+
+        raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
+
         // main window
-        if (currWindowOpts.uuid === currWindowOpts.name) {
-            raiseEventSync(`application/initialized/${currWindowOpts.uuid}`);
+        if (uuid === name) {
+            raiseEventSync(`application/initialized/${uuid}`);
         }
-        raiseEventSync(`window/dom-content-loaded/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
-        raiseEventSync(`window/connected/${currWindowOpts.uuid}-${currWindowOpts.name}`, winIdentity);
+
+        raiseEventSync(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
+        raiseEventSync(`window/connected/${uuid}-${name}`, winIdentity);
+        raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
+            frameName: name,
+            entityType
+        });
+        raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
     }
 
     function deferByTick(callback) {
@@ -349,15 +370,25 @@ limitations under the License.
         //---------------------------------------------------------------
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
-        let winOpts = getWindowOptionsSync();
 
-        showOnReady(glbl, winOpts);
-        wireUpMenu(glbl, winOpts);
+
+        // Prevent iframes from attempting to do windowing actions, these will always be handled
+        // by the main window frame.
+        // TODO this needs to be revisited when we have xorigin frame api
+        if (!window.frameElement) {
+            showOnReady(glbl, initialOptions);
+        }
+
+        // The api-ready event allows the webContents to assign api priority. This must happen after
+        // any spin up windowing action or you risk stealing api priority from an already connected frame
+        electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
+
+        wireUpMenu(glbl);
         wireUpZoomEvents();
-        raiseReadyEvents(winOpts);
+        raiseReadyEvents(entityInfo);
 
         //TODO:Notifications to be removed from this file.
-        if (/^notification-window/.test(winOpts.name) &&
+        if (/^notification-window/.test(initialOptions.name) &&
             !(/^about:blank/.test(location.href))) {
 
             fin.desktop.InterApplicationBus.subscribe('*',
@@ -365,8 +396,8 @@ limitations under the License.
                 function() {
 
                     fin.desktop.InterApplicationBus.publish('notification-ready', {
-                        uuid: winOpts.uuid,
-                        name: winOpts.name,
+                        uuid: initialOptions.uuid,
+                        name: initialOptions.name,
                         url: location.href,
                         some: 'other thing',
                         routingInfo: window.payload
@@ -375,8 +406,8 @@ limitations under the License.
                 });
 
             fin.desktop.InterApplicationBus.publish('notification-ready', {
-                uuid: winOpts.uuid,
-                name: winOpts.name,
+                uuid: initialOptions.uuid,
+                name: initialOptions.name,
                 url: location.href
             });
         }
@@ -386,7 +417,7 @@ limitations under the License.
 
         currPageHasLoaded = true;
 
-        if (getOpenerSuccessCallbackCalled() || window.opener === null || winOpts.rawWindowOpen) {
+        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
                     callback();
@@ -398,9 +429,7 @@ limitations under the License.
 
     function onContentReady(bindObject, callback) {
 
-        let winOpts = getWindowOptionsSync();
-
-        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || winOpts.rawWindowOpen)) {
+        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen)) {
             deferByTick(() => {
                 callback();
             });
@@ -411,7 +440,6 @@ limitations under the License.
 
     function createChildWindow(options, cb) {
         let requestId = ++childWindowRequestId;
-        let winOpts = getWindowOptionsSync();
         // initialize what's needed to create a child window via window.open
         let url = ((options || {}).url || undefined);
         let uniqueKey = generateGuidSync();
@@ -421,7 +449,13 @@ limitations under the License.
         // Reset state machine values that are set through synchronous handshake between native WebContent lifecycle observers and JS
         options.openfin = true;
 
-        options.uuid = winOpts.uuid;
+        // Force window to be a child of its parent application.
+        options.uuid = initialOptions.uuid;
+
+        // Apply parent window background color to child window when child
+        // window background color is unspecified.
+        options.backgroundColor = options.backgroundColor || initialOptions.backgroundColor;
+
         let responseChannel = `${frameName}-created`;
         ipc.once(responseChannel, () => {
             setTimeout(() => {
@@ -446,25 +480,43 @@ limitations under the License.
             }, 1);
         });
 
-        setTimeout(() => {
+        const convertedOpts = convertOptionsToElectronSync(options);
+        const { preloadScripts } = 'preloadScripts' in convertedOpts ? convertedOpts : initialOptions;
+        const windowIsNotification = syncApiCall('window-is-notification-type', {
+            uuid: convertedOpts.uuid,
+            name: convertedOpts.name
+        });
+
+        if (!(preloadScripts && preloadScripts.length) || windowIsNotification) {
+            proceed(); // short-circuit preload scripts fetch
+        } else {
+            const preloadScriptsPayload = {
+                uuid: options.uuid,
+                name: options.name,
+                scripts: preloadScripts
+            };
+            fin.__internal_.downloadPreloadScripts(preloadScriptsPayload, proceed, proceed);
+        }
+
+        function proceed() {
             // PLEASE NOTE: Must stringify options object
-            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId, requestId, JSON.stringify(convertOptionsToElectronSync(options)));
-        }, 1);
+            ipc.send(renderFrameId, 'add-child-window-request', responseChannel, frameName, webContentsId,
+                requestId, JSON.stringify(convertedOpts));
+        }
     }
 
     global.chrome = global.chrome || {};
 
     global.chrome.desktop = {
         getDetails: cb => {
-            let winOpts = getWindowOptionsSync();
             let details = {};
             let currSocketServerState = getSocketServerStateSync();
 
             details.port = currSocketServerState.port;
             details.ssl = currSocketServerState.isHttps;
-            details.uuid = winOpts.uuid;
-            details.name = winOpts.name;
-            details.options = winOpts;
+            details.uuid = initialOptions.uuid;
+            details.name = initialOptions.name;
+            details.options = initialOptions;
             details.versions = processVersions;
 
             cb(details);
@@ -503,9 +555,11 @@ limitations under the License.
             windowExists: windowExistsSync,
             ipcconfig: getIpcConfigSync(),
             createChildWindow: createChildWindow,
-            getWindowOptions: getWindowOptionsSync,
+            getCachedWindowOptionsSync: getCachedWindowOptionsSync,
             openerSuccessCBCalled: openerSuccessCBCalled,
-            emitNoteProxyReady: emitNoteProxyReady
+            emitNoteProxyReady: emitNoteProxyReady,
+            initialOptions,
+            entityInfo
         }
     };
 
@@ -513,18 +567,95 @@ limitations under the License.
      * Preload script eval
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
-        const preload = windowOptions.preload;
+        const { uuid, name } = initialOptions;
+        const identity = { uuid, name };
+        const windowOptions = entityInfo.entityType === 'iframe' ? getWindowOptionsSync(entityInfo.parent) :
+            getCurrentWindowOptionsSync();
+        const windowIsNotification = syncApiCall('window-is-notification-type', {
+            uuid: windowOptions.uuid,
+            name: windowOptions.name
+        });
 
-        if (preload) {
-            try {
-                const preloadScriptContent = syncApiCall('get-window-preload-script', {
-                    preload
-                });
-                window.eval(preloadScriptContent); /* jshint ignore:line */
-            } catch (err) {
-                console.error(err);
-            }
+        // Don't execute preload scripts and plugin modules in notifications
+        if (windowIsNotification) {
+            return;
+        }
+
+        let { preloadScripts } = convertOptionsToElectronSync(windowOptions);
+
+        evalPlugins(identity);
+
+        if (preloadScripts.length) {
+            evalPreloadScripts(identity, preloadScripts);
         }
     });
+
+    /**
+     * Requests plugin modules from the Core and evals them in the current window
+     */
+    function evalPlugins(identity) {
+        const action = 'set-window-plugin-state';
+        const plugins = syncApiCall('get-plugin-modules');
+        let logBase = `[plugin] [${identity.uuid}]-[${identity.name}]: `;
+
+        plugins.forEach((plugin) => {
+            // _content - contains module code as a string to eval in this window
+            const { name, version, _content } = plugin;
+
+            if (!_content) {
+                return;
+            }
+
+            try {
+                window.eval(_content); /* jshint ignore:line */
+                asyncApiCall(action, { name, version, state: 'succeeded' });
+                syncApiCall('write-to-log', {
+                    level: 'info',
+                    message: logBase + `eval succeeded for ${name} ${version}`
+                });
+            } catch (err) {
+                asyncApiCall(action, { name, version, state: 'failed' });
+                syncApiCall('write-to-log', {
+                    level: 'info',
+                    message: logBase + `eval failed for ${name} ${version}`
+                });
+            }
+        });
+
+        asyncApiCall(action, { allDone: true });
+    }
+
+    /**
+     * Requests preload scripts contents from the Core and evals them in the current window
+     */
+    function evalPreloadScripts(identity, preloadOption) {
+        const action = 'set-window-preload-state';
+        let logBase = `[preload] [${identity.uuid}]-[${identity.name}]: `;
+        let preloadScripts;
+
+        try {
+            preloadScripts = syncApiCall('get-selected-preload-scripts', preloadOption);
+        } catch (error) {
+            preloadScripts = [];
+            syncApiCall('write-to-log', { level: 'error', message: logBase + error });
+        }
+
+        preloadScripts.forEach((preloadScript) => {
+            const { url, content } = preloadScript;
+
+            if (content) {
+                try {
+                    window.eval(content); /* jshint ignore:line */
+                    asyncApiCall(action, { url, state: 'succeeded' });
+                    syncApiCall('write-to-log', { level: 'info', message: logBase + `eval succeeded for ${url}` });
+                } catch (err) {
+                    asyncApiCall(action, { url, state: 'failed' });
+                    syncApiCall('write-to-log', { level: 'error', message: logBase + `eval failed for ${err}` });
+                }
+            }
+        });
+
+        asyncApiCall(action, { allDone: true });
+    }
 
 }());

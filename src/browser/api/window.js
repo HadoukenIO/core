@@ -38,36 +38,46 @@ let clipBounds = require('../clip_bounds.js').default;
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
-import {
-    cachedFetch
-} from '../cached_resource_fetcher';
+import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
 let regex = require('../../common/regex');
-let subscriptionManager = new require('../subscription_manager.js').SubscriptionManager();
+import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
-import {
-    validateNavigation,
-    navigationValidator
-} from '../navigation_validation';
-import {
-    toSafeInt
-} from '../../common/safe_int';
+import { validateNavigation, navigationValidator } from '../navigation_validation';
+import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
+import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
+import { FrameInfo } from './frame';
+import { System } from './system';
+// constants
+import {
+    DEFAULT_RESIZE_REGION_SIZE,
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+} from '../../shapes';
 
-// locals
+const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
 const userCache = electronApp.getPath('userCache');
+const WindowsMessages = {
+    WM_KEYDOWN: 0x0100,
+    WM_KEYUP: 0x0101,
+    WM_SYSKEYDOWN: 0x0104,
+    WM_SYSKEYUP: 0x0105,
+};
 
-let Window = {};
+let Window = {
+    QUEUE_COUNTER_NAME: 'queueCounter'
+};
 
 let browserWindowEventMap = {
     'api-injection-failed': {
         topic: 'api-injection-failed'
     },
     'blur': {
-        topic: 'blurred'
+        topic: 'blurred',
+        decorator: blurredDecorator
     },
     'synth-bounds-change': {
         topic: 'bounds-changing', // or bounds-changed
@@ -86,7 +96,8 @@ let browserWindowEventMap = {
         decorator: disabledFrameBoundsChangeDecorator
     },
     'focus': {
-        topic: 'focused'
+        topic: 'focused',
+        decorator: focusedDecorator
     },
     'opacity-changed': {
         decorator: opacityChangedDecorator
@@ -163,12 +174,15 @@ let optionSetters = {
             // reapply resize region
             applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
                 let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
-                    size: 2,
-                    bottomRightCorner: 4
+                    size: DEFAULT_RESIZE_REGION_SIZE,
+                    bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
                 });
                 browserWin.setResizeRegion(resizeRegion.size);
                 browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
             });
+        } else {
+            // reapply top-left icon
+            setTaskbar(browserWin, true);
         }
     },
     alphaMask: function(newVal, browserWin) {
@@ -375,6 +389,32 @@ Window.create = function(id, opts) {
 
         browserWindow = BrowserWindow.fromId(id);
 
+        // called in the WebContents class in the runtime
+        browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
+            const parentFrameId = id;
+            const frameInfo = {
+                name: frameName,
+                uuid,
+                parentFrameId,
+                parent: { uuid, name },
+                frameRoutingId,
+                entityType: 'iframe'
+            };
+
+            winObj.frames.set(frameName, frameInfo);
+        };
+
+        // called in the WebContents class in the runtime
+        browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
+            const entityType = frameRoutingId === 1 ? 'window' : 'iframe';
+            const frameName = closedFrameName || name; // the parent name is considered a frame as well
+            const payload = { uuid, name, frameName, entityType };
+
+            winObj.frames.delete(closedFrameName);
+            ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
+            ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
+        };
+
         // this is a first pass at teardown. for now, push the unsubscribe
         // function for each subscription you make, on closed, remove them all
         // if you listen on 'closed' it will crash as your resources are
@@ -391,7 +431,7 @@ Window.create = function(id, opts) {
         // each window now inherits the main window's base options. this can
         // be made to be the parent's options if that makes more sense...
         baseOpts = coreState.getMainWindowOptions(id) || {};
-        _options = _.extend(_.clone(baseOpts), convertOptions.convertToElectron(opts));
+        _options = convertOptions.convertToElectron(Object.assign({}, baseOpts, opts));
 
         // (taskbar) a child window should be grouped in with the application
         // if a taskbarIconGroup isn't specified
@@ -688,12 +728,12 @@ Window.create = function(id, opts) {
             ofEvents.removeListener(resourceLoadFailedEventString, resourceLoadFailedHandler);
         };
 
-        resourceLoadFailedHandler = (failure) => {
-            if (failure.errorCode === -3) {
+        resourceLoadFailedHandler = (failed) => {
+            if (failed.errorCode === -3) {
                 // 304 can trigger net::ERR_ABORTED, ignore it
-                electronApp.vlog(1, `ignoring net error -3 for ${failure.validatedURL}`);
+                electronApp.vlog(1, `ignoring net error -3 for ${failed.validatedURL}`);
             } else {
-                emitErrMessage(failure.errorCode);
+                emitErrMessage(failed.errorCode);
                 ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
             }
         };
@@ -754,11 +794,25 @@ Window.create = function(id, opts) {
         /* jshint ignore:end */
 
         children: [],
+        frames: new Map(),
 
         // TODO this should be removed once it's safe in favor of the
         //      more descriptive browserWindow key
         _window: browserWindow
     };
+
+    const { manifest } = coreState.getManifest(identity);
+    const { plugins } = manifest || {};
+    winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
+
+    // Set preload scripts' final loading states
+    winObj.preloadScripts = (_options.preloadScripts || _options.preload || []).map(preload => {
+        return {
+            url: getIdentifier(preload),
+            state: getPreloadScriptState(getIdentifier(preload))
+        };
+    });
+    winObj.framePreloadScripts = {}; // frame ID => [{url, state}]
 
     if (!coreState.getWinObjById(id)) {
         coreState.setWindowObj(id, winObj);
@@ -806,7 +860,6 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
     safeListener = (...args) => {
 
         try {
-
             listener.call(null, ...args);
 
         } catch (err) {
@@ -822,6 +875,7 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
     };
 
     electronApp.vlog(1, `addEventListener ${eventString}`);
+
     ofEvents.on(eventString, safeListener);
 
     unsubscribe = () => {
@@ -917,10 +971,10 @@ Window.embed = function(identity, parentHwnd) {
     }
 
     if (isWin32) {
-        browserWindow.setMessageObserver(0x0100, parentHwnd); // WM_KEYDOWN
-        browserWindow.setMessageObserver(0x0101, parentHwnd); // WM_KEYUP
-        browserWindow.setMessageObserver(0x0104, parentHwnd); // WM_SYSKEYDOWN
-        browserWindow.setMessageObserver(0x0105, parentHwnd); // WM_SYSKEYUP
+        browserWindow.setMessageObserver(WindowsMessages.WM_KEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_KEYUP, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYUP, parentHwnd);
     }
 
     ofEvents.emit(route.window('embedded', identity.uuid, identity.name), {
@@ -984,6 +1038,23 @@ Window.focus = function(identity) {
     browserWindow.focus();
 };
 
+Window.getAllFrames = function(identity) {
+    const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
+
+    if (!openfinWindow) {
+        return [];
+    }
+
+    const framesArr = [coreState.getInfoByUuidFrame(identity)];
+    const subFrames = [];
+
+    for (let [, info] of openfinWindow.frames) {
+        subFrames.push(new FrameInfo(info));
+    }
+
+    return framesArr.concat(subFrames);
+};
+
 Window.getBounds = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 
@@ -1026,15 +1097,26 @@ Window.getGroup = function(identity) {
 
 
 Window.getWindowInfo = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    let webContents = browserWindow.webContents;
-
-    return {
-        url: webContents.getURL(),
-        title: webContents.getTitle(),
+    const browserWindow = getElectronBrowserWindow(identity, 'get info for');
+    const { plugins, preloadScripts } = Window.wrap(identity.uuid, identity.name);
+    const webContents = browserWindow.webContents;
+    const windowInfo = {
+        canNavigateBack: webContents.canGoBack(),
         canNavigateForward: webContents.canGoForward(),
-        canNavigateBack: webContents.canGoBack()
+        plugins,
+        preloadScripts,
+        title: webContents.getTitle(),
+        url: webContents.getURL()
     };
+    return windowInfo;
+};
+
+
+Window.getAbsolutePath = function(identity, path) {
+    let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
+    let windowURL = browserWindow.webContents.getURL();
+
+    return (path || path === 0) ? url.resolve(windowURL, path) : '';
 };
 
 
@@ -1055,11 +1137,14 @@ Window.getNativeId = function(identity) {
 
 Window.getNativeWindow = function() {};
 
-
 Window.getOptions = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'get options for');
-
-    return browserWindow._options;
+    // In the case that the identity passed does not exist, or is not a window,
+    // return the entity info object. The fail case is used for frame identity on spin up.
+    try {
+        return getElectronBrowserWindow(identity, 'get options for')._options;
+    } catch (e) {
+        return System.getEntityInfo(identity);
+    }
 };
 
 Window.getParentApplication = function() {
@@ -1072,24 +1157,73 @@ Window.getParentApplication = function() {
 Window.getParentWindow = function() {};
 
 /**
- * Fetches window's preload script and gets its content
+ * Sets/updates window's plugin state and emits relevant events
  */
-Window.getPreloadScript = function(identity, preloadUrl, callback) {
-    cachedFetch(identity.uuid, preloadUrl, (fetchError, scriptPath) => {
-        if (fetchError) {
-            return callback(new Error(`Failed to fetch preload script from ${preloadUrl}`));
-        }
+Window.setWindowPluginState = function(identity, payload) {
+    const { uuid, name } = identity;
+    const { name: pluginName, version, state, allDone } = payload;
+    const updateTopic = allDone ? 'plugins-state-changed' : 'plugins-state-changing';
+    let { plugins } = Window.wrap(uuid, name);
 
-        fs.readFile(scriptPath, 'utf8', (readError, content) => {
-            if (readError) {
-                callback(new Error('Failed to read the content of the preload script'));
-            } else {
-                callback(null, content);
-            }
-        });
-    });
+    // Single plugin state change
+    if (!allDone) {
+        plugins = plugins.filter(e => e.name === pluginName && e.version === version);
+        plugins[0].state = state;
+    }
+
+    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, plugins });
 };
 
+/**
+ * Sets/updates window's preload script state and emits relevant events
+ */
+Window.setWindowPreloadState = function(identity, payload) {
+    const { uuid, name } = identity;
+    const { url, state, allDone } = payload;
+    const updateTopic = allDone ? 'preload-scripts-state-changed' : 'preload-scripts-state-changing';
+    const frameInfo = coreState.getInfoByUuidFrame(identity);
+    let openfinWindow;
+    if (frameInfo.entityType === 'iframe') {
+        openfinWindow = Window.wrap(frameInfo.parent.uuid, frameInfo.parent.name);
+    } else {
+        openfinWindow = Window.wrap(uuid, name);
+    }
+
+    if (!openfinWindow) {
+        return log.writeToLog('info', `setWindowPreloadState missing openfinWindow ${uuid} ${name}`);
+    }
+    let { preloadScripts } = openfinWindow;
+
+    // Single preload script state change
+    if (!allDone) {
+        if (frameInfo.entityType === 'iframe') {
+            let frameState = openfinWindow.framePreloadScripts[name];
+            if (!frameState) {
+                frameState = openfinWindow.framePreloadScripts[name] = [];
+            }
+            preloadScripts = frameState.find(e => e.url === getIdentifier(payload));
+            if (!preloadScripts) {
+                frameState.push(preloadScripts = { url: getIdentifier(payload) });
+            }
+            preloadScripts = [preloadScripts];
+        } else {
+            preloadScripts = openfinWindow.preloadScripts.filter(e => e.url === url);
+        }
+        if (preloadScripts) {
+            preloadScripts[0].state = state;
+        } else {
+            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${getIdentifier(payload)} `);
+        }
+    }
+
+    if (frameInfo.entityType === 'window') {
+        ofEvents.emit(route.window(updateTopic, uuid, name), {
+            name,
+            uuid,
+            preloadScripts
+        });
+    } // @TODO ofEvents.emit(route.frame for iframes
+};
 
 Window.getSnapshot = function(identity, callback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
@@ -1128,6 +1262,21 @@ Window.hide = function(identity) {
     browserWindow.hide();
 };
 
+Window.isNotification = function(name) {
+    const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
+    return noteGuidRegex.test(name);
+};
+
+Window.isNotificationType = function(identity, callback = () => {}) {
+    const { name } = identity;
+
+    const isNotification = Window.isNotification(name);
+    const isQueueCounter = name === Window.QUEUE_COUNTER_NAME;
+    const isNotificationType = isNotification || isQueueCounter;
+
+    callback(isNotificationType);
+    return isNotificationType;
+};
 
 Window.isShowing = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
@@ -1205,6 +1354,10 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
     let left = toSafeInt(deltaLeft, 0);
     let top = toSafeInt(deltaTop, 0);
 
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
+    }
+
     // no need to call clipBounds here because width and height are not changing
     browserWindow.setBounds({
         x: currentBounds.x + left,
@@ -1225,6 +1378,10 @@ Window.moveTo = function(identity, x, y) {
     const currentBounds = browserWindow.getBounds();
     const safeX = toSafeInt(x);
     const safeY = toSafeInt(y);
+
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
+    }
 
     // no need to call clipBounds here because width and height are not changing
     browserWindow.setBounds({
@@ -1278,6 +1435,10 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
         return;
     }
 
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
+    }
+
     let currentBounds = browserWindow.getBounds();
     let newWidth = toSafeInt(currentBounds.width + deltaWidth, currentBounds.width);
     let newHeight = toSafeInt(currentBounds.height + deltaHeight, currentBounds.height);
@@ -1296,6 +1457,10 @@ Window.resizeTo = function(identity, newWidth, newHeight, anchor) {
 
     if (!browserWindow) {
         return;
+    }
+
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
     }
 
     const currentBounds = browserWindow.getBounds();
@@ -1339,6 +1504,11 @@ Window.setAsForeground = function(identity) {
 Window.setBounds = function(identity, left, top, width, height) {
     let browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
     let bounds = browserWindow.getBounds();
+
+    if (browserWindow.isMaximized()) {
+        browserWindow.unmaximize();
+    }
+
     browserWindow.setBounds(clipBounds({
         x: toSafeInt(left, bounds.x),
         y: toSafeInt(top, bounds.y),
@@ -1357,7 +1527,15 @@ Window.show = function(identity, force = false) {
 
     let payload = {};
     let defaultAction = () => {
-        if (!browserWindow.isMinimized()) {
+        const dontShow = (
+            browserWindow.isMinimized() ||
+
+            // RUN-2905: To match v5 behavior, for maximized window, avoid showInactive() because it does an
+            // erroneous restore(), an apparent Electron oversight (a restore _is_ needed in all other cases).
+            browserWindow.isMaximized() && browserWindow.isVisible()
+        );
+
+        if (!dontShow) {
             browserWindow.showInactive();
         }
     };
@@ -1381,6 +1559,10 @@ Window.showAt = function(identity, left, top, force = false) {
     };
     let defaultAction = () => {
         let currentBounds = browserWindow.getBounds();
+
+        if (browserWindow.isMaximized()) {
+            browserWindow.unmaximize();
+        }
 
         // no need to call clipBounds here because width and height are not changing
         browserWindow.setBounds({
@@ -1543,7 +1725,13 @@ Window.getZoomLevel = function(identity, callback) {
 Window.setZoomLevel = function(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
 
-    browserWindow.webContents.setZoomLevel(level);
+    // browserWindow.webContents.setZoomLevel(level); // zooms all windows loaded from same domain
+    browserWindow.webContents.send('zoom', { level }); // zoom just this window
+};
+
+Window.onUnload = (identity) => {
+    ofEvents.emit(route.window('unload', identity.uuid, identity.name, false), identity);
+    ofEvents.emit(route.window('init-subscription-listeners'), identity);
 };
 
 Window.onUnload = (identity) => {
@@ -1693,7 +1881,15 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
     } else {
         browserWindow.once('visibility-changed', (event, isVisible) => {
             if (isVisible) {
-                callback();
+                if (browserWindow.isVisible()) {
+                    callback();
+                    // Version 8: Will be visible on the next tick
+                    // TODO: Refactor to also use 'ready-to-show'
+                } else {
+                    setTimeout(() => {
+                        callback();
+                    }, 1);
+                }
             }
         });
     }
@@ -1797,6 +1993,19 @@ function closeRequestedDecorator(payload) {
     return propagate;
 }
 
+function blurredDecorator(payload, args) {
+    const { uuid, name } = payload;
+    ofEvents.emit(route.application('window-blurred', uuid), { topic: 'application', type: 'window-blurred', uuid, name });
+    ofEvents.emit(route.system('window-blurred'), { topic: 'system', type: 'window-blurred', uuid, name });
+    return true;
+}
+
+function focusedDecorator(payload, args) {
+    const { uuid, name } = payload;
+    ofEvents.emit(route.application('window-focused', uuid), { topic: 'application', type: 'window-focused', uuid, name });
+    ofEvents.emit(route.system('window-focused'), { topic: 'system', type: 'window-focused', uuid, name });
+    return true;
+}
 
 function boundsChangeDecorator(payload, args) {
     let boundsChangePayload = args[0];
@@ -1962,7 +2171,7 @@ function calcBoundsAnchor(anchor, newWidth, newHeight, currBounds) {
     return calcAnchor;
 }
 
-function setTaskbar(browserWindow) {
+function setTaskbar(browserWindow, forceFetch = false) {
     const options = browserWindow._options;
 
     setBlankTaskbarIcon(browserWindow);
@@ -2013,6 +2222,16 @@ function setTaskbar(browserWindow) {
             }
         });
     });
+
+    if (forceFetch) {
+        // try the window icon options first
+        setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {
+            if (!browserWindow.isDestroyed()) {
+                // if not, try using the main window's icon
+                setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
+            }
+        });
+    }
 }
 
 function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {

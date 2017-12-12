@@ -31,6 +31,13 @@ let coreState = require('./core_state.js');
 let log = require('./log');
 let regex = require('../common/regex');
 
+// constants
+import {
+    DEFAULT_RESIZE_REGION_SIZE,
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+} from '../shapes';
+const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
+
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
     return {
@@ -61,6 +68,7 @@ function five0BaseOptions() {
         'defaultTop': 10,
         'defaultWidth': 800,
         'delay_connection': false,
+        'disableIabSecureLogging': false,
         'draggable': false,
         'exitOnClose': false,
         'frame': true,
@@ -83,12 +91,13 @@ function five0BaseOptions() {
         'resizable': true,
         'resize': true,
         'resizeRegion': {
-            'bottomRightCorner': 4,
-            'size': 2
+            'bottomRightCorner': DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
+            'size': DEFAULT_RESIZE_REGION_SIZE
         },
         'saveWindowState': true,
         'shadow': false,
         'showTaskbarIcon': true,
+        'smallWindow': false,
         'state': 'normal',
         'taskbarIcon': '',
         'taskbarIconGroup': '',
@@ -96,7 +105,7 @@ function five0BaseOptions() {
         'url': 'about:blank',
         'uuid': '',
         'waitForPageLoad': true,
-        'backgroundColor': '#000',
+        'backgroundColor': '#FFF',
         'webSecurity': true
     };
 }
@@ -194,7 +203,7 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 
 module.exports = {
 
-    getWindowOptions: function(appJson) {
+    getStartupAppOptions: function(appJson) {
         return appJson['startup_app'];
     },
 
@@ -262,8 +271,26 @@ module.exports = {
             newOptions.permissions = options.permissions;
         }
 
-        if (options.hasOwnProperty('preload')) {
-            newOptions.preload = options.preload;
+        if ('preloadScripts' in options || 'preload' in options) {
+            const preloadScripts = options.preloadScripts || options.preload;
+            newOptions.preloadScripts = normalizePreload(preloadScripts);
+        }
+
+        const plugin = options['plugin'];
+        if (!plugin) {
+            // for all falsy values
+            newOptions.plugin = [];
+        } else {
+            newOptions.plugin = plugin;
+        }
+
+        if (options.customRequestHeaders !== undefined) {
+            newOptions.customRequestHeaders = options.customRequestHeaders;
+        }
+
+        // implicitly set the backgroundColor if the window is transparent
+        if (newOptions.transparent) {
+            newOptions.backgroundColor = TRANSPARENT_WHITE;
         }
 
         if (returnAsString) {
@@ -333,3 +360,24 @@ module.exports = {
     }
 
 };
+
+function normalizePreload(preload) {
+    if (preload === null || preload === false) {
+        preload = '';
+    }
+
+    if (typeof preload === 'string') {
+        // convert legacy `preload` option into modern `preload` option
+        return preload === '' ? [] : [{ url: preload }];
+    }
+
+    if (
+        Array.isArray(preload) &&
+        preload.every(p => typeof p === 'object' && typeof p.url === 'string')
+    ) {
+        return preload.filter(p => p.url !== ''); // filter out empties
+    }
+
+    log.writeToLog('warning', 'Expected `preload` option to be null, false, string, or array of objects with `url` string properties.');
+    return []; // no preloads when bad option
+}

@@ -35,24 +35,27 @@ describe('safe_int', () => {
     });
 
     it('Should use the default value if given number is invalid', () => {
-        const i = Number.NaN, def = 55;
+        const i = Number.NaN;
+        const def = 55;
         const safeI = toSafeInt(i, def);
 
         assert.equal(safeI, def, 'Expected numbers to be equal');
     });
 
     it('Should accept a default value of 0', () => {
-        const i = Number.NaN, def = 0;
+        const i = Number.NaN;
+        const def = 0;
         const safeI = toSafeInt(i, def);
 
         assert.equal(safeI, def, 'Expected numbers to be equal');
     });
 
     it('Should throw an error if the default value is passed and needed but is invalid', () => {
-        const i = Number.NaN, def = Number.NaN;
+        const i = Number.NaN;
+        const def = Number.NaN;
         try {
             toSafeInt(i, def);
-        } catch(err) {
+        } catch (err) {
             assert.equal(err.message, `Neither ${i} nor default value ${def} are parsable numbers.`);
         }
     });
@@ -61,13 +64,13 @@ describe('safe_int', () => {
         const i = Number.NaN;
         try {
             toSafeInt(i);
-        } catch(err) {
+        } catch (err) {
             assert.equal(err.message, `${i} is not a parsable number and default value not provided.`);
         }
     });
 
     it('Should use default value if given a non number', () => {
-        const i:any = [];
+        const i: any = [];
         const def = 55;
         const safeI = toSafeInt(<number>i, def);
 
@@ -75,7 +78,7 @@ describe('safe_int', () => {
     });
 
     it('Should throw an Error given a non number', () => {
-        const i:any = true;
+        const i: any = true;
 
         try {
             const safeI = toSafeInt(<number>i);

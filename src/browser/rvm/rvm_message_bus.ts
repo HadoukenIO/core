@@ -8,9 +8,10 @@ import { WMCopyData } from '../transport';
 import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
+import { Plugin } from '../../shapes';
 
-import { app }  from 'electron';
-const  _ = require('underscore');
+import { app } from 'electron';
+const _ = require('underscore');
 
 const processVersions = <any> process.versions;
 
@@ -77,6 +78,7 @@ type getShortcutStateAction = 'get-shortcut-state';
 type setShortcutStateAction = 'set-shortcut-state';
 type launchedFromAction = 'launched-from';
 type launchAppAction = 'launch-app';
+type pluginQueryAction = 'query-plugin';
 
 export interface LaunchApp extends RvmMsgBase {
     topic: applicationTopic;
@@ -125,6 +127,19 @@ export interface AppAssetsDownloadAsset extends RvmMsgBase {
     showRvmProgressDialog: boolean;
     asset: any;
     downloadId: string;
+}
+
+export interface PluginQuery extends RvmMsgBase {
+    topic: applicationTopic;
+    action: pluginQueryAction;
+    name: string;
+    version: string;
+    optional?: boolean;
+    sourceUrl: string;
+}
+
+export interface PluginQueryResponse extends RvmMsgBase {
+    payload: any;
 }
 
 // topic: cleanup -----
@@ -333,14 +348,34 @@ export class RVMMessageBus extends EventEmitter  {
                     if (_.has(this.messageIdToCallback, messageId)) {
                         this.messageIdToCallback[messageId]({
                             'time-to-live-expiration': timeToLiveInSeconds,
-                            'envelope': envelope
+                            envelope
                         });
                         delete this.messageIdToCallback[messageId];
                     }
                 }, timeToLiveInMS);
             }
         }
-    };
+    }
+
+    /**
+     * Retrieves information about a plugin
+     */
+    public getPluginInfo(manifestUrl: string, opts: Plugin): Promise<PluginQueryResponse> {
+        return new Promise((resolve) => {
+            const {name, version, optional} = opts;
+
+            const rvmMsg: PluginQuery = {
+                topic: 'application',
+                action: 'query-plugin',
+                name,
+                version,
+                optional,
+                sourceUrl: manifestUrl
+            };
+
+            this.publish(rvmMsg, resolve);
+        });
+    }
 }
 
 const rvmMessageBus = new RVMMessageBus();

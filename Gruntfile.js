@@ -24,7 +24,6 @@ limitations under the License.
 
 const fs = require('fs');
 const path = require('path');
-
 const asar = require('asar');
 const nativeBuilder = require('electron-rebuild');
 const wrench = require('wrench');
@@ -34,7 +33,7 @@ const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
 
 //optional dependencies that we ship.
 const optionalDependencies = [
-    'node-adapter/**',
+    'hadouken-js-adapter/**',
     'runtime-p2p/**'
 ];
 
@@ -52,33 +51,6 @@ try {
     openfinSign = function() {};
 }
 
-/**
- * A list of files that have already moved to TypeScript. This list will
- * slowly increase as more and more files are moved to TypeScript
- */
-const trans2TSFiles = [
-    'src/browser/api_protocol/api_handlers/clipboard.ts',
-    'src/browser/api_protocol/shapes.ts',
-    'src/browser/transports/base.ts',
-    'src/browser/transports/chromium_ipc.ts',
-    'src/browser/transports/electron_ipc.ts',
-    'src/browser/transports/wm_copydata.ts',
-    'src/browser/clip_bounds.ts',
-    'src/browser/deferred.ts',
-    'src/browser/cached_resource_fetcher.ts',
-    'src/browser/int_pool.ts',
-    'src/browser/log.ts',
-    'src/browser/of_events.ts',
-    'src/browser/session.ts',
-    'src/browser/transport.ts',
-    'src/browser/window_group_transaction_tracker.ts',
-    'src/common/**/*.ts',
-    'src/browser/port_discovery.ts',
-    'src/browser/api_protocol/**/*.ts',
-    'src/browser/rvm/rvm_message_bus.ts',
-    'src/browser/api/*.ts', // notifications subdirectory excluded due to legacy linting errors
-    'src/browser/rvm/runtime_initiated_topics/app_assets.ts'
-];
 
 // OpenFin commercial license
 const commercialLic = `/*
@@ -163,7 +135,13 @@ module.exports = (grunt) => {
                 force: false
             },
             files: {
-                src: trans2TSFiles
+                src: [
+                    'src/**/*.ts',
+                    '!src/browser/api/notifications/*.ts',
+                    '!src/**/*.d.ts',
+                    'test/**/*.ts',
+                    '!test/**/*.d.ts',
+                ]
             }
         },
 
@@ -379,6 +357,7 @@ module.exports = (grunt) => {
             'src/browser/rvm/utils.ts',
             'src/browser/external_window_event_adapter.js',
             'src/browser/connection_manager.ts',
+            'src/browser/plugins.ts',
             'src/browser/transport.ts',
             'src/browser/transports/socket_server.js',
             'src/browser/transports/wm_copydata.ts',

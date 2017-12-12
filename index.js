@@ -43,6 +43,7 @@ let socketServer = require('./src/browser/transports/socket_server').server;
 let authenticationDelegate = require('./src/browser/authentication_delegate.js');
 let convertOptions = require('./src/browser/convert_options.js');
 let coreState = require('./src/browser/core_state.js');
+let webRequestHandlers = require('./src/browser/web_request_handler.js');
 let errors = require('./src/common/errors.js');
 import ofEvents from './src/browser/of_events';
 import {
@@ -52,7 +53,8 @@ import {
 import {
     default as connectionManager,
     meshEnabled,
-    isMeshEnabled
+    getMeshUuid,
+    isMeshEnabledRuntime
 } from './src/browser/connection_manager';
 
 import * as log from './src/browser/log';
@@ -64,7 +66,6 @@ import route from './src/common/route';
 
 // locals
 let firstApp = null;
-let crashReporterEnabled = false;
 let rvmBus;
 let otherInstanceRunning = false;
 let appIsReady = false;
@@ -98,8 +99,10 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
         skipTaskbar: true,
         resizable: false,
         alwaysOnTop: true,
-        nodeIntegration: true,
-        openfinIntegration: false
+        webPreferences: {
+            nodeIntegration: true,
+            openfinIntegration: false
+        }
     });
 
     let ipcUuid = app.generateGUID();
@@ -136,12 +139,14 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
 portDiscovery.on('runtime/launched', (portInfo) => {
     //check if the ports match:
     const myPortInfo = coreState.getSocketServerState();
+    const myUuid = getMeshUuid();
+
     log.writeToLog('info', `Port discovery message received ${JSON.stringify(portInfo)}`);
 
-    //TODO: Include REALM in the determination.
-    if (meshEnabled && portInfo.port !== myPortInfo.port && isMeshEnabled(portInfo.options)) {
+    //TODO include old runtimes in the determination.
+    if (meshEnabled && portInfo.port !== myPortInfo.port && isMeshEnabledRuntime(portInfo)) {
 
-        connectionManager.connectToRuntime(`${myPortInfo.version}:${myPortInfo.port}`, portInfo).then((runtimePeer) => {
+        connectionManager.connectToRuntime(myUuid, portInfo).then((runtimePeer) => {
             //one connected we broadcast our port discovery message.
             staggerPortBroadcast(myPortInfo);
             log.writeToLog('info', `Connected to runtime ${JSON.stringify(runtimePeer.portInfo)}`);
@@ -248,6 +253,8 @@ app.on('ready', function() {
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
+    webRequestHandlers.initHandlers();
+
     launchApp(coreState.argo, true);
 
     registerShortcuts();
@@ -389,15 +396,14 @@ function includeFlashPlugin() {
 }
 
 function initializeCrashReporter(argo) {
-    if (!crashReporterEnabled && argo['enable-crash-reporting']) {
-        crashReporter.start({
-            productName: 'OpenFin',
-            companyName: 'OpenFin',
-            submitURL: 'https://dl.openfin.co/services/crash-report',
-            autoSubmit: true
-        });
-        crashReporterEnabled = true;
+    if (!isInDiagnosticsMode(argo)) {
+        return;
     }
+
+    const configUrl = argo['startup-url'] || argo['config'];
+    const diagnosticMode = argo['diagnostics'] || false;
+
+    crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
 }
 
 function rotateLogs(argo) {
@@ -499,6 +505,11 @@ function initServer() {
 //is essential for proper runtime startup and adapter connectivity. we want to split into smaller independent parts.
 //please see the discussion on https://github.com/openfin/runtime-core/pull/194
 function launchApp(argo, startExternalAdapterServer) {
+
+    if (isInDiagnosticsMode(argo)) {
+        log.setToVerbose();
+    }
+
     convertOptions.fetchOptions(argo, configuration => {
         const {
             configUrl,
@@ -506,36 +517,51 @@ function launchApp(argo, startExternalAdapterServer) {
             configObject: { licenseKey }
         } = configuration;
 
-        const openfinWinOpts = convertOptions.getWindowOptions(configObject);
-        const startUpApp = configObject.startup_app; /* jshint ignore:line */
-        const uuid = startUpApp && startUpApp.uuid;
-        const ofApp = Application.wrap(uuid);
-        const isRunning = Application.isRunning(ofApp);
+        coreState.setManifest(configUrl, configObject);
 
-        if (openfinWinOpts && !isRunning) {
-            //making sure that if a window is pressent we set the window name === to the uuid as per 5.0
-            openfinWinOpts.name = uuid;
-            initFirstApp(openfinWinOpts, configUrl, licenseKey);
-        } else if (uuid) {
-            Application.run({
-                uuid,
-                name: uuid
-            });
+        if (argo['user-app-config-args']) {
+            const tempUrl = configObject['startup_app'].url;
+            const delimiter = tempUrl.indexOf('?') < 0 ? '?' : '&';
+            configObject['startup_app'].url = `${tempUrl}${delimiter}${argo['user-app-config-args']}`;
         }
 
-        if (startExternalAdapterServer) {
+        const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
+        const uuid = startupAppOptions && startupAppOptions.uuid;
+        const ofApp = Application.wrap(uuid);
+        const ofManifestUrl = ofApp && ofApp._configUrl;
+        const isRunning = Application.isRunning(ofApp);
+
+        // this ensures that external connections that start the runtime can do so without a main window
+        let successfulInitialLaunch = true;
+
+        if (startupAppOptions && (!isRunning || ofManifestUrl !== configUrl)) {
+            //making sure that if a window is present we set the window name === to the uuid as per 5.0
+            startupAppOptions.name = uuid;
+            successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
+        } else if (uuid) {
+            Application.run({
+                    uuid,
+                    name: uuid
+                },
+                '',
+                argo['user-app-config-args']
+            );
+        }
+
+        if (startExternalAdapterServer && successfulInitialLaunch) {
             coreState.setStartManifest(configUrl, configObject);
             socketServer.start(configObject['websocket_port'] || 9696);
         }
 
         app.emit('synth-desktop-icon-clicked', {
             mouse: System.getMousePosition(),
-            tickCount: app.getTickCount()
+            tickCount: app.getTickCount(),
+            uuid
         });
     }, error => {
         log.writeToLog(1, error, true);
 
-        if (!coreState.argo['noerrdialog']) {
+        if (!coreState.argo['noerrdialogs']) {
             dialog.showErrorBox('Fatal Error', `${error}`);
         }
 
@@ -544,10 +570,17 @@ function launchApp(argo, startExternalAdapterServer) {
 }
 
 
-function initFirstApp(options, configUrl, licenseKey) {
+function initFirstApp(configObject, configUrl, licenseKey) {
+    let startupAppOptions;
+    let successfulLaunch = false;
+
     try {
+        startupAppOptions = convertOptions.getStartupAppOptions(configObject);
+
         // Needs proper configs
-        firstApp = Application.create(options, configUrl);
+        firstApp = Application.create(startupAppOptions, configUrl);
+
+        coreState.setLicenseKey({ uuid: startupAppOptions.uuid }, licenseKey);
 
         coreState.setLicenseKey({ uuid: options.uuid }, licenseKey);
 
@@ -555,10 +588,12 @@ function initFirstApp(options, configUrl, licenseKey) {
             uuid: firstApp.uuid
         });
 
-        // Emitted when the window is closed.
         firstApp.mainWindow.on('closed', function() {
             firstApp = null;
         });
+
+        successfulLaunch = true;
+
     } catch (error) {
         log.writeToLog(1, error, true);
 
@@ -570,9 +605,9 @@ function initFirstApp(options, configUrl, licenseKey) {
             });
         }
 
-        if (!coreState.argo['noerrdialog']) {
+        if (!coreState.argo['noerrdialogs']) {
             const srcMsg = error ? error.message : '';
-            const errorMessage = options.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
+            const errorMessage = startupAppOptions.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
 
             dialog.showErrorBox('Fatal Error', errorMessage);
         }
@@ -583,95 +618,54 @@ function initFirstApp(options, configUrl, licenseKey) {
             });
         }
     }
+
+    return successfulLaunch;
 }
 
 function registerShortcuts() {
-    const resetZoomShortcut = 'CommandOrControl+0';
-    const zoomInShortcut = 'CommandOrControl+=';
-    const zoomInShiftShortcut = 'CommandOrControl+Plus';
-    const zoomOutShortcut = 'CommandOrControl+-';
-    const zoomOutShiftShortcut = 'CommandOrControl+_';
-    const devToolsShortcut = 'CommandOrControl+Shift+I';
-    const reloadF5Shortcut = 'F5';
-    const reloadShiftF5Shortcut = 'Shift+F5';
-    const reloadCtrlRShortcut = 'CommandOrControl+R';
-    const reloadCtrlShiftRShortcut = 'CommandOrControl+Shift+R';
+    app.on('browser-window-focus', (event, browserWindow) => {
+        const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
+        const accelerator = windowOptions && windowOptions.accelerator || {};
+        const webContents = browserWindow.webContents;
 
-    let zoom = (zoomIn, reset = false) => {
-        return () => {
-            let browserWindow = BrowserWindow.getFocusedWindow();
-            let windowOptions = browserWindow && coreState.getWindowOptionsById(browserWindow.id);
+        if (accelerator.zoom) {
+            const zoom = increment => { return () => { webContents.send('zoom', { increment }); }; };
 
-            if (windowOptions && windowOptions.accelerator && windowOptions.accelerator.zoom) {
-                browserWindow.webContents.send('zoom', zoomIn, reset);
-            }
-        };
-    };
+            globalShortcut.register('CommandOrControl+0', zoom(0));
 
-    let reload = () => {
-        let browserWindow = BrowserWindow.getFocusedWindow();
-        let windowOptions = browserWindow && coreState.getWindowOptionsById(browserWindow.id);
+            globalShortcut.register('CommandOrControl+=', zoom(+1));
+            globalShortcut.register('CommandOrControl+Plus', zoom(+1));
 
-        if (windowOptions && windowOptions.accelerator && windowOptions.accelerator.reload) {
-            browserWindow.webContents.reload();
+            globalShortcut.register('CommandOrControl+-', zoom(-1));
+            globalShortcut.register('CommandOrControl+_', zoom(-1));
         }
-    };
 
-    let reloadIgnoringCache = () => {
-        let browserWindow = BrowserWindow.getFocusedWindow();
-        let windowOptions = browserWindow && coreState.getWindowOptionsById(browserWindow.id);
-
-        if (windowOptions && windowOptions.accelerator && windowOptions.accelerator.reloadIgnoringCache) {
-            browserWindow.webContents.reloadIgnoringCache();
+        if (accelerator.devtools) {
+            const devtools = () => { webContents.openDevTools(); };
+            globalShortcut.register('CommandOrControl+Shift+I', devtools);
         }
-    };
 
-    app.on('browser-window-focus', () => {
-        globalShortcut.register(resetZoomShortcut, zoom(undefined, true));
-        globalShortcut.register(zoomInShortcut, zoom(true));
-        globalShortcut.register(zoomInShiftShortcut, zoom(true));
-        globalShortcut.register(zoomOutShortcut, zoom(false));
-        globalShortcut.register(zoomOutShiftShortcut, zoom(false));
+        if (accelerator.reload) {
+            const reload = () => { webContents.reload(); };
+            globalShortcut.register('F5', reload);
+            globalShortcut.register('CommandOrControl+R', reload);
+        }
 
-        globalShortcut.register(devToolsShortcut, () => {
-            let browserWindow = BrowserWindow.getFocusedWindow();
-            let windowOptions = browserWindow && coreState.getWindowOptionsById(browserWindow.id);
-
-            if (windowOptions && windowOptions.accelerator && windowOptions.accelerator.devtools) {
-                browserWindow.webContents.openDevTools();
-            }
-        });
-
-        globalShortcut.register(reloadF5Shortcut, reload);
-        globalShortcut.register(reloadShiftF5Shortcut, reloadIgnoringCache);
-        globalShortcut.register(reloadCtrlRShortcut, reload);
-        globalShortcut.register(reloadCtrlShiftRShortcut, reloadIgnoringCache);
+        if (accelerator.reloadIgnoringCache) {
+            const reloadIgnoringCache = () => { webContents.reloadIgnoringCache(); };
+            globalShortcut.register('Shift+F5', reloadIgnoringCache);
+            globalShortcut.register('CommandOrControl+Shift+R', reloadIgnoringCache);
+        }
     });
 
-    const unhookShortcuts = (event, bw) => {
-        let browserWindow = BrowserWindow.getFocusedWindow();
-        const sourceWindowExists = bw && !bw.isDestroyed();
-        const focusedWindowExists = browserWindow && !browserWindow.isDestroyed();
-        let unhook = !focusedWindowExists;
-
-        if (focusedWindowExists && sourceWindowExists) {
-            unhook = browserWindow.id === bw.id;
-        }
-
-        if (unhook) {
-            globalShortcut.unregister(resetZoomShortcut);
-            globalShortcut.unregister(zoomInShortcut);
-            globalShortcut.unregister(zoomInShiftShortcut);
-            globalShortcut.unregister(zoomOutShortcut);
-            globalShortcut.unregister(zoomOutShiftShortcut);
-            globalShortcut.unregister(devToolsShortcut);
-            globalShortcut.unregister(reloadF5Shortcut);
-            globalShortcut.unregister(reloadShiftF5Shortcut);
-            globalShortcut.unregister(reloadCtrlRShortcut);
-            globalShortcut.unregister(reloadCtrlShiftRShortcut);
-        }
+    const unhookShortcuts = (event, browserWindow) => {
+        globalShortcut.unregisterAll();
     };
 
     app.on('browser-window-closed', unhookShortcuts);
     app.on('browser-window-blur', unhookShortcuts);
+}
+
+function isInDiagnosticsMode(argo) {
+    return !!(argo['diagnostics'] || argo['enable-crash-reporting']);
 }

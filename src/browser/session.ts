@@ -61,11 +61,8 @@ class Session extends EventEmitter {
 
         // Windows-only
         if (process.platform === 'win32') {
+            const bw = new BrowserWindow({ show: false });
             const WM_WTSSESSION_CHANGE = 0x02B1;
-
-            const bw = new BrowserWindow({
-                show: false
-            });
 
             // Listen to session changes using hidden Electron's browser window
             bw.hookWindowMessage(WM_WTSSESSION_CHANGE, wParam => {
@@ -129,7 +126,7 @@ class Session extends EventEmitter {
             topic: 'system',
             type: 'idle-state-changed'
         });
-    };
+    }
 }
 
 export default new Session();

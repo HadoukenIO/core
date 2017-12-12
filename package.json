@@ -20,9 +20,10 @@
   "homepage": "https://github.com/openfin/openfin",
   "optionalDependencies": {
     "openfin-sign": "git+ssh://git@github.com:openfin/openfin-sign.git#caee55ecbe6f81e6ed9630790781fe4d1835cb03",
-    "runtime-p2p": "git+ssh://git@github.com:openfin/runtime-p2p.git#2dc7945deac21ee5b632ed2dc8ba55efbbd343cf"
+    "runtime-p2p": "git+ssh://git@github.com:openfin/runtime-p2p.git#24c57c1770b1ae2896e544197e12cb688dbf6de2"
   },
   "devDependencies": {
+    "@types/minimist": "^1.2.0",
     "@types/mocha": "^2.2.39",
     "@types/mockery": "^1.4.29",
     "@types/node": "^6.0.49",
@@ -39,7 +40,7 @@
     "grunt-jsbeautifier": "^0.2.10",
     "grunt-mocha-test": "^0.13.2",
     "grunt-ts": "^5.5.1",
-    "grunt-tslint": "^4.0.1",
+    "grunt-tslint": "^5.0.1",
     "load-grunt-tasks": "^3.3.0",
     "mocha": "^3.0.2",
     "mockery": "^2.0.0",
@@ -47,8 +48,8 @@
     "should": "^11.1.0",
     "should-sinon": "^0.0.5",
     "sinon": "^1.17.5",
-    "tslint": "^4.5.1",
-    "tslint-microsoft-contrib": "^4.0.1",
+    "tslint": "^5.4.3",
+    "tslint-microsoft-contrib": "^5.0.0",
     "typescript": "~2.2.0",
     "wrench": "^1.5.9"
   },

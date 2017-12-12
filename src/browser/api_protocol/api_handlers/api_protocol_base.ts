@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { ExternalApplication } from '../../api/external_application';
-const SubscriptionManager = require('../../subscription_manager.js').SubscriptionManager;
+import SubscriptionManager from '../../subscription_manager';
 const WebSocketStrategy = require('../transport_strategy/ws_strategy').WebSocketStrategy;
 const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrategy;
 
 import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
-import { registerMiddleware as registerMeshMiddleware } from './mesh_middleware';
-import { meshEnabled } from '../../connection_manager';
 import { ApiPath, ApiFunc, EndpointSpec, ActionSpecMap, Endpoint, ActionMap } from '../shapes';
 
 export const actionMap: ActionMap = Object.create(null); // no prototype to avoid having to call hasOwnProperty()
@@ -73,7 +71,7 @@ export function registerActionMap(
                     }
                     apiPath = authorizationPathPrefix + apiPath;
                 } else if (apiPath.indexOf('.') < 0) {
-                    throw new Error('Expected "${apiPath}" to be an apiFunc (starts with dot) or an apiPath (contains dot)');
+                    throw new Error(`Expected "${apiPath}" to be an apiFunc (starts with dot) or an apiPath (contains dot)`);
                 }
                 endpoint.apiPath = apiPath;
             }

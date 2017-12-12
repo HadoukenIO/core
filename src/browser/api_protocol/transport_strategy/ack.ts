@@ -25,11 +25,12 @@ export class AckMessage {
 // ToDo following duplicated in src/shapes.ts
 
 export class AckPayload {
-    public success: true;
+    public success: boolean;
     public data?: any;
 
     constructor(data: any) {
         this.data = data;
+        this.success = true;
     }
 }
 
@@ -49,10 +50,6 @@ export class NackPayload {
     }
 }
 
-export interface AckFunc {
-    (payload: AckPayload | NackPayload): void;
-}
+export type AckFunc = (payload: AckPayload | NackPayload) => void;
 
-export interface NackFunc {
-    (error: string | Error): void;
-}
+export type NackFunc = (error: string | Error) => void;

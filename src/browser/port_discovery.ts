@@ -9,8 +9,11 @@ import { WMCopyData, ChromiumIPC } from './transport';
 import { EventEmitter } from 'events';
 import * as log from './log';
 import route from '../common/route';
+import { isMeshEnabled } from './connection_manager';
 
 const coreState = require('./core_state');
+
+
 const windowClassName = 'OPENFIN_ADAPTER_WINDOW';
 
 export interface ArgMap {
@@ -25,6 +28,7 @@ export interface PortInfo {
     requestedVersion?: string;
     securityRealm?: string;
     runtimeInformationChannel: string;
+    multiRuntime: boolean;
 }
 
 export class PortDiscovery extends EventEmitter {
@@ -56,6 +60,7 @@ export class PortDiscovery extends EventEmitter {
         const securityRealm = args['security-realm'];
         const runtimeInformationChannel = args['runtime-information-channel-v6'];
         const ver = <any>process.versions;
+        const multiRuntime = isMeshEnabled(args);
 
         const portDiscoveryPayload: PortInfo = {
             // tslint:disable
@@ -66,14 +71,15 @@ export class PortDiscovery extends EventEmitter {
             options: args,
             requestedVersion: versionKeyword,
             securityRealm,
-            runtimeInformationChannel
+            runtimeInformationChannel,
+            multiRuntime
         };
 
         return portDiscoveryPayload;
     }
 
     public broadcast = (portDiscoveryPayload: PortInfo): void => {
-	//we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
+    //we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
         const _copyDataTransport = this.constructCopyDataTransport();
 
         coreState.setSocketServerState(portDiscoveryPayload);

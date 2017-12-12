@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {app, resourceFetcher} from 'electron'; // Electron app
-import {stat, mkdir} from 'fs';
+import {app, net} from 'electron'; // Electron app
+import {stat, mkdir, writeFileSync, createWriteStream} from 'fs';
 import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
@@ -22,12 +22,14 @@ import {isURL, isURI, uriToPath} from '../common/regex';
 
 let appQuiting: Boolean = false;
 
+const fetchMap: Map<string, Promise<any>> = new Map();
+
 app.on('quit', () => { appQuiting = true; });
 
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
-export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): void {
+export async function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
     if (!fileUrl || typeof fileUrl !== 'string') {
         callback(new Error(`Bad file url: '${fileUrl}'`));
         return;
@@ -38,11 +40,15 @@ export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: 
     }
 
     if (!isURL(fileUrl)) {
+
+        // this is the case where file:///
         if (isURI(fileUrl)) {
             callback(null, uriToPath(fileUrl));
         } else {
+            // this is C:\whatever\
             stat(fileUrl, (err: null|Error) => {
                 if (err) {
+                    app.vlog(1, `cachedFetch invalid file url ${fileUrl}`);
                     callback(new Error(`Invalid file url: '${fileUrl}'`));
                 } else {
                     callback(null, fileUrl);
@@ -54,35 +60,91 @@ export function cachedFetch(appUuid: string, fileUrl: string, callback: (error: 
 
     const appCacheDir = getAppCacheDir(appUuid);
     const filePath = getFilePath(appCacheDir, fileUrl);
+    let err: Error;
 
-    stat(filePath, (err: null | Error) => {
-        if (err) {
-            if (!appQuiting) {
-                stat(appCacheDir, (err: null | Error) => {
-                    if (err) {
-                        if (!appQuiting) {
-                            mkdir(appCacheDir, () => {
-                                download(fileUrl, filePath, callback);
-                            });
-                        }
-                    } else {
-                        download(fileUrl, filePath, callback);
-                    }
-                });
+    app.vlog(1, `cachedFetch ${fileUrl} ${filePath}`);
+    if (fetchMap.has(filePath)) {
+        fetchMap.get(filePath).then(() => callback(null, filePath)).catch(callback);
+    } else {
+        const p = new Promise( async (resolve, reject) => {
+            try {
+                await prepDownloadLocation(appCacheDir);
+                await download(fileUrl, filePath);
+                callback(null, filePath);
+                resolve(filePath);
+            } catch (e) {
+                err = e;
+                app.vlog(1, `cachedFetch uuid ${appUuid} url ${fileUrl} file ${filePath} err ${e.message}`);
+                callback(err, filePath);
+                reject(err);
+            } finally {
+                fetchMap.delete(filePath);
             }
-        } else if (remoteFileIsYoungerThanCachedFile(fileUrl, filePath)) {
-            download(fileUrl, filePath, callback);
-        } else {
-            callback(null, filePath);
-        }
+        });
+        fetchMap.set(filePath, p);
+    }
+}
+
+function pathExists (location: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        stat(location, (err: null | Error) => {
+            if (err) {
+                resolve(false);
+            } else {
+                resolve(true);
+            }
+        });
     });
 }
 
-function remoteFileIsYoungerThanCachedFile(remoteUrl: string, cachedFilePath: string) {
-    //todo: make a RESTful HEAD request and if file at remoteUrl is missing, return false;
-    //todo: else if file at remoteUrl is younger than file at cachedFilePath, return true;
-    //todo: else return false
-    return true; //for now we are always fetching
+function makeDirectory(location: string) {
+    return new Promise((resolve, reject) => {
+        mkdir(location, (err: null | Error) => {
+            if (err) {
+                // EEXIST not an error
+                pathExists(location).then(value => value ? resolve() : reject(err))
+                    .catch(() => {
+                        app.vlog(1, `cachedFetch makeDirectory error ${err.message}`);
+                        reject(err);
+                    });
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
+let makingCacheDir = false;
+let makingAppDir = false;
+
+async function prepDownloadLocation(appCacheDir: string) {
+    const appCacheDirExists = await pathExists(appCacheDir);
+
+    if (appCacheDirExists) {
+        return;
+    }
+
+    const rootCachePath = getRootCachePath();
+    const cacheRootPathExists = await pathExists(rootCachePath);
+
+    if (!cacheRootPathExists && !makingCacheDir) {
+        makingCacheDir = true;
+        await makeDirectory(rootCachePath);
+        makingCacheDir = false;
+    }
+
+    if (!makingAppDir) {
+        makingAppDir = true;
+        await makeDirectory(appCacheDir);
+        makingAppDir = false;
+    }
+
+    return;
+}
+
+
+function getRootCachePath () {
+    return join(app.getPath('userData') , 'Cache');
 }
 
 /**
@@ -90,8 +152,8 @@ function remoteFileIsYoungerThanCachedFile(remoteUrl: string, cachedFilePath: st
  */
 function getAppCacheDir(appUuid: string): string {
     const appUuidHash = generateHash(appUuid);
-    const userDataDir = app.getPath('userData');
-    return join(userDataDir, 'Cache', appUuidHash);
+    const rootCachePath = getRootCachePath();
+    return join(rootCachePath, appUuidHash);
 }
 
 /**
@@ -117,17 +179,51 @@ function generateHash(str: string): string {
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(fileUrl: string, filePath: string, callback: (error: null|Error, filePath: string) => any): void {
-    const fetcher = new resourceFetcher('file');
+function download(fileUrl: string, filePath: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
+        const request = net.request(fileUrl);
+        const binaryWriteStream = createWriteStream(filePath, {
+            encoding: 'binary'
+        });
 
-    fetcher.once('fetch-complete', (event: string, status: string) => {
-        if (status === 'success') {
-            callback(null, filePath);
-        } else {
-            callback(new Error(`Failed to download file from ${fileUrl}`), filePath);
-        }
+        request.once('response', (response: any) => {
+            const { statusCode } = response;
+            app.vlog(1, `cachedFetch download status ${filePath} ${statusCode} `);
+
+            response.setEncoding('binary');
+            response.on('data', (chunk: any) => {
+                binaryWriteStream.write(chunk, 'binary');
+            });
+            response.once('error', (err: Error) => {
+                reject(err);
+            });
+            response.on('end', () => {
+                binaryWriteStream.once('close', () => {
+                    resolve();
+                });
+                binaryWriteStream.once('error', (err: Error) => {
+                    reject(err);
+                });
+                binaryWriteStream.end();
+
+                if (!expectedStatusCode.test(statusCode)) {
+                    const error = new Error(`Failed to download resource. Status code: ${statusCode}`);
+                    reject(error);
+                }
+            });
+        });
+
+        request.once('login', (authInfo: any, callback: Function) => {
+            //Simply provide empty credentials to raise the authentication error.
+            //https://github.com/rdepena/electron/blob/master/docs/api/client-request.md#event-login
+            callback();
+        });
+
+        request.once('error', (err: Error) => {
+            reject(err);
+        });
+
+        request.end();
     });
-
-    fetcher.setFilePath(filePath);
-    fetcher.fetch(fileUrl);
 }

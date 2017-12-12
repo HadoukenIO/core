@@ -10,25 +10,21 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 
 // built-in modules
-declare let process: any;
+declare const process: any;
 import { EventEmitter } from 'events';
-import { Identity } from './api_protocol/transport_strategy/api_transport_base';
-import { ArgMap, PortInfo } from './port_discovery';
 
 // npm modules
 // (none)
 
 // local modules
-const coreState = require('./core_state');
+import { Identity } from './api_protocol/transport_strategy/api_transport_base';
+import { ArgMap, PortInfo } from './port_discovery';
 import * as log from './log';
+import * as  coreState from './core_state';
 
-//TODO: pre-release flag, this will go away once we release multi runtime.
-const multiRuntimeCommandLineFlag = 'enable-multi-runtime';
-const enableMeshCommandLineFlag = 'enable-mesh';
+const enableMeshFlag = 'enable-mesh';
 const securityRealmFlag = 'security-realm';
 
-//TODO: pre-release flag, this will go away once we release multi runtime
-const multiRuntimeEnabled = coreState.argo[multiRuntimeCommandLineFlag];
 let connectionManager: any;
 let meshEnabled = false;
 
@@ -55,15 +51,15 @@ function buildNoopConnectionManager() {
     connectionManager.resolveIdentity = () => {
         return new Promise((resolve, reject) => {
             reject();
-        })
+        });
     };
 
     connectionManager.connections = [];
 }
 
-function isMeshEnabled(args: ArgMap) {
+function isMeshEnabled(args: ArgMap = {}) {
     let enabled = false;
-    const enableMesh = args[enableMeshCommandLineFlag];
+    const enableMesh = args[enableMeshFlag];
     const securityRealm = args[securityRealmFlag];
 
     if (!securityRealm || enableMesh) {
@@ -73,10 +69,23 @@ function isMeshEnabled(args: ArgMap) {
     return enabled;
 }
 
-if (multiRuntimeEnabled && isMeshEnabled(coreState.argo)) {
+function isMeshEnabledRuntime(portInfo: PortInfo) {
+    return portInfo.multiRuntime === true;
+}
+
+function keyFromPortInfo(portInfo: PortInfo): string {
+    const { version, port, securityRealm = '' } = portInfo;
+    return `${version}/${port}/${securityRealm}`;
+}
+
+if (isMeshEnabled(coreState.argo)) {
     startConnectionManager();
 }
 
+function getMeshUuid(): string {
+    const portInfo = <PortInfo>coreState.getSocketServerState();
+    return keyFromPortInfo(portInfo);
+}
 /*
   Note that these should match the definitions found here:
   https://github.com/openfin/runtime-p2p/blob/master/src/connection_manager.ts
@@ -86,7 +95,6 @@ interface PeerRuntime {
     portInfo: PortInfo;
     fin: any;
     isDisconnected: boolean;
-    identity: Identity;
 }
 
 interface IdentityAddress {
@@ -101,6 +109,5 @@ interface ConnectionManager extends EventEmitter {
     resolveIdentity(identity: Identity): Promise<IdentityAddress>;
 }
 
-
-export default connectionManager as ConnectionManager;
-export { meshEnabled, PeerRuntime, isMeshEnabled };
+export default <ConnectionManager>connectionManager;
+export { meshEnabled, PeerRuntime, isMeshEnabled, keyFromPortInfo, getMeshUuid, isMeshEnabledRuntime };

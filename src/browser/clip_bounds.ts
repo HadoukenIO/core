@@ -13,15 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { BrowserWindow } from 'electron';
-import { WindowBounds } from '../shapes';
+import { BrowserWindow, Rectangle } from 'electron';
 
 export default clipBounds;
 
 /**
  * Clip width and height values to be within allowed maximum
  */
-function clipBounds(bounds: WindowBounds, browserWindow: BrowserWindow): WindowBounds {
+function clipBounds(bounds: Rectangle, browserWindow: BrowserWindow): Rectangle {
     if (!('_options' in browserWindow)) {
         return bounds;
     }

@@ -27,6 +27,14 @@ const apiMessagesToIgnore: any = {
     'subscribe-to-desktop-event': true,
     'unsubscribe-to-desktop-event': true
 };
+
+const apiMessagesToAggregate: any = {
+    'get-all-windows': true,
+    'get-all-applications': true,
+    'get-all-external-applications': true,
+    'process-snapshot': true
+};
+
 //TODO: This is a workaround for a circular dependency issue in the api handler modules.
 const subscriberTriggeredEvents: any = {
     'subscribe': true,
@@ -78,9 +86,7 @@ function publishMiddleware(msg: MessagePackage, next: () => void) {
     if (data.action === PUBLISH_ACTION && !identity.runtimeUuid) {
 
         connectionManager.connections.forEach((peer: any) => {
-            peer.fin.System.executeOnRemote(identity, data)
-            .then(ack)
-            .catch(nack);
+            peer.fin.System.executeOnRemote(identity, data);
         });
     }
     next();
@@ -150,11 +156,39 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
+function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: object) => void) {
+    const { identity, data, ack, nack } = msg;
+    const action = data && data.action;
+    const isAggregateAction = apiMessagesToAggregate[action];
+    //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
+    const isLocalAction = !identity.runtimeUuid;
+
+    try {
+        if (connectionManager.connections.length && isAggregateAction && isLocalAction) {
+            Promise.all(connectionManager.connections.map(runtime => runtime.fin.System.executeOnRemote(identity, data)))
+            .then(externalResults => {
+                const externalRuntimeData = externalResults.reduce((result, runtime) => [...result, ...runtime.data], []);
+                const locals = { aggregate: externalRuntimeData };
+                next(locals);
+            })
+            .catch(nack);
+        } else {
+            next();
+        }
+
+    } catch (e) {
+        log.writeToLog('info', e);
+        next();
+    }
+
+}
+
 function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): void {
     requestHandler.addPreProcessor(subscriberEventMiddleware);
     requestHandler.addPreProcessor(publishMiddleware);
     requestHandler.addPreProcessor(sendMessageMiddleware);
     requestHandler.addPreProcessor(ferryActionMiddleware);
+    requestHandler.addPreProcessor(aggregateFromExternalRuntime);
 }
 
 export { registerMiddleware };
