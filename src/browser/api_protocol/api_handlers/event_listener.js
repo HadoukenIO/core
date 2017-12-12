@@ -40,12 +40,6 @@ const successAck = {
     success: true
 };
 
-function isBrowserClient(uuid) {
-    return connectionManager.connections.map((conn) => {
-        return conn.portInfo.version + ':' + conn.portInfo.port;
-    }).filter((id) => id === uuid).length > 0;
-}
-
 function EventListenerApiHandler() {
     const eventListenerActionMap = {
         'subscribe-to-desktop-event': subToDesktopEvent,

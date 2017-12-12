@@ -57,9 +57,9 @@ export function sendToRVM(opts: SendToRVMOpts): Promise<any> {
 
             // Prepare a clean response for the user
             let payload = Object.assign({}, rvmResponse.payload);
-            delete payload['action'];
-            delete payload['status'];
-            delete payload['error'];
+            delete payload.action;
+            delete payload.status;
+            delete payload.error;
             if (Object.keys(payload).length === 0) {
                 payload = undefined;
             }

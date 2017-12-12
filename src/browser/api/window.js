@@ -1120,14 +1120,6 @@ Window.getAbsolutePath = function(identity, path) {
 };
 
 
-Window.getAbsolutePath = function(identity, path) {
-    let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
-    let windowURL = browserWindow.webContents.getURL();
-
-    return (path || path === 0) ? url.resolve(windowURL, path) : '';
-};
-
-
 Window.getNativeId = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
 
@@ -1727,11 +1719,6 @@ Window.setZoomLevel = function(identity, level) {
 
     // browserWindow.webContents.setZoomLevel(level); // zooms all windows loaded from same domain
     browserWindow.webContents.send('zoom', { level }); // zoom just this window
-};
-
-Window.onUnload = (identity) => {
-    ofEvents.emit(route.window('unload', identity.uuid, identity.name, false), identity);
-    ofEvents.emit(route.window('init-subscription-listeners'), identity);
 };
 
 Window.onUnload = (identity) => {

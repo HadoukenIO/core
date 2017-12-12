@@ -582,8 +582,6 @@ function initFirstApp(configObject, configUrl, licenseKey) {
 
         coreState.setLicenseKey({ uuid: startupAppOptions.uuid }, licenseKey);
 
-        coreState.setLicenseKey({ uuid: options.uuid }, licenseKey);
-
         Application.run({
             uuid: firstApp.uuid
         });

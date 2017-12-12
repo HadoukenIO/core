@@ -26,10 +26,6 @@ export const actionMap: ActionMap = Object.create(null); // no prototype to avoi
 
 const requestHandler = new RequestHandler<MessagePackage>();
 
-if (meshEnabled) {
-    registerMeshMiddleware(requestHandler);
-}
-
 // add the handler + create with action map
 const webSocketStrategy = new WebSocketStrategy(actionMap, requestHandler);
 const elipcStrategy = new ElipcStrategy(actionMap, requestHandler);
