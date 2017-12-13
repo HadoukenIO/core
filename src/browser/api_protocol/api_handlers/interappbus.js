@@ -189,6 +189,17 @@ function InterApplicationBusApiHandler() {
             iabIdentity.uuid,
             iabIdentity.name,
             subScriptionTypes.SUB_REMOVED);
+
+        ofEvents.once(route.window('unload', iabIdentity.uuid, iabIdentity.name, false), () => {
+            apiProtocolBase.removeSubscription(iabIdentity,
+                iabIdentity.uuid,
+                iabIdentity.name,
+                subScriptionTypes.SUB_ADDED);
+            apiProtocolBase.removeSubscription(iabIdentity,
+                iabIdentity.uuid,
+                iabIdentity.name,
+                subScriptionTypes.SUB_REMOVED);
+        });
     }
 
 
