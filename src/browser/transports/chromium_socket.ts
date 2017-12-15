@@ -15,19 +15,19 @@ import * as nodeNet from 'net';
 
 interface RequestProtocol {
     port: number;
-    proxyProtocol: string; // protocol that proxy socket should be accessed with
+    secureProtocol?: string; // secure version of the protocol
     chromiumProtocol?: string; // protocol Chromium network layer should use to create connection
 }
 
 const ProtocolMap: { [index: string]: RequestProtocol } = {
     // tslint:disable-next-line:no-http-string
-    'rtmp:' :  { port: 1935, proxyProtocol: 'rtmp:', chromiumProtocol: 'http:'},
+    'rtmp:' :  { port: 1935, secureProtocol: 'rtmps:',  chromiumProtocol: 'http:'},
     // tslint:disable-next-line:no-http-string
-    'rtmps:' : { port: 443,  proxyProtocol: 'rtmp:', chromiumProtocol: 'https:'},
+    'rtmps:' : { port: 443,  chromiumProtocol: 'https:'},
     // tslint:disable-next-line:no-http-string
-    'http:' : { port: 80,  proxyProtocol: 'http:' },
+    'http:' : { port: 80,  secureProtocol: 'https:'},
     // tslint:disable-next-line:no-http-string
-    'https:' : { port: 443,  proxyProtocol: 'http:'}
+    'https:' : { port: 443 }
 };
 
 enum ProxyEventType {
@@ -51,7 +51,7 @@ const requestMap: { [url: string]: any } = {};  // map of URL to net.request
 
 export interface CreateProxyResponse {
     success: boolean;
-    data?: {localPort: number, proxyUrl: string}; // port# on localhost
+    data?: {port: number, originalUrl: string}; // port# on localhost
 }
 
 export interface CreateProxyRequest {
@@ -70,10 +70,16 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
     const originalUrl: Url = parseUrl(req.url);
     const mappedUrl: Url = parseUrl(req.url);
     if (ProtocolMap.hasOwnProperty(originalUrl.protocol)) {
-        if (ProtocolMap[originalUrl.protocol].chromiumProtocol) {
-            mappedUrl.protocol = ProtocolMap[originalUrl.protocol].chromiumProtocol;
-            // setting mappedUrl.port does not work.  Have to append to host
-            mappedUrl.host = originalUrl.host + ':' + ProtocolMap[originalUrl.protocol].port;
+        const reqProtocol: RequestProtocol = ProtocolMap[originalUrl.protocol];
+        if (reqProtocol.chromiumProtocol) {
+            mappedUrl.protocol = reqProtocol.chromiumProtocol;
+            // in case of http://host:443/...   Yes, it does happen
+            if (originalUrl.port === '443' && reqProtocol.secureProtocol) {
+                log.writeToLog(1, `applying secure protocol: ${reqProtocol.secureProtocol}`, true);
+                if (ProtocolMap.hasOwnProperty(reqProtocol.secureProtocol)) {
+                    mappedUrl.protocol = ProtocolMap[reqProtocol.secureProtocol].chromiumProtocol;
+                }
+            }
         }
     }
     const url: string = formatUrl(mappedUrl);
@@ -94,11 +100,8 @@ export function createChromiumSocket(req: CreateProxyRequest): void {
                 request.closeSocket();
             }
             if (event.eventType === ProxyEventType.Listening) {
-                const proxyUrl: Url = parseUrl(req.url);
-                proxyUrl.protocol = ProtocolMap[originalUrl.protocol].proxyProtocol;
                 // setting mappedUrl.port does not work.  Have to append to host
-                proxyUrl.host = 'localhost:' + event.payload;
-                req.callback({success: true, data: {localPort: event.payload, proxyUrl: formatUrl(proxyUrl)}});
+                req.callback({success: true, data: {port: event.payload, originalUrl: formatUrl(originalUrl)}});
             }
         }, response);
     });
