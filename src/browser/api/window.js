@@ -299,13 +299,6 @@ let optionSetters = {
         browserWin.setResizable(resizeBool);
         setOptOnBrowserWin('resizable', resizeBool, browserWin);
     },
-    resizeSides: function(newVal, browserWin) {
-        if (typeof newVal !== 'string') {
-            return;
-        }
-        browserWin.setResizeSides(newVal);
-        setOptOnBrowserWin('resizeSides', newVal, browserWin);
-    },
     icon: function(newVal, browserWin) {
         if (typeof newVal !== 'string') {
             return;
@@ -330,20 +323,23 @@ let optionSetters = {
         setTaskbarIcon(browserWin, getWinOptsIconUrl(browserWin._options));
     },
     resizeRegion: function(newVal, browserWin) {
-        if (!newVal || typeof newVal.size !== 'number' || typeof newVal.bottomRightCorner !== 'number') {
-            return;
-        }
+        if (newVal ) {
+            if ( typeof newVal.size === 'number' && typeof newVal.cls === 'number') {
+
 
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-            if (!browserWin.isDestroyed()) {
-                let frame = getOptFromBrowserWin('frame', browserWin, true);
-                if (!frame) {
-                    browserWin.setResizeRegion(newVal.size);
-                    browserWin.setResizeRegionBottomRight(newVal.bottomRightCorner);
-                }
+            if (!browserWin.isDestroyed()) {let frame = getOptFromBrowserWin('frame', browserWin, true);
+            if (!frame) {
+                browserWin.setResizeRegion(newVal.size);
+                browserWin.setResizeRegionBottomRight(newVal.bottomRightCorner);}
             }
         });
-        setOptOnBrowserWin('resizeRegion', newVal, browserWin);
+        }
+            if (typeof newVal.sides === 'string') {
+                applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
+                    browserWin.setResizeSides(newVal.sides);
+                });
+            }setOptOnBrowserWin('resizeRegion', newVal, browserWin);}
     },
     hasLoaded: function(newVal, browserWin) {
         if (typeof(newVal) === 'boolean') {
@@ -1965,6 +1961,9 @@ function applyAdditionalOptionsToWindow(browserWindow) {
                 browserWindow.setResizeRegion(options.resizeRegion.size);
                 browserWindow.setResizeRegionBottomRight(options.resizeRegion.bottomRightCorner);
             }
+        }
+        if (options.resizeRegion.sides) {
+            browserWindow.setResizeSides(options.resizeRegion.sides);
         }
     });
 }

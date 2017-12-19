@@ -96,9 +96,9 @@ function five0BaseOptions() {
         'resize': true,
         'resizeRegion': {
             'bottomRightCorner': DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
-            'size': DEFAULT_RESIZE_REGION_SIZE
+            'size': DEFAULT_RESIZE_REGION_SIZE,
+            'sides': ''
         },
-        'resizeSides': '',
         'saveWindowState': true,
         'shadow': false,
         'showTaskbarIcon': true,

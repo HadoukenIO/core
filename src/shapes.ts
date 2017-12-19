@@ -213,6 +213,7 @@ export interface WindowOptions {
     resizeRegion?: {
         bottomRightCorner: number;
         size: number;
+        sides?: string;
     };
     saveWindowState?: boolean;
     shadow?: boolean;
