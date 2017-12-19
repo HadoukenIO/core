@@ -219,9 +219,7 @@ exports.System = {
 
     },
     createProxySocket: function(options, callback, errorCallback) {
-        const url = options && options.url;
-        electronApp.vlog(1, `createProxySocket ${url}`);
-        createChromiumSocket({ url, dataSocket: true, callback, errorCallback });
+        createChromiumSocket(Object.assign({}, options, { callback, errorCallback }));
     },
     authenticateProxySocket: function(options) {
         const url = options && options.url;
