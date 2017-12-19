@@ -49,7 +49,7 @@ export function validateNavigationRules(uuid: string, url: string, parentUuid: s
     } else if (parentUuid) {
         electronApp.vlog(1, `validateNavigationRules app ${uuid} check parent ${parentUuid}`);
         const parentObject = coreState.appByUuid(parentUuid);
-        if (parentObject) {
+        if (parentObject && parentObject.isRunning) {
             const parentOpts = parentObject.appObj._options;
             isAllowed = validateNavigationRules(uuid, url, parentObject.parentUuid, parentOpts);
         } else {
