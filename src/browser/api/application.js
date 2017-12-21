@@ -348,7 +348,7 @@ Application.grantWindowAccess = function() {
 };
 Application.isRunning = function(identity) {
     let uuid = identity && identity.uuid;
-    return uuid && coreState.getAppRunningState(uuid) && !coreState.getAppRestartingState(uuid);
+    return !!(uuid && coreState.getAppRunningState(uuid) && !coreState.getAppRestartingState(uuid));
 };
 Application.pingChildWindow = function() {
     console.warn('Deprecated');
