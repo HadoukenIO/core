@@ -657,7 +657,9 @@ function registerShortcuts() {
     });
 
     const unhookShortcuts = (event, browserWindow) => {
-        globalShortcut.unregisterAll();
+        if (!globalShortcut.isDestroyed()) {
+            globalShortcut.unregisterAll();
+        }
     };
 
     app.on('browser-window-closed', unhookShortcuts);
