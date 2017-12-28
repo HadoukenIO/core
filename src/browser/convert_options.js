@@ -236,11 +236,10 @@ module.exports = {
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
+            disableInitialReload: newOptions.experimental.disableInitialReload
             nodeIntegration: false,
             plugins: newOptions.plugins
         };
-
-        newOptions.webPreferences.disableInitialReload = newOptions.experimental.disableInitialReload;
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
             newOptions.webPreferences.webSecurity = false;
