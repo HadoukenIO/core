@@ -71,7 +71,7 @@ function five0BaseOptions() {
         'disableIabSecureLogging': false,
         'draggable': false,
         'exitOnClose': false,
-        'expiremental': {
+        'experimental': {
             'v2Api': false
         },
         'frame': true,
