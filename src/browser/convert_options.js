@@ -236,7 +236,7 @@ module.exports = {
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
-            disableInitialReload: newOptions.experimental.disableInitialReload
+            disableInitialReload: newOptions.experimental.disableInitialReload,
             nodeIntegration: false,
             plugins: newOptions.plugins
         };
