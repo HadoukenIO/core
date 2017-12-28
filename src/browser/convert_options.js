@@ -242,7 +242,7 @@ module.exports = {
 
         // v2Api Fallback for incorrect spelling
         let ex = newOptions.expiremental || { v2Api: false };
-        newOptions.experimental.v2Api = ex.v2Api || false;
+        newOptions.experimental.v2Api = ex.v2Api || newOptions.experimental.v2Api;
 
         newOptions.webPreferences.disableInitialReload = newOptions.experimental.disableInitialReload;
 
