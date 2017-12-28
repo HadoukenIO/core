@@ -71,7 +71,8 @@ function five0BaseOptions() {
         'disableIabSecureLogging': false,
         'draggable': false,
         'exitOnClose': false,
-        'expiremental': {
+        'experimental': {
+            'disableInitialReload': false,
             'v2Api': false
         },
         'frame': true,
@@ -238,6 +239,12 @@ module.exports = {
             nodeIntegration: false,
             plugins: newOptions.plugins
         };
+
+        // v2Api Fallback for incorrect spelling
+        let ex = newOptions.expiremental || { v2Api: false };
+        newOptions.experimental.v2Api = ex.v2Api || false;
+
+        newOptions.webPreferences.disableInitialReload = newOptions.experimental.disableInitialReload;
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
             newOptions.webPreferences.webSecurity = false;
