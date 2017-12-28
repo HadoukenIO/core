@@ -1650,7 +1650,9 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
     });
 
     const currentMenu = Menu.buildFromTemplate(menuTemplate);
-    currentMenu.popup(browserWindow);
+    currentMenu.popup(browserWindow, {
+        async: true
+    });
 };
 
 Window.defineDraggableArea = function() {};
