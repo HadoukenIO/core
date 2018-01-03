@@ -49,6 +49,7 @@ function SystemApiHandler() {
     };
 
     let SystemApiHandlerMap = {
+        'resource-fetch-authenticate': { apiFunc: authenticateResourceFetch },
         'clear-cache': { apiFunc: clearCache, apiPath: '.clearCache' },
         'convert-options': convertOptions,
         'delete-cache-request': deleteCacheRequest, // apiPath: '.deleteCacheOnRestart' -> deprecated
@@ -556,6 +557,13 @@ function SystemApiHandler() {
             })
             .catch(nack);
     }
+
+    function authenticateResourceFetch(identity, message, ack) {
+        let dataAck = _.clone(successAck);
+        dataAck.data = System.authenticateResourceFetch(identity, message.payload);
+        ack(dataAck);
+    }
+
 }
 
 module.exports.SystemApiHandler = SystemApiHandler;

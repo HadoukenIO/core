@@ -25,7 +25,8 @@ function addPendingAuthRequests(identity, authInfo, authCallback) {
     } = identity;
     pendingAuthRequests.set(`${uuid}-${name}`, {
         authInfo,
-        authCallback
+        authCallback,
+        identity
     });
 }
 
@@ -51,8 +52,9 @@ function createAuthUI(identity) {
     let appId = `${appIdPrefix}-${electronApp.generateGUID()}`;
     let uriUuid = encodeURIComponent(identity.uuid);
     let uriName = encodeURIComponent(identity.name);
+    const resourceFetch = identity.resourceFetch || false;
     Application.create({
-        url: `file:///${__dirname}/../login/index.html?uuid=${uriUuid}&name=${uriName}`,
+        url: `file:///${__dirname}/../login/index.html?uuid=${uriUuid}&name=${uriName}&resourceFetch=${resourceFetch}`,
         uuid: appId,
         name: appId,
         mainWindowOptions: {
@@ -64,7 +66,8 @@ function createAuthUI(identity) {
             defaultCentered: true,
             defaultTop: true,
             frame: false
-        }
+        },
+        runtimeAuthDialog: true // skip checks for shouldCloseRuntime
     });
 
     Application.run({
