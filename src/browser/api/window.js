@@ -1873,7 +1873,9 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
                     // TODO: Refactor to also use 'ready-to-show'
                 } else {
                     setTimeout(() => {
-                        callback();
+                        if (!browserWindow.isDestroyed()) {
+                            callback();
+                        }
                     }, 1);
                 }
             }
