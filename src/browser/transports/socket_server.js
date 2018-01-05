@@ -134,6 +134,11 @@ let Server = function() {
             uuid
         });
     };
+
+    me.isConnectionOpen = function(id) {
+        const socket = activeConnections[id];
+        return typeof socket === 'object' && socket.readyState === socket.OPEN;
+    };
 };
 
 util.inherits(Server, EventEmitter);
