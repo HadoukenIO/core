@@ -324,7 +324,7 @@ let optionSetters = {
     },
     resizeRegion: function(newVal, browserWin) {
         if (newVal ) {
-            if ( typeof newVal.size === 'number' && typeof newVal.cls === 'number') {
+            if ( typeof newVal.size === 'number' && typeof newVal.bottomRightCorner === 'number') {
 
 
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
@@ -1962,9 +1962,7 @@ function applyAdditionalOptionsToWindow(browserWindow) {
                 browserWindow.setResizeRegionBottomRight(options.resizeRegion.bottomRightCorner);
             }
         }
-        if (options.resizeRegion.sides) {
-            browserWindow.setResizeSides(options.resizeRegion.sides);
-        }
+        browserWindow.setResizeSides(options.resizeRegion.sides);
     });
 }
 
