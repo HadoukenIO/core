@@ -185,6 +185,12 @@ let optionSetters = {
             // reapply top-left icon
             setTaskbar(browserWin, true);
         }
+        applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
+            let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
+                sides: ''
+            });
+            browserWin.setResizeSides(resizeRegion.sides);
+        });
     },
     alphaMask: function(newVal, browserWin) {
         if (!newVal || typeof newVal.red !== 'number' || typeof newVal.green !== 'number' || typeof newVal.blue !== 'number') {
