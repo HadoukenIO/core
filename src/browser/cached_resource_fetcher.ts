@@ -178,6 +178,19 @@ function generateHash(str: string): string {
     return hash.digest('hex');
 }
 
+function authRequest(url: string, authInfo: any, authCallback: Function): void {
+    const uuid: string = app.generateGUID();
+    const identity = {
+        name: uuid,
+        uuid: uuid,
+        resourceFetch: true // not tied to a window
+    };
+    log.writeToLog(1, `fetchURL login event ${url} uuid ${uuid} ${JSON.stringify(authInfo)}`, true);
+    authMap.set(uuid, authCallback);
+    authenticationDelegate.addPendingAuthRequests(identity, authInfo, authCallback);
+    authenticationDelegate.createAuthUI(identity);
+}
+
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
@@ -215,10 +228,8 @@ function download(fileUrl: string, filePath: string): Promise<any> {
             });
         });
 
-        request.once('login', (authInfo: any, callback: Function) => {
-            //Simply provide empty credentials to raise the authentication error.
-            //https://github.com/rdepena/electron/blob/master/docs/api/client-request.md#event-login
-            callback();
+        request.on('login', (authInfo: any, callback: Function) => {
+            authRequest(filePath, authInfo, callback);
         });
 
         request.once('error', (err: Error) => {
@@ -259,19 +270,7 @@ export function fetchURL(url: string, done: (resp: any) => void, onError: (err: 
         });
     });
     request.on('login', (authInfo: any, callback: Function) => {
-        //Simply provide empty credentials to raise the authentication error.
-        //https://github.com/electron/blob/master/docs/api/client-request.md#event-login
-        const uuid: string = app.generateGUID();
-        const identity = {
-            name: uuid,
-            uuid: uuid,
-            resourceFetch: true // not tied to a window
-        };
-        log.writeToLog(1, `fetchURL login event ${url} uuid ${uuid}`, true);
-        authMap.set(uuid, callback);
-        authenticationDelegate.addPendingAuthRequests(identity, authInfo, callback);
-        authenticationDelegate.createAuthUI(identity);
-//        callback();
+        authRequest(url, authInfo, callback);
     });
     request.once('error', (err: Error) => {
         onError(err);
