@@ -81,7 +81,7 @@ function downloadScript(identity: Identity, preloadScript: PreloadScript): Promi
 export async function loadScripts(identity: Identity): Promise<PreloadScriptWithContent[]|any> {
     const options = Window.getOptions(identity);
     const { preloadScripts = [] }: {preloadScripts: Array<PreloadScript>} = convertToElectron(options);
-    const promises =  preloadScripts.map((preloadScript: PreloadScript) => loadScript(identity, preloadScript));
+    const promises = preloadScripts.map((preloadScript: PreloadScript) => loadScript(identity, preloadScript));
     return await Promise.all(promises);
 }
 
