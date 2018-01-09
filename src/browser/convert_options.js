@@ -72,6 +72,7 @@ function five0BaseOptions() {
         'draggable': false,
         'exitOnClose': false,
         'experimental': {
+            'disableInitialReload': false,
             'v2Api': false
         },
         'frame': true,
@@ -235,6 +236,7 @@ module.exports = {
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
+            disableInitialReload: newOptions.experimental.disableInitialReload,
             nodeIntegration: false,
             plugins: newOptions.plugins
         };
