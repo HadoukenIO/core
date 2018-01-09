@@ -27,6 +27,18 @@ limitations under the License.
     let glbl = global;
 
     const electron = require('electron');
+
+    if (global.shouldStartCrashReporter) {
+        try {
+            const crashReporter = electron.crashReporter;
+            crashReporter.startOFCrashReporter({ configUrl: global.configUrl });
+        } catch (e) {
+            console.log(e);
+            console.log('For the crash reporter to connect successfully, please ensure' +
+                ' "--no-sandbox" is present in the app\'s config');
+        }
+    }
+
     const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
     const ipc = electron.ipcRenderer;
 
