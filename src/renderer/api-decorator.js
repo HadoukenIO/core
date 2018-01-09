@@ -33,8 +33,8 @@ limitations under the License.
             const crashReporter = electron.crashReporter;
             crashReporter.startOFCrashReporter({ configUrl: global.configUrl });
         } catch (e) {
-            console.log(e);
-            console.log('For the crash reporter to connect successfully, please ensure' +
+            console.warn(e);
+            console.warn('For the crash reporter to connect successfully, please ensure' +
                 ' "--no-sandbox" is present in the app\'s config');
         }
     }
