@@ -34,7 +34,8 @@ import { fetchURL } from './cached_resource_fetcher';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
-    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
+    DEFAULT_RESIZE_SIDES
 } from '../shapes';
 const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 
@@ -97,7 +98,7 @@ function five0BaseOptions() {
         'resizeRegion': {
             'bottomRightCorner': DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
             'size': DEFAULT_RESIZE_REGION_SIZE,
-            'sides': ''
+            'sides': DEFAULT_RESIZE_SIDES
         },
         'saveWindowState': true,
         'shadow': false,

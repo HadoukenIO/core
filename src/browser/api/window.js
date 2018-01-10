@@ -52,7 +52,8 @@ import { System } from './system';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
-    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
+    DEFAULT_RESIZE_SIDES
 } from '../../shapes';
 
 const subscriptionManager = new SubscriptionManager();
@@ -187,9 +188,10 @@ let optionSetters = {
         }
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
             let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
-                sides: ''
+                sides: DEFAULT_RESIZE_SIDES
             });
-            browserWin.setResizeSides(resizeRegion.sides);
+            browserWin.setResizeSides(resizeRegion.sides.top, resizeRegion.sides.right,
+                resizeRegion.sides.bottom, resizeRegion.sides.left);
         });
     },
     alphaMask: function(newVal, browserWin) {
@@ -341,9 +343,11 @@ let optionSetters = {
             }
         });
         }
-            if (typeof newVal.sides === 'string') {
+            if (typeof newVal.sides === 'object') {
                 applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-                    browserWin.setResizeSides(newVal.sides);
+                    const sides = Object.assign({}, DEFAULT_RESIZE_SIDES, newVal.sides);
+                    browserWin.setResizeSides(sides.top, sides.right,
+                        sides.bottom, sides.left);
                 });
             }setOptOnBrowserWin('resizeRegion', newVal, browserWin);}
     },
@@ -1968,7 +1972,8 @@ function applyAdditionalOptionsToWindow(browserWindow) {
                 browserWindow.setResizeRegionBottomRight(options.resizeRegion.bottomRightCorner);
             }
         }
-        browserWindow.setResizeSides(options.resizeRegion.sides);
+        browserWindow.setResizeSides(options.resizeRegion.sides.top, options.resizeRegion.sides.right,
+            options.resizeRegion.sides.bottom, options.resizeRegion.sides.left);
     });
 }
 
