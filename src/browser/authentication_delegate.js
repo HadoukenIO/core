@@ -67,7 +67,7 @@ function createAuthUI(identity) {
             defaultTop: true,
             frame: false
         },
-        runtimeAuthDialog: true // skip checks for shouldCloseRuntime
+        _runtimeAuthDialog: true // skip checks for shouldCloseRuntime
     });
 
     Application.run({

@@ -49,7 +49,6 @@ function SystemApiHandler() {
     };
 
     let SystemApiHandlerMap = {
-        'resource-fetch-authenticate': { apiFunc: authenticateResourceFetch },
         'clear-cache': { apiFunc: clearCache, apiPath: '.clearCache' },
         'convert-options': convertOptions,
         'delete-cache-request': deleteCacheRequest, // apiPath: '.deleteCacheOnRestart' -> deprecated
@@ -92,6 +91,7 @@ function SystemApiHandler() {
         'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue', apiPolicyDelegate: ReadRegistryValuePolicyDelegate },
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
+        'resource-fetch-authenticate': { apiFunc: authenticateResourceFetch },
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
         'get-cookies': { apiFunc: getCookies, apiPath: '.getCookies' },
         'set-cookie': setCookie,

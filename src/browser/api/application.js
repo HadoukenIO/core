@@ -632,7 +632,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
         coreState.removeApp(app.id);
 
-        if (!app._options.runtimeAuthDialog && !runtimeIsClosing && coreState.shouldCloseRuntime()) {
+        if (!app._options._runtimeAuthDialog && !runtimeIsClosing && coreState.shouldCloseRuntime()) {
             try {
                 runtimeIsClosing = true;
                 let appsToClose = coreState.getAllAppObjects();
