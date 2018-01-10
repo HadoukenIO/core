@@ -172,12 +172,14 @@ let optionSetters = {
 
             // reapply resize region
             applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-                let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
-                    size: DEFAULT_RESIZE_REGION_SIZE,
-                    bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
-                });
-                browserWin.setResizeRegion(resizeRegion.size);
-                browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
+                if (!browserWin.isDestroyed()) {
+                    let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
+                        size: DEFAULT_RESIZE_REGION_SIZE,
+                        bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+                    });
+                    browserWin.setResizeRegion(resizeRegion.size);
+                    browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
+                }
             });
         } else {
             // reapply top-left icon
@@ -190,7 +192,9 @@ let optionSetters = {
         }
 
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-            browserWin.setAlphaMask(newVal.red, newVal.green, newVal.blue);
+            if (!browserWin.isDestroyed()) {
+                browserWin.setAlphaMask(newVal.red, newVal.green, newVal.blue);
+            }
         });
         setOptOnBrowserWin('alphaMask', newVal, browserWin);
     },
@@ -283,7 +287,9 @@ let optionSetters = {
         opacity = opacity > 1 ? 1 : opacity;
 
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-            browserWin.setOpacity(opacity);
+            if (!browserWin.isDestroyed()) {
+                browserWin.setOpacity(opacity);
+            }
         });
         setOptOnBrowserWin('opacity', opacity, browserWin);
     },
@@ -322,10 +328,12 @@ let optionSetters = {
         }
 
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-            let frame = getOptFromBrowserWin('frame', browserWin, true);
-            if (!frame) {
-                browserWin.setResizeRegion(newVal.size);
-                browserWin.setResizeRegionBottomRight(newVal.bottomRightCorner);
+            if (!browserWin.isDestroyed()) {
+                let frame = getOptFromBrowserWin('frame', browserWin, true);
+                if (!frame) {
+                    browserWin.setResizeRegion(newVal.size);
+                    browserWin.setResizeRegionBottomRight(newVal.bottomRightCorner);
+                }
             }
         });
         setOptOnBrowserWin('resizeRegion', newVal, browserWin);
@@ -1873,9 +1881,7 @@ function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
                     // TODO: Refactor to also use 'ready-to-show'
                 } else {
                     setTimeout(() => {
-                        if (!browserWindow.isDestroyed()) {
-                            callback();
-                        }
+                        callback();
                     }, 1);
                 }
             }
@@ -1929,25 +1935,27 @@ function applyAdditionalOptionsToWindow(browserWindow) {
     }
 
     applyAdditionalOptionsToWindowOnVisible(browserWindow, () => {
-        // set alpha mask if present, otherwise set opacity if present
-        if (options.alphaMask.red > -1 && options.alphaMask.green > -1 && options.alphaMask.blue > -1) {
-            browserWindow.setAlphaMask(options.alphaMask.red, options.alphaMask.green, options.alphaMask.blue);
-        } else if (options.opacity < 1) {
-            browserWindow.setOpacity(options.opacity);
-        }
+        if (!browserWindow.isDestroyed()) {
+            // set alpha mask if present, otherwise set opacity if present
+            if (options.alphaMask.red > -1 && options.alphaMask.green > -1 && options.alphaMask.blue > -1) {
+                browserWindow.setAlphaMask(options.alphaMask.red, options.alphaMask.green, options.alphaMask.blue);
+            } else if (options.opacity < 1) {
+                browserWindow.setOpacity(options.opacity);
+            }
 
-        // set minimized or maximized
-        if (options.state === 'minimized') {
-            browserWindow.minimize();
-        } else if (options.state === 'maximized') {
-            browserWindow.maximize();
-        }
+            // set minimized or maximized
+            if (options.state === 'minimized') {
+                browserWindow.minimize();
+            } else if (options.state === 'maximized') {
+                browserWindow.maximize();
+            }
 
-        // frameless window updates
-        if (!options.frame) {
-            // resize region
-            browserWindow.setResizeRegion(options.resizeRegion.size);
-            browserWindow.setResizeRegionBottomRight(options.resizeRegion.bottomRightCorner);
+            // frameless window updates
+            if (!options.frame) {
+                // resize region
+                browserWindow.setResizeRegion(options.resizeRegion.size);
+                browserWindow.setResizeRegionBottomRight(options.resizeRegion.bottomRightCorner);
+            }
         }
     });
 }
