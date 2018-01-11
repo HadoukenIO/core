@@ -75,6 +75,7 @@ export interface AuthProxyRequest {
 export function createChromiumSocket(req: CreateProxyRequest): void {
     log.writeToLog(1, `createChromiumSocket: ${JSON.stringify(req)}`, true);
     if (req.httpGet === true) {
+        // @todo not full function yet.
         createHttpProxySocket(req);
     } else {
         createFullProxySocket(req);
