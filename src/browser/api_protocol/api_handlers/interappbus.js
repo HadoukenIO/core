@@ -180,15 +180,26 @@ function InterApplicationBusApiHandler() {
 
         apiProtocolBase.registerSubscription(subAddedSubObj.unsubscribe,
             iabIdentity,
-            iabIdentity.uuid,
-            iabIdentity.name,
+            connectionIdentity.uuid,
+            connectionIdentity.name,
             subScriptionTypes.SUB_ADDED);
 
         apiProtocolBase.registerSubscription(subRemovedSubObj.unsubscribe,
             iabIdentity,
-            iabIdentity.uuid,
-            iabIdentity.name,
+            connectionIdentity.uuid,
+            connectionIdentity.name,
             subScriptionTypes.SUB_REMOVED);
+
+        ofEvents.once(route.window('unload', connectionIdentity.uuid, connectionIdentity.name, false), () => {
+            apiProtocolBase.removeSubscription(iabIdentity,
+                connectionIdentity.uuid,
+                connectionIdentity.name,
+                subScriptionTypes.SUB_ADDED);
+            apiProtocolBase.removeSubscription(iabIdentity,
+                connectionIdentity.uuid,
+                connectionIdentity.name,
+                subScriptionTypes.SUB_REMOVED);
+        });
     }
 
 
