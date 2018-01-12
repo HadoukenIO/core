@@ -41,7 +41,7 @@ import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
-import { fetchURL } from '../cached_resource_fetcher';
+import { fetchReadFile } from '../cached_resource_fetcher';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -459,7 +459,9 @@ exports.System = {
         };
     },
     getRemoteConfig: function(url, callback, errorCallback) {
-        fetchURL(url, callback, errorCallback);
+        fetchReadFile(url, true)
+            .then(callback)
+            .catch(errorCallback);
     },
     getVersion: function() {
         return process.versions['openfin'];
