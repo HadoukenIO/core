@@ -213,6 +213,12 @@ export interface WindowOptions {
     resizeRegion?: {
         bottomRightCorner: number;
         size: number;
+        sides?: {
+            top?: boolean,
+            right?: boolean,
+            bottom?: boolean,
+            left?: boolean
+        };
     };
     saveWindowState?: boolean;
     shadow?: boolean;
@@ -240,6 +246,7 @@ export interface WindowOptions {
 
 export const DEFAULT_RESIZE_REGION_SIZE = 7;
 export const DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER = 9;
+export const DEFAULT_RESIZE_SIDES = {top: true, right: true, bottom: true, left: true};
 
 export interface Manifest {
     appAssets?: {
