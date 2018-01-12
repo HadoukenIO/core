@@ -37,15 +37,15 @@ let Window = require('./window.js').Window;
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
-import { cachedFetch, fetchURL } from '../cached_resource_fetcher';
+import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
-let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
 import { sendToRVM } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
+import { isFileUrl, isHttpUrl } from '../../common/main';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -290,9 +290,9 @@ Application.getManifest = function(identity, manifestUrl, callback, errCallback)
     }
 
     if (manifestUrl) {
-        fetchURL(manifestUrl, manifest => {
-            callback(manifest);
-        }, errCallback);
+        fetchReadFile(manifestUrl, true)
+            .then(callback)
+            .catch(errCallback);
     } else {
         errCallback(new Error('App not started from manifest'));
     }
@@ -993,7 +993,7 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         opts.url = opts.url || 'about:blank';
 
-        if (!regex.isURL(opts.url) && !isURI(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
+        if (!isHttpUrl(opts.url) && !isFileUrl(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
         }
 
@@ -1077,10 +1077,6 @@ function createAppObj(uuid, opts, configUrl = '') {
         });
     }
     return appObj;
-}
-
-function isURI(str) {
-    return /^file:\/\/\/?/.test(str);
 }
 
 function isNonEmptyString(str) {

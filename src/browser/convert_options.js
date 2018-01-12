@@ -27,9 +27,8 @@ let _ = require('underscore');
 // local modules
 let coreState = require('./core_state.js');
 let log = require('./log');
-let regex = require('../common/regex');
-
-import { fetchURL } from './cached_resource_fetcher';
+import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
+import { fetchReadFile } from './cached_resource_fetcher';
 
 // constants
 import {
@@ -142,11 +141,6 @@ function readFile(filePath, done, onError) {
         }
         done(config);
     });
-}
-
-function getURL(url, done, onError) {
-    log.writeToLog(1, `Fetching ${url}`, true);
-    fetchURL(url, done, onError);
 }
 
 function validateOptions(options) {
@@ -328,16 +322,14 @@ module.exports = {
             return;
         }
 
-        if (regex.isURL(configUrl)) {
-            return getURL(configUrl, configObject => {
-                onComplete({
-                    configObject,
-                    configUrl
-                });
-            }, errorCallback);
+        if (isHttpUrl(configUrl)) {
+            fetchReadFile(configUrl, true)
+                .then((configObject) => onComplete({ configObject, configUrl }))
+                .catch(errorCallback);
+            return;
         }
 
-        let filepath = regex.isURI(configUrl) ? regex.uriToPath(configUrl) : configUrl;
+        let filepath = isFileUrl(configUrl) ? uriToPath(configUrl) : configUrl;
 
         return readFile(filepath, configObject => {
             onComplete({

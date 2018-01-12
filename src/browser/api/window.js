@@ -41,7 +41,6 @@ let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
 import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
-let regex = require('../../common/regex');
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
 import { validateNavigation, navigationValidator } from '../navigation_validation';
@@ -49,6 +48,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
+import { isFileUrl, isHttpUrl } from '../../common/main';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -2200,12 +2200,12 @@ function setTaskbar(browserWindow, forceFetch = false) {
     // page-favicon-updated event never fires (explained below). In this case
     // we try the window options and if that fails we get the icon info
     // from the main window.
-    if (!regex.isURL(options.url)) {
+    if (!isHttpUrl(options.url)) {
         let _url = getWinOptsIconUrl(options);
 
         // v6 needs to match v5's behavior: if the window url is a file uri,
         // then icon can be either a file path, file uri, or url
-        if (!regex.isURL(_url) && !regex.isURI(_url)) {
+        if (!isHttpUrl(_url) && !isFileUrl(_url)) {
             _url = 'file:///' + _url;
         }
 
