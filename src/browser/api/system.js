@@ -42,7 +42,7 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
-import { createChromiumSocket } from '../transports/chromium_socket';
+import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 
 const defaultProc = {
     getCpuUsage: function() {
