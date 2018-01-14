@@ -20,6 +20,7 @@ import { convertToElectron } from './convert_options';
 import { Identity, PreloadScript } from '../shapes';
 import { readFile } from 'fs';
 import { writeToLog } from './log';
+import * as coreState from './core_state';
 
 interface PreloadScriptWithContent extends PreloadScript {
     _content: string;
@@ -79,7 +80,13 @@ function downloadScript(identity: Identity, preloadScript: PreloadScript): Promi
 }
 
 export async function loadScripts(identity: Identity): Promise<PreloadScriptWithContent[]|any> {
-    const options = Window.getOptions(identity);
+    let options;
+    const frameInfo = coreState.getInfoByUuidFrame(identity);
+    if (frameInfo && frameInfo.entityType === 'iframe') {
+        options = Window.getOptions({uuid: frameInfo.parent.uuid, name: frameInfo.parent.name});
+    } else {
+        options = Window.getOptions(identity);
+    }
     const { preloadScripts = [] }: {preloadScripts: Array<PreloadScript>} = convertToElectron(options);
     const promises = preloadScripts.map((preloadScript: PreloadScript) => loadScript(identity, preloadScript));
     return await Promise.all(promises);
