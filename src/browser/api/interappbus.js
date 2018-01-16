@@ -175,11 +175,37 @@ function subscribe(identity, payload, listener) {
             busEventing.emit(ofEvents.subscriber.REMOVED, eventingPayload);
         }
     };
-    subscriptionManager.registerSubscription(unsubItem.unsubscribe, identity, payload);
 
     return unsubItem;
 }
 
+function emitSubscriberAdded(identity, payload) {
+    let senderUuid = payload.sourceUuid || '*';
+
+    let eventingPayload = {
+        senderUuid: senderUuid,
+        senderName: senderUuid,
+        uuid: identity.uuid,
+        name: identity.name,
+        topic: payload.topic,
+        directMsg: payload.sourceWindowName !== '*' ? payload.sourceWindowName : false
+    };
+    busEventing.emit(ofEvents.subscriber.ADDED, eventingPayload);
+}
+
+function emitSubscriberRemoved(identity, payload) {
+    let senderUuid = payload.sourceUuid || '*';
+
+    let eventingPayload = {
+        senderUuid: senderUuid,
+        senderName: senderUuid,
+        uuid: identity.uuid,
+        name: identity.name,
+        topic: payload.topic,
+        directMsg: payload.sourceWindowName !== '*' ? payload.sourceWindowName : false
+    };
+    busEventing.emit(ofEvents.subscriber.REMOVED, eventingPayload);
+}
 
 function unsubscribe(identity, cbId, senderUuid, ...rest) {
     let {
@@ -215,7 +241,6 @@ function unsubscribe(identity, cbId, senderUuid, ...rest) {
         topic: topic
     });
 }
-
 
 function subscriberAdded(identity, listener) {
     let {
@@ -362,7 +387,9 @@ module.exports.InterApplicationBus = {
     publish,
     send,
     subscribe,
+    emitSubscriberAdded,
     unsubscribe,
+    emitSubscriberRemoved,
     subscriberAdded,
     removeSubscriberAdded,
     subscriberRemoved,
