@@ -23,7 +23,7 @@ limitations under the License.
 
 const coreState = require('./core_state');
 const electronApp = require('electron').app;
-const {session, webContents} = require('electron');
+const { session, webContents } = require('electron');
 
 import * as Shapes from '../shapes';
 
@@ -59,7 +59,7 @@ let headerMap: UrlHeaderMap = {};  // reset for every app started and closed
 function matchUrlPatterns(url: string, config: Shapes.WebRequestHeaderConfig): boolean {
     let match: boolean = false;
     if (config.urlPatterns && config.urlPatterns.length > 0) {
-            match = electronApp.matchesURL(url, config.urlPatterns);
+        match = electronApp.matchesURL(url, config.urlPatterns);
     }
     return match;
 }
@@ -84,10 +84,11 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
         if (wc) {
             electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler got webcontents ${wc.id}`);
             const bw = wc.getOwnerBrowserWindow();
-            if (bw) {
+            if (bw && bw.id) {
                 const opts: Shapes.WindowOptions = coreState.getWindowOptionsById(bw.id);
                 electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts ${JSON.stringify(opts)}`);
-                if (opts.customRequestHeaders) {
+                electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts is undefined ${opts === undefined}`);
+                if (opts !== undefined && opts.customRequestHeaders) {
                     for (const rhItem of opts.customRequestHeaders) {
                         if (matchUrlPatterns(details.url, rhItem)) {
                             applyHeaders(details.requestHeaders, rhItem);
@@ -102,16 +103,16 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
     }
 
     if (headerAdded) {
-        callback({cancel: false, requestHeaders: details.requestHeaders});
+        callback({ cancel: false, requestHeaders: details.requestHeaders });
     } else {
-        callback({cancel: false});
+        callback({ cancel: false });
     }
 }
 
 interface AppCreatedEvent {
     topic: string;
-    type:  string;
-    uuid:  string;
+    type: string;
+    uuid: string;
 }
 
 function updateHeaderFilter(): void {
@@ -133,7 +134,7 @@ function updateHeaderFilter(): void {
             }
         }
     });
-    const filers = {urls: JSON.stringify(urls)};
+    const filers = { urls: JSON.stringify(urls) };
     electronApp.vlog(1, `${moduleName}:updateHeaderFilter for ${JSON.stringify(filers)} headers ${JSON.stringify(headerMap)}`);
 }
 
