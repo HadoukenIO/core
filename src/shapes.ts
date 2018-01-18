@@ -96,12 +96,9 @@ export interface OpenFinWindow {
     id: number;
     name: string;
     plugins: PluginState[];
-    preloadScripts: {
-        optional?: boolean;
-        state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
-        url: string;
-    }[];
+    preloadScripts: PreloadScriptState[];
     uuid: string;
+    mainFrameRoutingId: number;
 }
 
 export interface BrowserWindow {
@@ -121,7 +118,9 @@ export interface BrowserWindow {
     devToolsWebContents: null;
     webContents: {
         hasFrame: (frameName: string) => boolean;
+        mainFrameRoutingId: number;
     };
+    isDestroyed(): boolean;
 }
 
 export interface AppObj {
@@ -294,11 +293,20 @@ export interface Manifest {
 
 export interface Plugin {
     link?: string;
+    mandatory?: boolean;
     name: string;
-    optional?: boolean;
     version: string;
 }
 
 export interface PluginState extends Plugin {
     state: 'load-failed'|'load-succeeded'|'failed'|'succeeded';
+}
+
+export interface PreloadScript {
+    mandatory?: boolean;
+    url: string;
+}
+
+export interface PreloadScriptState extends PreloadScript {
+    state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
 }

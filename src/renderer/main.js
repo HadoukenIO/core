@@ -17,7 +17,7 @@ limitations under the License.
 
 let fs = require('fs');
 let path = require('path');
-let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
+const coreState = require('../browser/core_state.js');
 
 // check resources/adapter/openfin-desktop.js then
 // resources/adapter.asar/openfin-desktop.js
@@ -33,7 +33,27 @@ for (let adapterPath of searchPaths) {
     }
 }
 
+let jsAdapterV2 = '';
+try {
+    const jsAdapterV2Path = path.resolve(__dirname, '../../node_modules/hadouken-js-adapter/out/js-adapter.js');
+    jsAdapterV2 = fs.readFileSync(jsAdapterV2Path, 'utf8');
+} catch (error) {}
+
 // Remove strict (Prevents, as of now, poorly understood memory lifetime scoping issues with remote module)
+let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
 me = me.slice(13);
 
-module.exports.api = `${me} ; ${jsAdapter} ;`;
+const shouldStartCrashReporter = !!(coreState.argo['diagnostics'] || coreState.argo['enable-crash-reporting']);
+const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
+
+let addCrashFlag = ` global.shouldStartCrashReporter = ${shouldStartCrashReporter}; `;
+addCrashFlag += ` global.configUrl = '${configUrl}'; `;
+const removeCrashFlag = ` delete global.shouldStartCrashReporter; delete global.configUrl; `;
+
+module.exports.api = (windowId) => {
+    const mainWindowOptions = coreState.getMainWindowOptions(windowId);
+    const enableV2Api = ((mainWindowOptions || {}).experimental || {}).v2Api;
+    const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
+
+    return `${addCrashFlag} ${me} ; ${jsAdapter}; ${v2AdapterShim} ; fin.__internal_.ipc = null; ${removeCrashFlag}`;
+};

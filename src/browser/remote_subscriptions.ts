@@ -38,7 +38,7 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
  * Shape of remote subscription props
  */
 interface RemoteSubscriptionProps extends Identity {
-    className: 'application'|'window'; // names of the class event emitters, used for subscriptions
+    className: 'application'|'window'|'system'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
 }
@@ -49,8 +49,15 @@ interface RemoteSubscriptionProps extends Identity {
 interface RemoteSubscription extends RemoteSubscriptionProps {
     _id: number; // ID of the subscription
     isCleaned: boolean; // helps prevents repetitive un-subscriptions and other cleanup
+    isSystemEvent?: boolean; // helps point applyAllRemoteSubscriptions to the correct function
     unSubscriptions: Map<string, (() => void)[]>; // a map of un-subscriptions assigned to runtime versions
 }
+
+const systemEventsToIgnore: {[index: string]: boolean} = {
+    'idle-state-changed': true,
+    'monitor-info-changed': true,
+    'session-changed': true
+};
 
 /**
  * Handles addition of a remote subscription.
@@ -96,15 +103,6 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
             const unsubscribe = cleanUpSubscription.bind(null, subscription);
             resolve(unsubscribe);
         });
-    });
-}
-
-/**
- * Apply all pending remote subscriptions for a given runtime
- */
-export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
-    pendingRemoteSubscriptions.forEach(subscription => {
-        applyRemoteSubscription(subscription, runtime);
     });
 }
 
@@ -210,6 +208,101 @@ function unSubscribe(subscription: RemoteSubscription, runtime: PeerRuntime) {
         unSubs.forEach(unSubscribe => unSubscribe());
     }
     unSubscriptions.delete(runtimeKey);
+}
+
+/**
+ * Apply all pending remote subscriptions for a given runtime
+ */
+export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
+    pendingRemoteSubscriptions.forEach(subscription => {
+        if (!subscription.isSystemEvent) {
+            applyRemoteSubscription(subscription, runtime);
+        } else {
+            applySystemSubscription(subscription, runtime);
+        }
+    });
+}
+
+/**
+ * Handles addition of a system subscription on remote runtimes.
+ */
+export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
+    return new Promise(resolve => {
+        if (systemEventsToIgnore[subscriptionProps.eventName]) {
+            resolve();
+        }
+
+        const clonedProps = Object.create(subscriptionProps);
+        const subscription: RemoteSubscription = Object.assign(clonedProps, {isSystemEvent: true});
+
+        // Generate a subscription ID for pending subscriptions
+        subscription._id = getId();
+
+        // Create an un-subscription map
+        subscription.unSubscriptions = new Map();
+
+        // Subscribe in all connected runtimes
+        if (connectionManager.connections.length) {
+            connectionManager.connections.forEach(runtime => applySystemSubscription(subscription, runtime));
+        }
+
+        // Add the subscription to pending to cover any runtimes launched in the future
+        pendingRemoteSubscriptions.set(subscription._id, subscription);
+
+        // Resolving with a subscription cleanup function
+        const unsubscribe = systemUnsubscribe.bind(null, subscription);
+        resolve(unsubscribe);
+    });
+}
+
+/**
+ * Remove a system subscription from all runtimes
+ */
+function systemUnsubscribe(subscription: any) {
+    subscription.unSubscriptions.forEach((runtime: any[]) => {
+        if (runtime.length) {
+            runtime.forEach((removeListener: any) => removeListener());
+        }
+    });
+    pendingRemoteSubscriptions.delete(subscription._id);
+}
+
+/**
+ * Subscribe to a system event in a remote runtime
+ */
+function applySystemSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
+    const { className, eventName, listenType } = subscription;
+    const fullEventName = route(className, eventName);
+    const runtimeKey = keyFromPortInfo(runtime.portInfo);
+
+    const listener = (data: any) => {
+        if (!data.runtimeUuid) {
+            data.runtimeUuid = getMeshUuid();
+            ofEvents.emit(fullEventName, data);
+        }
+    };
+    // Subscribe to an event on a remote runtime
+    runtime.fin.System[listenType](eventName, listener);
+
+
+    // When runtime disconnects, remove the subscription for that runtime
+    // It will be re-added from pending subscriptions if the runtime connects again
+    const disconnectEventName = 'disconnected';
+    const unSubscribeListener = () => {
+        unSubscribe(subscription, runtime);
+    };
+    runtime.fin.on(disconnectEventName, unSubscribeListener);
+
+    // Store a cleanup function for the added listener and disconnect listener in
+    // un-subscription map, so that we can remove all subscriptions
+    if (!Array.isArray(subscription.unSubscriptions.get(runtimeKey))) {
+        subscription.unSubscriptions.set(runtimeKey, []);
+    }
+
+    subscription.unSubscriptions.get(runtimeKey).push(() => {
+        runtime.fin.System.removeListener(eventName, listener);
+        runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
+    });
 }
 
 /**

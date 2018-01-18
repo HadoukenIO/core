@@ -41,15 +41,14 @@ let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
 import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
-let regex = require('../../common/regex');
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
-import { getPreloadScriptState, getIdentifier } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import { System } from './system';
+import { isFileUrl, isHttpUrl } from '../../common/main';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -173,12 +172,14 @@ let optionSetters = {
 
             // reapply resize region
             applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-                let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
-                    size: DEFAULT_RESIZE_REGION_SIZE,
-                    bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
-                });
-                browserWin.setResizeRegion(resizeRegion.size);
-                browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
+                if (!browserWin.isDestroyed()) {
+                    let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
+                        size: DEFAULT_RESIZE_REGION_SIZE,
+                        bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+                    });
+                    browserWin.setResizeRegion(resizeRegion.size);
+                    browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
+                }
             });
         } else {
             // reapply top-left icon
@@ -191,7 +192,9 @@ let optionSetters = {
         }
 
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-            browserWin.setAlphaMask(newVal.red, newVal.green, newVal.blue);
+            if (!browserWin.isDestroyed()) {
+                browserWin.setAlphaMask(newVal.red, newVal.green, newVal.blue);
+            }
         });
         setOptOnBrowserWin('alphaMask', newVal, browserWin);
     },
@@ -284,7 +287,9 @@ let optionSetters = {
         opacity = opacity > 1 ? 1 : opacity;
 
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-            browserWin.setOpacity(opacity);
+            if (!browserWin.isDestroyed()) {
+                browserWin.setOpacity(opacity);
+            }
         });
         setOptOnBrowserWin('opacity', opacity, browserWin);
     },
@@ -323,10 +328,12 @@ let optionSetters = {
         }
 
         applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-            let frame = getOptFromBrowserWin('frame', browserWin, true);
-            if (!frame) {
-                browserWin.setResizeRegion(newVal.size);
-                browserWin.setResizeRegionBottomRight(newVal.bottomRightCorner);
+            if (!browserWin.isDestroyed()) {
+                let frame = getOptFromBrowserWin('frame', browserWin, true);
+                if (!frame) {
+                    browserWin.setResizeRegion(newVal.size);
+                    browserWin.setResizeRegionBottomRight(newVal.bottomRightCorner);
+                }
             }
         });
         setOptOnBrowserWin('resizeRegion', newVal, browserWin);
@@ -391,6 +398,8 @@ Window.create = function(id, opts) {
 
         // called in the WebContents class in the runtime
         browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
+            // called for all iframes, but not for main frame of windows
+            electronApp.vlog(1, `registerIframe ${frameName} ${frameRoutingId}`);
             const parentFrameId = id;
             const frameInfo = {
                 name: frameName,
@@ -406,8 +415,11 @@ Window.create = function(id, opts) {
 
         // called in the WebContents class in the runtime
         browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
-            const entityType = frameRoutingId === 1 ? 'window' : 'iframe';
+            // called for all iframes AND for main frames
+            electronApp.vlog(1, `unregisterIframe ${frameRoutingId} ${closedFrameName}`);
             const frameName = closedFrameName || name; // the parent name is considered a frame as well
+            const frameInfo = winObj.frames.get(closedFrameName);
+            const entityType = frameInfo ? 'iframe' : 'window';
             const payload = { uuid, name, frameName, entityType };
 
             winObj.frames.delete(closedFrameName);
@@ -806,12 +818,7 @@ Window.create = function(id, opts) {
     winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
 
     // Set preload scripts' final loading states
-    winObj.preloadScripts = (_options.preloadScripts || _options.preload || []).map(preload => {
-        return {
-            url: getIdentifier(preload),
-            state: getPreloadScriptState(getIdentifier(preload))
-        };
-    });
+    winObj.preloadScripts = (_options.preloadScripts || []);
     winObj.framePreloadScripts = {}; // frame ID => [{url, state}]
 
     if (!coreState.getWinObjById(id)) {
@@ -1193,9 +1200,9 @@ Window.setWindowPreloadState = function(identity, payload) {
             if (!frameState) {
                 frameState = openfinWindow.framePreloadScripts[name] = [];
             }
-            preloadScripts = frameState.find(e => e.url === getIdentifier(payload));
+            preloadScripts = frameState.find(e => e.url === url);
             if (!preloadScripts) {
-                frameState.push(preloadScripts = { url: getIdentifier(payload) });
+                frameState.push(preloadScripts = { url });
             }
             preloadScripts = [preloadScripts];
         } else {
@@ -1204,7 +1211,7 @@ Window.setWindowPreloadState = function(identity, payload) {
         if (preloadScripts) {
             preloadScripts[0].state = state;
         } else {
-            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${getIdentifier(payload)} `);
+            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${url} `);
         }
     }
 
@@ -1928,25 +1935,27 @@ function applyAdditionalOptionsToWindow(browserWindow) {
     }
 
     applyAdditionalOptionsToWindowOnVisible(browserWindow, () => {
-        // set alpha mask if present, otherwise set opacity if present
-        if (options.alphaMask.red > -1 && options.alphaMask.green > -1 && options.alphaMask.blue > -1) {
-            browserWindow.setAlphaMask(options.alphaMask.red, options.alphaMask.green, options.alphaMask.blue);
-        } else if (options.opacity < 1) {
-            browserWindow.setOpacity(options.opacity);
-        }
+        if (!browserWindow.isDestroyed()) {
+            // set alpha mask if present, otherwise set opacity if present
+            if (options.alphaMask.red > -1 && options.alphaMask.green > -1 && options.alphaMask.blue > -1) {
+                browserWindow.setAlphaMask(options.alphaMask.red, options.alphaMask.green, options.alphaMask.blue);
+            } else if (options.opacity < 1) {
+                browserWindow.setOpacity(options.opacity);
+            }
 
-        // set minimized or maximized
-        if (options.state === 'minimized') {
-            browserWindow.minimize();
-        } else if (options.state === 'maximized') {
-            browserWindow.maximize();
-        }
+            // set minimized or maximized
+            if (options.state === 'minimized') {
+                browserWindow.minimize();
+            } else if (options.state === 'maximized') {
+                browserWindow.maximize();
+            }
 
-        // frameless window updates
-        if (!options.frame) {
-            // resize region
-            browserWindow.setResizeRegion(options.resizeRegion.size);
-            browserWindow.setResizeRegionBottomRight(options.resizeRegion.bottomRightCorner);
+            // frameless window updates
+            if (!options.frame) {
+                // resize region
+                browserWindow.setResizeRegion(options.resizeRegion.size);
+                browserWindow.setResizeRegionBottomRight(options.resizeRegion.bottomRightCorner);
+            }
         }
     });
 }
@@ -2167,12 +2176,12 @@ function setTaskbar(browserWindow, forceFetch = false) {
     // page-favicon-updated event never fires (explained below). In this case
     // we try the window options and if that fails we get the icon info
     // from the main window.
-    if (!regex.isURL(options.url)) {
+    if (!isHttpUrl(options.url)) {
         let _url = getWinOptsIconUrl(options);
 
         // v6 needs to match v5's behavior: if the window url is a file uri,
         // then icon can be either a file path, file uri, or url
-        if (!regex.isURL(_url) && !regex.isURI(_url)) {
+        if (!isHttpUrl(_url) && !isFileUrl(_url)) {
             _url = 'file:///' + _url;
         }
 

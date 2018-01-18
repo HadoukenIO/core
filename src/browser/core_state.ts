@@ -29,6 +29,7 @@ import { app } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
+import { writeToLog } from './log';
 
 export interface StartManifest {
     data: Shapes.Manifest;
@@ -385,7 +386,6 @@ export function setWindowObj(id: number, openfinWindow: Shapes.OpenFinWindow): S
     }
 
     win.openfinWindow = openfinWindow;
-
     return win;
 }
 
@@ -657,15 +657,27 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
     }
 
     for (const { openfinWindow } of app.children) {
-        const { name, parentFrameId } = openfinWindow;
+        const { uuid, name, parentFrameId } = openfinWindow;
         let browserWindow: Shapes.BrowserWindow;
         browserWindow = openfinWindow.browserWindow;
+
+        if (!openfinWindow.mainFrameRoutingId) {
+            // save bit time here by not calling webContents.mainFrameRoutingId every time
+            // mainFrameRoutingId is wrong during setWindowObj
+            if (!browserWindow.isDestroyed()) {
+                openfinWindow.mainFrameRoutingId = browserWindow.webContents.mainFrameRoutingId;
+                writeToLog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId}`, true);
+            } else {
+                writeToLog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`, true);
+            }
+        }
 
         if (name === frame) {
             return {
                 name,
                 browserWindow,
-                frameRoutingId: 1,
+                frameRoutingId: openfinWindow.mainFrameRoutingId,
+                mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                 frameName: name
             };
         } else if (openfinWindow.frames.get(frame)) {
@@ -674,6 +686,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 name,
                 browserWindow,
                 frameRoutingId,
+                mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                 frameName: name
             };
         }

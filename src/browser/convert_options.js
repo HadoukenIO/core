@@ -21,15 +21,14 @@ limitations under the License.
 let fs = require('fs');
 let path = require('path');
 
-let ResourceFetcher = require('electron').resourceFetcher;
-
 // npm modules
 let _ = require('underscore');
 
 // local modules
 let coreState = require('./core_state.js');
 let log = require('./log');
-let regex = require('../common/regex');
+import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
+import { fetchReadFile } from './cached_resource_fetcher';
 
 // constants
 import {
@@ -71,6 +70,9 @@ function five0BaseOptions() {
         'disableIabSecureLogging': false,
         'draggable': false,
         'exitOnClose': false,
+        'experimental': {
+            'v2Api': false
+        },
         'frame': true,
         'frameConnect': '',
         'hideOnBlur': false,
@@ -136,30 +138,6 @@ function readFile(filePath, done, onError) {
         }
         done(config);
     });
-}
-
-function getURL(url, done, onError) {
-    const fetcher = new ResourceFetcher('string');
-
-    fetcher.once('fetch-complete', (object, status, data) => {
-        if (status !== 'success') {
-            onError(new Error(`Could not retrieve ${url}`));
-            return;
-        }
-
-        log.writeToLog(1, `Contents from ${url}`, true);
-        log.writeToLog(1, data, true);
-
-        try {
-            const config = JSON.parse(data);
-            done(config);
-        } catch (e) {
-            onError(new Error(`Error parsing JSON from ${url}`));
-        }
-    });
-
-    log.writeToLog(1, `Fetching ${url}`, true);
-    fetcher.fetch(url);
 }
 
 function validateOptions(options) {
@@ -340,16 +318,14 @@ module.exports = {
             return;
         }
 
-        if (regex.isURL(configUrl)) {
-            return getURL(configUrl, configObject => {
-                onComplete({
-                    configObject,
-                    configUrl
-                });
-            }, errorCallback);
+        if (isHttpUrl(configUrl)) {
+            fetchReadFile(configUrl, true)
+                .then((configObject) => onComplete({ configObject, configUrl }))
+                .catch(errorCallback);
+            return;
         }
 
-        let filepath = regex.isURI(configUrl) ? regex.uriToPath(configUrl) : configUrl;
+        let filepath = isFileUrl(configUrl) ? uriToPath(configUrl) : configUrl;
 
         return readFile(filepath, configObject => {
             onComplete({
