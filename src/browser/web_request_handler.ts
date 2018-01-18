@@ -87,8 +87,7 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
             if (bw && bw.id) {
                 const opts: Shapes.WindowOptions = coreState.getWindowOptionsById(bw.id);
                 electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts ${JSON.stringify(opts)}`);
-                electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts is undefined ${opts === undefined}`);
-                if (opts !== undefined && opts.customRequestHeaders) {
+                if (opts && opts.customRequestHeaders) {
                     for (const rhItem of opts.customRequestHeaders) {
                         if (matchUrlPatterns(details.url, rhItem)) {
                             applyHeaders(details.requestHeaders, rhItem);
