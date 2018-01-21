@@ -5,7 +5,7 @@ Licensed under OpenFin Commercial License you may not use this file except in co
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 
-import {net} from 'electron';
+import {socketNet} from 'electron';
 import {parse as parseUrl, format as formatUrl, Url} from 'url';
 import * as log from '../log';
 import ofEvents from '../of_events';
@@ -139,7 +139,7 @@ function onHttpProxyConnectionEvent(event: ProxyEvent, proxyReq: CreateProxyRequ
 
 function fetchFromURL(url: string, proxySocket: nodeNet.Socket, done: (resp: any) => void, onError: (err: Error) => void ): void {
     let contentSize: number = 0;
-    const request = net.request(url);
+    const request = socketNet.socketRequest(url);
     request.once('response', (response: any) => {
         const { statusCode } = response;
         log.writeToLog(1, `fetchURL statusCode: ${statusCode} for ${url}`, true);
@@ -198,7 +198,7 @@ function createFullProxySocket(req: CreateProxyRequest): void {
     const mappedUrl: Url = mapUrl(originalUrl);
     const url: string = formatUrl(mappedUrl);
     // ask net module to create the data socket
-    const request = net.request({ url, dataSocket: true });
+    const request = socketNet.socketRequest(url);
     requestMap[req.url] = request;
     // fired when Chromium socket is connected
     request.on('requestSocketConnected', (response: any) => {

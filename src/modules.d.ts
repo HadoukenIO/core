@@ -40,6 +40,9 @@ declare module 'electron' {
     export namespace net {
         export function request(url: string): any;
     }
+    export namespace socketNet {
+        export function socketRequest(url: string): any;
+    }
 
     export interface Rectangle {
         x: number;
@@ -108,9 +111,4 @@ declare module 'electron' {
         export function readHtml(type?: string): string;
         export function readText(type?: string): string;
     }
-
-    namespace net {
-        export function request(options: any): any;
-    }
-
 }
