@@ -91,6 +91,7 @@ function SystemApiHandler() {
         'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue', apiPolicyDelegate: ReadRegistryValuePolicyDelegate },
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
+        'resource-fetch-authenticate': { apiFunc: authenticateResourceFetch },
         //'set-clipboard': setClipboard, -> moved to clipboard.ts
         'get-cookies': { apiFunc: getCookies, apiPath: '.getCookies' },
         'set-cookie': setCookie,
@@ -556,6 +557,13 @@ function SystemApiHandler() {
             })
             .catch(nack);
     }
+
+    function authenticateResourceFetch(identity, message, ack) {
+        let dataAck = _.clone(successAck);
+        dataAck.data = System.authenticateResourceFetch(identity, message.payload);
+        ack(dataAck);
+    }
+
 }
 
 module.exports.SystemApiHandler = SystemApiHandler;
