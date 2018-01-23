@@ -17,7 +17,6 @@ interface RequestProtocol {
     port: number;
     secureProtocol?: string;   // secure version of the protocol
     chromiumProtocol?: string; // protocol Chromium network layer should use to create connection
-    httpGet?: boolean;         // true: to retrieve data and write it to proxy socket
 }
 
 const ProtocolMap: { [index: string]: RequestProtocol } = {
@@ -61,7 +60,6 @@ export interface CreateProxyResponse {
 
 export interface CreateProxyRequest {
     url: string;            // URL to proxy requests to
-    httpGet?: boolean;      // true: to retrieve data and write it to proxy socket
     callback: (result: CreateProxyResponse) => void;
     errorCallback: (err: any) => void;
 }
@@ -74,12 +72,7 @@ export interface AuthProxyRequest {
 
 export function createChromiumSocket(req: CreateProxyRequest): void {
     log.writeToLog(1, `createChromiumSocket: ${JSON.stringify(req)}`, true);
-    if (req.httpGet === true) {
-        // @todo not full function yet.
-        createHttpProxySocket(req);
-    } else {
-        createFullProxySocket(req);
-    }
+    createFullProxySocket(req);
 }
 
 function mapUrl(originalUrl: Url): Url {
@@ -98,76 +91,6 @@ function mapUrl(originalUrl: Url): Url {
         }
     }
     return mappedUrl;
-}
-
-/**
- * Create a socket for a client which makes a http GET request and data is
- * written to the socket
- *
- * @param {CreateProxyRequest} req
- */
-function createHttpProxySocket(req: CreateProxyRequest): void {
-    startProxyConnection((event: ProxyEvent) => {
-        if (event.eventType === ProxyEventType.Open) {
-            const proxySocket: nodeNet.Socket = event.clientSocket;
-            fetchFromURL(req.url, proxySocket, (resp: any) => {
-                log.writeToLog(1, `done with fetching URL ${req.url} ${JSON.stringify(resp)}`, true);
-                proxySocket.end();
-            }, e => {
-                log.writeToLog(1, `Error from fetching URL ${req.url}: ${e}`, true);
-                proxySocket.end();
-            });
-        }
-        onHttpProxyConnectionEvent(event, req);
-    });
-}
-
-function onHttpProxyConnectionEvent(event: ProxyEvent, proxyReq: CreateProxyRequest): void {
-    if (event.eventType === ProxyEventType.ProxyData) {
-        // support GET only, so should not receive data from the proxy socket
-        log.writeToLog(1, `ignoring data from proxy socket: ${event.payload.length}`, true);
-    } else if (event.eventType === ProxyEventType.ChromiumData) {
-        const flushed: boolean = event.clientSocket.write(event.payload);
-        log.writeToLog(1, `proxy socket input chromium data: ${event.payload.length} flushed ${flushed}`, true);
-    } else if (event.eventType === ProxyEventType.Closed) {
-        log.writeToLog(1, 'close chromium socket', true);
-    } else if (event.eventType === ProxyEventType.Listening) {
-        // setting mappedUrl.port does not work.  Have to append to host
-        proxyReq.callback({success: true, data: {port: event.port, originalUrl: proxyReq.url}});
-    }
-}
-
-function fetchFromURL(url: string, proxySocket: nodeNet.Socket, done: (resp: any) => void, onError: (err: Error) => void ): void {
-    let contentSize: number = 0;
-    const request = socketNet.socketRequest(url);
-    request.once('response', (response: any) => {
-        const { statusCode } = response;
-        log.writeToLog(1, `fetchURL statusCode: ${statusCode} for ${url}`, true);
-        if (!expectedStatusCode.test(statusCode)) {
-            const error = new Error(`Failed to download resource. Status code: ${statusCode}`);
-            onError(error);
-        }
-        response.once('error', (err: Error) => {
-            onError(err);
-        });
-        response.on('data', (chunk: Buffer) => {
-            log.writeToLog(1, `data from ${url} ${chunk.length}`, true);
-            contentSize += chunk.length;
-            proxySocket.write(chunk);
-        });
-        response.on('end', () => {
-            log.writeToLog(1, `done from ${url}`, true);
-            done({contentSize});
-        });
-    });
-    request.once('login', (authInfo: any, callback: Function) => {
-        log.writeToLog(1, `fetchURL login event ${url}`, true);
-        callback();
-    });
-    request.once('error', (err: Error) => {
-        onError(err);
-    });
-    request.end();
 }
 
 function onFullProxyConnectionEvent(event: ProxyEvent, request: any, proxyReq: CreateProxyRequest): void {
