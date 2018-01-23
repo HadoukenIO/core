@@ -144,7 +144,7 @@ function SystemApiHandler() {
     function startCrashReporter(identity, message, ack) {
         const dataAck = _.clone(successAck);
         const { payload } = message;
-        dataAck.data = System.startCrashReporter(identity, payload, false);
+        dataAck.data = System.startCrashReporter(identity, payload);
         ack(dataAck);
     }
 
