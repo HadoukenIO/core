@@ -199,7 +199,6 @@ function subscribe(identity, payload, listener) {
 }
 
 function unsubscribe(identity, cbId, senderUuid, ...rest) {
-
     let {
         uuid,
         name
@@ -224,7 +223,6 @@ function unsubscribe(identity, cbId, senderUuid, ...rest) {
     ofBus.removeListener(keys.toApp, callback);
 
     delete callbacks['' + cbId];
-
 
     busEventing.emit(ofEvents.subscriber.REMOVED, {
         senderUuid: senderUuid,
