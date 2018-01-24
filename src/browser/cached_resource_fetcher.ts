@@ -14,24 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import {app, net} from 'electron'; // Electron app
-import {stat, mkdir, writeFileSync, createWriteStream} from 'fs';
+import {stat, mkdir, createWriteStream, readFile as fsReadFile} from 'fs';
 import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
-import {isURL, isURI, uriToPath} from '../common/regex';
+import * as log from './log';
+import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
+import * as authenticationDelegate from './authentication_delegate';
 
 let appQuiting: Boolean = false;
 
+const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 const fetchMap: Map<string, Promise<any>> = new Map();
+const authMap: Map<string, Function> = new Map();  // auth UUID => auth callback
 
 app.on('quit', () => { appQuiting = true; });
 
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
-export async function cachedFetch(appUuid: string, fileUrl: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
-    if (!fileUrl || typeof fileUrl !== 'string') {
-        callback(new Error(`Bad file url: '${fileUrl}'`));
+export async function cachedFetch(appUuid: string, url: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
+    if (typeof url !== 'string') {
+        callback(new Error(`Bad file url: '${url}'`));
         return;
     }
     if (appQuiting) {
@@ -39,19 +43,17 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
         return;
     }
 
-    if (!isURL(fileUrl)) {
-
-        // this is the case where file:///
-        if (isURI(fileUrl)) {
-            callback(null, uriToPath(fileUrl));
+    if (!isHttpUrl(url)) {
+        if (isFileUrl(url)) {
+            callback(null, uriToPath(url));
         } else {
             // this is C:\whatever\
-            stat(fileUrl, (err: null|Error) => {
+            stat(url, (err: null|Error) => {
                 if (err) {
-                    app.vlog(1, `cachedFetch invalid file url ${fileUrl}`);
-                    callback(new Error(`Invalid file url: '${fileUrl}'`));
+                    app.vlog(1, `cachedFetch invalid file url ${url}`);
+                    callback(new Error(`Invalid file url: '${url}'`));
                 } else {
-                    callback(null, fileUrl);
+                    callback(null, url);
                 }
             });
         }
@@ -59,22 +61,22 @@ export async function cachedFetch(appUuid: string, fileUrl: string, callback: (e
     }
 
     const appCacheDir = getAppCacheDir(appUuid);
-    const filePath = getFilePath(appCacheDir, fileUrl);
+    const filePath = getFilePath(appCacheDir, url);
     let err: Error;
 
-    app.vlog(1, `cachedFetch ${fileUrl} ${filePath}`);
+    app.vlog(1, `cachedFetch ${url} ${filePath}`);
     if (fetchMap.has(filePath)) {
         fetchMap.get(filePath).then(() => callback(null, filePath)).catch(callback);
     } else {
         const p = new Promise( async (resolve, reject) => {
             try {
                 await prepDownloadLocation(appCacheDir);
-                await download(fileUrl, filePath);
+                await download(url, filePath);
                 callback(null, filePath);
                 resolve(filePath);
             } catch (e) {
                 err = e;
-                app.vlog(1, `cachedFetch uuid ${appUuid} url ${fileUrl} file ${filePath} err ${e.message}`);
+                app.vlog(1, `cachedFetch uuid ${appUuid} url ${url} file ${filePath} err ${e.message}`);
                 callback(err, filePath);
                 reject(err);
             } finally {
@@ -176,12 +178,24 @@ function generateHash(str: string): string {
     return hash.digest('hex');
 }
 
+function authRequest(url: string, authInfo: any, authCallback: Function): void {
+    const uuid: string = app.generateGUID();
+    const identity = {
+        name: uuid,
+        uuid: uuid,
+        resourceFetch: true // not tied to a window
+    };
+    log.writeToLog(1, `fetchURL login event ${url} uuid ${uuid} ${JSON.stringify(authInfo)}`, true);
+    authMap.set(uuid, authCallback);
+    authenticationDelegate.addPendingAuthRequests(identity, authInfo, authCallback);
+    authenticationDelegate.createAuthUI(identity);
+}
+
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
 function download(fileUrl: string, filePath: string): Promise<any> {
     return new Promise((resolve, reject) => {
-        const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
         const request = net.request(fileUrl);
         const binaryWriteStream = createWriteStream(filePath, {
             encoding: 'binary'
@@ -214,10 +228,8 @@ function download(fileUrl: string, filePath: string): Promise<any> {
             });
         });
 
-        request.once('login', (authInfo: any, callback: Function) => {
-            //Simply provide empty credentials to raise the authentication error.
-            //https://github.com/rdepena/electron/blob/master/docs/api/client-request.md#event-login
-            callback();
+        request.on('login', (authInfo: any, callback: Function) => {
+            authRequest(filePath, authInfo, callback);
         });
 
         request.once('error', (err: Error) => {
@@ -226,4 +238,88 @@ function download(fileUrl: string, filePath: string): Promise<any> {
 
         request.end();
     });
+}
+
+export function fetchURL(url: string, done: (resp: any) => void, onError: (err: Error) => void ): void {
+    log.writeToLog(1, `fetchURL ${url}`, true);
+    const request = net.request(url);
+    request.once('response', (response: any) => {
+        let data = '';
+        const { statusCode } = response;
+        log.writeToLog(1, `fetchURL statusCode: ${statusCode} for ${url}`, true);
+        if (!expectedStatusCode.test(statusCode)) {
+            const error = new Error(`Failed to download resource. Status code: ${statusCode}`);
+            onError(error);
+        }
+        response.setEncoding('utf8');
+        response.once('error', (err: Error) => {
+            onError(err);
+        });
+        response.on('data', (chunk: string) => {
+            data = data.concat(chunk);
+        });
+        response.on('end', () => {
+            log.writeToLog(1, `Contents from ${url}`, true);
+            log.writeToLog(1, data, true);
+            try {
+                const obj = JSON.parse(data);
+                done(obj);
+            } catch (e) {
+                onError(new Error(`Error parsing JSON from ${url}`));
+            }
+        });
+    });
+    request.on('login', (authInfo: any, callback: Function) => {
+        authRequest(url, authInfo, callback);
+    });
+    request.once('error', (err: Error) => {
+        onError(err);
+    });
+    request.end();
+}
+
+/**
+ * Fetches a file to disk and then reads it
+ */
+export function fetchReadFile(url: string, isJSON: boolean): Promise<string|object> {
+    return new Promise((resolve, reject) => {
+        if (isHttpUrl(url)) {
+            fetchURL(url, resolve, reject);
+
+        } else if (isFileUrl(url)) {
+            const pathToFile = uriToPath(url);
+
+            readFile(pathToFile, isJSON)
+                .then(resolve)
+                .catch(reject);
+
+        } else {
+            reject(new Error(`URL protocol is not supported in ${url}`));
+        }
+    });
+}
+
+/**
+ * Reads a file from disk
+ */
+export function readFile(pathToFile: string, isJSON: boolean): Promise<string|object> {
+    return new Promise((resolve, reject) => {
+        fsReadFile(pathToFile, 'utf-8', (error, data) => {
+            if (error) {
+                reject(error);
+            } else {
+                isJSON ? resolve(JSON.parse(data)) : resolve(data);
+            }
+        });
+    });
+}
+
+export function authenticateFetch(uuid: string, username: string, password: string): void {
+    if (authMap.has(uuid)) {
+        log.writeToLog(1, `Auth resource fetch uuid ${uuid} ${username}`, true);
+        authMap.get(uuid).call(null, username, password);
+        authMap.delete(uuid);
+    } else {
+        log.writeToLog(1, `Missing resource auth uuid ${uuid}`, true);
+    }
 }

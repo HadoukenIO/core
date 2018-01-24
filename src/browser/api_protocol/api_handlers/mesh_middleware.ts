@@ -156,6 +156,7 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
+// On certain system API calls, provide aggregate results from all runtimes on the mesh
 function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: object) => void) {
     const { identity, data, ack, nack } = msg;
     const action = data && data.action;

@@ -21,20 +21,20 @@ limitations under the License.
 let fs = require('fs');
 let path = require('path');
 
-let ResourceFetcher = require('electron').resourceFetcher;
-
 // npm modules
 let _ = require('underscore');
 
 // local modules
 let coreState = require('./core_state.js');
 let log = require('./log');
-let regex = require('../common/regex');
+import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
+import { fetchReadFile } from './cached_resource_fetcher';
 
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
-    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
+    DEFAULT_RESIZE_SIDES
 } from '../shapes';
 const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 
@@ -71,6 +71,10 @@ function five0BaseOptions() {
         'disableIabSecureLogging': false,
         'draggable': false,
         'exitOnClose': false,
+        'experimental': {
+            'disableInitialReload': false,
+            'v2Api': false
+        },
         'frame': true,
         'frameConnect': '',
         'hideOnBlur': false,
@@ -92,7 +96,8 @@ function five0BaseOptions() {
         'resize': true,
         'resizeRegion': {
             'bottomRightCorner': DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
-            'size': DEFAULT_RESIZE_REGION_SIZE
+            'size': DEFAULT_RESIZE_REGION_SIZE,
+            'sides': DEFAULT_RESIZE_SIDES
         },
         'saveWindowState': true,
         'shadow': false,
@@ -136,30 +141,6 @@ function readFile(filePath, done, onError) {
         }
         done(config);
     });
-}
-
-function getURL(url, done, onError) {
-    const fetcher = new ResourceFetcher('string');
-
-    fetcher.once('fetch-complete', (object, status, data) => {
-        if (status !== 'success') {
-            onError(new Error(`Could not retrieve ${url}`));
-            return;
-        }
-
-        log.writeToLog(1, `Contents from ${url}`, true);
-        log.writeToLog(1, data, true);
-
-        try {
-            const config = JSON.parse(data);
-            done(config);
-        } catch (e) {
-            onError(new Error(`Error parsing JSON from ${url}`));
-        }
-    });
-
-    log.writeToLog(1, `Fetching ${url}`, true);
-    fetcher.fetch(url);
 }
 
 function validateOptions(options) {
@@ -251,6 +232,7 @@ module.exports = {
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
+            disableInitialReload: newOptions.experimental.disableInitialReload,
             nodeIntegration: false,
             plugins: newOptions.plugins
         };
@@ -340,16 +322,14 @@ module.exports = {
             return;
         }
 
-        if (regex.isURL(configUrl)) {
-            return getURL(configUrl, configObject => {
-                onComplete({
-                    configObject,
-                    configUrl
-                });
-            }, errorCallback);
+        if (isHttpUrl(configUrl)) {
+            fetchReadFile(configUrl, true)
+                .then((configObject) => onComplete({ configObject, configUrl }))
+                .catch(errorCallback);
+            return;
         }
 
-        let filepath = regex.isURI(configUrl) ? regex.uriToPath(configUrl) : configUrl;
+        let filepath = isFileUrl(configUrl) ? uriToPath(configUrl) : configUrl;
 
         return readFile(filepath, configObject => {
             onComplete({

@@ -31,6 +31,10 @@ declare module 'electron' {
         export function on(event: string, callback: () => void): void;
         export function setMinLogLevel(level: number): void;
         export function vlog(level: number, message: any): any;
+
+        export function readRegistryValue(root: string, key: string, value: string): any;
+
+        export function matchesURL(url: string, patterns: [string]): boolean;
     }
 
     export namespace net {
@@ -72,14 +76,6 @@ declare module 'electron' {
 
     export class ipcMain {
 
-    }
-
-    export class resourceFetcher {
-        constructor(type: string);
-        on(event: string, callback: (event: string, status: string, data: string, headers: any) => any): void;
-        once(event: string, callback: (event: string, status: string, data: string, headers: any) => any): void;
-        setFilePath(path: string): void;
-        fetch(url: string): void;
     }
 
     export class chromeIpcClient {

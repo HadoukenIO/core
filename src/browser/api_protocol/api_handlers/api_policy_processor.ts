@@ -12,6 +12,7 @@ import {ApiPath, ApiPolicyDelegate, Endpoint} from '../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
 import { GetDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
 import { writeToLog } from '../../log';
+import {app as electronApp} from 'electron';
 
 const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUrl => permission object, retrieved from RVM
                                             // if a configUrl is mapped to a boolean true, request to RVM is successful
@@ -24,6 +25,15 @@ const DESKTOP_OWNER_SETTINGS_TIMEOUT: string = 'desktop-owner-settings-timeout';
 let desktopOwnerSettingsTimeout: number = 2000;  // in ms
 let desktopOwnerSettingEnabled: boolean = false;
 
+type ApiPolicy = {
+    // for backwards compatible, policyName can be config URL
+    [policyName: string]: {
+        urls?: [string];  // support wildcard patterns. If missing, policyName is URL (no wildcard)
+        permissions: any;
+    }
+};
+let apiPolicies: ApiPolicy;  // policies for all APIs
+
 enum POLICY_AUTH_RESULT {
     Allowed = 1,
     Denied,
@@ -34,6 +44,25 @@ const delegateMap: Map<ApiPath, ApiPolicyDelegate> = new Map();
 
 function getApiPath(action: string) : string {
     return actionMap[action] ? actionMap[action].apiPath : '';
+}
+
+function searchPolicyByConfigUrl(url: string): any {
+    writeToLog(1, `searchPolicyByConfigUrl ${url}`, true);
+    if (apiPolicies) {
+        for (const policyName of Object.keys(apiPolicies)) {
+            const policy = apiPolicies[policyName];
+            if (Array.isArray(policy.urls) &&
+                    electronApp.matchesURL(url, policy.urls)) {
+                writeToLog(1, `searchPolicyByConfigUrl matched by policy name ${policyName}`, true);
+                return policy;
+            } else if (electronApp.matchesURL(url,  [policyName])) {
+                writeToLog(1, `searchPolicyByConfigUrl matched by policy name ${policyName}`, true);
+                return policy;
+            }
+        }
+    } else {
+        writeToLog('error', 'searchPolicyByConfigUrl: missing API policies');
+    }
 }
 
 /**
@@ -257,30 +286,13 @@ function requestAppPermissions(configUrl: string): Promise<any> {
             writeToLog(1, 'requestAppPermissions cached', true);
             resolve(configUrlPermissionsMap[configUrl]);
         } else {
-            const msg: GetDesktopOwnerSettings =  {
-                topic: 'application',
-                action: 'get-desktop-owner-settings',
-                sourceUrl: configUrl
-            };
-
-            rvmBus.publish(msg, (rvmResponse: any) => {
-                writeToLog('info', `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
-
-                if (rvmResponse.payload && rvmResponse.payload.success === true &&
-                    rvmResponse.payload.payload) {
-                    if (rvmResponse.payload.payload.permissions) {
-                        configUrlPermissionsMap[configUrl] = {permissions: rvmResponse.payload.payload.permissions};
-                                                                // cache it
-                    } else {
-                        // if permissions is missing, startup URL is not defined in desktop-owner-settings.  Not an error
-                        configUrlPermissionsMap[configUrl] = {};
-                    }
-                    resolve(configUrlPermissionsMap[configUrl]);
-                } else {
-                    writeToLog('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
-                    reject(rvmResponse);  // false indicates request to RVM failed
-                }
-            }, desktopOwnerSettingsTimeout / 1000);
+            const policy = searchPolicyByConfigUrl(configUrl);
+            if (policy && policy.permissions) {
+                configUrlPermissionsMap[configUrl] = {permissions: policy.permissions};
+            } else {
+                configUrlPermissionsMap[configUrl] = {};
+            }
+            resolve(configUrlPermissionsMap[configUrl]);
         }
     });
 }
@@ -288,6 +300,28 @@ function requestAppPermissions(configUrl: string): Promise<any> {
 function registerDelegate(apiPath: ApiPath, delegate: ApiPolicyDelegate) {
     writeToLog(1, `register API policy delegate ${apiPath}`, true);
     delegateMap.set(apiPath, delegate);
+}
+
+function retrieveAPIPolicyContent(): Promise<any> {
+    writeToLog(1, 'retrieveAPIPolicyContent', true);
+    return new Promise((resolve, reject) => {
+        const msg: GetDesktopOwnerSettings = {
+            topic: 'application',
+            action: 'get-desktop-owner-settings',
+            sourceUrl: 'https://openfin.co', // ignored by RVM if isGlobal is true
+            isGlobal: true // get all polices
+        };
+        rvmBus.publish(msg, (rvmResponse: any) => {
+            writeToLog('info', `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
+            if (rvmResponse.payload && rvmResponse.payload.success === true &&
+                rvmResponse.payload.payload) {
+                resolve(rvmResponse.payload.payload);
+            } else {
+                writeToLog('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
+                reject(rvmResponse);  // false indicates request to RVM failed
+            }
+        }, desktopOwnerSettingsTimeout / 1000);
+    });
 }
 
 if (coreState.argo['enable-strict-api-permissions']) {
@@ -304,6 +338,14 @@ if (coreState.argo['enable-strict-api-permissions']) {
         if (endPoint.apiPolicyDelegate) {
             registerDelegate(endPoint.apiPath, endPoint.apiPolicyDelegate);
         }
+    }
+
+    if (desktopOwnerSettingEnabled === true) {
+        retrieveAPIPolicyContent().then((content: ApiPolicy) => {
+            apiPolicies = content;
+        }).catch(e => {
+            writeToLog(1, `Error retrieveAPIPolicies ${e}`, true);
+        });
     }
 }
 

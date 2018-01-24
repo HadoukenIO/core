@@ -13,14 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-export function isURL(str: string): boolean {
-    return /^https?:\/\//.test(str);
+
+import { parse as parseUrl } from 'url';
+
+export function isFileUrl(url: string): boolean {
+    const protocol = parseUrl(url).protocol || '';
+    return protocol.startsWith('file');
 }
 
-export function isURI(str: string): boolean {
-    return /^file:\/\/\//.test(str); // file:// is BAD; file:/// is GOOD
+export function isHttpUrl(url: string): boolean {
+    const protocol = parseUrl(url).protocol || '';
+    return protocol.startsWith('http'); // will work for https too
 }
 
 export function uriToPath(uri: string): string {
-    return uri.substring(8).replace(/%20/g, ' ');
+    return uri
+        .replace(/^file:\/\/\/?/, '')
+        .replace(/%20/g, ' ');
 }
