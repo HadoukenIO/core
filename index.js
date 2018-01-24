@@ -396,12 +396,19 @@ function includeFlashPlugin() {
 }
 
 function initializeCrashReporter(argo) {
-    if (!isInDiagnosticsMode(argo)) {
+    if (!needsCrashReporter(argo)) {
         return;
     }
 
     const configUrl = argo['startup-url'] || argo['config'];
     const diagnosticMode = argo['diagnostics'] || false;
+    const sandboxDisabled = argo['sandbox'] === false; // means '--no-sandbox' flag exists
+
+    if (diagnosticMode && !sandboxDisabled) {
+        log.writeToLog('info', `'--no-sandbox' flag has been automatically added, ` +
+            `because the application is running in diagnostics mode and has '--diagnostics' flag specified`);
+        app.commandLine.appendSwitch('no-sandbox');
+    }
 
     crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
 }
@@ -506,7 +513,7 @@ function initServer() {
 //please see the discussion on https://github.com/openfin/runtime-core/pull/194
 function launchApp(argo, startExternalAdapterServer) {
 
-    if (isInDiagnosticsMode(argo)) {
+    if (needsCrashReporter(argo)) {
         log.setToVerbose();
     }
 
@@ -666,6 +673,6 @@ function registerShortcuts() {
     app.on('browser-window-blur', unhookShortcuts);
 }
 
-function isInDiagnosticsMode(argo) {
+function needsCrashReporter(argo) {
     return !!(argo['diagnostics'] || argo['enable-crash-reporting']);
 }
