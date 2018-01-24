@@ -191,7 +191,7 @@ function subscribe(identity, payload, listener) {
             ofBus.removeListener(keys.toWin, listener);
             ofBus.removeListener(keys.toApp, listener);
 
-            busEventing.emit(ofEvents.subscriber.REMOVED, eventingPayload);
+            emitSubscriberRemoved(identity, payload);
         }
     };
 
@@ -201,11 +201,11 @@ function subscribe(identity, payload, listener) {
 function unsubscribe(identity, cbId, senderUuid, ...rest) {
 
 
-    setTimeout(()=>{
-        throw new Error("tom wins"), 5
-    });
+    setTimeout(() => {
+        throw new Error('tom wins');
+    }, 5);
 
-    
+
     let {
         uuid,
         name
