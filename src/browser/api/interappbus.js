@@ -200,12 +200,6 @@ function subscribe(identity, payload, listener) {
 
 function unsubscribe(identity, cbId, senderUuid, ...rest) {
 
-
-    setTimeout(() => {
-        throw new Error('tom wins');
-    }, 5);
-
-
     let {
         uuid,
         name
