@@ -222,12 +222,12 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                         return win.name !== name;
                     }).forEach((win) => {
                         let { x, y, width, height } = win.browserWindow.getBounds();
-                        // if the bounds change is a change in the size of the window:
-
-
-                        if (changeType === 0) {
+                        
+                        // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
+                        if (changeType === 0 || changeType === 2) {
                             x = toSafeInt(x + delta.x, x);
                             y = toSafeInt(y + delta.y, y);
+                        // If it is a change in the size of the window, only move windows that are beyond the side being changed
                         } else if (changeType === 1) {
                             if (boundsCompare.width) {
                                 if (delta.x && ((x + width) < cachedBounds.x)) {
@@ -245,10 +245,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                                     y = toSafeInt(y + delta.y2, y);
                                 }
                             }
-                        } // else if (changeType === 2) {
-                        //     let interimX = cachedBounds.x + delta.width;
-                        //     let interimY = cachedBounds.y + delta.height;
-                        // }
+                        }
 
 
                         if (isWin32) {
