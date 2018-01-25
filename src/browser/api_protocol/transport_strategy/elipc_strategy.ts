@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { AckMessage,  AckFunc, AckPayload } from './ack';
+import { AckMessage, AckFunc, AckPayload } from './ack';
 import { ApiTransportBase, MessagePackage } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
@@ -36,7 +36,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         super(actionMap, requestHandler);
 
         this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
-            const {identity, data, ack, nack, e, strategyName} = mp;
+            const { identity, data, ack, nack, e, strategyName } = mp;
 
             if (strategyName !== this.constructor.name) {
                 next();
@@ -119,7 +119,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             const nack = this.nackDecorator(ack);
             const browserWindow = e.sender.getOwnerBrowserWindow();
             const currWindow = browserWindow ? coreState.getWinById(browserWindow.id) : null;
-            const openfinWindow = currWindow.openfinWindow;
+            const openfinWindow = currWindow && currWindow.openfinWindow;
             const opts = openfinWindow && openfinWindow._options || {};
             const subFrameName = bypassLocalFrameConnect ? e.sender.getFrameName(e.frameRoutingId) : null;
             const identity = {
