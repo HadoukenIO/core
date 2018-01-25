@@ -87,8 +87,8 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         // set the changed flag only if it has not been set
         sizeChanged = sizeChanged || (widthDiff || heightDiff);
         if (sizeChanged) {
-            xDiff = xDiff && (Math.abs(boundsOne.width - boundsTwo.width) !== Math.abs(boundsOne.x - boundsTwo.x));
-            yDiff = yDiff && (Math.abs(boundsOne.height - boundsTwo.height) !== Math.abs(boundsOne.y - boundsTwo.y));
+            xDiff = xDiff && (boundsOne.x - boundsTwo.x !== (boundsOne.x + boundsOne.width) - (boundsTwo.x + boundsTwo.width));
+            yDiff = yDiff && (boundsOne.y - boundsTwo.y !== (boundsOne.y + boundsOne.height) - (boundsTwo.y + boundsTwo.height));
         }
         positionChanged = positionChanged || (xDiff || yDiff);
 
@@ -227,7 +227,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                         if (changeType === 0 || changeType === 2) {
                             x = toSafeInt(x + delta.x, x);
                             y = toSafeInt(y + delta.y, y);
-                        // If it is a change in the size of the window, only move windows that are beyond the side being changed
+                            // If it is a change in the size of the window, only move windows that are beyond the side being changed
                         } else if (changeType === 1) {
                             if (boundsCompare.width) {
                                 if (delta.x && ((x + width) < cachedBounds.x)) {
