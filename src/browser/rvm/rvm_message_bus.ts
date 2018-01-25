@@ -26,18 +26,21 @@ export interface RvmMsgBase {
 
 // topic: application -----
 type applicationTopic = 'application';
-type registerCustomDataAction = 'register-custom-data';
+type registerUserAction = 'register-user';
 type hideSplashscreenAction = 'hide-splashscreen';
 type relaunchOnCloseAction = 'relaunch-on-close';
 type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
 type downloadRuntimeAction = 'runtime-download';
 
-export interface RegisterCustomData extends RvmMsgBase {
+export interface RegisterUser extends RvmMsgBase {
     topic: applicationTopic;
-    action: registerCustomDataAction;
+    action: registerUserAction;
     sourceUrl: string;
     runtimeVersion: string;
-    data: any;
+    payload: {
+        userName: string;
+        appName: string;
+    };
 }
 
 export interface HideSplashscreen extends RvmMsgBase {
@@ -363,14 +366,13 @@ export class RVMMessageBus extends EventEmitter  {
      */
     public getPluginInfo(manifestUrl: string, opts: Plugin): Promise<PluginQueryResponse> {
         return new Promise((resolve) => {
-            const {name, version, optional} = opts;
+            const {name, version} = opts;
 
             const rvmMsg: PluginQuery = {
                 topic: 'application',
                 action: 'query-plugin',
                 name,
                 version,
-                optional,
                 sourceUrl: manifestUrl
             };
 

@@ -32,7 +32,8 @@ const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
 
 import {
-    addRemoteSubscription
+    addRemoteSubscription,
+    subscribeToAllRuntimes
 } from '../../remote_subscriptions';
 
 // locals
@@ -158,7 +159,23 @@ function EventListenerApiHandler() {
         'system': {
             name: 'system',
             subscribe: function(identity, type, payload, cb) {
-                return System.addEventListener(type, cb);
+                const localUnsub = System.addEventListener(type, cb);
+                const subscription = {
+                    listenType: 'on',
+                    className: 'system',
+                    eventName: type
+                };
+                let remoteUnSub;
+                subscribeToAllRuntimes(subscription).then(unSubscribe => {
+                    remoteUnSub = unSubscribe;
+                });
+
+                return () => {
+                    localUnsub();
+                    if (typeof remoteUnSub === 'function') {
+                        remoteUnSub();
+                    }
+                };
             }
         },
         'notifications': {

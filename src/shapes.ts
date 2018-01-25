@@ -96,11 +96,7 @@ export interface OpenFinWindow {
     id: number;
     name: string;
     plugins: PluginState[];
-    preloadScripts: {
-        optional?: boolean;
-        state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
-        url: string;
-    }[];
+    preloadScripts: PreloadScriptState[];
     uuid: string;
     mainFrameRoutingId: number;
 }
@@ -217,6 +213,12 @@ export interface WindowOptions {
     resizeRegion?: {
         bottomRightCorner: number;
         size: number;
+        sides?: {
+            top?: boolean,
+            right?: boolean,
+            bottom?: boolean,
+            left?: boolean
+        };
     };
     saveWindowState?: boolean;
     shadow?: boolean;
@@ -244,6 +246,7 @@ export interface WindowOptions {
 
 export const DEFAULT_RESIZE_REGION_SIZE = 7;
 export const DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER = 9;
+export const DEFAULT_RESIZE_SIDES = {top: true, right: true, bottom: true, left: true};
 
 export interface Manifest {
     appAssets?: {
@@ -297,11 +300,20 @@ export interface Manifest {
 
 export interface Plugin {
     link?: string;
+    mandatory?: boolean;
     name: string;
-    optional?: boolean;
     version: string;
 }
 
 export interface PluginState extends Plugin {
     state: 'load-failed'|'load-succeeded'|'failed'|'succeeded';
+}
+
+export interface PreloadScript {
+    mandatory?: boolean;
+    url: string;
+}
+
+export interface PreloadScriptState extends PreloadScript {
+    state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
 }

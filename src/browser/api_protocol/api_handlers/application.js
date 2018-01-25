@@ -74,10 +74,9 @@ module.exports.applicationApiMap = {
     'notify-on-app-connected': notifyOnAppConnected,
     'notify-on-content-loaded': notifyOnContentLoaded,
     'ping-child-window': pingChildWindow,
-    'register-custom-data': registerCustomData,
     'register-external-window': registerExternalWindow,
+    'register-user': registerUser,
     'relaunch-on-close': relaunchOnClose,
-    'redownload-preload-scripts': downloadPreloadScripts, // download-preload-scripts already used
     'remove-tray-icon': removeTrayIcon,
     'restart-application': restartApplication,
     'run-application': runApplication,
@@ -427,11 +426,11 @@ function externalWindowAction(identity, message, ack) {
     /* jshint bitwise: true */
 }
 
-function registerCustomData(identity, message, ack, nack) {
+function registerUser(identity, message, ack, nack) {
     const payload = message.payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-    Application.registerCustomData(appIdentity, payload.data, () => {
+    Application.registerUser(appIdentity, payload.userName, payload.appName, () => {
         ack(successAck);
     }, nack);
 }
@@ -442,20 +441,4 @@ function relaunchOnClose(identity, message, ack, nack) {
     Application.scheduleRestart(appIdentity, () => {
         ack(successAck);
     }, nack);
-}
-
-function downloadPreloadScripts(identity, message, ack, nack) {
-    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
-    const { payload } = message;
-    // not pass name in Identity here to prevent preload script events from firing
-    Application.reloadPreloadScripts({ uuid: appIdentity.uuid }, payload.scripts, err => {
-        electronApp.vlog(1, `reloadPreloadScripts ${JSON.stringify(err)}`);
-        if (Array.isArray(err)) {
-            const dataAck = _.clone(successAck);
-            dataAck.data = err;
-            ack(dataAck);
-        } else {
-            nack(err);
-        }
-    });
 }

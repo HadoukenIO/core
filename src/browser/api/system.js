@@ -38,10 +38,11 @@ const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
-import { fetchAndLoadPreloadScripts, getIdentifier } from '../preload_scripts';
+import { downloadScripts, loadScripts } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
-import { fetchURL } from '../cached_resource_fetcher';
+import { fetchReadFile } from '../cached_resource_fetcher';
+import { authenticateFetch } from '../cached_resource_fetcher';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -75,8 +76,6 @@ const defaultProc = {
         return 0;
     }
 };
-
-let preloadScriptsCache = {};
 
 let MonitorInfo;
 let Session;
@@ -166,6 +165,9 @@ exports.System = {
 
         return unsubscribe;
     },
+    authenticateResourceFetch: function(identity, options) {
+        authenticateFetch(options.uuid, options.username, options.password);
+    },
     clearCache: function(identity, options, resolve) {
         /*
         fin.desktop.System.clearCache({
@@ -173,8 +175,7 @@ exports.System = {
             cookies: true,
             localStorage: true,
             appcache: true,
-            userData: true, // TODO: userData is the window bounds cache
-            preload: true   // TODO: ignored here, but clearCache does cause issues with preload scripts
+            userData: true // TODO: userData is the window bounds cache
         });
         */
         var settings = options || {};
@@ -462,7 +463,9 @@ exports.System = {
         };
     },
     getRemoteConfig: function(url, callback, errorCallback) {
-        fetchURL(url, callback, errorCallback);
+        fetchReadFile(url, true)
+            .then(callback)
+            .catch(errorCallback);
     },
     getVersion: function() {
         return process.versions['openfin'];
@@ -712,49 +715,15 @@ exports.System = {
         }
     },
 
-    downloadPreloadScripts: function(identity, preloadOption, cb) {
-        if (!preloadOption) {
-            cb();
-        } else {
-            fetchAndLoadPreloadScripts(identity, preloadOption, cb);
-        }
+    downloadPreloadScripts: function(identity, preloadScripts) {
+        return downloadScripts(identity, preloadScripts);
     },
 
     getPluginModules: function(identity) {
         return plugins.getModules(identity);
     },
 
-    // identitier is preload script url or plugin name
-    setPreloadScript: function(identitier, scriptText) {
-        preloadScriptsCache[identitier] = scriptText;
-    },
-
-    // identitier is preload script url or plugin name
-    getPreloadScript: function(identitier) {
-        return preloadScriptsCache[identitier];
-    },
-
-    // identitiers are preload script url or plugin name
-    getSelectedPreloadScripts: function(preloadOption) {
-        const missingRequiredScripts = preloadOption.reduce((identifiers, preload) => {
-            if (!preload.optional && !(getIdentifier(preload) in preloadScriptsCache)) {
-                identifiers.push(getIdentifier(preload));
-            }
-            return identifiers;
-        }, []);
-
-        if (missingRequiredScripts.length) {
-            const list = JSON.stringify(missingRequiredScripts);
-            const message = `Execution of preload scripts canceled because of missing required script(s) ${list}`;
-            const err = new Error(message);
-            return Promise.reject(err);
-        }
-
-        // when load/fetch failed, mapped object will be `undefined` (stringifies as `null`)
-        const scriptSet = preloadOption.map((preload) => {
-            preload.content = preloadScriptsCache[getIdentifier(preload)];
-            return preload;
-        });
-        return Promise.resolve(scriptSet);
-    },
+    getPreloadScripts: function(identity) {
+        return loadScripts(identity);
+    }
 };

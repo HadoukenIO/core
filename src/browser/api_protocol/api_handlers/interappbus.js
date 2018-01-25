@@ -46,7 +46,21 @@ function InterApplicationBusApiHandler() {
         let sourceUuid = payload.sourceUuid;
         let sourceWindowName = payload.sourceWindowName || '';
 
+        const subscriptionArgs = [
+            identity,
+            topic,
+            identity.uuid,
+            sourceUuid,
+            sourceWindowName,
+            subScriptionTypes.MESSAGE
+        ];
+
         apiProtocolBase.removeSubscription(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE);
+
+        // If subscription still exits, haven't called unsubscribe function so haven't emitted subscriber removed
+        if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
+            InterApplicationBus.emitSubscriberRemoved(identity, payload);
+        }
         ack(successAck);
     }
 
@@ -90,6 +104,11 @@ function InterApplicationBusApiHandler() {
         if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
             apiProtocolBase.uppSubscriptionRefCount(...subscriptionArgs);
 
+            InterApplicationBus.emitSubscriberAdded(identity, payload);
+
+            ofEvents.once(route.window('unload', identity.uuid, identity.name, false), () => {
+                apiProtocolBase.removeSubscription(...subscriptionArgs);
+            });
         } else {
 
             const subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
@@ -180,15 +199,26 @@ function InterApplicationBusApiHandler() {
 
         apiProtocolBase.registerSubscription(subAddedSubObj.unsubscribe,
             iabIdentity,
-            iabIdentity.uuid,
-            iabIdentity.name,
+            connectionIdentity.uuid,
+            connectionIdentity.name,
             subScriptionTypes.SUB_ADDED);
 
         apiProtocolBase.registerSubscription(subRemovedSubObj.unsubscribe,
             iabIdentity,
-            iabIdentity.uuid,
-            iabIdentity.name,
+            connectionIdentity.uuid,
+            connectionIdentity.name,
             subScriptionTypes.SUB_REMOVED);
+
+        ofEvents.once(route.window('unload', connectionIdentity.uuid, connectionIdentity.name, false), () => {
+            apiProtocolBase.removeSubscription(iabIdentity,
+                connectionIdentity.uuid,
+                connectionIdentity.name,
+                subScriptionTypes.SUB_ADDED);
+            apiProtocolBase.removeSubscription(iabIdentity,
+                connectionIdentity.uuid,
+                connectionIdentity.name,
+                subScriptionTypes.SUB_REMOVED);
+        });
     }
 
 

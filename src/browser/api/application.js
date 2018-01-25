@@ -37,16 +37,15 @@ let Window = require('./window.js').Window;
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
-import { cachedFetch, fetchURL } from '../cached_resource_fetcher';
+import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
-let regex = require('../../common/regex');
 let WindowGroups = require('../window_groups.js');
 import { sendToRVM } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { getIdentifier, deletePreloadScriptState } from '../preload_scripts';
+import { isFileUrl, isHttpUrl } from '../../common/main';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -56,6 +55,7 @@ let rvmBus;
 let MonitorInfo;
 var Application = {};
 let fetchingIcon = {};
+let registeredUsersByApp = {};
 
 // var OfEvents = [
 //     'closed',
@@ -290,9 +290,9 @@ Application.getManifest = function(identity, manifestUrl, callback, errCallback)
     }
 
     if (manifestUrl) {
-        fetchURL(manifestUrl, manifest => {
-            callback(manifest);
-        }, errCallback);
+        fetchReadFile(manifestUrl, true)
+            .then(callback)
+            .catch(errCallback);
     } else {
         errCallback(new Error('App not started from manifest'));
     }
@@ -348,34 +348,56 @@ Application.grantWindowAccess = function() {
 };
 Application.isRunning = function(identity) {
     let uuid = identity && identity.uuid;
-    return uuid && coreState.getAppRunningState(uuid) && !coreState.getAppRestartingState(uuid);
+    return !!(uuid && coreState.getAppRunningState(uuid) && !coreState.getAppRestartingState(uuid));
 };
 Application.pingChildWindow = function() {
     console.warn('Deprecated');
 };
-Application.registerCustomData = function(identity, data, callback, errorCallback) {
-    let app = Application.wrap(identity.uuid);
+Application.registerUser = function(identity, userName, appName, callback, errorCallback) {
+    const uuid = identity.uuid;
+    const app = coreState.getAppByUuid(uuid) || coreState.getExternalAppObjByUuid(uuid);
 
     if (!app) {
-        errorCallback(new Error(`application with uuid ${identity.uuid} does not exist`));
+        errorCallback(new Error(`application with uuid ${uuid} does not exist`));
+        return;
+    }
+
+    const licenseKey = app.licenseKey;
+    const configUrl = coreState.getConfigUrlByUuid(uuid);
+
+    if (!licenseKey) {
+        errorCallback(new Error(`application with uuid ${uuid} has no licenseKey specified`));
+    } else if (!configUrl) {
+        errorCallback(new Error(`application with uuid ${uuid} has no _configUrl specified`));
     } else if (!rvmBus) {
         errorCallback(new Error('cannot connect to the RVM'));
-    } else if (!data || !data.userId || !data.organization) {
-        errorCallback(new Error('\'userId\' and \'organization\' fields are required to send custom data'));
+    } else if (!userName) {
+        errorCallback(new Error('\'userId\' field is required to register user'));
+    } else if (!appName) {
+        errorCallback(new Error('\'appName\' field is required to register user'));
+    } else if (userName.length > 128) {
+        errorCallback(new Error('\'userName\' is too long; must be <= 128 characters'));
+    } else if (appName.length > 32) {
+        errorCallback(new Error('\'appName\' is too long; must be <= 32 characters'));
+    } else if (uuid in registeredUsersByApp && registeredUsersByApp[uuid].has(userName)) {
+        errorCallback(new Error(`userName ${userName} is already registered for appName ${appName} with app uuid ${uuid}`));
     } else {
-        let success = rvmBus.publish({
-            topic: 'application',
-            action: 'register-custom-data',
-            sourceUrl: app._configUrl,
-            runtimeVersion: System.getVersion(),
-            data
-        });
-
-        if (success) {
-            callback();
-        } else {
-            errorCallback(new Error('there was an issue sending a message to the RVM'));
+        if (!(uuid in registeredUsersByApp)) {
+            registeredUsersByApp[uuid] = new Set();
         }
+        registeredUsersByApp[uuid].add(userName);
+
+        sendToRVM({
+                topic: 'application',
+                action: 'register-user',
+                sourceUrl: configUrl,
+                runtimeVersion: System.getVersion(),
+                payload: {
+                    userName: userName,
+                    appName: appName
+                }
+            }).then(callback, errorCallback)
+            .catch(errorCallback);
     }
 };
 
@@ -440,7 +462,9 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     } else {
         // Flow through preload script logic (eg. re-download of failed preload scripts)
         // only if app is not already running.
-        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts, proceed);
+        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts)
+            .then(proceed)
+            .catch(proceed);
     }
 };
 
@@ -586,6 +610,10 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         delete fetchingIcon[uuid];
         removeTrayIcon(app);
 
+        if (uuid in registeredUsersByApp) {
+            delete registeredUsersByApp[uuid];
+        }
+
         ofEvents.emit(route.application('closed', uuid), { topic: 'application', type: 'closed', uuid });
 
         eventListenerStrings.forEach(eventString => {
@@ -604,7 +632,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
         coreState.removeApp(app.id);
 
-        if (!runtimeIsClosing && coreState.shouldCloseRuntime()) {
+        if (!app._options._runtimeAuthDialog && !runtimeIsClosing && coreState.shouldCloseRuntime()) {
             try {
                 runtimeIsClosing = true;
                 let appsToClose = coreState.getAllAppObjects();
@@ -821,15 +849,6 @@ Application.emitRunRequested = function(identity, userAppConfigArgs) {
     }
 };
 
-Application.reloadPreloadScripts = function(identity, preloadScripts, callback) {
-    (preloadScripts || []).map(preload => {
-        electronApp.vlog(1, `clear preload script ${getIdentifier(preload)}`);
-        deletePreloadScriptState(getIdentifier(preload));
-    });
-    System.downloadPreloadScripts(identity, preloadScripts, callback);
-
-};
-
 Application.wait = function() {
     console.warn('Awaiting native implementation');
 };
@@ -974,7 +993,7 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         opts.url = opts.url || 'about:blank';
 
-        if (!regex.isURL(opts.url) && !isURI(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
+        if (!isHttpUrl(opts.url) && !isFileUrl(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
         }
 
@@ -1058,10 +1077,6 @@ function createAppObj(uuid, opts, configUrl = '') {
         });
     }
     return appObj;
-}
-
-function isURI(str) {
-    return /^file:\/\/\/?/.test(str);
 }
 
 function isNonEmptyString(str) {
