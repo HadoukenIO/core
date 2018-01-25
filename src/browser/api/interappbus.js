@@ -135,7 +135,7 @@ function dispatchToSubscriptions(topic, identity, destUuid, destName, payload, s
 }
 
 function emitSubscriberAdded(identity, payload) {
-    const senderUuid = payload.sourceUuid || '*';
+    const senderUuid = payload.sourceUuid || ANY_UUID;
 
     const eventingPayload = {
         senderUuid: senderUuid,
@@ -143,13 +143,13 @@ function emitSubscriberAdded(identity, payload) {
         uuid: identity.uuid,
         name: identity.name,
         topic: payload.topic,
-        directMsg: payload.sourceWindowName !== '*' ? payload.sourceWindowName : false
+        directMsg: payload.sourceWindowName !== ANY_NAME ? payload.sourceWindowName : false
     };
     busEventing.emit(ofEvents.subscriber.ADDED, eventingPayload);
 }
 
 function emitSubscriberRemoved(identity, payload) {
-    const senderUuid = payload.sourceUuid || '*';
+    const senderUuid = payload.sourceUuid || ANY_UUID;
 
     const eventingPayload = {
         senderUuid: senderUuid,
@@ -157,7 +157,7 @@ function emitSubscriberRemoved(identity, payload) {
         uuid: identity.uuid,
         name: identity.name,
         topic: payload.topic,
-        directMsg: payload.sourceWindowName !== '*' ? payload.sourceWindowName : false
+        directMsg: payload.sourceWindowName !== ANY_NAME ? payload.sourceWindowName : false
     };
     busEventing.emit(ofEvents.subscriber.REMOVED, eventingPayload);
 }
