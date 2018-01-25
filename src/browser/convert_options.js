@@ -241,6 +241,10 @@ module.exports = {
             newOptions.webPreferences.webSecurity = false;
         }
 
+        if (coreState.argo['user-app-config-args']) {
+            newOptions.userAppConfigArgs = coreState.argo['user-app-config-args'];
+        }
+
         if (options.message !== undefined) {
             newOptions.message = options.message;
         }

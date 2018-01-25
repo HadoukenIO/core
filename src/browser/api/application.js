@@ -838,14 +838,24 @@ Application.emitHideSplashScreen = function(identity) {
 };
 
 Application.emitRunRequested = function(identity, userAppConfigArgs) {
-    var uuid = identity && identity.uuid;
-    if (uuid) {
-        ofEvents.emit(route.application('run-requested', uuid), {
-            topic: 'application',
-            type: 'run-requested',
-            uuid,
-            userAppConfigArgs
+    const uuid = identity && identity.uuid;
+    let data = {
+        topic: 'application',
+        type: 'run-requested',
+        uuid
+    };
+
+    if (userAppConfigArgs) {
+        let queryParams = userAppConfigArgs.split('&');
+        let args = {};
+        queryParams.forEach(function(param) {
+            let [key, value] = param.split('=');
+            args[key] = value;
         });
+        data.userAppConfigArgs = args;
+    }
+    if (uuid) {
+        ofEvents.emit(route.application('run-requested', uuid), data);
     }
 };
 
