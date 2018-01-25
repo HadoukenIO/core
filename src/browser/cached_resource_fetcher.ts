@@ -294,7 +294,15 @@ export function fetchReadFile(url: string, isJSON: boolean): Promise<string|obje
                 .catch(reject);
 
         } else {
-            reject(new Error(`URL protocol is not supported in ${url}`));
+            stat(url, (err: null|Error) => {
+                if (err) {
+                    reject(new Error(`URL protocol is not supported in ${url}`));
+                } else {
+                    readFile(url, isJSON)
+                        .then(resolve)
+                        .catch(reject);
+                }
+            });
         }
     });
 }
