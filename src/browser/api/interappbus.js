@@ -180,43 +180,6 @@ function subscribe(identity, payload, listener) {
     return unsubItem;
 }
 
-
-function unsubscribe(identity, cbId, senderUuid, ...rest) {
-    let {
-        uuid,
-        name
-    } = identity;
-
-    let senderName = typeof rest[1] === 'function' ? ANY_NAME : rest[0] || ANY_NAME;
-    let topic = typeof rest[1] === 'function' ? rest[0] : rest[1];
-
-    let callback = callbacks['' + cbId];
-
-    if (!callback) {
-        return;
-    }
-
-    let keys = generateSubscribeKeys(topic, {
-        uuid: senderUuid,
-        name: senderName
-    }, identity);
-
-    ofBus.removeListener(keys.toAny, callback);
-    ofBus.removeListener(keys.toWin, callback);
-    ofBus.removeListener(keys.toApp, callback);
-
-    delete callbacks['' + cbId];
-
-    busEventing.emit(ofEvents.subscriber.REMOVED, {
-        senderUuid: senderUuid,
-        senderName: senderUuid,
-        uuid: uuid,
-        name: name,
-        topic: topic
-    });
-}
-
-
 function subscriberAdded(identity, listener) {
     let {
         uuid,
