@@ -46,7 +46,21 @@ function InterApplicationBusApiHandler() {
         let sourceUuid = payload.sourceUuid;
         let sourceWindowName = payload.sourceWindowName || '';
 
+        const subscriptionArgs = [
+            identity,
+            topic,
+            identity.uuid,
+            sourceUuid,
+            sourceWindowName,
+            subScriptionTypes.MESSAGE
+        ];
+
         apiProtocolBase.removeSubscription(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE);
+
+        // If subscription still exits, haven't called unsubscribe function so haven't emitted subscriber removed
+        if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
+            InterApplicationBus.emitSubscriberRemoved(identity, payload);
+        }
         ack(successAck);
     }
 
@@ -90,6 +104,11 @@ function InterApplicationBusApiHandler() {
         if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
             apiProtocolBase.uppSubscriptionRefCount(...subscriptionArgs);
 
+            InterApplicationBus.emitSubscriberAdded(identity, payload);
+
+            ofEvents.once(route.window('unload', identity.uuid, identity.name, false), () => {
+                apiProtocolBase.removeSubscription(...subscriptionArgs);
+            });
         } else {
 
             const subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
