@@ -135,9 +135,9 @@ function dispatchToSubscriptions(topic, identity, destUuid, destName, payload, s
 }
 
 function emitSubscriberAdded(identity, payload) {
-    let senderUuid = payload.sourceUuid || '*';
+    const senderUuid = payload.sourceUuid || '*';
 
-    let eventingPayload = {
+    const eventingPayload = {
         senderUuid: senderUuid,
         senderName: senderUuid,
         uuid: identity.uuid,
@@ -149,9 +149,9 @@ function emitSubscriberAdded(identity, payload) {
 }
 
 function emitSubscriberRemoved(identity, payload) {
-    let senderUuid = payload.sourceUuid || '*';
+    const senderUuid = payload.sourceUuid || '*';
 
-    let eventingPayload = {
+    const eventingPayload = {
         senderUuid: senderUuid,
         senderName: senderUuid,
         uuid: identity.uuid,
