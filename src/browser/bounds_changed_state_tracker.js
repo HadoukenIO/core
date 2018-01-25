@@ -222,7 +222,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                         return win.name !== name;
                     }).forEach((win) => {
                         let { x, y, width, height } = win.browserWindow.getBounds();
-                        
+
                         // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
                         if (changeType === 0 || changeType === 2) {
                             x = toSafeInt(x + delta.x, x);
@@ -246,7 +246,6 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                                 }
                             }
                         }
-
 
                         if (isWin32) {
                             let hwnd = parseInt(win.browserWindow.nativeId, 16);
