@@ -325,7 +325,6 @@ module.exports.InterApplicationBus = {
     publish,
     send,
     subscribe,
-    unsubscribe,
     subscriberAdded,
     removeSubscriberAdded,
     subscriberRemoved,
