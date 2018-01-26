@@ -20,6 +20,7 @@ limitations under the License.
 // built-in modules
 let path = require('path');
 let electron = require('electron');
+let queryString = require('querystring');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let dialog = electron.dialog;
@@ -558,7 +559,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             Application.emitHideSplashScreen(identity);
         }
         // need to call convert function to get updated args
-        mainWindowOpts.userAppConfigArgs = convertOpts.parseQueryString(userAppConfigArgs);
+        mainWindowOpts.userAppConfigArgs = queryString.parse(userAppConfigArgs);
         Application.emitRunRequested(identity, mainWindowOpts.userAppConfigArgs);
         return;
     }

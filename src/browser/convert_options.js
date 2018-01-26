@@ -20,6 +20,7 @@ limitations under the License.
 // built-in modules
 let fs = require('fs');
 let path = require('path');
+let queryString = require('querystring');
 
 // npm modules
 let _ = require('underscore');
@@ -242,7 +243,7 @@ module.exports = {
         }
 
         if (coreState.argo['user-app-config-args']) {
-            newOptions.userAppConfigArgs = this.parseQueryString(coreState.argo['user-app-config-args']);
+            newOptions.userAppConfigArgs = queryString.parse(coreState.argo['user-app-config-args']);
         }
 
         if (options.message !== undefined) {
@@ -341,16 +342,6 @@ module.exports = {
                 configUrl
             });
         }, errorCallback);
-    },
-
-    parseQueryString: function(queryString) {
-        let queryParams = queryString.split('&');
-        let args = {};
-        queryParams.forEach(function(param) {
-            let [key, value] = param.split('=');
-            args[decodeURIComponent(key)] = decodeURIComponent(value);
-        });
-        return args;
     }
 };
 
