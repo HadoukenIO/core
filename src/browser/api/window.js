@@ -32,7 +32,7 @@ let _ = require('underscore');
 
 // local modules
 let animations = require('../animations.js');
-let authenticationDelegate = require('../authentication_delegate.js');
+import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 let BoundsChangedStateTracker = require('../bounds_changed_state_tracker.js');
 let clipBounds = require('../clip_bounds.js').default;
 let convertOptions = require('../convert_options.js');
@@ -1726,11 +1726,11 @@ Window.getBoundsFromDisk = function(identity, callback, errorCallback) {
 Window.authenticate = function(identity, username, password, callback) {
     let {
         authCallback
-    } = authenticationDelegate.getPendingAuthRequest(identity);
+    } = getPendingAuthRequest(identity);
 
     if (authCallback && typeof(authCallback) === 'function') {
         authCallback(username, password);
-        authenticationDelegate.deletePendingAuthRequest(identity);
+        deletePendingAuthRequest(identity);
         callback();
     } else {
         callback(new Error('No authentication request pending for window'));
