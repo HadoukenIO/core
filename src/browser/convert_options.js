@@ -242,7 +242,7 @@ module.exports = {
         }
 
         if (coreState.argo['user-app-config-args']) {
-            newOptions.userAppConfigArgs = coreState.argo['user-app-config-args'];
+            newOptions.userAppConfigArgs = this.parseQueryString(coreState.argo['user-app-config-args']);
         }
 
         if (options.message !== undefined) {
@@ -341,8 +341,17 @@ module.exports = {
                 configUrl
             });
         }, errorCallback);
-    }
+    },
 
+    parseQueryString: function(queryString) {
+        let queryParams = queryString.split('&');
+        let args = {};
+        queryParams.forEach(function(param) {
+            let [key, value] = param.split('=');
+            args[decodeURIComponent(key)] = decodeURIComponent(value);
+        });
+        return args;
+    }
 };
 
 function normalizePreload(preload) {

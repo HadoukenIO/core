@@ -557,7 +557,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             // only resend if we've sent once before(meaning 1 window has shown)
             Application.emitHideSplashScreen(identity);
         }
-        Application.emitRunRequested(identity, userAppConfigArgs);
+        // need to call convert function to get updated args
+        mainWindowOpts.userAppConfigArgs = convertOpts.parseQueryString(userAppConfigArgs);
+        Application.emitRunRequested(identity, mainWindowOpts.userAppConfigArgs);
         return;
     }
 
@@ -846,13 +848,7 @@ Application.emitRunRequested = function(identity, userAppConfigArgs) {
     };
 
     if (userAppConfigArgs) {
-        let queryParams = userAppConfigArgs.split('&');
-        let args = {};
-        queryParams.forEach(function(param) {
-            let [key, value] = param.split('=');
-            args[key] = value;
-        });
-        data.userAppConfigArgs = args;
+        data.userAppConfigArgs = userAppConfigArgs;
     }
     if (uuid) {
         ofEvents.emit(route.application('run-requested', uuid), data);

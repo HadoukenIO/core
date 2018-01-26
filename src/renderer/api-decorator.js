@@ -434,13 +434,7 @@ limitations under the License.
                 pendingMainCallbacks.forEach((callback) => {
                     const userAppConfigArgs = initialOptions.userAppConfigArgs;
                     if (userAppConfigArgs) { // handle deep linking callback
-                        const queryParams = userAppConfigArgs.split('&');
-                        let args = {};
-                        queryParams.forEach(function(param) {
-                            let [key, value] = param.split('=');
-                            args[key] = value;
-                        });
-                        callback(args);
+                        callback(userAppConfigArgs);
                     } else {
                         callback();
                     }
