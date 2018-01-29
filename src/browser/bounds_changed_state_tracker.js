@@ -46,7 +46,6 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
 
     let _deferred = false;
     let _deferredEvents = [];
-    let _clippedChanges = [];
 
     var setUserBoundsChangeActive = (enabled) => {
         _userBoundsChangeActive = enabled;
@@ -317,14 +316,12 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                                 win.browserWindow.unmaximize();
                             }
                             let [w, h] = [width, height];
-                            // Clip bounds?
                             wt.setWindowPos(hwnd, { x, y, w, h, flags });
                         } else {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             }
-                            // no need to call clipBounds here because width and height are not changing
-                            // CLIP BOUNDS???
+                            // no need to call clipBounds here because called earlier
                             win.browserWindow.setBounds({ x, y, width, height });
                         }
                     });
@@ -363,8 +360,6 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         if (!isAdditionalChangeExpected) {
             sizeChanged = false;
             positionChanged = false;
-            _clippedChanges.forEach(fn => fn());
-            _clippedChanges = [];
         }
 
         return dispatchedChange;
