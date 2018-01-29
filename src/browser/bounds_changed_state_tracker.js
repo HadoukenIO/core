@@ -24,7 +24,6 @@ let animations = require('./animations.js');
 let clipBounds = require('./clip_bounds.js').default;
 let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
-// let Window = require('./api/window.js').Window;
 let WindowGroups = require('./window_groups.js');
 import WindowGroupTransactionTracker from './window_group_transaction_tracker';
 import { toSafeInt } from '../common/safe_int';
