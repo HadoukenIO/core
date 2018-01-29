@@ -841,17 +841,13 @@ Application.emitHideSplashScreen = function(identity) {
 
 Application.emitRunRequested = function(identity, userAppConfigArgs) {
     const uuid = identity && identity.uuid;
-    let data = {
-        topic: 'application',
-        type: 'run-requested',
-        uuid
-    };
-
-    if (userAppConfigArgs) {
-        data.userAppConfigArgs = userAppConfigArgs;
-    }
     if (uuid) {
-        ofEvents.emit(route.application('run-requested', uuid), data);
+        ofEvents.emit(route.application('run-requested', uuid), {
+            topic: 'application',
+            type: 'run-requested',
+            uuid,
+            userAppConfigArgs
+        });
     }
 };
 
