@@ -558,9 +558,8 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             // only resend if we've sent once before(meaning 1 window has shown)
             Application.emitHideSplashScreen(identity);
         }
-        // need to call convert function to get updated args
-        mainWindowOpts.userAppConfigArgs = queryString.parse(userAppConfigArgs);
-        Application.emitRunRequested(identity, mainWindowOpts.userAppConfigArgs);
+
+        Application.emitRunRequested(identity, queryString.parse(userAppConfigArgs));
         return;
     }
 
