@@ -345,6 +345,25 @@ limitations under the License.
         });
     }
 
+    function disableModifiedClicks(global) {
+        global.addEventListener('auxclick', e => {
+            e.preventDefault();
+        });
+        global.addEventListener('click', e => {
+            const tag = e.target.tagName;
+            const modifiedClick = e.shiftKey || e.metaKey || e.ctrlKey || e.altKey;
+            const mightOpenNewWindow = tag === 'A' || tag === 'IMG';
+            if (mightOpenNewWindow && modifiedClick) {
+                e.preventDefault();
+            } else if (modifiedClick && (tag === 'BUTTON' || tag === 'INPUT')) {
+                if (e.target.type === 'submit') {
+                    e.preventDefault();
+                }
+
+            }
+        });
+    }
+
     function raiseReadyEvents(entityInfo) {
         const { uuid, name, parent, entityType } = entityInfo;
         const winIdentity = { uuid, name };
@@ -396,6 +415,7 @@ limitations under the License.
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
         wireUpMenu(glbl);
+        disableModifiedClicks(glbl);
         wireUpZoomEvents();
         raiseReadyEvents(entityInfo);
 

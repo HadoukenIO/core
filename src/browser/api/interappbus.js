@@ -134,6 +134,33 @@ function dispatchToSubscriptions(topic, identity, destUuid, destName, payload, s
         ofBus.emit(keys.fromWin, payload);
 }
 
+function emitSubscriberAdded(identity, payload) {
+    const senderUuid = payload.sourceUuid || ANY_UUID;
+
+    const eventingPayload = {
+        senderUuid: senderUuid,
+        senderName: senderUuid,
+        uuid: identity.uuid,
+        name: identity.name,
+        topic: payload.topic,
+        directMsg: payload.sourceWindowName !== ANY_NAME ? payload.sourceWindowName : false
+    };
+    busEventing.emit(ofEvents.subscriber.ADDED, eventingPayload);
+}
+
+function emitSubscriberRemoved(identity, payload) {
+    const senderUuid = payload.sourceUuid || ANY_UUID;
+
+    const eventingPayload = {
+        senderUuid: senderUuid,
+        senderName: senderUuid,
+        uuid: identity.uuid,
+        name: identity.name,
+        topic: payload.topic,
+        directMsg: payload.sourceWindowName !== ANY_NAME ? payload.sourceWindowName : false
+    };
+    busEventing.emit(ofEvents.subscriber.REMOVED, eventingPayload);
+}
 
 function subscribe(identity, payload, listener) {
     let topic = payload.topic;
@@ -141,14 +168,6 @@ function subscribe(identity, payload, listener) {
     let senderName = payload.sourceWindowName || ANY_NAME;
 
     let cbId = genCallBackId();
-    let eventingPayload = {
-        senderUuid: senderUuid,
-        senderName: senderUuid,
-        uuid: identity.uuid,
-        name: identity.name,
-        topic: topic,
-        directMsg: payload.sourceWindowName !== ANY_NAME ? payload.sourceWindowName : false
-    };
 
     callbacks['' + cbId] = listener;
 
@@ -162,7 +181,7 @@ function subscribe(identity, payload, listener) {
     ofBus.on(keys.toApp, listener);
 
     // for the subscribe listeners:
-    busEventing.emit(ofEvents.subscriber.ADDED, eventingPayload);
+    emitSubscriberAdded(identity, payload);
 
     //return a function that will unhook the listeners
     var unsubItem = {
@@ -172,50 +191,12 @@ function subscribe(identity, payload, listener) {
             ofBus.removeListener(keys.toWin, listener);
             ofBus.removeListener(keys.toApp, listener);
 
-            busEventing.emit(ofEvents.subscriber.REMOVED, eventingPayload);
+            emitSubscriberRemoved(identity, payload);
         }
     };
-    subscriptionManager.registerSubscription(unsubItem.unsubscribe, identity, payload);
 
     return unsubItem;
 }
-
-
-function unsubscribe(identity, cbId, senderUuid, ...rest) {
-    let {
-        uuid,
-        name
-    } = identity;
-
-    let senderName = typeof rest[1] === 'function' ? ANY_NAME : rest[0] || ANY_NAME;
-    let topic = typeof rest[1] === 'function' ? rest[0] : rest[1];
-
-    let callback = callbacks['' + cbId];
-
-    if (!callback) {
-        return;
-    }
-
-    let keys = generateSubscribeKeys(topic, {
-        uuid: senderUuid,
-        name: senderName
-    }, identity);
-
-    ofBus.removeListener(keys.toAny, callback);
-    ofBus.removeListener(keys.toWin, callback);
-    ofBus.removeListener(keys.toApp, callback);
-
-    delete callbacks['' + cbId];
-
-    busEventing.emit(ofEvents.subscriber.REMOVED, {
-        senderUuid: senderUuid,
-        senderName: senderUuid,
-        uuid: uuid,
-        name: name,
-        topic: topic
-    });
-}
-
 
 function subscriberAdded(identity, listener) {
     let {
@@ -362,7 +343,8 @@ module.exports.InterApplicationBus = {
     publish,
     send,
     subscribe,
-    unsubscribe,
+    emitSubscriberAdded,
+    emitSubscriberRemoved,
     subscriberAdded,
     removeSubscriberAdded,
     subscriberRemoved,
