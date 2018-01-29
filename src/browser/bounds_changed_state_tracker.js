@@ -21,8 +21,10 @@ let windowTransaction = require('electron').windowTransaction;
 
 let _ = require('underscore');
 let animations = require('./animations.js');
+let clipBounds = require('./clip_bounds.js').default;
 let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
+// let Window = require('./api/window.js').Window;
 let WindowGroups = require('./window_groups.js');
 import WindowGroupTransactionTracker from './window_group_transaction_tracker';
 import { toSafeInt } from '../common/safe_int';
@@ -44,6 +46,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
 
     let _deferred = false;
     let _deferredEvents = [];
+    let _clippedChanges = [];
 
     var setUserBoundsChangeActive = (enabled) => {
         _userBoundsChangeActive = enabled;
@@ -132,6 +135,66 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         return animations.getAnimationHandler().hasWindow(browserWindow.id) ? 'animation' : 'self';
     };
 
+    const sharedBoundPixelDiff = 5;
+    const sharedBound = (boundOne, boundTwo) => {
+        return Math.abs(boundOne - boundTwo) < sharedBoundPixelDiff;
+    };
+
+    const handleGroupedResize = (resizeChangeType, delta, originalWindowCachedBounds, windowToUpdate) => {
+        let { x, y, width, height } = windowToUpdate.browserWindow.getBounds();
+        if (resizeChangeType.height) {
+            if (delta.y) {
+                if (sharedBound(y, originalWindowCachedBounds.y)) {
+                    // resize windows with matching top bound
+                    y = toSafeInt(y + delta.y, y);
+                    height = height + delta.height;
+                }
+                if (sharedBound(y + height, originalWindowCachedBounds.y)) {
+                    // resize windows with matching bottom bound
+                    height = height - delta.height;
+                }
+            }
+            if (delta.y2) {
+                if (sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+                    // resize windows with matching bottom bound
+                    height = height + delta.height;
+                }
+                if (sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+                    // resize windows with matching top bound
+                    y = toSafeInt(y + delta.height, y);
+                    height = height - delta.height;
+                }
+            }
+        }
+        if (resizeChangeType.width) {
+            if (delta.x) {
+                if (sharedBound(x, originalWindowCachedBounds.x)) {
+                    // resize windows with matching left bound
+                    x = toSafeInt(x + delta.x, x);
+                    width = width + delta.width;
+                }
+                if (sharedBound(x + width, originalWindowCachedBounds.x)) {
+                    // resize windows with matching right bound
+                    width = width - delta.width;
+                }
+            }
+            if (delta.x2) {
+                if (sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+                    // resize windows with matching right bound
+                    width = width + delta.width;
+                }
+                if (sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+                    // resize windows with matching left bound
+                    x = toSafeInt(x + delta.width, x);
+                    width = width - delta.width;
+                }
+            }
+        }
+        const newWindowBounds = { x, y, width, height };
+        const newClippedBounds = clipBounds(newWindowBounds, windowToUpdate.browserWindow);
+        return newClippedBounds;
+    };
+
     var handleBoundsChange = (isAdditionalChangeExpected, force) => {
 
         var dispatchedChange = false;
@@ -215,150 +278,25 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                     let hwndToId = {};
 
                     const { flag: { noZorder, noSize, noActivate } } = windowTransaction;
-
                     let flags;
-                    // LATER - this may need to change to 1 or 2
                     if (changeType === 1) {
+                        // this may need to change to 1 or 2 if we fix functionality for changeType 2
                         flags = noZorder + noActivate;
                     } else {
                         flags = noZorder + noSize + noActivate;
                     }
 
-                    const groupedWindows = WindowGroups.getGroup(groupUuid);
-
-                    let groupedWindowsWithBounds = groupedWindows.map(win => {
-                        let bounds = win.browserWindow.getBounds();
-                        win.bounds = bounds;
-                        if (win.name === name) {
-                            win.bounds = cachedBounds;
-                        }
-                        return win;
-                    });
-                    // If window resize, get edges of window group
-                    let outerBounds;
-                    if (changeType === 1) {
-                        let minX = groupedWindowsWithBounds.map(winWithBounds => winWithBounds.bounds.x)
-                            .reduce((acc, leftBound) => leftBound < acc ? leftBound : acc);
-                        let maxX = groupedWindowsWithBounds.map(winWithBounds => (winWithBounds.bounds.x + winWithBounds.bounds.width))
-                            .reduce((acc, rightBound) => rightBound > acc ? rightBound : acc);
-                        let minY = groupedWindowsWithBounds.map(winWithBounds => winWithBounds.bounds.y)
-                            .reduce((acc, topBound) => topBound < acc ? topBound : acc);
-                        let maxY = groupedWindowsWithBounds.map(winWithBounds => winWithBounds.bounds.y + winWithBounds.bounds.height)
-                            .reduce((acc, bottomBound) => bottomBound > acc ? bottomBound : acc);
-
-                        outerBounds = { minX, maxX, minY, maxY };
-                        //Determine if original window resize changed the outer bounds of the window group
-                        if (boundsCompare.width) {
-                            if (delta.x && cachedBounds.x === minX) {
-                                // top bounds changed; later, change all that match top bound
-                                boundsCompare.leftOuterBoundChanged = true;
-                            }
-                            if (delta.x2 && (cachedBounds.x + cachedBounds.width) === maxX) {
-                                boundsCompare.rightOuterBoundChanged = true;
-                            }
-                        }
-                        if (boundsCompare.height) {
-                            if (delta.y && cachedBounds.y === minY) {
-                                boundsCompare.topOuterBoundChanged = true;
-                            }
-                            if (delta.y2 && (cachedBounds.y + cachedBounds.height) === maxY) {
-                                boundsCompare.bottomOuterBoundChanged = true;
-                            }
-                        }
-                    }
-
-                    let sharedBoundPixelDiff = 3;
-                    let sharedBound = (boundOne, boundTwo) => {
-                        return Math.abs(boundOne - boundTwo) < sharedBoundPixelDiff;
-                    };
-
-                    groupedWindowsWithBounds.filter((win) => {
+                    WindowGroups.getGroup(groupUuid).filter((win) => {
                         win.browserWindow.bringToFront();
                         return win.name !== name;
                     }).forEach((win) => {
-                        let { x, y, width, height } = win.bounds;
+                        let winBounds = win.browserWindow.getBounds();
+                        let { x, y, width, height } = (changeType === 1) ? handleGroupedResize(boundsCompare, delta, cachedBounds, win): winBounds;
+
                         // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
                         if (changeType === 0 || changeType === 2) {
                             x = toSafeInt(x + delta.x, x);
                             y = toSafeInt(y + delta.y, y);
-                            // If it is a change in the size of the window, only move windows that are beyond the side being changed
-                        } else if (changeType === 1) {
-                            if (boundsCompare.width) {
-                                if (delta.x) {
-                                    if (sharedBound(cachedBounds.x, outerBounds.minX) && sharedBound(x, outerBounds.minX)) {
-                                        //left outer bound has changed - resize windows that match left outer bound
-                                        x = toSafeInt(x + delta.x, x);
-                                        width = width + delta.width;
-                                    } else {
-                                        //left inner bound changed
-                                        if (sharedBound(x, cachedBounds.x)) {
-                                            // resize windows with matching left bound
-                                            // currently same behavior as an outer bound but keeping separate in case we want to alter
-                                            x = toSafeInt(x + delta.x, x);
-                                            width = width + delta.width;
-                                        }
-                                        if (sharedBound(x + width, cachedBounds.x)) {
-                                            // resize windows with matching right bound
-                                            width = width - delta.width;
-                                        }
-                                    }
-                                }
-                                if (delta.x2) {
-                                    if (sharedBound(cachedBounds.x + cachedBounds.width, outerBounds.maxX) && sharedBound(x + width, outerBounds.maxX)) {
-                                        //right outer bound has changed - resize windows that match right outer bound
-                                        width = width + delta.width;
-                                    } else {
-                                        //right inner bound changed
-                                        if (sharedBound(x + width, cachedBounds.x + cachedBounds.width)) {
-                                            // resize windows with matching right bound
-                                            width = width + delta.width;
-                                        }
-                                        if (sharedBound(x, cachedBounds.x + cachedBounds.width)) {
-                                            // resize windows with matching left bound
-                                            x = toSafeInt(x + delta.width, x);
-                                            width = width - delta.width;
-                                        }
-                                    }
-                                }
-                            }
-                            if (boundsCompare.height) {
-                                if (delta.y) {
-                                    if (sharedBound(cachedBounds.y, outerBounds.minY) && sharedBound(x, outerBounds.minY)) {
-                                        //left outer bound has changed - resize windows that match left outer bound
-                                        y = toSafeInt(y + delta.y, y);
-                                        height = height + delta.height;
-                                    } else {
-                                        //left inner bound changed
-                                        if (sharedBound(y, cachedBounds.y)) {
-                                            // resize windows with matching left bound
-                                            // (SAME AS ABOVE BUT KEEPING SEPARATE BC MAY NEED TO REFACTOR based on if inner / outer)
-                                            y = toSafeInt(y + delta.y, y);
-                                            height = height + delta.height;
-                                        }
-                                        if (sharedBound(y + height, cachedBounds.y)) {
-                                            // resize windows with matching right bound
-                                            height = height - delta.height;
-                                        }
-                                    }
-                                }
-                                if (delta.y2) {
-                                    if (sharedBound(cachedBounds.y + cachedBounds.height, outerBounds.maxY) && sharedBound(x + height, outerBounds.maxY)) {
-                                        //right outer bound has changed - resize windows that match right outer bound
-                                        height = height + delta.height;
-                                    } else {
-                                        //right inner bound changed
-                                        if (sharedBound(y + height, cachedBounds.y + cachedBounds.height)) {
-                                            // resize windows with matching right bound
-                                            height = height + delta.height;
-                                        }
-                                        if (sharedBound(y, cachedBounds.y + cachedBounds.height)) {
-                                            // resize windows with matching left bound
-                                            y = toSafeInt(y + delta.height, y);
-                                            height = height - delta.height;
-                                        }
-                                    }
-                                }
-                            }
                         }
 
                         if (isWin32) {
@@ -425,6 +363,8 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         if (!isAdditionalChangeExpected) {
             sizeChanged = false;
             positionChanged = false;
+            _clippedChanges.forEach(fn => fn());
+            _clippedChanges = [];
         }
 
         return dispatchedChange;
