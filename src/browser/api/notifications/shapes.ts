@@ -98,7 +98,7 @@ export class NoteConfig {
         contextMenu: true,
         cornerRounding: {
             height: 6,
-            width: 6,
+            width: 6
         },
         defaultHeight: 80,
         defaultWidth: 300,
@@ -115,7 +115,7 @@ export class NoteConfig {
         saveWindowState: false,
         showTaskbarIcon: false,
         state: 'normal',
-        url: '',
+        url: ''
     };
 
     public url: string;
@@ -131,7 +131,7 @@ export class NoteConfig {
     constructor(opts: NotificationOptions) {
 
         if (!opts.url) {
-            throw 'Notifications require a url';
+            throw new Error('Notifications require a url');
         }
 
         // TODO use extend here? ...

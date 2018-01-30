@@ -54,7 +54,7 @@ export const noteStack = Rx.Observable.merge(
     .scan((acc, value) => {
 
         if (value.create) {
-            let idxRemoved = acc.map(x => x.name).indexOf(value.name);
+            const idxRemoved = acc.map(x => x.name).indexOf(value.name);
 
             if (idxRemoved === -1) {
                 acc.push({
@@ -65,7 +65,7 @@ export const noteStack = Rx.Observable.merge(
             }
 
         } else {
-            let idxRemoved = acc.map(x => x.name).indexOf(value.name);
+            const idxRemoved = acc.map(x => x.name).indexOf(value.name);
 
             if (idxRemoved !== -1) {
                 acc.splice(idxRemoved, 1);
