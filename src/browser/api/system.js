@@ -42,6 +42,7 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
+import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch } from '../cached_resource_fetcher';
 
 const defaultProc = {
@@ -220,6 +221,14 @@ exports.System = {
         });
 
 
+    },
+    createProxySocket: function(options, callback, errorCallback) {
+        createChromiumSocket(Object.assign({}, options, { callback, errorCallback }));
+    },
+    authenticateProxySocket: function(options) {
+        const url = options && options.url;
+        electronApp.vlog(1, `authenticateProxySocket ${url}`);
+        authenticateChromiumSocket(options);
     },
     deleteCacheOnExit: function(callback, errorCallback) {
         const folders = [{
