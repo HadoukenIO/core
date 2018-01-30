@@ -153,16 +153,30 @@
     function login() {
         let userName = document.getElementById('username').value;
         let password = document.getElementById('password').value;
-        let targetWindow = getTargetWindow();
-
-        targetWindow.authenticate(userName, password, ()=> fin.desktop.Application.getCurrent().close());
+        const resourceFetch = getParameterByName('resourceFetch') === 'true';
+        if (resourceFetch) {
+            const uuid = getParameterByName('uuid');
+            fin.desktop.System.authenticateResourceFetch(uuid, userName, password,
+                () => fin.desktop.Application.getCurrent().close());
+        } else {
+            let targetWindow = getTargetWindow();
+            targetWindow.authenticate(userName, password, () => fin.desktop.Application.getCurrent().close());
+        }
         authEnteredOrCanceled = true;
     }
 
     function cancel() {
         let targetWindow = getTargetWindow();
-
-        targetWindow.authenticate('', '', ()=> fin.desktop.Application.getCurrent().close());
+        const resourceFetch = getParameterByName('resourceFetch');
+        if (resourceFetch) {
+            const uuid = getParameterByName('uuid');
+            fin.desktop.Window.getCurrent().hide(() => { // so error popup is not covered by this window
+                fin.desktop.System.authenticateResourceFetch(uuid, '', '',
+                    () => fin.desktop.Application.getCurrent().close());
+            });
+        } else {
+            targetWindow.authenticate('', '', () => fin.desktop.Application.getCurrent().close());
+        }
         authEnteredOrCanceled = true;
     }
 

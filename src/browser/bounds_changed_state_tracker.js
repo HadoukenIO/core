@@ -86,7 +86,12 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
 
         // set the changed flag only if it has not been set
         sizeChanged = sizeChanged || (widthDiff || heightDiff);
+        if (sizeChanged) {
+            xDiff = xDiff && (boundsOne.x - boundsTwo.x !== (boundsOne.x + boundsOne.width) - (boundsTwo.x + boundsTwo.width));
+            yDiff = yDiff && (boundsOne.y - boundsTwo.y !== (boundsOne.y + boundsOne.height) - (boundsTwo.y + boundsTwo.height));
+        }
         positionChanged = positionChanged || (xDiff || yDiff);
+
 
         return {
             x: xDiff,
@@ -101,7 +106,11 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
     var getBoundsDelta = (current, cached) => {
         return {
             x: current.x - cached.x,
-            y: current.y - cached.y
+            x2: (current.x + current.width) - (cached.x + cached.width),
+            y: current.y - cached.y,
+            y2: (current.y + current.height) - (cached.y + cached.height),
+            width: current.width - cached.width,
+            height: current.height - cached.height
         };
     };
 
@@ -213,8 +222,30 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                         return win.name !== name;
                     }).forEach((win) => {
                         let { x, y, width, height } = win.browserWindow.getBounds();
-                        x = toSafeInt(x + delta.x, x);
-                        y = toSafeInt(y + delta.y, y);
+
+                        // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
+                        if (changeType === 0 || changeType === 2) {
+                            x = toSafeInt(x + delta.x, x);
+                            y = toSafeInt(y + delta.y, y);
+                            // If it is a change in the size of the window, only move windows that are beyond the side being changed
+                        } else if (changeType === 1) {
+                            if (boundsCompare.width) {
+                                if (delta.x && ((x + width) < cachedBounds.x)) {
+                                    x = toSafeInt(x + delta.x, x);
+                                }
+                                if (delta.x2 && (x > (cachedBounds.x + cachedBounds.width))) {
+                                    x = toSafeInt(x + delta.x2, x);
+                                }
+                            }
+                            if (boundsCompare.height) {
+                                if (delta.y && ((y + height) < cachedBounds.y)) {
+                                    y = toSafeInt(y + delta.y, y);
+                                }
+                                if (delta.y2 && (y > (cachedBounds.y + cachedBounds.height))) {
+                                    y = toSafeInt(y + delta.y2, y);
+                                }
+                            }
+                        }
 
                         if (isWin32) {
                             let hwnd = parseInt(win.browserWindow.nativeId, 16);

@@ -43,6 +43,7 @@ import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
+import { authenticateFetch } from '../cached_resource_fetcher';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -164,6 +165,9 @@ exports.System = {
         };
 
         return unsubscribe;
+    },
+    authenticateResourceFetch: function(identity, options) {
+        authenticateFetch(options.uuid, options.username, options.password);
     },
     clearCache: function(identity, options, resolve) {
         /*
