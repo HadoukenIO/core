@@ -541,7 +541,8 @@ function launchApp(argo, startExternalAdapterServer) {
         // this ensures that external connections that start the runtime can do so without a main window
         let successfulInitialLaunch = true;
 
-        if (startupAppOptions && (!isRunning || ofManifestUrl !== configUrl)) {
+        // comparing ofManifestUrl and configUrl shouldn't consider query strings. Otherwise, it will break deep linking
+        if (startupAppOptions && (!isRunning || ofManifestUrl.split('?')[0] !== configUrl.split('?')[0])) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);

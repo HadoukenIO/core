@@ -437,7 +437,12 @@ limitations under the License.
         if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
-                    callback();
+                    const userAppConfigArgs = initialOptions.userAppConfigArgs;
+                    if (userAppConfigArgs) { // handle deep linking callback
+                        callback(userAppConfigArgs);
+                    } else {
+                        callback();
+                    }
                 });
             });
         }
