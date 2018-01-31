@@ -22,7 +22,7 @@ const electronApp = electron.app;
 const electronBrowserWindow = electron.BrowserWindow;
 const session = electron.session;
 const shell = electron.shell;
-const { crashReporter } = electron;
+const { crashReporter, idleState } = electron;
 
 // npm modules
 const path = require('path');
@@ -337,15 +337,17 @@ exports.System = {
         return uuid ? { uuid, name } : null;
     },
     getHostSpecs: function() {
-        return {
+        let state = new idleState();
+        return Object.assign({
             cpus: os.cpus(),
             memory: os.totalmem(),
             name: electronApp.getSystemName(),
             arch: electronApp.getSystemArch(),
             gpu: {
                 name: electronApp.getGpuName()
-            }
-        };
+            },
+            screenSaver: state.IsScreenSaverRunning(),
+        }, (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {});
     },
     getLog: function(name, resolve) {
         // Prevent abuse of trying to read files with a path relative to cache directory
