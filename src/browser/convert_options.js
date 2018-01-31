@@ -254,8 +254,7 @@ module.exports = {
         }
 
         if ('preloadScripts' in options || 'preload' in options) {
-            const preloadScripts = options.preloadScripts || options.preload;
-            newOptions.preloadScripts = normalizePreload(preloadScripts);
+            newOptions.preloadScripts = this.normalizePreloadScripts(options);
         }
 
         const plugin = options['plugin'];
@@ -337,27 +336,24 @@ module.exports = {
                 configUrl
             });
         }, errorCallback);
+    },
+
+    normalizePreloadScripts(options) {
+        let preloadScripts = [];
+
+        if ('preload' in options) {
+            if (typeof options.preload === 'string') {
+                preloadScripts = [{ url: options.preload }];
+            } else if (Array.isArray(options.preload)) {
+                preloadScripts = options.preload;
+            }
+        }
+
+        if ('preloadScripts' in options && Array.isArray(options.preloadScripts)) {
+            preloadScripts = options.preloadScripts;
+        }
+
+        return preloadScripts;
     }
 
 };
-
-function normalizePreload(preload) {
-    if (preload === null || preload === false) {
-        preload = '';
-    }
-
-    if (typeof preload === 'string') {
-        // convert legacy `preload` option into modern `preload` option
-        return preload === '' ? [] : [{ url: preload }];
-    }
-
-    if (
-        Array.isArray(preload) &&
-        preload.every(p => typeof p === 'object' && typeof p.url === 'string')
-    ) {
-        return preload.filter(p => p.url !== ''); // filter out empties
-    }
-
-    log.writeToLog('warning', 'Expected `preload` option to be null, false, string, or array of objects with `url` string properties.');
-    return []; // no preloads when bad option
-}

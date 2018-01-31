@@ -207,7 +207,8 @@ export interface WindowOptions {
     nonPersistant?: boolean;  // deprecated, backwards compatible
     opacity?: number;
     plugins?: boolean;
-    preload?: string;
+    preload?: string|PreloadScript[]; // deprecated, use 'preloadScripts'
+    preloadScripts?: PreloadScript[];
     resizable?: boolean;
     resize?: boolean;
     resizeRegion?: {
