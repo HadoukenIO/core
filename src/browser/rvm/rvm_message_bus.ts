@@ -172,7 +172,7 @@ export interface System extends RvmMsgBase {
 }
 
 // topic: application-events -----
-type EventType = 'started'| 'closed' | 'ready' | 'run-requested' | 'crashed' | 'error' | 'not-responding' | 'out-of-memory';
+type EventType = 'started'| 'closed' | 'ready' | 'run-requested' | 'crashed' | 'error' | 'not-responding';
 type ApplicationEventTopic = 'application-event';
 export interface ApplicationEvent extends RvmMsgBase {
     topic: ApplicationEventTopic;
@@ -212,8 +212,7 @@ export class RVMMessageBus extends EventEmitter  {
         RUN_REQUESTED: 'run-requested',
         CRASHED: 'crashed',
         ERROR: 'error',
-        NOT_RESPONDING: 'not-responding',
-        OUT_OF_MEMORY: 'out-of-memory'
+        NOT_RESPONDING: 'not-responding'
     };
 
     constructor() {
