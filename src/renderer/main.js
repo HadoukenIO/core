@@ -43,17 +43,10 @@ try {
 let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
 me = me.slice(13);
 
-const shouldStartCrashReporter = !!(coreState.argo['diagnostics'] || coreState.argo['enable-crash-reporting']);
-const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
-
-let addCrashFlag = ` global.shouldStartCrashReporter = ${shouldStartCrashReporter}; `;
-addCrashFlag += ` global.configUrl = '${configUrl}'; `;
-const removeCrashFlag = ` delete global.shouldStartCrashReporter; delete global.configUrl; `;
-
 module.exports.api = (windowId) => {
     const mainWindowOptions = coreState.getMainWindowOptions(windowId);
     const enableV2Api = ((mainWindowOptions || {}).experimental || {}).v2Api;
     const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
 
-    return `${addCrashFlag} ${me} ; ${jsAdapter}; ${v2AdapterShim} ; fin.__internal_.ipc = null; ${removeCrashFlag}`;
+    return `${me} ; ${jsAdapter}; ${v2AdapterShim} ; fin.__internal_.ipc = null;`;
 };
