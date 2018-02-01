@@ -20,6 +20,12 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
+export interface Service {
+    identity: Identity;
+    messageRoot?: string;
+    serviceFunctions?: string[];
+}
+
 export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
 
 export interface FrameInfo extends Identity {
