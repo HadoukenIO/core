@@ -40,7 +40,7 @@ let Window = require('./src/browser/api/window.js').Window;
 let apiProtocol = require('./src/browser/api_protocol');
 let socketServer = require('./src/browser/transports/socket_server').server;
 
-let authenticationDelegate = require('./src/browser/authentication_delegate.js');
+import { addPendingAuthRequests, createAuthUI } from './src/browser/authentication_delegate';
 let convertOptions = require('./src/browser/convert_options.js');
 let coreState = require('./src/browser/core_state.js');
 let webRequestHandlers = require('./src/browser/web_request_handler.js');
@@ -271,9 +271,9 @@ app.on('ready', function() {
         const windowEvtName = route.window('auth-requested', identity.uuid, identity.name);
         const appEvtName = route.application('window-auth-requested', identity.uuid);
 
-        authenticationDelegate.addPendingAuthRequests(identity, authInfo, callback);
+        addPendingAuthRequests(identity, authInfo, callback);
         if (ofEvents.listeners(windowEvtName).length < 1 && ofEvents.listeners(appEvtName).length < 1) {
-            authenticationDelegate.createAuthUI(identity);
+            createAuthUI(identity);
         } else {
             ofEvents.emit(windowEvtName, {
                 topic: 'window',
