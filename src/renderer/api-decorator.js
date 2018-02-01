@@ -21,27 +21,12 @@ limitations under the License.
 
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
-
     let renderFrameId = global.routingId;
     let customData = global.getFrameData(renderFrameId);
     let glbl = global;
-
     const electron = require('electron');
-
-    if (global.shouldStartCrashReporter) {
-        try {
-            const crashReporter = electron.crashReporter;
-            crashReporter.startOFCrashReporter({ configUrl: global.configUrl });
-        } catch (e) {
-            console.warn(e);
-            console.warn('For the crash reporter to connect successfully, please ensure' +
-                ' "--no-sandbox" is present in the app\'s config');
-        }
-    }
-
     const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
     const ipc = electron.ipcRenderer;
-
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
@@ -452,7 +437,12 @@ limitations under the License.
         if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
-                    callback();
+                    const userAppConfigArgs = initialOptions.userAppConfigArgs;
+                    if (userAppConfigArgs) { // handle deep linking callback
+                        callback(userAppConfigArgs);
+                    } else {
+                        callback();
+                    }
                 });
             });
         }

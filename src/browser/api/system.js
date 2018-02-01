@@ -563,9 +563,7 @@ exports.System = {
         const reporterOptions = Object.assign({ configUrl }, options);
 
         log.setToVerbose();
-        crashReporter.startOFCrashReporter(reporterOptions);
-
-        return crashReporter.crashReporterState();
+        return crashReporter.startOFCrashReporter(reporterOptions);
     },
     terminateExternalProcess: function(processUuid, timeout = 3000, child = false) {
         let status = ProcessTracker.terminate(processUuid, timeout, child);
