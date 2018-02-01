@@ -346,7 +346,7 @@ exports.System = {
             gpu: {
                 name: electronApp.getGpuName()
             },
-            screenSaver: state.IsScreenSaverRunning(),
+            screenSaver: state.isScreenSaverRunning(),
         }, (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {});
     },
     getLog: function(name, resolve) {

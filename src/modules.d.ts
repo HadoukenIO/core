@@ -92,7 +92,7 @@ declare module 'electron' {
     export class idleState {
         public isIdle(): boolean;
         public elapsedTime(): number;
-        public IsScreenSaverRunning(): boolean;
+        public isScreenSaverRunning(): boolean;
     }
 
     export class nativeTimer {
