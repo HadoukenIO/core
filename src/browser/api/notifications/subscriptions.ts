@@ -14,14 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import * as Rx from 'rx';
-
-/// <reference path="./observable_sequences.ts" />
 import * as seqs from './observable_sequences';
-
-/// <reference path="./note_action.ts" />
 import NoteAction from './note_action';
-
-/// <reference path="./shapes.ts" />
 import {
     AvailableRect, NotificationMessage, Identity,
     IdtoNameMap, NoteNameToParent, NameToNoteId,
@@ -71,7 +65,7 @@ const notesToBeCreated: Array<string> = [];
 let proxyAppInitialized = false;
 let proxyAppReady = false;
 
-ofEvents.once(`notification-service-ready`, () => {
+ofEvents.once('notification-service-ready', () => {
     try {
         pendingExternalNoteRequests.forEach(noteFn => noteFn());
         proxyAppReady = true;
@@ -399,7 +393,7 @@ function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: a
             },
             position: {
                 duration: POSITION_ANIMATION_DURATION,
-                top: (defaultTop - (numNotes - idx) * NOTE_HEIGHT) + NOTE_TOP_MARGIN,
+                top: (defaultTop - (numNotes - idx) * NOTE_HEIGHT) + NOTE_TOP_MARGIN
             }
         };
         const animationCallback = () => {
@@ -417,10 +411,8 @@ function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: a
 
 function mouseisOverNotes(mousePos: any, monitorInfo: any, noteStackLength: number) {
 
-    const isOver = mousePos.left > monitorInfo.right - 310 &&
+    return mousePos.left > monitorInfo.right - 310 &&
         monitorInfo.bottom - mousePos.top < noteStackLength * 110;
-
-    return isOver;
 }
 
 function genBaseAnimateOpts () {
@@ -778,9 +770,7 @@ function addEventListener (identity: Identity, type: string, payload: any, cb: a
     const {uuid, name} = identity;
     const isGeneral = type === 'general';
     const sub = noteTopicStr(uuid, name, isGeneral);
-    const unsub = ofEvents.on(sub, cb);
-
-    return unsub;
+    return ofEvents.on(sub, cb);
 }
 
 export {addEventListener};

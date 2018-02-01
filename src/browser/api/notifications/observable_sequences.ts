@@ -13,10 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/// <reference path="../../../../node_modules/rx/ts/rx.all.d.ts" />
 import * as Rx from 'rx';
-
-/// <reference path="./shapes.ts" />
 import {Identity} from './shapes';
 
 export const createdNotes = new Rx.Subject();

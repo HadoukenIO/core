@@ -18,7 +18,7 @@ enum NoteAction {
     // root topic
     noteMessage,
 
-    // this is inbound from the external connection 
+    // this is inbound from the external connection
     create_external,
 
     // this is sent to the proxy notifications app on behalf of the remote connection
