@@ -32,6 +32,7 @@ import { init as initApiProtocol, getDefaultRequestHandler } from './api_handler
 import { meshEnabled } from '../connection_manager';
 import { registerMiddleware as registerEntityExistenceMiddleware } from './api_handlers/middleware_entity_existence';
 import { registerMiddleware as registerMeshMiddleware } from './api_handlers/mesh_middleware';
+import { registerMiddleware as registerServicesAppMiddleware } from './api_handlers/services_middleware';
 import {
     registerMiddleware as registerProcessExternalAppMiddleware,
     legacyWindowingEnabled
@@ -47,6 +48,7 @@ if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
 }
 registerExternalConnAuthMiddleware(getDefaultRequestHandler());
+registerServicesAppMiddleware(getDefaultRequestHandler());
 
 export function initApiHandlers() {
     /* tslint:disable: no-unused-variable */
