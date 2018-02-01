@@ -74,6 +74,7 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'disableInitialReload': false,
+            'node': true,
             'v2Api': false
         },
         'frame': true,
@@ -229,13 +230,18 @@ module.exports = {
             }
         }
 
+        const useNodeInRenderer = newOptions.experimental.node;
+        const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
+
         // Electron BrowserWindow options
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
             disableInitialReload: newOptions.experimental.disableInitialReload,
             nodeIntegration: false,
-            plugins: newOptions.plugins
+            plugins: newOptions.plugins,
+            preload: (!useNodeInRenderer ? noNodePreload : ''),
+            sandbox: !useNodeInRenderer
         };
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
