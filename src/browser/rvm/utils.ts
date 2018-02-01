@@ -4,8 +4,9 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-import { rvmMessageBus } from '../rvm/rvm_message_bus';
-
+import { rvmMessageBus, ConsoleMessage } from '../rvm/rvm_message_bus';
+import { System } from '../api/system';
+import { setTimeout } from 'timers';
 /**
  * Interface for [sendToRVM] method
  */
@@ -14,6 +15,42 @@ interface SendToRVMOpts {
     action: string;
     sourceUrl?: string;
     data?: any;
+    runtimeVersion?: string;
+    payload?: any;
+}
+
+let consoleMessageQueue: ConsoleMessage[] = [];
+let isFlushScheduled: boolean = false;
+
+function flushConsoleMessageQueue() {
+    if (consoleMessageQueue.length <= 0) {
+        return;
+    }
+
+    const obj: SendToRVMOpts = {
+        topic: 'application',
+        action: 'application-log',
+        sourceUrl: '', // The actual sourceUrl's are contained in the payload
+        runtimeVersion: System.getVersion(),
+        payload: {
+            messages: JSON.parse(JSON.stringify(consoleMessageQueue))
+        }
+    };
+
+    consoleMessageQueue = [];
+    sendToRVM(obj);
+    isFlushScheduled = false;
+}
+
+export function addConsoleMessageToRVMMessageQueue(message: ConsoleMessage): void {
+    consoleMessageQueue.push(message);
+
+    // If no timer already set, set one to flush the queue in 10s
+    if (!isFlushScheduled) {
+        setTimeout(flushConsoleMessageQueue, 10000);
+
+        isFlushScheduled = true;
+    }
 }
 
 /**

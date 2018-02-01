@@ -43,6 +43,7 @@ let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
+import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
@@ -836,6 +837,40 @@ Window.create = function(id, opts) {
     const { manifest } = coreState.getManifest(identity);
     const { plugins } = manifest || {};
     winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
+
+    webContents.on('console-message', (thing, level, message, lineNo, sourceId) => {
+        const manifestUrl = coreState.getConfigUrlByUuid(identity.uuid);
+        if (!manifestUrl) {
+            electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
+        }
+
+        function checkPrependLeadingZero(num) {
+            let str = String(num);
+            if (str.length === 1) {
+                str = '0' + str;
+            }
+
+            return str;
+        }
+
+        const date = new Date();
+        const month = checkPrependLeadingZero(date.getMonth() + 1);
+        const day = checkPrependLeadingZero(date.getDate());
+        const year = String(date.getFullYear()).slice(2);
+        const hour = checkPrependLeadingZero(date.getHours());
+        const minute = checkPrependLeadingZero(date.getMinutes());
+        const second = checkPrependLeadingZero(date.getSeconds());
+
+        // Format timestamp to match debug.log
+        const timeStamp = '' + month + '/' + day + '/' + year + ' ' + hour + ':' + minute + ':' + second;
+
+        addConsoleMessageToRVMMessageQueue({
+            level: level,
+            message: message,
+            appConfigUrl: manifestUrl,
+            timeStamp: timeStamp
+        });
+    });
 
     // Set preload scripts' final loading states
     winObj.preloadScripts = (_options.preloadScripts || []);
