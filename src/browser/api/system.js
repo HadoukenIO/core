@@ -338,6 +338,7 @@ exports.System = {
     },
     getHostSpecs: function() {
         let state = new idleState();
+        const theme = (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {};
         return Object.assign({
             cpus: os.cpus(),
             memory: os.totalmem(),
@@ -347,7 +348,7 @@ exports.System = {
                 name: electronApp.getGpuName()
             },
             screenSaver: state.isScreenSaverRunning(),
-        }, (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {});
+        }, theme);
     },
     getLog: function(name, resolve) {
         // Prevent abuse of trying to read files with a path relative to cache directory
