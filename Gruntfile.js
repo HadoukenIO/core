@@ -137,7 +137,6 @@ module.exports = (grunt) => {
             files: {
                 src: [
                     'src/**/*.ts',
-                    '!src/browser/api/notifications/*.ts',
                     '!src/**/*.d.ts',
                     'test/**/*.ts',
                     '!test/**/*.d.ts',

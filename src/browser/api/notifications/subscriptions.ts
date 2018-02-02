@@ -14,18 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import * as Rx from 'rx';
-
-/// <reference path="./observable_sequences.ts" />
 import * as seqs from './observable_sequences';
-
-/// <reference path="./note_action.ts" />
 import NoteAction from './note_action';
-
-/// <reference path="./shapes.ts" />
 import {
     AvailableRect, NotificationMessage, Identity,
     IdtoNameMap, NoteNameToParent, NameToNoteId,
-    PendingNote,
+    PendingNote
 } from './shapes';
 
 // required tor the ts compiler, theses should be made imports eventually
@@ -54,7 +48,7 @@ const nameToNoteId: NameToNoteId = {};
 const pendingExternalNoteRequests: Array<() => void> = [];
 const qCounterTarget = {
     name: '',
-    uuid: '',
+    uuid: ''
 };
 const NOTE_WIDTH = 300;
 const NOTE_PAD_RIGHT = 10;
@@ -66,17 +60,17 @@ const NOTE_TOP_MARGIN = 70;
 let askedFor = 0;
 let created = 0;
 let pendindNotes: Array<PendingNote> = [];
-let potentialQCounterTargets: Array<Identity> = [];
-let notesToBeCreated: Array<string> = [];
+const potentialQCounterTargets: Array<Identity> = [];
+const notesToBeCreated: Array<string> = [];
 let proxyAppInitialized = false;
 let proxyAppReady = false;
 
-ofEvents.once(`notification-service-ready`, () => {
+ofEvents.once('notification-service-ready', () => {
     try {
         pendingExternalNoteRequests.forEach(noteFn => noteFn());
         proxyAppReady = true;
     } catch (e) {
-        ;
+        writeToLog('info', e);
     }
 });
 
@@ -95,7 +89,7 @@ ofEvents.on(route.window('closed', '*'), (e: any) => {
             // FIXME The closed event will emit twice:
             // one is uuid/name the other uuid-name. This is a workaround
             if (/\//.test(source)) {
-                let [uuid, name] = source.split('/');
+                const [uuid, name] = source.split('/');
 
                 if (Window.isNotification(name)) {
                     seqs.removes.onNext({uuid, name});
@@ -129,11 +123,11 @@ ofEvents.on(route.application('window-end-load', '*'), (e: any) => {
     try {
         const { uuid, name} = e.data[0];
 
-        let notesToClose = getCurrNotes().filter((note: Identity) => {
+        const notesToClose = getCurrNotes().filter((note: Identity) => {
             let parentWasRefreshed = false;
 
             Object.keys(noteNameToParent).forEach((nameKey: string) => {
-                let {name: nameFromHash} = noteNameToParent[nameKey];
+                const {name: nameFromHash} = noteNameToParent[nameKey];
 
                 if (nameFromHash === name) {
                     parentWasRefreshed = true;
@@ -157,8 +151,8 @@ ofEvents.on(route.application('window-end-load', '*'), (e: any) => {
                     uuid,
                     name: Window.QUEUE_COUNTER_NAME
                 });
-            } catch (e){
-                writeToLog('info', e)
+            } catch (e) {
+                writeToLog('info', e);
             }
         }
 
@@ -207,7 +201,7 @@ seqs.isAnimating
         const payload = <NotificationMessage> {
             action: NoteAction.animating,
             data: animationPayload,
-            id: {},
+            id: {}
         };
 
         ofEvents.emit(route('notifications', 'listener/'), payload); // legacy trailing slash; do not remove!
@@ -232,9 +226,9 @@ function noteStackCount() {
     let pendingNotYetCounted = 0;
     const numNotes = System.getAllWindows()
         .reduce((prev: any, currApp: any) => {
-            let {childWindows} = currApp;
-            let childNoteWindows = childWindows.filter((win: any) => {
-                    let {name} = win;
+            const {childWindows} = currApp;
+            const childNoteWindows = childWindows.filter((win: any) => {
+                    const {name} = win;
 
                     // This guards against the case where the window shows up in the
                     // core state as a child but the created_notes message has not
@@ -256,8 +250,8 @@ function noteStackCount() {
 function getCurrNotes (): Array<Identity> {
     return System.getAllWindows()
         .reduce((prev: any, currApp: any) => {
-            let {childWindows} = currApp;
-            let childrenAsIdentities = childWindowsAsIdentities(childWindows, currApp.uuid);
+            const {childWindows} = currApp;
+            const childrenAsIdentities = childWindowsAsIdentities(childWindows, currApp.uuid);
             return prev.concat(childrenAsIdentities);
         }, []);
 }
@@ -269,7 +263,7 @@ function childWindowsAsIdentities(childWindows: Array<any>, appUuid: string): Ar
 
             return {
                 name: win.name,
-                uuid: appUuid,
+                uuid: appUuid
             };
         });
 }
@@ -277,13 +271,13 @@ function childWindowsAsIdentities(childWindows: Array<any>, appUuid: string): Ar
 function inPotentialQCounterTargets (id: Identity): boolean {
     const {uuid, name} = id;
     let found = false;
-    let len = potentialQCounterTargets.length;
+    const len = potentialQCounterTargets.length;
 
     for (let i = 0; i < len; i++) {
-        let target = potentialQCounterTargets[i];
-        let nameMatch = target.name === name;
-        let uuidMatch = target.uuid === uuid;
-        let match = nameMatch && uuidMatch;
+        const target = potentialQCounterTargets[i];
+        const nameMatch = target.name === name;
+        const uuidMatch = target.uuid === uuid;
+        const match = nameMatch && uuidMatch;
 
         if (match) {
             found = true;
@@ -302,14 +296,14 @@ function qCounterTargetIsValid(): boolean {
 
 // TODO the creates has a shape data->options, make interface
 function requestNoteCreation (noteData: any, parent: any) {
-    let {options: {uuid, name}} = noteData;
-    let noteStackLen = noteStackCount();
+    const {options: {uuid, name}} = noteData;
+    const noteStackLen = noteStackCount();
 
     if (noteStackLen >= MAX_NOTES) {
         pendindNotes.push({noteData, parent});
 
     } else {
-        let {ack} = noteData;
+        const {ack} = noteData;
 
         ++askedFor;
         notesToBeCreated.push(name);
@@ -337,7 +331,7 @@ function updateQcounterCount(identity: Identity): void {
 function assignQCounterToWindow() {
     const  numTargets = potentialQCounterTargets.length;
     for (let i = 0; i < numTargets; i++) {
-        let id = potentialQCounterTargets[i];
+        const id = potentialQCounterTargets[i];
 
         if (windowIsValid(id)) {
             qCounterTarget.uuid = id.uuid;
@@ -366,9 +360,9 @@ function createQCounterNumPendingMessage() {
     return {
         action: NoteAction.qQueryUpdate,
         data: {
-            numPending: pendindNotes.length,
+            numPending: pendindNotes.length
         },
-        id: {},
+        id: {}
     };
 }
 
@@ -399,7 +393,7 @@ function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: a
             },
             position: {
                 duration: POSITION_ANIMATION_DURATION,
-                top: (defaultTop - (numNotes - idx) * NOTE_HEIGHT) + NOTE_TOP_MARGIN,
+                top: (defaultTop - (numNotes - idx) * NOTE_HEIGHT) + NOTE_TOP_MARGIN
             }
         };
         const animationCallback = () => {
@@ -417,21 +411,19 @@ function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: a
 
 function mouseisOverNotes(mousePos: any, monitorInfo: any, noteStackLength: number) {
 
-    const isOver = mousePos.left > monitorInfo.right - 310 &&
+    return mousePos.left > monitorInfo.right - 310 &&
         monitorInfo.bottom - mousePos.top < noteStackLength * 110;
-
-    return isOver;
 }
 
 function genBaseAnimateOpts () {
     return <any> {
         opacity: {
             duration: 300,
-            opacity: 0,
+            opacity: 0
         },
         position: {
-            duration: 300,
-        },
+            duration: 300
+        }
     };
 }
 
@@ -441,12 +433,12 @@ function createNoteProxyApp () {
         name: NOTE_APP_UUID,
         nonPersistent: true,
         url: 'about:blank',
-        uuid: NOTE_APP_UUID,
+        uuid: NOTE_APP_UUID
     });
 
     Application.run({
         name: NOTE_APP_UUID,
-        uuid: NOTE_APP_UUID,
+        uuid: NOTE_APP_UUID
     });
 
     proxyAppInitialized = true;
@@ -482,8 +474,8 @@ function handleNoteCreate(msg: NotificationMessage): void {
     let isOwnedByProxy = false;
     let parent: any;
 
-    let { options: {
-        notificationId, uuidOfProxiedApp, name: noteName},
+    const { options: {
+        notificationId, uuidOfProxiedApp, name: noteName}
     }: { options: { notificationId: number, uuidOfProxiedApp: string, name: string } } = data;
 
     if (notificationId !== undefined && uuidOfProxiedApp !== undefined) {
@@ -513,7 +505,7 @@ function handleNoteCreated(msg: NotificationMessage): void {
 
     ++created;
 
-    let idx = notesToBeCreated.indexOf(options.name);
+    const idx = notesToBeCreated.indexOf(options.name);
 
     if (idx !== -1) {
         notesToBeCreated.splice(idx, 1);
@@ -588,7 +580,7 @@ function requestNoteClose(msg: NotificationMessage): void {
     const {data, id: {uuid}} = msg;
 
     if (data.notificationId !== undefined) {
-        let destName = idToNameMap[uuid][data.notificationId];
+        const destName = idToNameMap[uuid][data.notificationId];
         msg.id.name = destName;
         msg.id.uuid = NOTE_APP_UUID;
     }
@@ -601,7 +593,7 @@ function dispatchMessageToNote (msg: NotificationMessage): void {
 
     try {
         if (data.notificationId !== undefined) {
-            let destName = idToNameMap[uuid][data.notificationId];
+            const destName = idToNameMap[uuid][data.notificationId];
             ofEvents.emit(noteTopicStr(NOTE_APP_UUID, destName), msg);
         } else {
             ofEvents.emit(noteTopicStr(uuid, name), msg);
@@ -623,19 +615,19 @@ function dispatchEvent(event: string, msg: NotificationMessage): void {
 }
 
 function sendEventToExternal(name: string, eventType: string): void {
-    let {uuid: proxiedAppUuid} = noteNameToParent[name];
+    const {uuid: proxiedAppUuid} = noteNameToParent[name];
     //TODO: api_base should not be used outside of api_protocol, need to refacor this
     sendToIdentity({
         name: proxiedAppUuid,
-        uuid: proxiedAppUuid,
+        uuid: proxiedAppUuid
     }, {
         action: 'process-notification-event',
         payload: {
             payload: {
-                notificationId: nameToNoteId[name],
+                notificationId: nameToNoteId[name]
             },
-            type: eventType,
-        },
+            type: eventType
+        }
     });
 }
 
@@ -643,8 +635,8 @@ function windowIsValid(identity: any): boolean {
     let isValid: boolean;
 
     try {
-        let openfinWindow = Window.wrap(identity.uuid, identity.name);
-        let browserWindow = openfinWindow && openfinWindow.browserWindow;
+        const openfinWindow = Window.wrap(identity.uuid, identity.name);
+        const browserWindow = openfinWindow && openfinWindow.browserWindow;
 
         if (!browserWindow) {
             isValid = false;
@@ -705,7 +697,7 @@ function closeNotification(req: NotificationMessage): void {
 function updateAnimationState(animationState: boolean): void {
     seqs.isAnimating.onNext(<any> {
         animating: animationState,
-        from: {},
+        from: {}
     });
 }
 
@@ -718,7 +710,7 @@ function getPrimaryMonitorAvailableRect(): AvailableRect {
 function getPrimaryMonitorRect(): AvailableRect {
     const {primaryMonitor: {monitorRect}} = System.getMonitorInfo();
 
-    return monitorRect
+    return monitorRect;
 }
 
 function scheduleNoteClose(req: NotificationMessage, timeout: number): void {
@@ -742,11 +734,11 @@ function createPendingNote(): void {
     const nextNote: any = pendindNotes[0].noteData;
     const noteHasValidParent = windowIsValid({
         name: nextNote.options.uuid,
-        uuid: nextNote.options.uuid,
+        uuid: nextNote.options.uuid
     });
 
     if (noteHasValidParent) {
-        let {ack} = nextNote;
+        const {ack} = nextNote;
 
         ++askedFor;
         invokeCreateAck(ack);
@@ -767,9 +759,9 @@ function invokeCreateAck(ack: any): void {
     ack({
         data: {
             left: right - NOTE_WIDTH_AND_PAD,
-            top: bottom,
+            top: bottom
         },
-        success: true,
+        success: true
     });
 }
 
@@ -778,10 +770,8 @@ function addEventListener (identity: Identity, type: string, payload: any, cb: a
     const {uuid, name} = identity;
     const isGeneral = type === 'general';
     const sub = noteTopicStr(uuid, name, isGeneral);
-    const unsub = ofEvents.on(sub, cb);
-
-    return unsub;
+    return ofEvents.on(sub, cb);
 }
 
-export {addEventListener}
-export {routeRequest}
+export {addEventListener};
+export {routeRequest};

@@ -112,3 +112,9 @@ declare module 'electron' {
         export function readText(type?: string): string;
     }
 }
+
+declare namespace Rx {
+    interface IScheduler {
+        scheduleFuture<TState>(state: TState, dueTime: number | Date, action: (scheduler: IScheduler, state: TState) => IDisposable): IDisposable;
+    }
+}
