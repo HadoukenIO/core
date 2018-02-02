@@ -13,15 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-import RequestHandler from '../transport_strategy/base_handler';
-import { MessagePackage } from '../transport_strategy/api_transport_base';
-import { sendToIdentity } from './api_protocol_base';
-import { Identity } from '../../../shapes';
-import { AckFunc, NackFunc } from '../transport_strategy/ack';
-import { Services } from '../../api/services';
 import * as apiProtocolBase from './api_protocol_base';
 import * as coreState from '../../core_state';
+import { Identity } from '../../../shapes';
+import { MessagePackage } from '../transport_strategy/api_transport_base';
+import RequestHandler from '../transport_strategy/base_handler';
+import { sendToIdentity } from './api_protocol_base';
+import { Services } from '../../api/services';
+import { AckFunc, NackFunc } from '../transport_strategy/ack';
 
 interface RemoteAck {
     ack: AckFunc;
@@ -30,26 +29,26 @@ interface RemoteAck {
 
 const serviceApiActions: any = {
     'connect-to-service': true,
-    'send-to-service': true,
-    'send-to-connection': true
+    'send-to-connection': true,
+    'send-to-service': true
 };
 
 const remoteAckMap: Map<string, RemoteAck> = new Map();
 const pendingServiceConnections: Map<string, MessagePackage[]> = new Map();
+
+const CONNECT_TO_SERVICE_ACTION = 'connect-to-service';
 const SERVICE_APP_ACTION = 'process-service-action';
 const SERVICE_ACK_ACTION = 'service-ack';
-const CONNECT_TO_SERVICE_ACTION = 'connect-to-service';
 
-// Do we need name too?
 function getAckKey(id: number, identity: Identity): string {
     return `${ id }-${ identity.uuid }`;
 }
 
-// If it is an initial connection to a service, don't know Identity yet, only service Name
+// If initial connection to a service, don't know Identity yet, only service Name
 function setTargetIdentity(action: string, payload: any) {
     if (action === CONNECT_TO_SERVICE_ACTION) {
         const serviceName = payload && payload.serviceName;
-        return Services.getService(serviceName);
+        return Services.getService(serviceName).identity;
     } else {
         return apiProtocolBase.getTargetWindowIdentity(payload);
     }
@@ -79,8 +78,8 @@ function handleServiceApiAction(msg: MessagePackage, next: () => void): void {
 
     //the target of this API call is a window.
     if (serviceApiActions[action]) {
-        const payload = data && data.payload;
-        const serviceName = payload && payload.serviceName;
+        const payload = data && data.payload || {};
+        const { serviceName } = payload;
 
         // If it is an initial connection to a service, don't know identity yet, only service Name
         const targetIdentity = setTargetIdentity(action, payload);
@@ -90,24 +89,30 @@ function handleServiceApiAction(msg: MessagePackage, next: () => void): void {
         if (targetIdentity) {
             //store the ack/nack combo for when the service or connection acks/nacks.
             remoteAckMap.set(ackKey, { ack, nack });
+
+            // If serviceName is defined, original request was from connection so respond with service info
+            // (update if serviceName not sent on every request from connection)
+            const service = Services.getService(serviceName);
             const ackToSender = {
                 action: SERVICE_ACK_ACTION,
                 payload: {
                     correlationId: data.messageId,
                     destinationToken: identity,
-                    payload: {}
-                }
+                    ...(service ? { payload: service } : { payload: {} })
+                },
+                success: true,
+                ...(service ? { service } : {})
             };
 
             //foward the API call to the service or connection.
             sendToIdentity(targetIdentity, {
                 action: SERVICE_APP_ACTION,
                 payload: {
+                    ackToSender,
                     action,
-                    messageId: data.messageId,
-                    payload,
                     destinationToken: identity,
-                    ackToSender
+                    messageId: data.messageId,
+                    payload
                 }
             });
         } else if (action === CONNECT_TO_SERVICE_ACTION && payload.wait) {
@@ -126,17 +131,16 @@ function handleServiceAckAction(msg: MessagePackage, next: () => void): void {
     const action = data && data.action;
 
     if (action === SERVICE_ACK_ACTION) {
-        const payload = data && data.payload;
-        const destinationToken = payload && payload.destinationToken;
-        const correlationId = payload && payload.correlationId;
+        const payload = data && data.payload || {};
+        const { destinationToken, correlationId, payload: ackPayload } = payload;
         const ackKey = getAckKey(correlationId, destinationToken);
         const remoteAck = remoteAckMap.get(ackKey);
 
         if (remoteAck) {
             if (data.success) {
                 remoteAck.ack({
-                    data: payload,
-                    success: true
+                    success: true,
+                    ...(ackPayload ? { data: ackPayload } : {})
                 });
             } else {
                 remoteAck.nack(new Error(data.reason));
