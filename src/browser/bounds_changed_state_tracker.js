@@ -21,7 +21,7 @@ let windowTransaction = require('electron').windowTransaction;
 
 let _ = require('underscore');
 let animations = require('./animations.js');
-let clipBounds = require('./clip_bounds.js').default;
+import clipBounds from './clip_bounds';
 let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
 let WindowGroups = require('./window_groups.js');
@@ -288,7 +288,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                         win.browserWindow.bringToFront();
                         return win.name !== name;
                     }).forEach((win) => {
-                        let winBounds = win.browserWindow.getBounds();
+                        const winBounds = win.browserWindow.getBounds();
                         let { x, y, width, height } = (changeType === 1) ? handleGroupedResize(boundsCompare, delta, cachedBounds, win): winBounds;
 
                         // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
@@ -314,7 +314,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             }
-                            let [w, h] = [width, height];
+                            const [w, h] = [width, height];
                             wt.setWindowPos(hwnd, { x, y, w, h, flags });
                         } else {
                             if (win.browserWindow.isMaximized()) {
