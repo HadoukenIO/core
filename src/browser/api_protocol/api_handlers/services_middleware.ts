@@ -20,6 +20,8 @@ import { sendToIdentity } from './api_protocol_base';
 import { Identity } from '../../../shapes';
 import { AckFunc, NackFunc } from '../transport_strategy/ack';
 import { Services } from '../../api/services';
+import * as apiProtocolBase from './api_protocol_base';
+import * as coreState from '../../core_state';
 
 interface RemoteAck {
     ack: AckFunc;
@@ -27,16 +29,46 @@ interface RemoteAck {
 }
 
 const serviceApiActions: any = {
-   'dispatch-service': true
+    'connect-to-service': true,
+    'send-to-service': true,
+    'send-to-connection': true
 };
 
 const remoteAckMap: Map<string, RemoteAck> = new Map();
+const pendingServiceConnections: Map<string, MessagePackage[]> = new Map();
 const SERVICE_APP_ACTION = 'process-service-action';
 const SERVICE_ACK_ACTION = 'service-ack';
 
 // Do we need name too?
 function getAckKey(id: number, identity: Identity): string {
-    return `${ id }-${ identity.uuid }-${ identity.name }`;
+    return `${ id }-${ identity.uuid }`;
+}
+
+// If it is an initial connection to a service, don't know Identity yet, only service Name
+function setTargetIdentity(action: string, payload: any) {
+    if (action === 'connect-to-service') {
+        const serviceName = payload && payload.serviceName;
+        return Services.getService(serviceName);
+    } else {
+        return apiProtocolBase.getTargetWindowIdentity(payload);
+    }
+}
+
+function waitForService(serviceName: string, msg: MessagePackage) {
+    if (!Array.isArray(pendingServiceConnections.get(serviceName))) {
+        pendingServiceConnections.set(serviceName, []);
+    }
+    pendingServiceConnections.get(serviceName).push(msg);
+}
+
+function applyPendingServiceConnections(serviceName: string) {
+    const pendingConnections = pendingServiceConnections.get(serviceName);
+    if (pendingConnections) {
+        pendingConnections.forEach(connectionMsg => {
+            const serviceNack = () => connectionMsg.nack('Error connecting to Service.');
+            handleServiceApiAction(connectionMsg, serviceNack);
+        });
+    }
 }
 
 //this preprocessor will check if the API call is a service action and forward it to the service to handle.
@@ -47,17 +79,17 @@ function handleServiceApiAction(msg: MessagePackage, next: () => void): void {
 
     //the target of this API call is a window.
     if (serviceApiActions[action]) {
-        const service = Services.getService(serviceName);
+        // If it is an initial connection to a service, don't know Identity yet, only service Name
+        const targetIdentity = setTargetIdentity(action, payload);
         const ackKey = getAckKey(data.messageId, identity);
 
-        //the service exists and is registered
-        if (service) {
-
-            //store the ack/nack combo for when the external connection acks/nacks.
+        //the service / connection exists
+        if (targetIdentity) {
+            //store the ack/nack combo for when the service or connection acks/nacks.
             remoteAckMap.set(ackKey, { ack, nack });
 
-            //foward the API call to the service.
-            sendToIdentity(service.identity, {
+            //foward the API call to the service or connection.
+            sendToIdentity(targetIdentity, {
                 action: SERVICE_APP_ACTION,
                 payload: {
                     action,
@@ -66,8 +98,10 @@ function handleServiceApiAction(msg: MessagePackage, next: () => void): void {
                     destinationToken: identity
                 }
             });
+        } else if (action === 'connect-to-service' && payload.wait) {
+            waitForService(serviceName, msg);
         } else {
-            nack('Service not found.');
+            nack('Service connection not found.');
         }
     } else {
         next();
@@ -95,10 +129,8 @@ function handleServiceAckAction(msg: MessagePackage, next: () => void): void {
             }
             remoteAckMap.delete(ackKey);
         } else {
-            // how does this fail...? nack here?
-            next();
+            nack('Message not found.');
         }
-
     } else {
         next();
     }

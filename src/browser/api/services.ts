@@ -24,15 +24,12 @@ export module Services {
         if (servicesMap.get(serviceName)) {
             return false;
         }
-        const messageRoot = `From-core-${serviceName}`;
+        const messageRoot = serviceName;
         // TO DO: MAKE SURE FUNCTION NAMES DONT CLASH?
         const service = { identity, messageRoot, serviceFunctions, serviceName };
         servicesMap.set(serviceName, service);
 
-        return messageRoot;
-    }
-    export function subscribeService(identity: Identity, serviceName: string) {
-        return servicesMap.get(serviceName);
+        return { messageRoot, identity };
     }
     export function getService(serviceName: string) {
         return servicesMap.get(serviceName);

@@ -48,7 +48,7 @@ export class ServiceApiHandler {
         // const { payload: { serviceName = null } = {} } = message;
         const { payload } = message;
         const { serviceName } = payload;
-        const service = Services.subscribeService(identity, serviceName);
+        const service = Services.getService(serviceName);
         const dataAck = Object.assign({}, successAck, { data: service });
         service ? ack(dataAck) : nack('Requested service not registered');
     }
