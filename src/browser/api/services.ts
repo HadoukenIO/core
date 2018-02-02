@@ -34,7 +34,7 @@ export module Services {
             servicesMap.delete(serviceName);
         });
 
-        return { messageRoot, identity };
+        return { messageRoot };
     }
     export function getService(serviceName: string) {
         return servicesMap.get(serviceName);
