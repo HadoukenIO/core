@@ -40,7 +40,7 @@ export class ServiceApiHandler {
         const { serviceName, serviceFunctions } = payload;
 
         const serviceRegistered = Services.registerService(identity, serviceName, serviceFunctions);
-        const dataAck = Object.assign({}, successAck, { data: { messageRoot: serviceRegistered }});
+        const dataAck = Object.assign({}, successAck, { data: serviceRegistered });
         serviceRegistered ? ack(dataAck) : nack('service name already registered');
     }
 

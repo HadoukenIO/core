@@ -16,6 +16,7 @@ limitations under the License.
 
 import { Identity, Service } from '../../shapes';
 import route from '../../common/route';
+import ofEvents from '../of_events';
 
 const servicesMap: Map<string, Service> = new Map();
 
@@ -25,9 +26,13 @@ export module Services {
             return false;
         }
         const messageRoot = serviceName;
-        // TO DO: MAKE SURE FUNCTION NAMES DONT CLASH?
         const service = { identity, messageRoot, serviceFunctions, serviceName };
         servicesMap.set(serviceName, service);
+
+        // When service exits, remove from servicesMap - ToDo: Also send to connections? Or let service handle...?
+        ofEvents.once(route.application('closed', identity.uuid), () => {
+            servicesMap.delete(serviceName);
+        });
 
         return { messageRoot, identity };
     }
