@@ -27,7 +27,7 @@ const successAck = {
 export class ServiceApiHandler {
     private readonly actionMap: ActionSpecMap = {
         'register-service': this.registerService,
-        'subscribe-to-service': this.registerService
+        'subscribe-to-service': this.subscribeService
     };
 
     constructor() {
