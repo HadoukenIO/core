@@ -17,6 +17,8 @@ limitations under the License.
 import { Identity, Service } from '../../shapes';
 import route from '../../common/route';
 import ofEvents from '../of_events';
+import { applyPendingServiceConnections } from '../api_protocol/api_handlers/services_middleware';
+
 
 const servicesMap: Map<string, Service> = new Map();
 
@@ -28,6 +30,9 @@ export module Services {
         const messageRoot = serviceName;
         const service = { identity, messageRoot, serviceFunctions, serviceName };
         servicesMap.set(serviceName, service);
+
+        // execute any requests to connect for service that occured before service launch.
+        applyPendingServiceConnections(serviceName);
 
         // When service exits, remove from servicesMap - ToDo: Also send to connections? Or let service handle...?
         ofEvents.once(route.application('closed', identity.uuid), () => {

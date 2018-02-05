@@ -30,7 +30,8 @@ interface RemoteAck {
 const serviceApiActions: any = {
     'connect-to-service': true,
     'send-to-connection': true,
-    'send-to-service': true
+    'send-to-service': true,
+    'send-service-message': true
 };
 
 const remoteAckMap: Map<string, RemoteAck> = new Map();
@@ -48,7 +49,8 @@ function getAckKey(id: number, identity: Identity): string {
 function setTargetIdentity(action: string, payload: any) {
     if (action === CONNECT_TO_SERVICE_ACTION) {
         const serviceName = payload && payload.serviceName;
-        return Services.getService(serviceName).identity;
+        const service = Services.getService(serviceName);
+        return service && service.identity;
     } else {
         return apiProtocolBase.getTargetWindowIdentity(payload);
     }
@@ -61,12 +63,12 @@ function waitForService(serviceName: string, msg: MessagePackage) {
     pendingServiceConnections.get(serviceName).push(msg);
 }
 
-function applyPendingServiceConnections(serviceName: string) {
+export function applyPendingServiceConnections(serviceName: string) {
     const pendingConnections = pendingServiceConnections.get(serviceName);
     if (pendingConnections) {
         pendingConnections.forEach(connectionMsg => {
-            const serviceNack = () => connectionMsg.nack('Error connecting to Service.');
-            handleServiceApiAction(connectionMsg, serviceNack);
+            const connectionNack = () => connectionMsg.nack('Error connecting to Service.');
+            handleServiceApiAction(connectionMsg, connectionNack);
         });
     }
 }
@@ -83,16 +85,18 @@ function handleServiceApiAction(msg: MessagePackage, next: () => void): void {
 
         // If it is an initial connection to a service, don't know identity yet, only service Name
         const targetIdentity = setTargetIdentity(action, payload);
-        const ackKey = getAckKey(data.messageId, identity);
 
         //the service / connection exists
         if (targetIdentity) {
             //store the ack/nack combo for when the service or connection acks/nacks.
+            const ackKey = getAckKey(data.messageId, identity);
             remoteAckMap.set(ackKey, { ack, nack });
 
             // If serviceName is defined, original request was from connection so respond with service info
             // (update if serviceName not sent on every request from connection)
             const service = Services.getService(serviceName);
+            // If it is a msg from a connection - service object placed on ackToSender automatically
+            // (can be altered by service before response)
             const ackToSender = {
                 action: SERVICE_ACK_ACTION,
                 payload: {
@@ -100,8 +104,7 @@ function handleServiceApiAction(msg: MessagePackage, next: () => void): void {
                     destinationToken: identity,
                     ...(service ? { payload: service } : { payload: {} })
                 },
-                success: true,
-                ...(service ? { service } : {})
+                success: true
             };
 
             //foward the API call to the service or connection.
@@ -110,8 +113,6 @@ function handleServiceApiAction(msg: MessagePackage, next: () => void): void {
                 payload: {
                     ackToSender,
                     action,
-                    destinationToken: identity,
-                    messageId: data.messageId,
                     payload
                 }
             });
