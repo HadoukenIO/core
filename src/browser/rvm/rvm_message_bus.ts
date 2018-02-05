@@ -33,13 +33,6 @@ type relaunchOnCloseAction = 'relaunch-on-close';
 type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
 type downloadRuntimeAction = 'runtime-download';
 
-export interface ConsoleMessage {
-    level: number;
-    message: string;
-    appConfigUrl: string;
-    timeStamp: string;
-}
-
 export interface ApplicationLog extends RvmMsgBase {
     topic: applicationTopic;
     action: applicationLogAction;
@@ -48,6 +41,13 @@ export interface ApplicationLog extends RvmMsgBase {
     payload: {
         messages: ConsoleMessage[];
     };
+}
+
+export interface ConsoleMessage {
+    level: number;
+    message: string;
+    appConfigUrl: string;
+    timeStamp: string;
 }
 
 export interface RegisterUser extends RvmMsgBase {

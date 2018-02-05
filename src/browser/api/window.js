@@ -838,39 +838,47 @@ Window.create = function(id, opts) {
     const { plugins } = manifest || {};
     winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
 
-    webContents.on('console-message', (thing, level, message, lineNo, sourceId) => {
-        const manifestUrl = coreState.getConfigUrlByUuid(identity.uuid);
-        if (!manifestUrl) {
-            electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
-        }
+    const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
+        // Hack: since this function is getting called from the native side with
+        // "webContents.on", there is weirdness where the "setTimeout(flushConsoleMessageQueue...)"
+        // in addConsoleMessageToRVMMessageQueue would only get called the first time, and not subsequent times,
+        // if you just called "addConsoleMessageToRVMMessageQueue" directly from here. So to get around that, we
+        // wrap this entire function in a "setTimeout" to put it in a different context. Eventually we should figure
+        // out if there is a way around this by using event.preventDefault or something similar
+        setTimeout(() => {
+            electronApp.vlog(1, `CONSOLE-MESSAGE`);
 
-        function checkPrependLeadingZero(num) {
-            let str = String(num);
-            if (str.length === 1) {
-                str = '0' + str;
+            const appConfigUrl = coreState.getConfigUrlByUuid(identity.uuid);
+            if (!appConfigUrl) {
+                electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
             }
 
-            return str;
-        }
+            function checkPrependLeadingZero(num) {
+                let str = String(num);
+                if (str.length === 1) {
+                    str = '0' + str;
+                }
 
-        const date = new Date();
-        const month = checkPrependLeadingZero(date.getMonth() + 1);
-        const day = checkPrependLeadingZero(date.getDate());
-        const year = String(date.getFullYear()).slice(2);
-        const hour = checkPrependLeadingZero(date.getHours());
-        const minute = checkPrependLeadingZero(date.getMinutes());
-        const second = checkPrependLeadingZero(date.getSeconds());
+                return str;
+            }
 
-        // Format timestamp to match debug.log
-        const timeStamp = '' + month + '/' + day + '/' + year + ' ' + hour + ':' + minute + ':' + second;
+            const date = new Date();
+            const month = checkPrependLeadingZero(date.getMonth() + 1);
+            const day = checkPrependLeadingZero(date.getDate());
+            const year = String(date.getFullYear()).slice(2);
+            const hour = checkPrependLeadingZero(date.getHours());
+            const minute = checkPrependLeadingZero(date.getMinutes());
+            const second = checkPrependLeadingZero(date.getSeconds());
 
-        addConsoleMessageToRVMMessageQueue({
-            level: level,
-            message: message,
-            appConfigUrl: manifestUrl,
-            timeStamp: timeStamp
-        });
-    });
+            // Format timestamp to match debug.log
+            const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
+
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp });
+
+        }, 1);
+    };
+
+    webContents.on('console-message', prepareConsoleMessageForRVM);
 
     // Set preload scripts' final loading states
     winObj.preloadScripts = (_options.preloadScripts || []);

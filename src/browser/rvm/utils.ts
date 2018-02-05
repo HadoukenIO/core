@@ -7,6 +7,7 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import { rvmMessageBus, ConsoleMessage } from '../rvm/rvm_message_bus';
 import { System } from '../api/system';
 import { setTimeout } from 'timers';
+
 /**
  * Interface for [sendToRVM] method
  */
@@ -22,7 +23,8 @@ interface SendToRVMOpts {
 let consoleMessageQueue: ConsoleMessage[] = [];
 let isFlushScheduled: boolean = false;
 
-function flushConsoleMessageQueue() {
+function flushConsoleMessageQueue(): void {
+    isFlushScheduled = false;
     if (consoleMessageQueue.length <= 0) {
         return;
     }
@@ -39,7 +41,6 @@ function flushConsoleMessageQueue() {
 
     consoleMessageQueue = [];
     sendToRVM(obj);
-    isFlushScheduled = false;
 }
 
 export function addConsoleMessageToRVMMessageQueue(message: ConsoleMessage): void {
@@ -47,9 +48,8 @@ export function addConsoleMessageToRVMMessageQueue(message: ConsoleMessage): voi
 
     // If no timer already set, set one to flush the queue in 10s
     if (!isFlushScheduled) {
-        setTimeout(flushConsoleMessageQueue, 10000);
-
         isFlushScheduled = true;
+        setTimeout(flushConsoleMessageQueue, 10000);
     }
 }
 
