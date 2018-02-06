@@ -7,7 +7,6 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 import { rvmMessageBus, ConsoleMessage } from '../rvm/rvm_message_bus';
 import { System } from '../api/system';
 import { setTimeout } from 'timers';
-
 /**
  * Interface for [sendToRVM] method
  */
@@ -20,11 +19,18 @@ interface SendToRVMOpts {
     payload?: any;
 }
 
+// 1 MB
+const maxBytes: number = 1000000;
+
 let consoleMessageQueue: ConsoleMessage[] = [];
 let isFlushScheduled: boolean = false;
+let totalBytes: number = 0;
+let timer: NodeJS.Timer = null;
 
 function flushConsoleMessageQueue(): void {
+    totalBytes = 0;
     isFlushScheduled = false;
+
     if (consoleMessageQueue.length <= 0) {
         return;
     }
@@ -43,13 +49,25 @@ function flushConsoleMessageQueue(): void {
     sendToRVM(obj);
 }
 
-export function addConsoleMessageToRVMMessageQueue(message: ConsoleMessage): void {
-    consoleMessageQueue.push(message);
+export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage): void {
+    consoleMessageQueue.push(consoleMessage);
 
-    // If no timer already set, set one to flush the queue in 10s
-    if (!isFlushScheduled) {
+    const byteLength = Buffer.byteLength(consoleMessage.message, 'utf8');
+    totalBytes += byteLength;
+
+    // If we have exceeded the byte threshold for messages, flush the queue immediately
+    if (totalBytes >= maxBytes) {
+        if (timer !== null) {
+            clearTimeout(timer);
+            timer = null;
+        }
+
+        flushConsoleMessageQueue();
+
+    // Otherwise if no timer already set, set one to flush the queue in 10s
+    } else if (!isFlushScheduled) {
         isFlushScheduled = true;
-        setTimeout(flushConsoleMessageQueue, 10000);
+        timer = setTimeout(flushConsoleMessageQueue, 10000);
     }
 }
 
