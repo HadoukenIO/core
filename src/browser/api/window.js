@@ -851,6 +851,7 @@ Window.create = function(id, opts) {
             const appConfigUrl = coreState.getConfigUrlByUuid(identity.uuid);
             if (!appConfigUrl) {
                 electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
+                return;
             }
 
             function checkPrependLeadingZero(num) {
