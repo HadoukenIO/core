@@ -44,7 +44,7 @@ function getAckKey(id: number, identity: Identity): string {
 }
 
 // If initial connection to a module, don't know Identity yet, only module Name
-function setTargetIdentity(payload: any): { targetIdentity: Identity, moduleIdentity: Module } {
+function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: Identity, moduleIdentity: Module } {
     const { connectAction } = payload;
     if (connectAction) {
         const moduleName = payload && payload.moduleName;
@@ -52,7 +52,7 @@ function setTargetIdentity(payload: any): { targetIdentity: Identity, moduleIden
         return { targetIdentity: moduleIdentity && moduleIdentity.identity, moduleIdentity };
     } else {
         const targetIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-        const moduleIdentity = Modules.getModuleByUuid(payload.uuid);
+        const moduleIdentity = Modules.getModuleByUuid(payload.uuid) || Modules.getModuleByUuid(identity.uuid);
         return { targetIdentity, moduleIdentity };
     }
 }
@@ -83,11 +83,7 @@ function handleModuleApiAction(msg: MessagePackage, next: () => void): void {
     if (action === MODULE_API_ACTION) {
         const payload = data && data.payload || {};
         // If it is an initial connection to a module, don't know identity yet, only module Name
-        const { targetIdentity, moduleIdentity } = setTargetIdentity(payload);
-
-        // If sender is a module, add extra properties in Module shape to Identity
-        const senderModule = Modules.getModuleByUuid(identity.uuid);
-        const senderIdentity = senderModule ? senderModule : identity;
+        const { targetIdentity, moduleIdentity } = setTargetIdentity(identity, payload);
 
         //the module / connection exists
         if (targetIdentity) {
@@ -100,8 +96,7 @@ function handleModuleApiAction(msg: MessagePackage, next: () => void): void {
                 action: MODULE_ACK_ACTION,
                 payload: {
                     correlationId: data.messageId,
-                    destinationToken: senderIdentity,
-                    ...(moduleIdentity ? { payload: moduleIdentity } : { payload: {} })
+                    destinationToken: identity
                 },
                 success: true
             };
@@ -111,9 +106,11 @@ function handleModuleApiAction(msg: MessagePackage, next: () => void): void {
                 action: MODULE_APP_ACTION,
                 payload: {
                     ackToSender,
-                    senderIdentity,
+                    senderIdentity: identity,
+                    moduleName: moduleIdentity.moduleName,
                     action: moduleAction,
-                    payload: messagePayload
+                    payload: messagePayload,
+                    ...(payload.connectAction ? { connectAction: true } : {})
                 }
             });
         } else if (payload.connectAction && payload.wait) {

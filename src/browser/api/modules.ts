@@ -27,8 +27,8 @@ export module Modules {
         if (moduleMap.get(moduleName)) {
             return false;
         }
-        const OFmodule = { identity, moduleName };
-        moduleMap.set(moduleName, OFmodule);
+        const moduleIdentity = { identity, moduleName };
+        moduleMap.set(moduleName, moduleIdentity);
 
         // execute any requests to connect for module that occured before module launch.
         applyPendingModuleConnections(moduleName);
@@ -43,13 +43,13 @@ export module Modules {
     export function getModuleByName(moduleName: string) {
         return moduleMap.get(moduleName);
     }
-    export function getModuleByUuid(uuid: string) {
-        let OFmodule;
+    export function getModuleByUuid(uuid: string): any {
+        let moduleIdentity;
         moduleMap.forEach((value, key) => {
             if (value.identity.uuid === uuid) {
-                OFmodule = moduleMap.get(key);
+                moduleIdentity = moduleMap.get(key);
             }
         });
-        return OFmodule;
+        return moduleIdentity;
     }
 }
