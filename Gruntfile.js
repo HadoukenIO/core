@@ -137,7 +137,6 @@ module.exports = (grunt) => {
             files: {
                 src: [
                     'src/**/*.ts',
-                    '!src/browser/api/notifications/*.ts',
                     '!src/**/*.d.ts',
                     'test/**/*.ts',
                     '!test/**/*.d.ts',
@@ -349,22 +348,22 @@ module.exports = (grunt) => {
             'src/browser/api_protocol/api_handlers/api_policy_processor.ts',
             'src/browser/api_protocol/api_handlers/external_application.ts',
             'src/browser/api_protocol/api_handlers/mesh_middleware.ts',
-            'src/browser/port_discovery.ts',
-            'src/browser/rvm/rvm_message_bus.ts',
-            'src/browser/rvm/runtime_initiated_topics/app_assets.ts',
-            'src/browser/remote_subscriptions.ts',
-            'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
-            'src/browser/rvm/utils.ts',
-            'src/browser/external_window_event_adapter.js',
             'src/browser/connection_manager.ts',
+            'src/browser/external_window_event_adapter.js',
             'src/browser/plugins.ts',
+            'src/browser/port_discovery.ts',
+            'src/browser/remote_subscriptions.ts',
+            'src/browser/rvm/runtime_initiated_topics/app_assets.ts',
+            'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
+            'src/browser/rvm/rvm_message_bus.ts',
+            'src/browser/rvm/utils.ts',
             'src/browser/transport.ts',
-            'src/browser/transports/socket_server.js',
-            'src/browser/transports/wm_copydata.ts',
             'src/browser/transports/base.ts',
             'src/browser/transports/chromium_ipc.ts',
+            'src/browser/transports/chromium_socket.ts',
             'src/browser/transports/electron_ipc.ts',
-            'src/browser/transports/chromium_socket.ts'
+            'src/browser/transports/socket_server.js',
+            'src/browser/transports/wm_copydata.ts'
         ];
 
         // List of files that need to have some kind of license

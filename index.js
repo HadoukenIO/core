@@ -40,7 +40,7 @@ let Window = require('./src/browser/api/window.js').Window;
 let apiProtocol = require('./src/browser/api_protocol');
 let socketServer = require('./src/browser/transports/socket_server').server;
 
-let authenticationDelegate = require('./src/browser/authentication_delegate.js');
+import { addPendingAuthRequests, createAuthUI } from './src/browser/authentication_delegate';
 let convertOptions = require('./src/browser/convert_options.js');
 let coreState = require('./src/browser/core_state.js');
 let webRequestHandlers = require('./src/browser/web_request_handler.js');
@@ -271,9 +271,9 @@ app.on('ready', function() {
         const windowEvtName = route.window('auth-requested', identity.uuid, identity.name);
         const appEvtName = route.application('window-auth-requested', identity.uuid);
 
-        authenticationDelegate.addPendingAuthRequests(identity, authInfo, callback);
+        addPendingAuthRequests(identity, authInfo, callback);
         if (ofEvents.listeners(windowEvtName).length < 1 && ofEvents.listeners(appEvtName).length < 1) {
-            authenticationDelegate.createAuthUI(identity);
+            createAuthUI(identity);
         } else {
             ofEvents.emit(windowEvtName, {
                 topic: 'window',
@@ -396,12 +396,19 @@ function includeFlashPlugin() {
 }
 
 function initializeCrashReporter(argo) {
-    if (!isInDiagnosticsMode(argo)) {
+    if (!needsCrashReporter(argo)) {
         return;
     }
 
     const configUrl = argo['startup-url'] || argo['config'];
     const diagnosticMode = argo['diagnostics'] || false;
+    const sandboxDisabled = argo['sandbox'] === false; // means '--no-sandbox' flag exists
+
+    if (diagnosticMode && !sandboxDisabled) {
+        log.writeToLog('info', `'--no-sandbox' flag has been automatically added, ` +
+            `because the application is running in diagnostics mode and has '--diagnostics' flag specified`);
+        app.commandLine.appendSwitch('no-sandbox');
+    }
 
     crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
 }
@@ -506,7 +513,7 @@ function initServer() {
 //please see the discussion on https://github.com/openfin/runtime-core/pull/194
 function launchApp(argo, startExternalAdapterServer) {
 
-    if (isInDiagnosticsMode(argo)) {
+    if (needsCrashReporter(argo)) {
         log.setToVerbose();
     }
 
@@ -534,7 +541,8 @@ function launchApp(argo, startExternalAdapterServer) {
         // this ensures that external connections that start the runtime can do so without a main window
         let successfulInitialLaunch = true;
 
-        if (startupAppOptions && (!isRunning || ofManifestUrl !== configUrl)) {
+        // comparing ofManifestUrl and configUrl shouldn't consider query strings. Otherwise, it will break deep linking
+        if (startupAppOptions && (!isRunning || ofManifestUrl.split('?')[0] !== configUrl.split('?')[0])) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
@@ -625,6 +633,10 @@ function registerShortcuts() {
         const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
         const accelerator = windowOptions && windowOptions.accelerator || {};
         const webContents = browserWindow.webContents;
+        const copy = () => { webContents.copy(); };
+        const paste = () => { webContents.paste(); };
+        globalShortcut.register('CommandOrControl+C', copy);
+        globalShortcut.register('CommandOrControl+V', paste);
 
         if (accelerator.zoom) {
             const zoom = increment => { return () => { webContents.send('zoom', { increment }); }; };
@@ -666,6 +678,6 @@ function registerShortcuts() {
     app.on('browser-window-blur', unhookShortcuts);
 }
 
-function isInDiagnosticsMode(argo) {
+function needsCrashReporter(argo) {
     return !!(argo['diagnostics'] || argo['enable-crash-reporting']);
 }
