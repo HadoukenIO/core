@@ -29,7 +29,7 @@ let nativeImage = electron.nativeImage;
 
 // npm modules
 let _ = require('underscore');
-const Rx = require('rx');
+import * as Rx from 'rx';
 
 // local modules
 let animations = require('../animations.js');
@@ -816,14 +816,10 @@ Window.create = function(id, opts) {
                 observer.next();
             } else if (_options.waitForPageLoad) {
                 browserWindow.once('ready-to-show', () => {
-                    restoreWindowPosition(identity, () => {
-                        observer.next();
-                    });
+                    restoreWindowPosition(identity, () => observer.next());
                 });
             } else {
-                restoreWindowPosition(identity, () => {
-                    observer.next();
-                });
+                restoreWindowPosition(identity, () => observer.next());
             }
         });
 
@@ -2413,7 +2409,7 @@ function intersectsRect(bounds, rect) {
 
 function boundsVisible(bounds, monitorInfo) {
     let visible = false;
-    let monitors = [monitorInfo.primaryMonitor].concat(monitorInfo.nonPrimaryMonitors);
+    const monitors = [monitorInfo.primaryMonitor].concat(monitorInfo.nonPrimaryMonitors);
 
     for (let i = 0; i < monitors.length; i++) {
         if (intersectsRect(bounds, monitors[i].monitorRect)) {
