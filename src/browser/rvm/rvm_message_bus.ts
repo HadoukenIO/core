@@ -44,9 +44,9 @@ export interface ApplicationLog extends RvmMsgBase {
 }
 
 export interface ConsoleMessage {
+    appConfigUrl: string;
     level: number;
     message: string;
-    appConfigUrl: string;
     timeStamp: string;
 }
 
