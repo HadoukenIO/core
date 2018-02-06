@@ -20,10 +20,9 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
-export interface Service {
+export interface Module {
     identity: Identity;
-    messageRoot?: string;
-    serviceFunctions?: string[];
+    moduleName: string;
 }
 
 export interface ResourceFetchIdentity extends Identity {
