@@ -25,7 +25,14 @@ limitations under the License.
     let customData = global.getFrameData(renderFrameId);
     let glbl = global;
     const electron = require('electron');
-    const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
+
+    // Mock webFrame if unavailable
+    const webFrame = (electron.webFrame ?
+        electron.webFrame.createForRenderFrame(renderFrameId) : {
+            getZoomLevel: () => { return 1.0; },
+            setZoomLevel: () => {}
+        });
+
     const ipc = electron.ipcRenderer;
     let childWindowRequestId = 0;
     let windowId;
