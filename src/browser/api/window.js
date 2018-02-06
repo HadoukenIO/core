@@ -2084,8 +2084,7 @@ function visibilityChangedDecorator(payload, args) {
     let propogate = false;
 
     if (args.length >= 2) {
-        const visible = args[1];
-        const closing = args[2];
+        const [, visible, closing] = args;
 
         if (visible) {
             payload.type = 'shown';
@@ -2101,17 +2100,9 @@ function visibilityChangedDecorator(payload, args) {
             }
         } else {
             let openfinWindow = Window.wrap(payload.uuid, payload.name);
-
+            const { hideReason } = openfinWindow;
             payload.type = 'hidden';
-            if (openfinWindow.hideReason === 'hide') {
-                if (closing) {
-                    payload.reason = 'closing';
-                } else {
-                    payload.reason = openfinWindow.hideReason;
-                }
-            } else {
-                payload.reason = openfinWindow.hideReason;
-            }
+            payload.reason = hideReason === 'hide' && closing ? 'closing' : hideReason;
             // reset to 'hide' in case visibility changes
             // due to a non-API related reason
             openfinWindow.hideReason = 'hide';
