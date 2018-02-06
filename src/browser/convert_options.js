@@ -20,6 +20,7 @@ limitations under the License.
 // built-in modules
 let fs = require('fs');
 let path = require('path');
+let queryString = require('querystring');
 
 // npm modules
 let _ = require('underscore');
@@ -239,6 +240,10 @@ module.exports = {
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
             newOptions.webPreferences.webSecurity = false;
+        }
+
+        if (coreState.argo['user-app-config-args']) {
+            newOptions.userAppConfigArgs = queryString.parse(coreState.argo['user-app-config-args']);
         }
 
         if (options.message !== undefined) {

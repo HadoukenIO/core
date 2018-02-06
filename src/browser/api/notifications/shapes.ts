@@ -13,12 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/// <reference path="./note_action.ts" />
 import NoteAction from './note_action';
 
-/* tslint:disable */
+// tslint:disable
 const noop = function(){};
-/* tslint:enable */
+// tslint:enable
 
 export interface Identity {
     name: string;
@@ -98,7 +97,7 @@ export class NoteConfig {
         contextMenu: true,
         cornerRounding: {
             height: 6,
-            width: 6,
+            width: 6
         },
         defaultHeight: 80,
         defaultWidth: 300,
@@ -108,14 +107,16 @@ export class NoteConfig {
         maxHeight: 80,
         maxWidth: 300,
         message: '',
+        // tslint:disable
         name: 'newNotifications' + Math.random(),
+        // tslint:enable
         opacity: 0,
         resizable: false,
         resize: false,
         saveWindowState: false,
         showTaskbarIcon: false,
         state: 'normal',
-        url: '',
+        url: ''
     };
 
     public url: string;
@@ -131,7 +132,7 @@ export class NoteConfig {
     constructor(opts: NotificationOptions) {
 
         if (!opts.url) {
-            throw 'Notifications require a url';
+            throw new Error('Notifications require a url');
         }
 
         // TODO use extend here? ...

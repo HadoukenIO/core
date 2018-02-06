@@ -22,7 +22,7 @@ const electronApp = electron.app;
 const electronBrowserWindow = electron.BrowserWindow;
 const session = electron.session;
 const shell = electron.shell;
-const { crashReporter } = electron;
+const { crashReporter, idleState } = electron;
 
 // npm modules
 const path = require('path');
@@ -42,6 +42,7 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
+import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch } from '../cached_resource_fetcher';
 
 const defaultProc = {
@@ -221,6 +222,14 @@ exports.System = {
 
 
     },
+    createProxySocket: function(options, callback, errorCallback) {
+        createChromiumSocket(Object.assign({}, options, { callback, errorCallback }));
+    },
+    authenticateProxySocket: function(options) {
+        const url = options && options.url;
+        electronApp.vlog(1, `authenticateProxySocket ${url}`);
+        authenticateChromiumSocket(options);
+    },
     deleteCacheOnExit: function(callback, errorCallback) {
         const folders = [{
             name: electronApp.getPath('userData') // deleteIfEmpty defaults to false on RVM side
@@ -328,15 +337,18 @@ exports.System = {
         return uuid ? { uuid, name } : null;
     },
     getHostSpecs: function() {
-        return {
+        let state = new idleState();
+        const theme = (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {};
+        return Object.assign({
             cpus: os.cpus(),
             memory: os.totalmem(),
             name: electronApp.getSystemName(),
             arch: electronApp.getSystemArch(),
             gpu: {
                 name: electronApp.getGpuName()
-            }
-        };
+            },
+            screenSaver: state.isScreenSaverRunning(),
+        }, theme);
     },
     getLog: function(name, resolve) {
         // Prevent abuse of trying to read files with a path relative to cache directory
@@ -554,9 +566,7 @@ exports.System = {
         const reporterOptions = Object.assign({ configUrl }, options);
 
         log.setToVerbose();
-        crashReporter.startOFCrashReporter(reporterOptions);
-
-        return crashReporter.crashReporterState();
+        return crashReporter.startOFCrashReporter(reporterOptions);
     },
     terminateExternalProcess: function(processUuid, timeout = 3000, child = false) {
         let status = ProcessTracker.terminate(processUuid, timeout, child);

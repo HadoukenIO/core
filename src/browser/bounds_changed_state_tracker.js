@@ -21,6 +21,7 @@ let windowTransaction = require('electron').windowTransaction;
 
 let _ = require('underscore');
 let animations = require('./animations.js');
+import clipBounds from './clip_bounds';
 let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
 let WindowGroups = require('./window_groups.js');
@@ -86,7 +87,12 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
 
         // set the changed flag only if it has not been set
         sizeChanged = sizeChanged || (widthDiff || heightDiff);
+        if (sizeChanged) {
+            xDiff = xDiff && ((boundsOne.x - boundsTwo.x) !== (boundsTwo.width - boundsOne.width));
+            yDiff = yDiff && ((boundsOne.y - boundsTwo.y) !== (boundsTwo.height - boundsOne.height));
+        }
         positionChanged = positionChanged || (xDiff || yDiff);
+
 
         return {
             x: xDiff,
@@ -101,7 +107,11 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
     var getBoundsDelta = (current, cached) => {
         return {
             x: current.x - cached.x,
-            y: current.y - cached.y
+            x2: (current.x + current.width) - (cached.x + cached.width),
+            y: current.y - cached.y,
+            y2: (current.y + current.height) - (cached.y + cached.height),
+            width: current.width - cached.width,
+            height: current.height - cached.height
         };
     };
 
@@ -121,6 +131,66 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         }
 
         return animations.getAnimationHandler().hasWindow(browserWindow.id) ? 'animation' : 'self';
+    };
+
+    const sharedBoundPixelDiff = 5;
+    const sharedBound = (boundOne, boundTwo) => {
+        return Math.abs(boundOne - boundTwo) < sharedBoundPixelDiff;
+    };
+
+    const handleGroupedResize = (resizeChangeType, delta, originalWindowCachedBounds, windowToUpdate) => {
+        let { x, y, width, height } = windowToUpdate.browserWindow.getBounds();
+        if (resizeChangeType.height) {
+            if (delta.y) {
+                if (sharedBound(y, originalWindowCachedBounds.y)) {
+                    // resize windows with matching top bound
+                    y = toSafeInt(y + delta.y, y);
+                    height = height + delta.height;
+                }
+                if (sharedBound(y + height, originalWindowCachedBounds.y)) {
+                    // resize windows with matching bottom bound
+                    height = height - delta.height;
+                }
+            }
+            if (delta.y2) {
+                if (sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+                    // resize windows with matching bottom bound
+                    height = height + delta.height;
+                }
+                if (sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+                    // resize windows with matching top bound
+                    y = toSafeInt(y + delta.height, y);
+                    height = height - delta.height;
+                }
+            }
+        }
+        if (resizeChangeType.width) {
+            if (delta.x) {
+                if (sharedBound(x, originalWindowCachedBounds.x)) {
+                    // resize windows with matching left bound
+                    x = toSafeInt(x + delta.x, x);
+                    width = width + delta.width;
+                }
+                if (sharedBound(x + width, originalWindowCachedBounds.x)) {
+                    // resize windows with matching right bound
+                    width = width - delta.width;
+                }
+            }
+            if (delta.x2) {
+                if (sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+                    // resize windows with matching right bound
+                    width = width + delta.width;
+                }
+                if (sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+                    // resize windows with matching left bound
+                    x = toSafeInt(x + delta.width, x);
+                    width = width - delta.width;
+                }
+            }
+        }
+        const newWindowBounds = { x, y, width, height };
+        const newClippedBounds = clipBounds(newWindowBounds, windowToUpdate.browserWindow);
+        return newClippedBounds;
     };
 
     var handleBoundsChange = (isAdditionalChangeExpected, force) => {
@@ -206,15 +276,26 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                     let hwndToId = {};
 
                     const { flag: { noZorder, noSize, noActivate } } = windowTransaction;
-                    const flags = noZorder + noSize + noActivate;
+                    let flags;
+                    if (changeType === 1) {
+                        // this may need to change to 1 or 2 if we fix functionality for changeType 2
+                        flags = noZorder + noActivate;
+                    } else {
+                        flags = noZorder + noSize + noActivate;
+                    }
 
                     WindowGroups.getGroup(groupUuid).filter((win) => {
                         win.browserWindow.bringToFront();
                         return win.name !== name;
                     }).forEach((win) => {
-                        let { x, y, width, height } = win.browserWindow.getBounds();
-                        x = toSafeInt(x + delta.x, x);
-                        y = toSafeInt(y + delta.y, y);
+                        const winBounds = win.browserWindow.getBounds();
+                        let { x, y, width, height } = (changeType === 1) ? handleGroupedResize(boundsCompare, delta, cachedBounds, win): winBounds;
+
+                        // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
+                        if (changeType === 0 || changeType === 2) {
+                            x = toSafeInt(x + delta.x, x);
+                            y = toSafeInt(y + delta.y, y);
+                        }
 
                         if (isWin32) {
                             let hwnd = parseInt(win.browserWindow.nativeId, 16);
@@ -233,12 +314,13 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             }
-                            wt.setWindowPos(hwnd, { x, y, flags });
+                            const [w, h] = [width, height];
+                            wt.setWindowPos(hwnd, { x, y, w, h, flags });
                         } else {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             }
-                            // no need to call clipBounds here because width and height are not changing
+                            // no need to call clipBounds here because called earlier
                             win.browserWindow.setBounds({ x, y, width, height });
                         }
                     });
