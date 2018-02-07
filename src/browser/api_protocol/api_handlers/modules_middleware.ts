@@ -96,7 +96,8 @@ function handleModuleApiAction(msg: MessagePackage, next: () => void): void {
                 action: MODULE_ACK_ACTION,
                 payload: {
                     correlationId: data.messageId,
-                    destinationToken: identity
+                    destinationToken: identity,
+                    ...(payload.connectAction ? { moduleIdentity } : {})
                 },
                 success: true
             };
