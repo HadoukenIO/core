@@ -157,6 +157,9 @@ let optionSetters = {
         setOptOnBrowserWin('contextMenu', contextMenuBool, browserWin);
         browserWin.setMenu(null);
     },
+    customData: function(newVal, browserWin) {
+        setOptOnBrowserWin('customData', newVal, browserWin);
+    },
     frame: function(newVal, browserWin) {
         let frameBool = !!newVal;
 
