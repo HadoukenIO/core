@@ -21,7 +21,6 @@ let windowTransaction = require('electron').windowTransaction;
 
 let _ = require('underscore');
 let animations = require('./animations.js');
-import clipBounds from './clip_bounds';
 let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
 let WindowGroups = require('./window_groups.js');
@@ -31,38 +30,38 @@ import { toSafeInt } from '../common/safe_int';
 const isWin32 = process.platform === 'win32';
 
 function BoundsChangedStateTracker(uuid, name, browserWindow) {
-    var me = this;
+    let me = this;
 
     // a flag that represents if any change in the size has happened
     // without relying on the checking of the previous bounds which
     // may or may not be reliable depending on the previous event (
     // specifically bounds-changing)
-    var sizeChanged = false;
-    var positionChanged = false;
+    let sizeChanged = false;
+    let positionChanged = false;
 
-    var _cachedBounds = {},
+    let _cachedBounds = {},
         _userBoundsChangeActive = false;
 
     let _deferred = false;
     let _deferredEvents = [];
 
-    var setUserBoundsChangeActive = (enabled) => {
+    let setUserBoundsChangeActive = (enabled) => {
         _userBoundsChangeActive = enabled;
     };
 
-    var isUserBoundsChangeActive = () => {
+    let isUserBoundsChangeActive = () => {
         return _userBoundsChangeActive;
     };
 
-    var updateCachedBounds = (bounds) => {
+    let updateCachedBounds = (bounds) => {
         _cachedBounds = bounds;
     };
 
-    var getCachedBounds = () => {
+    let getCachedBounds = () => {
         return _cachedBounds;
     };
 
-    var getCurrentBounds = () => {
+    let getCurrentBounds = () => {
         let bounds = browserWindow.getBounds();
 
         let windowState = 'normal';
@@ -77,13 +76,13 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         return bounds;
     };
 
-    var compareBoundsResult = (boundsOne, boundsTwo) => {
-        var xDiff = boundsOne.x !== boundsTwo.x;
-        var yDiff = boundsOne.y !== boundsTwo.y;
-        var widthDiff = boundsOne.width !== boundsTwo.width;
-        var heightDiff = boundsOne.height !== boundsTwo.height;
-        var stateDiff = boundsOne.windowState !== boundsTwo.windowState;
-        var changed = xDiff || yDiff || widthDiff || heightDiff /* || stateDiff*/ ;
+    let compareBoundsResult = (boundsOne, boundsTwo) => {
+        let xDiff = boundsOne.x !== boundsTwo.x;
+        let yDiff = boundsOne.y !== boundsTwo.y;
+        let widthDiff = boundsOne.width !== boundsTwo.width;
+        let heightDiff = boundsOne.height !== boundsTwo.height;
+        let stateDiff = boundsOne.windowState !== boundsTwo.windowState;
+        let changed = xDiff || yDiff || widthDiff || heightDiff /* || stateDiff*/ ;
 
         // set the changed flag only if it has not been set
         sizeChanged = sizeChanged || (widthDiff || heightDiff);
@@ -104,7 +103,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         };
     };
 
-    var getBoundsDelta = (current, cached) => {
+    let getBoundsDelta = (current, cached) => {
         return {
             x: current.x - cached.x,
             x2: (current.x + current.width) - (cached.x + cached.width),
@@ -115,12 +114,12 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         };
     };
 
-    var boundsChangeReason = (name, groupUuid) => {
+    let boundsChangeReason = (name, groupUuid) => {
         if (groupUuid) {
-            var groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
+            let groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
 
             if (groupLeader.uuid && groupLeader.name) {
-                var ofWindow = coreState.getWindowByUuidName(groupLeader.uuid, groupLeader.name);
+                let ofWindow = coreState.getWindowByUuidName(groupLeader.uuid, groupLeader.name);
 
                 if (animations.getAnimationHandler().hasWindow(ofWindow.browserWindow.id)) {
                     return groupLeader.name === name ? 'animation' : 'group-animation';
@@ -133,89 +132,29 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         return animations.getAnimationHandler().hasWindow(browserWindow.id) ? 'animation' : 'self';
     };
 
-    const sharedBoundPixelDiff = 5;
-    const sharedBound = (boundOne, boundTwo) => {
-        return Math.abs(boundOne - boundTwo) < sharedBoundPixelDiff;
-    };
+    let handleBoundsChange = (isAdditionalChangeExpected, force) => {
 
-    const handleGroupedResize = (resizeChangeType, delta, originalWindowCachedBounds, windowToUpdate) => {
-        let { x, y, width, height } = windowToUpdate.browserWindow.getBounds();
-        if (resizeChangeType.height) {
-            if (delta.y) {
-                if (sharedBound(y, originalWindowCachedBounds.y)) {
-                    // resize windows with matching top bound
-                    y = toSafeInt(y + delta.y, y);
-                    height = height + delta.height;
-                }
-                if (sharedBound(y + height, originalWindowCachedBounds.y)) {
-                    // resize windows with matching bottom bound
-                    height = height - delta.height;
-                }
-            }
-            if (delta.y2) {
-                if (sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                    // resize windows with matching bottom bound
-                    height = height + delta.height;
-                }
-                if (sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                    // resize windows with matching top bound
-                    y = toSafeInt(y + delta.height, y);
-                    height = height - delta.height;
-                }
-            }
-        }
-        if (resizeChangeType.width) {
-            if (delta.x) {
-                if (sharedBound(x, originalWindowCachedBounds.x)) {
-                    // resize windows with matching left bound
-                    x = toSafeInt(x + delta.x, x);
-                    width = width + delta.width;
-                }
-                if (sharedBound(x + width, originalWindowCachedBounds.x)) {
-                    // resize windows with matching right bound
-                    width = width - delta.width;
-                }
-            }
-            if (delta.x2) {
-                if (sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                    // resize windows with matching right bound
-                    width = width + delta.width;
-                }
-                if (sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                    // resize windows with matching left bound
-                    x = toSafeInt(x + delta.width, x);
-                    width = width - delta.width;
-                }
-            }
-        }
-        const newWindowBounds = { x, y, width, height };
-        const newClippedBounds = clipBounds(newWindowBounds, windowToUpdate.browserWindow);
-        return newClippedBounds;
-    };
+        let dispatchedChange = false;
 
-    var handleBoundsChange = (isAdditionalChangeExpected, force) => {
+        let currentBounds = getCurrentBounds();
+        let cachedBounds = getCachedBounds();
+        let boundsCompare = compareBoundsResult(currentBounds, cachedBounds);
+        let stateMin = boundsCompare.state && currentBounds.state === 'minimized';
 
-        var dispatchedChange = false;
-
-        var currentBounds = getCurrentBounds();
-        var cachedBounds = getCachedBounds();
-        var boundsCompare = compareBoundsResult(currentBounds, cachedBounds);
-        var stateMin = boundsCompare.state && currentBounds.state === 'minimized';
-
-        var eventType = isAdditionalChangeExpected ? 'bounds-changing' :
+        let eventType = isAdditionalChangeExpected ? 'bounds-changing' :
             'bounds-changed';
 
-        var sizeChangedCriteria = [
+        let sizeChangedCriteria = [
             boundsCompare.width,
             boundsCompare.height
         ];
 
-        var positionChangedCriteria = [
+        let positionChangedCriteria = [
             boundsCompare.x,
             boundsCompare.y
         ];
 
-        var isBoundsChanged = eventType === 'bounds-changed';
+        let isBoundsChanged = eventType === 'bounds-changed';
 
         // if this is to be the "last" event in a transaction, be sure to
         // any diff in the size or position towards the change type
@@ -227,31 +166,31 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         if (boundsCompare.changed && !stateMin || force) {
 
             // returns true if any of the criteria are true
-            var sizeChange = _.some(sizeChangedCriteria, (criteria) => {
+            let sizeChange = _.some(sizeChangedCriteria, (criteria) => {
                 return criteria;
             });
 
-            var posChange = _.some(positionChangedCriteria, (criteria) => {
+            let posChange = _.some(positionChangedCriteria, (criteria) => {
                 return criteria;
             });
 
-            //var posChange = boundsCompare.x || boundsCompare.y;
+            //let posChange = boundsCompare.x || boundsCompare.y;
 
             //0 means a change in position.
             //1 means a change in size.
             //2 means a change in position and size.
             // Default to change in position when there is no change
-            var changeType = (sizeChange ? (posChange ? 2 : 1) : 0);
+            let changeType = (sizeChange ? (posChange ? 2 : 1) : 0);
 
-            var ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
-            var groupUuid = ofWindow.groupUuid;
+            let ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
+            let groupUuid = ofWindow.groupUuid;
 
             // determine what caused the bounds change
-            var reason = boundsChangeReason(name, groupUuid);
+            let reason = boundsChangeReason(name, groupUuid);
 
             // handle window group movements
             if (groupUuid) {
-                var groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
+                let groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
 
                 if (force) {
                     if (groupLeader.name === name) {
@@ -264,15 +203,15 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                     }
                 } else {
                     if (!groupLeader.name) {
-                        var type = isUserBoundsChangeActive() ? 'user' : animations.getAnimationHandler().hasWindow(browserWindow.id) ? 'animation' : 'api';
+                        let type = isUserBoundsChangeActive() ? 'user' : animations.getAnimationHandler().hasWindow(browserWindow.id) ? 'animation' : 'api';
                         WindowGroupTransactionTracker.setGroupLeader(groupUuid, name, uuid, type);
                     }
                 }
 
                 groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
                 if (groupLeader.name === name) {
-                    var delta = getBoundsDelta(currentBounds, cachedBounds);
-                    var wt; // window-transaction
+                    let delta = getBoundsDelta(currentBounds, cachedBounds);
+                    let wt; // window-transaction
                     let hwndToId = {};
 
                     const { flag: { noZorder, noSize, noActivate } } = windowTransaction;
@@ -289,8 +228,9 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                         return win.name !== name;
                     }).forEach((win) => {
                         const winBounds = win.browserWindow.getBounds();
-                        let { x, y, width, height } = (changeType === 1) ? handleGroupedResize(boundsCompare, delta, cachedBounds, win): winBounds;
+                        let { x, y, width, height } = winBounds;
 
+                        // not doing anything for changeType === 1 so behaviors can be customized by clients
                         // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
                         if (changeType === 0 || changeType === 2) {
                             x = toSafeInt(x + delta.x, x);
@@ -331,7 +271,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                 }
             }
 
-            var payload = {
+            let payload = {
                 changeType,
                 reason,
                 name,
@@ -416,7 +356,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         _deferredEvents.length = 0;
     };
 
-    var _listeners = {
+    let _listeners = {
         'begin-user-bounds-change': () => {
             setUserBoundsChangeActive(true);
         },
@@ -425,14 +365,14 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
             handleBoundsChange(false, true);
         },
         'bounds-changed': () => {
-            var ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
-            var groupUuid = ofWindow.groupUuid;
+            let ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
+            let groupUuid = ofWindow.groupUuid;
 
-            var dispatchedChange = handleBoundsChange(true);
+            let dispatchedChange = handleBoundsChange(true);
 
             if (dispatchedChange) {
                 if (groupUuid) {
-                    var groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
+                    let groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
 
                     if (groupLeader.type === 'api') {
                         handleBoundsChange(false, true);
@@ -481,12 +421,12 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         }
     };
 
-    var endWindowGroupTransactionListener = (groupUuid) => {
-        var ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
-        var _groupUuid = ofWindow.groupUuid;
+    let endWindowGroupTransactionListener = (groupUuid) => {
+        let ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
+        let _groupUuid = ofWindow.groupUuid;
 
         if (_groupUuid === groupUuid) {
-            var groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
+            let groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
 
             if (groupLeader.name !== name) {
                 handleBoundsChange(false, true);
@@ -494,8 +434,8 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         }
     };
 
-    var updateEvents = (register) => {
-        var listenerFn = register ? 'on' : 'removeListener';
+    let updateEvents = (register) => {
+        let listenerFn = register ? 'on' : 'removeListener';
 
         Object.keys(_listeners).forEach((key) => {
             browserWindow[listenerFn](key, _listeners[key]);
@@ -504,11 +444,11 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         WindowGroupTransactionTracker[listenerFn]('end-window-group-transaction', endWindowGroupTransactionListener);
     };
 
-    var hookListeners = () => {
+    let hookListeners = () => {
         updateEvents(true);
     };
 
-    var unHookListeners = () => {
+    let unHookListeners = () => {
         updateEvents(false);
     };
 
