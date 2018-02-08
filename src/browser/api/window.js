@@ -839,6 +839,17 @@ Window.create = function(id, opts) {
     winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
+        const app = coreState.getAppByUuid(identity.uuid);
+        if (!app) {
+            electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);
+            return;
+        }
+
+        // If enableAppLogging not set or false, skip sending to RVM
+        if (!app._options || !app._options.enableAppLogging) {
+            return;
+        }
+
         // Hack: since this function is getting called from the native side with
         // "webContents.on", there is weirdness where the "setTimeout(flushConsoleMessageQueue...)"
         // in addConsoleMessageToRVMMessageQueue would only get called the first time, and not subsequent times,
@@ -846,8 +857,6 @@ Window.create = function(id, opts) {
         // wrap this entire function in a "setTimeout" to put it in a different context. Eventually we should figure
         // out if there is a way around this by using event.preventDefault or something similar
         setTimeout(() => {
-            electronApp.vlog(1, `CONSOLE-MESSAGE`);
-
             const appConfigUrl = coreState.getConfigUrlByUuid(identity.uuid);
             if (!appConfigUrl) {
                 electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);

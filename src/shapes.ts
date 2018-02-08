@@ -188,6 +188,7 @@ export interface WindowOptions {
     description?: string;
     disableIabSecureLogging?: boolean;
     draggable?: boolean;
+    enableAppLogging?: boolean;
     'enable-plugins'?: boolean;
     enableLargerThanScreen?: boolean;
     exitOnClose?: boolean;
