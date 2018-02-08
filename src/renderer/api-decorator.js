@@ -128,37 +128,6 @@ limitations under the License.
         return syncApiCall('get-el-ipc-config');
     }
 
-    function getCachedBoundsSync(uuid, name) {
-        let bounds;
-        try {
-            bounds = syncApiCall('window-get-cached-bounds', {
-                uuid: uuid,
-                name: name
-            });
-        } catch (e) {
-            //we really do not need to handle this error, as its probably just that the file did not exist.
-            bounds = {};
-        }
-
-        return bounds;
-    }
-
-    function getMonitorInfoSync() {
-        return syncApiCall('get-monitor-info');
-    }
-
-    function getNearestDisplayrootSync(point) {
-        return syncApiCall('get-nearest-display-root', point);
-    }
-
-    function updateWindowOptionsSync(name, uuid, opts) {
-        return syncApiCall('update-window-options', {
-            name: name,
-            uuid: uuid,
-            options: opts
-        });
-    }
-
     function raiseEventSync(eventName, eventArgs) {
         return syncApiCall('raise-event', {
             eventName,
@@ -201,118 +170,6 @@ limitations under the License.
             let level = Math.floor(webFrame.getZoomLevel());
             webFrame.setZoomLevel(event.wheelDelta >= 0 ? ++level : --level);
         });
-    }
-
-    function intersectsRect(bounds, rect) {
-        return !(bounds.left > rect.right || (bounds.left + bounds.width) < rect.left || bounds.top > rect.bottom || (bounds.top + bounds.height) < rect.top);
-    }
-
-    function boundsVisible(bounds, monitorInfo) {
-        let visible = false;
-        let monitors = [monitorInfo.primaryMonitor].concat(monitorInfo.nonPrimaryMonitors);
-
-        for (let i = 0; i < monitors.length; i++) {
-            if (intersectsRect(bounds, monitors[i].monitorRect)) {
-                visible = true;
-            }
-        }
-        return visible;
-    }
-
-    function setWindowBoundsSync(uuid, name, bounds) {
-        try {
-            syncApiCall('set-window-bounds', {
-                uuid,
-                name,
-                left: bounds.left,
-                top: bounds.top,
-                width: bounds.width,
-                height: bounds.height
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function showWindowSync(uuid, name) {
-        try {
-            syncApiCall('show-window', {
-                uuid,
-                name
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function maximizeWindowSync(uuid, name) {
-        try {
-            syncApiCall('maximize-window', {
-                uuid,
-                name
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function minimizeWindowSync(uuid, name) {
-        try {
-            syncApiCall('minimize-window', {
-                uuid,
-                name
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function showOnReady(global, currWindowOpts) {
-        let autoShow = currWindowOpts.autoShow;
-        let toShowOnRun = currWindowOpts.toShowOnRun;
-        let onFinish = callback => {
-            if (autoShow || toShowOnRun) {
-                callback();
-            }
-
-            updateWindowOptionsSync(currWindowOpts.name, currWindowOpts.uuid, {
-                hasLoaded: true
-            });
-        };
-
-        if (currWindowOpts.saveWindowState && !currWindowOpts.hasLoaded) {
-            let savedBounds = getCachedBoundsSync(currWindowOpts.uuid, currWindowOpts.name);
-            let monitorInfo = getMonitorInfoSync();
-            let restoreBounds = savedBounds;
-
-            if (!boundsVisible(savedBounds, monitorInfo)) {
-                let displayRoot = getNearestDisplayrootSync({
-                    x: savedBounds.left,
-                    y: savedBounds.top
-                });
-                restoreBounds.top = displayRoot.y;
-                restoreBounds.left = displayRoot.x;
-            }
-
-            setWindowBoundsSync(currWindowOpts.uuid, currWindowOpts.name, restoreBounds);
-            onFinish(() => {
-                switch (restoreBounds.windowState) {
-                    case 'maximized':
-                        maximizeWindowSync(currWindowOpts.uuid, currWindowOpts.name);
-                        break;
-                    case 'minimized':
-                        minimizeWindowSync(currWindowOpts.uuid, currWindowOpts.name);
-                        break;
-                    default:
-                        showWindowSync(currWindowOpts.uuid, currWindowOpts.name);
-                        break;
-                }
-            });
-        } else {
-            onFinish(() => {
-                showWindowSync(currWindowOpts.uuid, currWindowOpts.name);
-            });
-        }
     }
 
     function wireUpMenu(global) {
@@ -393,14 +250,6 @@ limitations under the License.
         //---------------------------------------------------------------
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
-
-
-        // Prevent iframes from attempting to do windowing actions, these will always be handled
-        // by the main window frame.
-        // TODO this needs to be revisited when we have xorigin frame api
-        if (!window.frameElement) {
-            showOnReady(glbl, initialOptions);
-        }
 
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
@@ -579,7 +428,6 @@ limitations under the License.
             ipc: ipc,
             routingId: renderFrameId,
             getWindowIdentity: getWindowIdentitySync,
-            convertOptionsToEl: convertOptionsToElectronSync,
             getCurrentWindowId: getWindowId,
             windowExists: windowExistsSync,
             ipcconfig: getIpcConfigSync(),
