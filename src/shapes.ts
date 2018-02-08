@@ -21,7 +21,8 @@ export interface Identity {
 }
 
 export interface Module {
-    identity: Identity;
+    uuid: string;
+    name?: string;
     moduleName: string;
 }
 

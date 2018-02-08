@@ -427,12 +427,12 @@ export function getMainWindowOptions(id: number): Shapes.WindowOptions|void {
     return app.appObj._options;
 }
 
-export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinWindow|boolean {
+export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinWindow|false {
     const win = getOfWindowByUuidName(uuid, name);
     return win && win.openfinWindow;
 }
 
-function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|undefined {
+function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|false {
     return getWinList().find(win => win.openfinWindow &&
         win.openfinWindow.uuid === uuid &&
         win.openfinWindow.name === name

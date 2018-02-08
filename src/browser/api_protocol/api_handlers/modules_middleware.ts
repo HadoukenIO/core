@@ -16,7 +16,7 @@ limitations under the License.
 
 import * as apiProtocolBase from './api_protocol_base';
 import * as coreState from '../../core_state';
-import { Identity, Module } from '../../../shapes';
+import { Identity, Module, OpenFinWindow } from '../../../shapes';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import RequestHandler from '../transport_strategy/base_handler';
 import { sendToIdentity } from './api_protocol_base';
@@ -44,14 +44,15 @@ function getAckKey(id: number, identity: Identity): string {
 }
 
 // If initial connection to a module, don't know Identity yet, only module Name
-function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: Identity, moduleIdentity: Module } {
-    const { connectAction } = payload;
+function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: false | OpenFinWindow, moduleIdentity: Module } {
+    const { connectAction, uuid, name } = payload;
     if (connectAction) {
         const moduleName = payload && payload.moduleName;
         const moduleIdentity = Modules.getModuleByName(moduleName);
-        return { targetIdentity: moduleIdentity && moduleIdentity.identity, moduleIdentity };
+        const targetIdentity = coreState.getWindowByUuidName(moduleIdentity && moduleIdentity.uuid, moduleIdentity && moduleIdentity.name);
+        return { targetIdentity, moduleIdentity };
     } else {
-        const targetIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+        const targetIdentity = coreState.getWindowByUuidName(uuid, name);
         const moduleIdentity = Modules.getModuleByUuid(payload.uuid) || Modules.getModuleByUuid(identity.uuid);
         return { targetIdentity, moduleIdentity };
     }
@@ -68,35 +69,34 @@ export function applyPendingModuleConnections(moduleName: string) {
     const pendingConnections = pendingModuleConnections.get(moduleName);
     if (pendingConnections) {
         pendingConnections.forEach(connectionMsg => {
-            const connectionNack = () => connectionMsg.nack('Error connecting to module.');
-            handleModuleApiAction(connectionMsg, connectionNack);
+            handleModuleApiAction(connectionMsg);
         });
     }
 }
 
 //this preprocessor will check if the API call is a module action and forward it to the module to handle.
-function handleModuleApiAction(msg: MessagePackage, next: () => void): void {
+function handleModuleApiAction(msg: MessagePackage, next?: () => void): void {
     const { data, ack, nack, identity } = msg;
     const action = data && data.action;
 
-    //the target of this API call is a window.
     if (action === MODULE_API_ACTION) {
         const payload = data && data.payload || {};
         // If it is an initial connection to a module, don't know identity yet, only module Name
         const { targetIdentity, moduleIdentity } = setTargetIdentity(identity, payload);
 
-        //the module / connection exists
-        if (targetIdentity) {
+        // use to ensure the module / connection exists (unnecessary?)
+        const browserWindow = targetIdentity && targetIdentity.browserWindow;
+        if (targetIdentity && browserWindow && !browserWindow.isDestroyed()) {
             const { action: moduleAction, payload: messagePayload } = payload;
             const ackKey = getAckKey(data.messageId, identity);
             remoteAckMap.set(ackKey, { ack, nack });
 
-            // If it is a msg from a connection - module object placed on ackToSender automatically
             const ackToSender = {
                 action: MODULE_ACK_ACTION,
                 payload: {
                     correlationId: data.messageId,
                     destinationToken: identity,
+                    // If it is a connection request, module object placed on ackToSender automatically
                     ...(payload.connectAction ? { payload: moduleIdentity } : {})
                 },
                 success: true
@@ -111,13 +111,14 @@ function handleModuleApiAction(msg: MessagePackage, next: () => void): void {
                     moduleName: moduleIdentity.moduleName,
                     action: moduleAction,
                     payload: messagePayload,
+                    // If it is a connection request, let module know with connectAction property
                     ...(payload.connectAction ? { connectAction: true } : {})
                 }
             });
         } else if (payload.connectAction && payload.wait) {
             waitForModule(payload.moduleName, msg);
         } else {
-            nack('Error sending module message.');
+            nack('Error: module connection not found.');
         }
     } else {
         next();
@@ -142,11 +143,11 @@ function handleModuleAckAction(msg: MessagePackage, next: () => void): void {
                     ...(ackPayload ? { data: ackPayload } : {})
                 });
             } else {
-                remoteAck.nack(new Error(data.reason));
+                remoteAck.nack(new Error(data.reason || 'Module error'));
             }
             remoteAckMap.delete(ackKey);
         } else {
-            nack('Message not found.');
+            nack('Error: Ack failed, initial module message not found.');
         }
     } else {
         next();

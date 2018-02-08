@@ -27,6 +27,7 @@ let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
+import { Modules } from '../../api/modules';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -140,6 +141,40 @@ function EventListenerApiHandler() {
                         uuid,
                         listenType: 'on',
                         className: 'application',
+                        eventName: type
+                    };
+
+                    addRemoteSubscription(subscription).then(unSubscribe => {
+                        remoteUnSub = unSubscribe;
+                    });
+                }
+
+                return () => {
+                    localUnsub();
+                    if (typeof remoteUnSub === 'function') {
+                        remoteUnSub();
+                    }
+                };
+            }
+        },
+        'module': {
+            name: 'module',
+            subscribe: function(identity, type, payload, cb) {
+                const {
+                    uuid
+                } = payload;
+                const moduleIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+                const targetUuid = moduleIdentity.uuid;
+                const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
+                const localUnsub = Modules.addEventListener(moduleIdentity, type, cb);
+                let remoteUnSub;
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+
+                if (!islocalApp && !isExternalClient) {
+                    const subscription = {
+                        uuid,
+                        listenType: 'on',
+                        className: 'module',
                         eventName: type
                     };
 

@@ -23,33 +23,74 @@ import { applyPendingModuleConnections } from '../api_protocol/api_handlers/modu
 const moduleMap: Map<string, Module> = new Map();
 
 export module Modules {
-    export function registerModule (identity: Identity, moduleName: string, moduleFunctions: string[] = []) {
-        if (moduleMap.get(moduleName)) {
-            return false;
-        }
-        const moduleIdentity = { identity, moduleName };
-        moduleMap.set(moduleName, moduleIdentity);
+    export function addEventListener(targetIdentity: Identity, type: string, listener: Function) {
+        // just uuid or uuid and name?
+        const eventString = route.module(type, targetIdentity.uuid);
+        const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
+        let unsubscribe;
+        let browserWinIsDead;
 
-        // execute any requests to connect for module that occured before module launch.
-        applyPendingModuleConnections(moduleName);
+        const safeListener = (...args: any[]) => {
+            try {
+                listener.call(null, ...args);
+            } catch (err) {
+                browserWinIsDead = errRegex.test(err.message);
 
-        // When module exits, remove from moduleMap - ToDo: Also send to connections? Or let module handle...?
-        ofEvents.once(route.application('closed', identity.uuid), () => {
-            moduleMap.delete(moduleName);
-        });
+                if (browserWinIsDead) {
+                    ofEvents.removeListener(eventString, safeListener);
+                }
+            }
+        };
 
-        return { identity };
+        ofEvents.on(eventString, safeListener);
+
+        unsubscribe = () => {
+            ofEvents.removeListener(eventString, safeListener);
+        };
+        return unsubscribe;
     }
+
     export function getModuleByName(moduleName: string) {
         return moduleMap.get(moduleName);
     }
+
     export function getModuleByUuid(uuid: string): any {
         let moduleIdentity;
         moduleMap.forEach((value, key) => {
-            if (value.identity.uuid === uuid) {
+            if (value.uuid === uuid) {
                 moduleIdentity = moduleMap.get(key);
             }
         });
         return moduleIdentity;
+    }
+
+    export function registerModule (identity: Identity, moduleName: string) {
+        // If module already registered with that identifier, nack
+        if (moduleMap.get(moduleName)) {
+            return false;
+        }
+
+        const { uuid, name } = identity;
+        const moduleIdentity = { uuid, name, moduleName };
+        moduleMap.set(moduleName, moduleIdentity);
+
+        // EVENTS CURRENTLY ASSUME THIS IS AN APP - IF EXTERNAL CONNECTION BECOMES OPTION AMEND THIS
+        // When module exits, remove from moduleMap - ToDo: Also send to connections? Or let module handle...?
+        ofEvents.once(route.application('closed', identity.uuid), () => {
+            moduleMap.delete(moduleName);
+            ofEvents.emit(route.module('closed', identity.uuid), {
+                topic: 'module',
+                type: 'closed',
+                uuid,
+                name
+            });
+        });
+
+        // execute any requests to connect for module that occured before module launch. Need timeout to ensure registration finished.
+        setTimeout(() => {
+            applyPendingModuleConnections(moduleName);
+        }, 1);
+
+        return { identity };
     }
 }
