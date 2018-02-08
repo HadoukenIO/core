@@ -241,7 +241,8 @@ module.exports = {
             nodeIntegration: false,
             plugins: newOptions.plugins,
             preload: (!useNodeInRenderer ? noNodePreload : ''),
-            sandbox: !useNodeInRenderer
+            sandbox: !useNodeInRenderer,
+            v2Api: newOptions.experimental.v2Api
         };
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
