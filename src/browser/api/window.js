@@ -568,25 +568,25 @@ Window.create = function(id, opts) {
             }
         });
 
-        const emitToAppAndWin = (...types) => {
+        const emitToAppAndWin = (type, payload) => {
             let isMainWindow = (uuid === name);
 
-            types.forEach(type => {
-                // Window crashed: inform Window "namespace"
-                ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type, uuid, name });
+            // Window crashed: inform Window "namespace"
+            ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
 
-                // Window crashed: inform Application "namespace" but with "window-" event string prefix
-                ofEvents.emit(route.application(`window-${type}`, uuid), { topic: 'application', type, uuid, name });
+            // Window crashed: inform Application "namespace" but with "window-" event string prefix
+            ofEvents.emit(route.application(`window-${type}`, uuid), Object.assign({ topic: 'application', type, uuid, name }, payload));
 
-                if (isMainWindow) {
-                    // Application crashed: inform Application "namespace"
-                    ofEvents.emit(route.application(type, uuid), { topic: 'application', type, uuid });
-                }
-            });
+            if (isMainWindow) {
+                // Application crashed: inform Application "namespace"
+                ofEvents.emit(route.application(type, uuid), Object.assign({ topic: 'application', type, uuid }, payload));
+            }
         };
 
-        webContents.on('crashed', () => {
-            emitToAppAndWin('crashed', 'out-of-memory');
+        webContents.on('crashed', (event, killed, terminationStatus) => {
+            emitToAppAndWin('crashed', {
+                reason: terminationStatus
+            });
         });
 
         browserWindow.on('responsive', () => {

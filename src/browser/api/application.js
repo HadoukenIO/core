@@ -63,7 +63,6 @@ let registeredUsersByApp = {};
 //     'error',
 //     'crashed',
 //     'not-responding',
-//     'out-of-memory',
 //     'responding',
 //     'started',
 //     'run-requested',
@@ -512,7 +511,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             }
         };
     };
-    const appEventsForRVM = ['closed', 'ready', 'run-requested', 'crashed', 'error', 'not-responding', 'out-of-memory'];
+    const appEventsForRVM = ['closed', 'ready', 'run-requested', 'crashed', 'error', 'not-responding'];
     const appStartedHandler = () => {
         rvmBus.registerLicenseInfo({ data: genLicensePayload() }, sourceUrl);
     };
