@@ -50,14 +50,14 @@ export module Modules {
         return unsubscribe;
     }
 
-    export function getModuleByName(moduleName: string) {
-        return moduleMap.get(moduleName);
+    export function getModuleByUuid(uuid: string) {
+        return moduleMap.get(uuid);
     }
 
-    export function getModuleByUuid(uuid: string): any {
+    export function getModuleByName(name: string): any {
         let moduleIdentity;
         moduleMap.forEach((value, key) => {
-            if (value.uuid === uuid) {
+            if (value.uuid === name) {
                 moduleIdentity = moduleMap.get(key);
             }
         });
@@ -66,31 +66,37 @@ export module Modules {
 
     export function registerModule (identity: Identity, moduleName: string) {
         // If module already registered with that identifier, nack
-        if (moduleMap.get(moduleName)) {
+        const { uuid, name } = identity;
+        if (moduleMap.get(uuid)) {
             return false;
         }
 
-        const { uuid, name } = identity;
         const moduleIdentity = { uuid, name, moduleName };
-        moduleMap.set(moduleName, moduleIdentity);
+        moduleMap.set(uuid, moduleIdentity);
 
         // EVENTS CURRENTLY ASSUME THIS IS AN APP - IF EXTERNAL CONNECTION BECOMES OPTION AMEND THIS
         // When module exits, remove from moduleMap - ToDo: Also send to connections? Or let module handle...?
-        ofEvents.once(route.application('closed', identity.uuid), () => {
-            moduleMap.delete(moduleName);
-            ofEvents.emit(route.module('closed', identity.uuid), {
+        ofEvents.once(route.application('closed', uuid), () => {
+            moduleMap.delete(uuid);
+            ofEvents.emit(route.module('disconnected', uuid), {
                 topic: 'module',
-                type: 'closed',
+                type: 'disconnected',
                 uuid,
                 name
             });
         });
 
+        ofEvents.emit(route.system('module-connected'), {
+            topic: 'module',
+            type: 'connected',
+            ...moduleIdentity
+        });
+
         // execute any requests to connect for module that occured before module launch. Need timeout to ensure registration finished.
         setTimeout(() => {
-            applyPendingModuleConnections(moduleName);
-        }, 1);
+            applyPendingModuleConnections(uuid);
+        }, 20);
 
-        return { identity };
+        return { moduleIdentity };
     }
 }

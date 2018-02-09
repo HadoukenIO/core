@@ -261,6 +261,9 @@ function EventListenerApiHandler() {
                 if (typeof(emmitedPayload) === 'object') {
                     _.extend(eventObj.payload, _.omit(emmitedPayload, _.keys(eventObj.payload)));
                 }
+                if (emmitedPayload.topic === 'module') {
+                    eventObj.payload.topic = 'module';
+                }
 
                 apiProtocolBase.sendToIdentity(identity, eventObj);
             });

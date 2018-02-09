@@ -45,28 +45,26 @@ function getAckKey(id: number, identity: Identity): string {
 
 // If initial connection to a module, don't know Identity yet, only module Name
 function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: false | OpenFinWindow, moduleIdentity: Module } {
-    const { connectAction, uuid, name } = payload;
-    if (connectAction) {
-        const moduleName = payload && payload.moduleName;
-        const moduleIdentity = Modules.getModuleByName(moduleName);
-        const targetIdentity = coreState.getWindowByUuidName(moduleIdentity && moduleIdentity.uuid, moduleIdentity && moduleIdentity.name);
-        return { targetIdentity, moduleIdentity };
-    } else {
-        const targetIdentity = coreState.getWindowByUuidName(uuid, name);
-        const moduleIdentity = Modules.getModuleByUuid(payload.uuid) || Modules.getModuleByUuid(identity.uuid);
+    const { uuid, name } = payload;
+    if (payload.connectAction) {
+        const moduleIdentity = Modules.getModuleByUuid(uuid);
+        const targetIdentity = moduleIdentity && coreState.getWindowByUuidName(moduleIdentity.uuid, moduleIdentity.name);
         return { targetIdentity, moduleIdentity };
     }
+    const moduleIdentity = Modules.getModuleByUuid(uuid) || Modules.getModuleByUuid(identity.uuid);
+    const targetIdentity = coreState.getWindowByUuidName(uuid, name);
+    return { targetIdentity, moduleIdentity };
 }
 
-function waitForModule(moduleName: string, msg: MessagePackage) {
-    if (!Array.isArray(pendingModuleConnections.get(moduleName))) {
-        pendingModuleConnections.set(moduleName, []);
+function waitForModule(uuid: string, msg: MessagePackage) {
+    if (!Array.isArray(pendingModuleConnections.get(uuid))) {
+        pendingModuleConnections.set(uuid, []);
     }
-    pendingModuleConnections.get(moduleName).push(msg);
+    pendingModuleConnections.get(uuid).push(msg);
 }
 
-export function applyPendingModuleConnections(moduleName: string) {
-    const pendingConnections = pendingModuleConnections.get(moduleName);
+export function applyPendingModuleConnections(uuid: string) {
+    const pendingConnections = pendingModuleConnections.get(uuid);
     if (pendingConnections) {
         pendingConnections.forEach(connectionMsg => {
             handleModuleApiAction(connectionMsg);
@@ -107,8 +105,8 @@ function handleModuleApiAction(msg: MessagePackage, next?: () => void): void {
                 action: MODULE_APP_ACTION,
                 payload: {
                     ackToSender,
+                    moduleIdentity,
                     senderIdentity: identity,
-                    moduleName: moduleIdentity.moduleName,
                     action: moduleAction,
                     payload: messagePayload,
                     // If it is a connection request, let module know with connectAction property
@@ -116,7 +114,7 @@ function handleModuleApiAction(msg: MessagePackage, next?: () => void): void {
                 }
             });
         } else if (payload.connectAction && payload.wait) {
-            waitForModule(payload.moduleName, msg);
+            waitForModule(payload.uuid, msg);
         } else {
             nack('Error: module connection not found.');
         }

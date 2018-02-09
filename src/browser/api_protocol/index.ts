@@ -45,11 +45,11 @@ registerEntityExistenceMiddleware(getDefaultRequestHandler());
 if (legacyWindowingEnabled()) {
     registerProcessExternalAppMiddleware(getDefaultRequestHandler());
 }
+registerModulesAppMiddleware(getDefaultRequestHandler());
 if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
 }
 registerExternalConnAuthMiddleware(getDefaultRequestHandler());
-registerModulesAppMiddleware(getDefaultRequestHandler());
 
 export function initApiHandlers() {
     /* tslint:disable: no-unused-variable */
