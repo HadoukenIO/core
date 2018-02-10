@@ -18,6 +18,7 @@ limitations under the License.
  */
 
 let windowTransaction = require('electron').windowTransaction;
+let eApp = require('electron').app;
 
 let _ = require('underscore');
 let animations = require('./animations.js');
@@ -29,6 +30,16 @@ import WindowGroupTransactionTracker from './window_group_transaction_tracker';
 import { toSafeInt } from '../common/safe_int';
 
 const isWin32 = process.platform === 'win32';
+
+const DisableWindowGroupTracking = 'disable-window-group-tracking';
+
+function shouldTrack(action) {
+    // track everything by default
+    return !coreState.argo[DisableWindowGroupTracking] ||
+        !coreState.argo[DisableWindowGroupTracking].split(',').includes(action);
+}
+const trackingResize = shouldTrack('resize');
+const trackingAPI = shouldTrack('api');
 
 function BoundsChangedStateTracker(uuid, name, browserWindow) {
     var me = this;
@@ -139,58 +150,68 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
     };
 
     const handleGroupedResize = (resizeChangeType, delta, originalWindowCachedBounds, windowToUpdate) => {
-        let { x, y, width, height } = windowToUpdate.browserWindow.getBounds();
-        if (resizeChangeType.height) {
-            if (delta.y) {
-                if (sharedBound(y, originalWindowCachedBounds.y)) {
-                    // resize windows with matching top bound
-                    y = toSafeInt(y + delta.y, y);
-                    height = height + delta.height;
+        eApp.vlog(1, `handleGroupedResize ${trackingResize}`);
+        if (!trackingResize) {
+            return windowToUpdate.browserWindow.getBounds();
+        } else {
+            let { x, y, width, height } = windowToUpdate.browserWindow.getBounds();
+            if (resizeChangeType.height) {
+                if (delta.y) {
+                    if (sharedBound(y, originalWindowCachedBounds.y)) {
+                        // resize windows with matching top bound
+                        y = toSafeInt(y + delta.y, y);
+                        height = height + delta.height;
+                    }
+                    if (sharedBound(y + height, originalWindowCachedBounds.y)) {
+                        // resize windows with matching bottom bound
+                        height = height - delta.height;
+                    }
                 }
-                if (sharedBound(y + height, originalWindowCachedBounds.y)) {
-                    // resize windows with matching bottom bound
-                    height = height - delta.height;
+                if (delta.y2) {
+                    if (sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+                        // resize windows with matching bottom bound
+                        height = height + delta.height;
+                    }
+                    if (sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+                        // resize windows with matching top bound
+                        y = toSafeInt(y + delta.height, y);
+                        height = height - delta.height;
+                    }
                 }
             }
-            if (delta.y2) {
-                if (sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                    // resize windows with matching bottom bound
-                    height = height + delta.height;
+
+            if (resizeChangeType.width) {
+                if (delta.x) {
+                    if (sharedBound(x, originalWindowCachedBounds.x)) {
+                        // resize windows with matching left bound
+                        x = toSafeInt(x + delta.x, x);
+                        width = width + delta.width;
+                    }
+                    if (sharedBound(x + width, originalWindowCachedBounds.x)) {
+                        // resize windows with matching right bound
+                        width = width - delta.width;
+                    }
                 }
-                if (sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                    // resize windows with matching top bound
-                    y = toSafeInt(y + delta.height, y);
-                    height = height - delta.height;
+                if (delta.x2) {
+                    if (sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+                        // resize windows with matching right bound
+                        width = width + delta.width;
+                    }
+                    if (sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+                        // resize windows with matching left bound
+                        x = toSafeInt(x + delta.width, x);
+                        width = width - delta.width;
+                    }
                 }
             }
+            const newWindowBounds = { x, y, width, height };
+            const newClippedBounds = clipBounds(newWindowBounds, windowToUpdate.browserWindow);
+            return newClippedBounds;
         }
-        if (resizeChangeType.width) {
-            if (delta.x) {
-                if (sharedBound(x, originalWindowCachedBounds.x)) {
-                    // resize windows with matching left bound
-                    x = toSafeInt(x + delta.x, x);
-                    width = width + delta.width;
-                }
-                if (sharedBound(x + width, originalWindowCachedBounds.x)) {
-                    // resize windows with matching right bound
-                    width = width - delta.width;
-                }
-            }
-            if (delta.x2) {
-                if (sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                    // resize windows with matching right bound
-                    width = width + delta.width;
-                }
-                if (sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                    // resize windows with matching left bound
-                    x = toSafeInt(x + delta.width, x);
-                    width = width - delta.width;
-                }
-            }
-        }
-        const newWindowBounds = { x, y, width, height };
-        const newClippedBounds = clipBounds(newWindowBounds, windowToUpdate.browserWindow);
-        return newClippedBounds;
+    };
+
+    let checkTrackingApi = (groupLeader) => {
+        return groupLeader.type === 'api' ? trackingAPI : true;
     };
 
     var handleBoundsChange = (isAdditionalChangeExpected, force) => {
@@ -270,7 +291,8 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                 }
 
                 groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
-                if (groupLeader.name === name) {
+                eApp.vlog(1, `WindowGroupTransactionTracker group ${groupLeader.name} name ${name} user-action ${isUserBoundsChangeActive()} type ${groupLeader.type} `);
+                if (groupLeader.name === name && checkTrackingApi(groupLeader)) {
                     var delta = getBoundsDelta(currentBounds, cachedBounds);
                     var wt; // window-transaction
                     let hwndToId = {};
