@@ -18,7 +18,6 @@ limitations under the License.
  */
 
 let windowTransaction = require('electron').windowTransaction;
-let eApp = require('electron').app;
 
 let _ = require('underscore');
 let animations = require('./animations.js');
@@ -150,7 +149,6 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
     };
 
     const handleGroupedResize = (resizeChangeType, delta, originalWindowCachedBounds, windowToUpdate) => {
-        eApp.vlog(1, `handleGroupedResize ${trackingResize}`);
         if (!trackingResize) {
             return windowToUpdate.browserWindow.getBounds();
         } else {
@@ -291,7 +289,6 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                 }
 
                 groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
-                eApp.vlog(1, `WindowGroupTransactionTracker group ${groupLeader.name} name ${name} user-action ${isUserBoundsChangeActive()} type ${groupLeader.type} `);
                 if (groupLeader.name === name && checkTrackingApi(groupLeader)) {
                     var delta = getBoundsDelta(currentBounds, cachedBounds);
                     var wt; // window-transaction
