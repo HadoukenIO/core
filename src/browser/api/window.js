@@ -44,6 +44,7 @@ let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
+import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
@@ -869,6 +870,58 @@ Window.create = function(id, opts) {
     const { manifest } = coreState.getManifest(identity);
     const { plugins } = manifest || {};
     winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
+
+    const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
+        const app = coreState.getAppByUuid(identity.uuid);
+        if (!app) {
+            electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);
+            return;
+        }
+
+        // If enableAppLogging not set or false, skip sending to RVM
+        if (!app._options || !app._options.enableAppLogging) {
+            return;
+        }
+
+        // Hack: since this function is getting called from the native side with
+        // "webContents.on", there is weirdness where the "setTimeout(flushConsoleMessageQueue...)"
+        // in addConsoleMessageToRVMMessageQueue would only get called the first time, and not subsequent times,
+        // if you just called "addConsoleMessageToRVMMessageQueue" directly from here. So to get around that, we
+        // wrap this entire function in a "setTimeout" to put it in a different context. Eventually we should figure
+        // out if there is a way around this by using event.preventDefault or something similar
+        setTimeout(() => {
+            const appConfigUrl = coreState.getConfigUrlByUuid(identity.uuid);
+            if (!appConfigUrl) {
+                electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
+                return;
+            }
+
+            function checkPrependLeadingZero(num) {
+                let str = String(num);
+                if (str.length === 1) {
+                    str = '0' + str;
+                }
+
+                return str;
+            }
+
+            const date = new Date();
+            const month = checkPrependLeadingZero(date.getMonth() + 1);
+            const day = checkPrependLeadingZero(date.getDate());
+            const year = String(date.getFullYear()).slice(2);
+            const hour = checkPrependLeadingZero(date.getHours());
+            const minute = checkPrependLeadingZero(date.getMinutes());
+            const second = checkPrependLeadingZero(date.getSeconds());
+
+            // Format timestamp to match debug.log
+            const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
+
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp });
+
+        }, 1);
+    };
+
+    webContents.on('console-message', prepareConsoleMessageForRVM);
 
     // Set preload scripts' final loading states
     winObj.preloadScripts = (_options.preloadScripts || []);

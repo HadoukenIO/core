@@ -26,11 +26,29 @@ export interface RvmMsgBase {
 
 // topic: application -----
 type applicationTopic = 'application';
+type applicationLogAction = 'application-log';
 type registerUserAction = 'register-user';
 type hideSplashscreenAction = 'hide-splashscreen';
 type relaunchOnCloseAction = 'relaunch-on-close';
 type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
 type downloadRuntimeAction = 'runtime-download';
+
+export interface ApplicationLog extends RvmMsgBase {
+    topic: applicationTopic;
+    action: applicationLogAction;
+    sourceUrl: string;
+    runtimeVersion: string;
+    payload: {
+        messages: ConsoleMessage[];
+    };
+}
+
+export interface ConsoleMessage {
+    appConfigUrl: string;
+    level: number;
+    message: string;
+    timeStamp: string;
+}
 
 export interface RegisterUser extends RvmMsgBase {
     topic: applicationTopic;
