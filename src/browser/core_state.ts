@@ -30,6 +30,8 @@ import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
 import { writeToLog } from './log';
+import { FrameInfo } from './api/frame';
+import * as electronIPC from './transports/electron_ipc';
 
 export interface StartManifest {
     data: Shapes.Manifest;
@@ -95,6 +97,26 @@ export function setStartManifest(url: string, data: Shapes.Manifest): void {
 
 export function getStartManifest(): StartManifest|{} {
     return startManifest;
+}
+
+export function getEntityInfo(identity: Shapes.Identity) {
+    const entityInfo = getInfoByUuidFrame(identity);
+
+    if (entityInfo) {
+        return new FrameInfo(entityInfo);
+    } else if (ExternalApplication.getExternalConnectionByUuid(identity.uuid)) {
+        const externalAppInfo = ExternalApplication.getInfo(identity);
+        return new FrameInfo({
+            uuid: identity.uuid,
+            entityType: 'external connection',
+            parent: externalAppInfo.parent
+        });
+    } else {
+
+        // this covers the case of a wrapped entity that does not exist
+        // where you only know the uuid and name you gave it
+        return new FrameInfo({ uuid: identity.uuid, name: identity.name, parent: null, entityType: null});
+    }
 }
 
 // Returns string on error
@@ -691,4 +713,21 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             };
         }
     }
+}
+
+export function getWindowInitialOptionSet(windowId: number): any {
+    const options = <any>getWindowOptionsById(windowId);
+    const { uuid, name } = options;
+    const entityInfo = getEntityInfo({ uuid, name });
+    const elIPCConfig = {
+        channels: electronIPC.channels
+    };
+    const socketServerState = getSocketServerState();
+
+    return {
+        options,
+        entityInfo,
+        elIPCConfig,
+        socketServerState
+    };
 }

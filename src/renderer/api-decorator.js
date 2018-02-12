@@ -18,7 +18,8 @@ limitations under the License.
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
 (function() {
-
+    const QUEUE_COUNTER_NAME = 'queueCounter';
+    const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
     let renderFrameId = global.routingId;
@@ -30,13 +31,24 @@ limitations under the License.
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
-    const initialOptions = getCurrentWindowOptionsSync();
-    const entityInfo = getEntityInfoSync(initialOptions.uuid, initialOptions.name);
+
+    const initialOptions = global.__startOptions.options;
+    const entityInfo = global.__startOptions.entityInfo;
+    const elIPCConfig = global.__startOptions.elIPCConfig;
+    const socketServerState = global.__startOptions.socketServerState;
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
         return customData.openerSuccessCalled;
     };
+
+    function isNotificationType(name) {
+
+        const isNotification = noteGuidRegex.test(name);
+        const isQueueCounter = name === QUEUE_COUNTER_NAME;
+
+        return isNotification || isQueueCounter;
+    }
 
     // used by the notification service to emit the ready event
     function emitNoteProxyReady() {
@@ -77,29 +89,16 @@ limitations under the License.
         return initialOptions;
     }
 
-    function getCurrentWindowOptionsSync() {
-        return syncApiCall('get-current-window-options');
-    }
-
-    function getWindowOptionsSync(identity) {
-        return syncApiCall('get-window-options', identity);
-    }
-
-    function getEntityInfoSync(uuid, name) {
-        return syncApiCall('get-entity-info', { uuid, name });
-    }
-
     function getWindowIdentitySync() {
-        let winOpts = getCurrentWindowOptionsSync();
 
         return {
-            uuid: winOpts.uuid,
-            name: winOpts.name
+            uuid: initialOptions.uuid,
+            name: initialOptions.name
         };
     }
 
     function getSocketServerStateSync() {
-        return syncApiCall('get-websocket-state');
+        return socketServerState;
     }
 
     function generateGuidSync() {
@@ -118,7 +117,7 @@ limitations under the License.
     }
 
     function getIpcConfigSync() {
-        return syncApiCall('get-el-ipc-config');
+        return elIPCConfig;
     }
 
     function raiseEventSync(eventName, eventArgs) {
@@ -171,9 +170,8 @@ limitations under the License.
                 e.preventDefault();
 
                 const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
-                const options = getWindowOptionsSync(identity);
 
-                if (options.contextMenu) {
+                if (initialOptions.contextMenu) {
                     syncApiCall('show-menu', {
                         uuid: identity.uuid,
                         name: identity.name,
@@ -207,24 +205,26 @@ limitations under the License.
     }
 
     function raiseReadyEvents(entityInfo) {
-        const { uuid, name, parent, entityType } = entityInfo;
+        //const { uuid, name, parent, entityType } = entityInfo;
+        const { uuid, name } = entityInfo;
         const winIdentity = { uuid, name };
-        const parentFrameName = parent.name || name;
+        // const parentFrameName = parent.name || name;
 
-        raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
+        //Done
+        //raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
 
-        // main window
-        if (uuid === name) {
-            raiseEventSync(`application/initialized/${uuid}`);
-        }
+        // // main window
+        // if (uuid === name) {
+        //     raiseEventSync(`application/initialized/${uuid}`);
+        // }
 
-        raiseEventSync(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
+        //raiseEventSync(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
         raiseEventSync(`window/connected/${uuid}-${name}`, winIdentity);
-        raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
-            frameName: name,
-            entityType
-        });
-        raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
+        // raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
+        //     frameName: name,
+        //     entityType
+        // });
+        // raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
     }
 
     function deferByTick(callback) {
@@ -353,12 +353,8 @@ limitations under the License.
 
         const convertedOpts = convertOptionsToElectronSync(options);
         const { preloadScripts } = 'preloadScripts' in convertedOpts ? convertedOpts : initialOptions;
-        const windowIsNotification = syncApiCall('window-is-notification-type', {
-            uuid: convertedOpts.uuid,
-            name: convertedOpts.name
-        });
 
-        if (!(preloadScripts && preloadScripts.length) || windowIsNotification) {
+        if (!(preloadScripts && preloadScripts.length) || isNotificationType(options.name)) {
             proceed(); // short-circuit preload scripts fetch
         } else {
             const preloadScriptsPayload = {
@@ -438,9 +434,8 @@ limitations under the License.
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const { uuid, name } = initialOptions;
-        const windowIsNotification = syncApiCall('window-is-notification-type', { uuid, name });
 
-        if (!windowIsNotification) {
+        if (isNotificationType(name)) {
             evalPlugins(uuid, name);
             evalPreloadScripts(uuid, name);
         }

@@ -28,7 +28,7 @@ export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown'
 export type AuthCallback = (username: string, password: string) => void;
 
 export interface FrameInfo extends Identity {
-    name: string;
+    name?: string;
     parent: Identity;
     entityType: EntityType;
 }

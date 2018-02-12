@@ -76,8 +76,7 @@ module.exports.windowApiMap = {
     'window-authenticate': windowAuthenticate,
     'window-embedded': windowEmbedded,
     'window-exists': windowExists,
-    'window-get-cached-bounds': getCachedBounds,
-    'window-is-notification-type': windowIsNotificationType
+    'window-get-cached-bounds': getCachedBounds
 };
 
 module.exports.init = function() {
@@ -570,15 +569,4 @@ function setZoomLevel(identity, message, ack) {
 
     Window.setZoomLevel(windowIdentity, level);
     ack(successAck);
-}
-
-function windowIsNotificationType(identity, message, ack) {
-    const { payload } = message;
-    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.isNotificationType(windowIdentity, (isNotification) => {
-        const dataAck = _.clone(successAck);
-        dataAck.data = isNotification;
-        ack(dataAck);
-    });
 }

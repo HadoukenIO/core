@@ -68,9 +68,7 @@ const WindowsMessages = {
     WM_SYSKEYUP: 0x0105,
 };
 
-let Window = {
-    QUEUE_COUNTER_NAME: 'queueCounter'
-};
+let Window = {};
 
 let browserWindowEventMap = {
     'api-injection-failed': {
@@ -826,9 +824,26 @@ Window.create = function(id, opts) {
         //We want to zip both event sources so that we get a single event only after both windowPositioning and apiInjection occur.
         const subscription = Rx.Observable.zip(apiInjectionObserver, windowPositioningObserver).subscribe((event) => {
             const constructorCallbackMessage = event[0];
+            const entityInfo = System.getEntityInfo(identity);
+            const { parent, entityType } = entityInfo;
+            const parentFrameName = parent.name || name;
+
             if (_options.autoShow || _options.toShowOnRun) {
                 Window.show(identity);
             }
+
+            ofEvents.emit(route.window('initialized', uuid, name), identity);
+
+            if (uuid === name) {
+                ofEvents.emit(route.application('initialized', uuid));
+            }
+
+            ofEvents.emit(route.window('dom-content-loaded', uuid, name), identity);
+            ofEvents.emit(route.window('frame-connected', uuid, parentFrameName), {
+                frameName: name,
+                entityType
+            });
+            ofEvents.emit(route.frame('connected', uuid, name), identity);
 
             ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
             //need to use the old RXJS API: https://github.com/Reactive-Extensions/RxJS/blob/master/doc/api/core/operators/create.md

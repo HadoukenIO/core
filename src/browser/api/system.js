@@ -32,14 +32,12 @@ const _ = require('underscore');
 // local modules
 const convertOptions = require('../convert_options.js');
 const coreState = require('../core_state.js');
-const electronIPC = require('../transports/electron_ipc.js');
 import { ExternalApplication } from './external_application';
 const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
-import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
@@ -303,23 +301,7 @@ exports.System = {
         return electronApp.getHostToken();
     },
     getEntityInfo: function(identity) {
-        const entityInfo = coreState.getInfoByUuidFrame(identity);
-
-        if (entityInfo) {
-            return new FrameInfo(entityInfo);
-        } else if (ExternalApplication.getExternalConnectionByUuid(identity.uuid)) {
-            const externalAppInfo = ExternalApplication.getInfo(identity);
-            return new FrameInfo({
-                uuid: identity.uuid,
-                entityType: 'external connection',
-                parent: externalAppInfo.parent
-            });
-        } else {
-
-            // this covers the case of a wrapped entity that does not exist
-            // where you only know the uuid and name you gave it
-            return new FrameInfo(identity);
-        }
+        return coreState.getEntityInfo(identity);
     },
     getEnvironmentVariable: function(varsToExpand) {
         if (Array.isArray(varsToExpand)) {
@@ -645,19 +627,11 @@ exports.System = {
             errorCallback(`Error getting cookies`);
         }
     },
-    getWebSocketServerState: function() {
-        return coreState.getSocketServerState();
-    },
     generateGUID: function() {
         return electronApp.generateGUID();
     },
     convertOptions: function(options) {
         return convertOptions.convertToElectron(options);
-    },
-    getElIPCConfiguration: function() {
-        return {
-            channels: electronIPC.channels
-        };
     },
     getNearestDisplayRoot: function(point) {
         return MonitorInfo.getNearestDisplayRoot(point);

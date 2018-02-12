@@ -18,6 +18,7 @@ limitations under the License.
 let fs = require('fs');
 let path = require('path');
 const coreState = require('../browser/core_state.js');
+const log = require('../browser/log');
 
 // check resources/adapter/openfin-desktop.js then
 // resources/adapter.asar/openfin-desktop.js
@@ -44,9 +45,12 @@ let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
 me = me.slice(13);
 
 module.exports.api = (windowId) => {
-    const mainWindowOptions = coreState.getMainWindowOptions(windowId);
-    const enableV2Api = ((mainWindowOptions || {}).experimental || {}).v2Api;
+    log.writeToLog('info', 'ok, I got this far. Wonder where the break is');
+    const windowOptionSet = coreState.getWindowInitialOptionSet(windowId);
+    const mainWindowOptions = windowOptionSet.options || {};
+    const enableV2Api = (mainWindowOptions.experimental || {}).v2Api;
     const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
+    const optionsString = JSON.stringify(windowOptionSet);
 
-    return `${me} ; ${jsAdapter}; ${v2AdapterShim} ; fin.__internal_.ipc = null;`;
+    return `console.log('start of injected scripts'); global.__startOptions = ${optionsString}; ${me} ; ${jsAdapter}; ${v2AdapterShim} ; fin.__internal_.ipc = null; console.log('here');`;
 };
