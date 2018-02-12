@@ -236,6 +236,10 @@ app.on('ready', function() {
     app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
     app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
 
+    if (process.platform === 'win32') {
+        app.vlog(1, `group-policy build: ${app.isGroupPolicyBuild()}`);
+    }
+    app.vlog(1, `build architecture: ${process.arch}`);
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
 
     rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
