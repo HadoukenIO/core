@@ -14,18 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { Identity, Module } from '../../shapes';
+import { Identity, ServiceIdentity } from '../../shapes';
 import route from '../../common/route';
 import ofEvents from '../of_events';
-import { applyPendingModuleConnections } from '../api_protocol/api_handlers/modules_middleware';
+import { applyPendingServiceConnections } from '../api_protocol/api_handlers/service_middleware';
 
 
-const moduleMap: Map<string, Module> = new Map();
+const serviceMap: Map<string, ServiceIdentity> = new Map();
 
-export module Modules {
+export module Service {
     export function addEventListener(targetIdentity: Identity, type: string, listener: Function) {
         // just uuid or uuid and name?
-        const eventString = route.module(type, targetIdentity.uuid);
+        const eventString = route.service(type, targetIdentity.uuid);
         const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
         let unsubscribe;
         let browserWinIsDead;
@@ -50,49 +50,49 @@ export module Modules {
         return unsubscribe;
     }
 
-    export function getModuleByUuid(uuid: string) {
-        return moduleMap.get(uuid);
+    export function getServiceByUuid(uuid: string) {
+        return serviceMap.get(uuid);
     }
 
-    export function getModuleByName(name: string): any {
-        let moduleIdentity;
-        moduleMap.forEach((value, key) => {
+    export function getServiceByName(name: string): any {
+        let serviceIdentity;
+        serviceMap.forEach((value, key) => {
             if (value.uuid === name) {
-                moduleIdentity = moduleMap.get(key);
+                serviceIdentity = serviceMap.get(key);
             }
         });
-        return moduleIdentity;
+        return serviceIdentity;
     }
 
-    export function registerModule (identity: Identity, moduleName: string) {
-        // If module already registered with that identifier, nack
+    export function registerService (identity: Identity, serviceName: string) {
+        // If service already registered with that identifier, nack
         const { uuid, name } = identity;
-        if (moduleMap.get(uuid)) {
+        if (serviceMap.get(uuid)) {
             return false;
         }
 
-        const moduleIdentity = { uuid, name, moduleName };
-        moduleMap.set(uuid, moduleIdentity);
+        const serviceIdentity = { uuid, name, serviceName };
+        serviceMap.set(uuid, serviceIdentity);
 
         // EVENTS CURRENTLY ASSUME THIS IS AN APP - IF EXTERNAL CONNECTION BECOMES OPTION AMEND THIS
-        // When module exits, remove from moduleMap - ToDo: Also send to connections? Or let module handle...?
+        // When service exits, remove from serviceMap - ToDo: Also send to connections? Or let service handle...?
         ofEvents.once(route.application('closed', uuid), () => {
-            moduleMap.delete(uuid);
-            ofEvents.emit(route.application('module-disconnected', uuid), {
+            serviceMap.delete(uuid);
+            ofEvents.emit(route.application('service-disconnected', uuid), {
                 uuid,
                 name
             });
         });
 
-        ofEvents.emit(route.system('module-connected'), {
-            ...moduleIdentity
+        ofEvents.emit(route.system('service-connected'), {
+            ...serviceIdentity
         });
 
-        // execute any requests to connect for module that occured before module launch. Need timeout to ensure registration finished.
+        // execute any requests to connect for service that occured before service launch. Need timeout to ensure registration finished.
         setTimeout(() => {
-            applyPendingModuleConnections(uuid);
+            applyPendingServiceConnections(uuid);
         }, 20);
 
-        return { moduleIdentity };
+        return { serviceIdentity };
     }
 }

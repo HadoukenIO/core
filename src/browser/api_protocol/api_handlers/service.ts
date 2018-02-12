@@ -17,30 +17,30 @@ limitations under the License.
 
 import * as apiProtocolBase from './api_protocol_base';
 import { ActionSpecMap } from '../shapes';
-import { Modules } from '../../api/modules';
+import { Service } from '../../api/service';
 import { Identity } from '../../../shapes';
 
 const successAck = {
     success: true
 };
 
-export class ModuleApiHandler {
+export class ServiceApiHandler {
     private readonly actionMap: ActionSpecMap = {
-        'register-module': this.registerModule
+        'register-service': this.registerService
     };
 
     constructor() {
         apiProtocolBase.registerActionMap(this.actionMap);
     }
 
-    private registerModule(identity: Identity, message: any, ack: any, nack: any) {
-        // const { payload: { moduleName = null } = {} } = message;
+    private registerService(identity: Identity, message: any, ack: any, nack: any) {
+        // const { payload: { serviceName = null } = {} } = message;
         const { payload } = message;
-        const { moduleName } = payload;
+        const { serviceName } = payload;
 
-        const moduleIdentity = Modules.registerModule(identity, moduleName);
-        const dataAck = Object.assign({}, successAck, { data: moduleIdentity });
-        moduleIdentity ? ack(dataAck) : nack('module name already registered');
+        const serviceIdentity = Service.registerService(identity, serviceName);
+        const dataAck = Object.assign({}, successAck, { data: serviceIdentity });
+        serviceIdentity ? ack(dataAck) : nack('Service name already registered');
     }
 
 }

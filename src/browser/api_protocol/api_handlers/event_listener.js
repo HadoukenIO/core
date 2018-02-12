@@ -27,7 +27,7 @@ let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
-import { Modules } from '../../api/modules';
+import { Service } from '../../api/service';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -157,16 +157,16 @@ function EventListenerApiHandler() {
                 };
             }
         },
-        'module': {
-            name: 'module',
+        'service': {
+            name: 'service',
             subscribe: function(identity, type, payload, cb) {
                 const {
                     uuid
                 } = payload;
-                const moduleIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-                const targetUuid = moduleIdentity.uuid;
+                const serviceIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+                const targetUuid = serviceIdentity.uuid;
                 const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
-                const localUnsub = Modules.addEventListener(moduleIdentity, type, cb);
+                const localUnsub = Service.addEventListener(serviceIdentity, type, cb);
                 let remoteUnSub;
                 const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
@@ -174,7 +174,7 @@ function EventListenerApiHandler() {
                     const subscription = {
                         uuid,
                         listenType: 'on',
-                        className: 'module',
+                        className: 'service',
                         eventName: type
                     };
 
