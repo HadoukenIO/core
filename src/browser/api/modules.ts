@@ -78,17 +78,13 @@ export module Modules {
         // When module exits, remove from moduleMap - ToDo: Also send to connections? Or let module handle...?
         ofEvents.once(route.application('closed', uuid), () => {
             moduleMap.delete(uuid);
-            ofEvents.emit(route.module('disconnected', uuid), {
-                topic: 'module',
-                type: 'disconnected',
+            ofEvents.emit(route.application('module-disconnected', uuid), {
                 uuid,
                 name
             });
         });
 
         ofEvents.emit(route.system('module-connected'), {
-            topic: 'module',
-            type: 'connected',
             ...moduleIdentity
         });
 
