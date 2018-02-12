@@ -23,7 +23,7 @@ import {
 } from './api_handlers/authorization';
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
 import { FrameApiHandler } from './api_handlers/frame';
-import { ModuleApiHandler } from './api_handlers/modules';
+import { ServiceApiHandler } from './api_handlers/service';
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
 const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
@@ -33,7 +33,7 @@ import { init as initApiProtocol, getDefaultRequestHandler } from './api_handler
 import { meshEnabled } from '../connection_manager';
 import { registerMiddleware as registerEntityExistenceMiddleware } from './api_handlers/middleware_entity_existence';
 import { registerMiddleware as registerMeshMiddleware } from './api_handlers/mesh_middleware';
-import { registerMiddleware as registerModulesAppMiddleware } from './api_handlers/modules_middleware';
+import { registerMiddleware as registerServiceAppMiddleware } from './api_handlers/service_middleware';
 import {
     registerMiddleware as registerProcessExternalAppMiddleware,
     legacyWindowingEnabled
@@ -45,7 +45,7 @@ registerEntityExistenceMiddleware(getDefaultRequestHandler());
 if (legacyWindowingEnabled()) {
     registerProcessExternalAppMiddleware(getDefaultRequestHandler());
 }
-registerModulesAppMiddleware(getDefaultRequestHandler());
+registerServiceAppMiddleware(getDefaultRequestHandler());
 if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
 }
@@ -58,7 +58,7 @@ export function initApiHandlers() {
     initAuthorizationApiHandler();
     initClipboardAPIHandler();
     const frameApiHandler = new FrameApiHandler();
-    const moduleApiHandler = new ModuleApiHandler();
+    const serviceApiHandler = new ServiceApiHandler();
     const eventListenerApiHandler = new EventListenerApiHandler();
     const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
     const notificationApiHandler = new NotificationApiHandler();
