@@ -40,7 +40,7 @@ function getAckKey(id: number, identity: Identity): string {
 }
 
 // If initial connection to a service, don't know Identity yet, only service Name
-function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: false | OpenFinWindow, serviceIdentity: service } {
+function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: false | OpenFinWindow, serviceIdentity: ServiceIdentity } {
     const { uuid, name } = payload;
     if (payload.connectAction) {
         const serviceIdentity = Service.getServiceByUuid(uuid);
