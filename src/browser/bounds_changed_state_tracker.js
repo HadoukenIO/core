@@ -37,11 +37,11 @@ const DisableWindowGroupTracking = 'disable-window-group-tracking';
 // so with disable-group-window-tracking="resize,api", docking framework can customize resize behaviors
 // for grouped windows
 
-function shouldTrack(action) {
+const shouldTrack = (action) => {
     // track everything by default
     return !coreState.argo[DisableWindowGroupTracking] ||
         !coreState.argo[DisableWindowGroupTracking].split(',').includes(action);
-}
+};
 const trackingResize = shouldTrack('resize');
 const trackingAPI = shouldTrack('api');
 
@@ -212,9 +212,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         return newClippedBounds;
     };
 
-    let checkTrackingApi = (groupLeader) => {
-        return groupLeader.type === 'api' ? trackingAPI : true;
-    };
+    const checkTrackingApi = (groupLeader) => groupLeader.type === 'api' ? trackingAPI : true;
 
     var handleBoundsChange = (isAdditionalChangeExpected, force) => {
 
