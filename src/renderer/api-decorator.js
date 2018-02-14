@@ -18,24 +18,32 @@ limitations under the License.
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
 (function() {
+    const glbl = global;
     const QUEUE_COUNTER_NAME = 'queueCounter';
     const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
-    let renderFrameId = global.routingId;
-    let customData = global.getFrameData(renderFrameId);
-    let glbl = global;
+    let renderFrameId = glbl.routingId;
+    let customData = glbl.getFrameData(renderFrameId);
+
     const electron = require('electron');
-    const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
+
+    // Mock webFrame if unavailable
+    const webFrame = (electron.webFrame ?
+        electron.webFrame.createForRenderFrame(renderFrameId) : {
+            getZoomLevel: () => { return 1.0; },
+            setZoomLevel: () => {}
+        });
+
     const ipc = electron.ipcRenderer;
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
 
-    const initialOptions = global.__startOptions.options;
-    const entityInfo = global.__startOptions.entityInfo;
-    const elIPCConfig = global.__startOptions.elIPCConfig;
-    const socketServerState = global.__startOptions.socketServerState;
+    const initialOptions = glbl.__startOptions.options;
+    const entityInfo = glbl.__startOptions.entityInfo;
+    const elIPCConfig = glbl.__startOptions.elIPCConfig;
+    const socketServerState = glbl.__startOptions.socketServerState;
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
@@ -205,26 +213,25 @@ limitations under the License.
     }
 
     function raiseReadyEvents(entityInfo) {
-        //const { uuid, name, parent, entityType } = entityInfo;
-        const { uuid, name } = entityInfo;
+        const { uuid, name, parent, entityType } = entityInfo;
         const winIdentity = { uuid, name };
-        // const parentFrameName = parent.name || name;
+        const parentFrameName = parent.name || name;
 
         //Done
-        //raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
+        raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
 
-        // // main window
-        // if (uuid === name) {
-        //     raiseEventSync(`application/initialized/${uuid}`);
-        // }
+        // main window
+        if (uuid === name) {
+            raiseEventSync(`application/initialized/${uuid}`);
+        }
 
-        //raiseEventSync(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
+        raiseEventSync(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
         raiseEventSync(`window/connected/${uuid}-${name}`, winIdentity);
-        // raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
-        //     frameName: name,
-        //     entityType
-        // });
-        // raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
+        raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
+            frameName: name,
+            entityType
+        });
+        raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
     }
 
     function deferByTick(callback) {
@@ -435,7 +442,7 @@ limitations under the License.
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const { uuid, name } = initialOptions;
 
-        if (isNotificationType(name)) {
+        if (!isNotificationType(name)) {
             evalPlugins(uuid, name);
             evalPreloadScripts(uuid, name);
         }
