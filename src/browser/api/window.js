@@ -1370,17 +1370,6 @@ Window.isNotification = function(name) {
     return noteGuidRegex.test(name);
 };
 
-Window.isNotificationType = function(identity, callback = () => {}) {
-    const { name } = identity;
-
-    const isNotification = Window.isNotification(name);
-    const isQueueCounter = name === Window.QUEUE_COUNTER_NAME;
-    const isNotificationType = isNotification || isQueueCounter;
-
-    callback(isNotificationType);
-    return isNotificationType;
-};
-
 Window.isShowing = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 
