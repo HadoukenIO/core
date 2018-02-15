@@ -217,7 +217,6 @@ limitations under the License.
         const winIdentity = { uuid, name };
         const parentFrameName = parent.name || name;
 
-        //Done
         raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
 
         // main window
