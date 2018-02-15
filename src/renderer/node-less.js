@@ -35,6 +35,7 @@ const susbcribeForTeardown = (routingId, handlers = []) => {
 // OpenFin: these values are used in lib/common/api/crash-reporter.js
 process.versions = process.versions || {};
 process.versions.combinedId = electron.remote.app.getCombinedId();
+process.versions.openfin = electron.remote.app.getRuntimeVersion();
 process.versions.mainFrameRoutingId = electron.ipcRenderer.getFrameRoutingID();
 process.versions.cachePath = electron.remote.app.getPath('userData');
 
