@@ -1,7 +1,7 @@
 {
   "name": "openfin",
   "version": "0.0.1",
-  "description": "The core app of the OpenFin Runtime 6.0",
+  "description": "The core app of the OpenFin Runtime 8",
   "main": "index.js",
   "scripts": {
     "pretest": "grunt babel && grunt ts",
