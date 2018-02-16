@@ -28,6 +28,7 @@ import { Identity } from '../shapes';
 import route from '../common/route';
 import * as coreState from './core_state';
 import { PortInfo } from './port_discovery';
+import { EventEmitter } from 'events';
 
 // id count to generate IDs for subscriptions
 let subscriptionIdCount = 0;
@@ -69,7 +70,7 @@ const systemEventsToIgnore: {[index: string]: boolean} = {
  */
 export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
     return new Promise(resolve => {
-        const clonedProps = Object.create(subscriptionProps);
+        const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
         const subscription: RemoteSubscription = Object.assign(clonedProps, {isCleaned: false});
 
         // Only generate an ID for new subscriptions
@@ -109,8 +110,8 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
 /**
  * Subscribe to an event in a remote runtime
  */
-function applyRemoteSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
-    const classEventEmitter = getClassEventEmitter(subscription, runtime);
+async function applyRemoteSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
+    const classEventEmitter = await getClassEventEmitter(subscription, runtime);
     const runtimeKey = keyFromPortInfo(runtime.portInfo);
     const { uuid, name, className, eventName, listenType, unSubscriptions } = subscription;
     const fullEventName = (typeof name === 'string')
@@ -232,7 +233,7 @@ export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProp
             resolve();
         }
 
-        const clonedProps = Object.create(subscriptionProps);
+        const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
         const subscription: RemoteSubscription = Object.assign(clonedProps, {isSystemEvent: true});
 
         // Generate a subscription ID for pending subscriptions
@@ -308,16 +309,16 @@ function applySystemSubscription(subscription: RemoteSubscription, runtime: Peer
 /**
  * Get event emitter of the class
  */
-function getClassEventEmitter(subscription: RemoteSubscription, runtime: PeerRuntime) {
+async function getClassEventEmitter(subscription: RemoteSubscription, runtime: PeerRuntime): Promise<EventEmitter> {
     let classEventEmitter;
     const { uuid, name, className } = subscription;
 
     switch (className) {
         case 'application':
-            classEventEmitter = runtime.fin.Application.wrap({uuid});
+            classEventEmitter = await runtime.fin.Application.wrap({uuid});
             break;
         case 'window':
-            classEventEmitter = runtime.fin.Window.wrap({uuid, name});
+            classEventEmitter = await runtime.fin.Window.wrap({uuid, name});
             break;
     }
 
