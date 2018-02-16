@@ -35,7 +35,7 @@ for (let adapterPath of searchPaths) {
 
 let jsAdapterV2 = '';
 try {
-    const jsAdapterV2Path = path.resolve(__dirname, '../../node_modules/hadouken-js-adapter/out/js-adapter.js');
+    const jsAdapterV2Path = path.join(process.resourcesPath, 'js-adapter.asar', 'js-adapter.js');
     jsAdapterV2 = fs.readFileSync(jsAdapterV2Path, 'utf8');
 } catch (error) {}
 
