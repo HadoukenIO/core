@@ -588,6 +588,14 @@ Window.create = function(id, opts) {
             emitToAppAndWin('crashed', {
                 reason: terminationStatus
             });
+
+            // When the renderer crashes, remove blocking event listeners.
+            // Removing 'close-requested' listeners will allow the crashed window to be closed manually easily.
+            const closeRequested = route.window('close-requested', uuid, name);
+            ofEvents.removeAllListeners(closeRequested);
+            // Removing 'show-requested' listeners will allow the crashed window to be shown so it can be closed.
+            const showRequested = route.window('show-requested', uuid, name);
+            ofEvents.removeAllListeners(showRequested);
         });
 
         browserWindow.on('responsive', () => {
