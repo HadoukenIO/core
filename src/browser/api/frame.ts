@@ -23,7 +23,7 @@ import * as Shapes from '../../shapes';
 
 export class FrameInfo implements Shapes.FrameInfo {
     public uuid: string = '';
-    public name: string = '';
+    public name?: string = '';
     public parent: Identity = {uuid: null, name: null};
     public entityType: Shapes.EntityType = 'unknown';
 
