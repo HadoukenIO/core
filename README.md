@@ -82,8 +82,3 @@ Stable: (http://cdn.openfin.co/jsdocs/stable/)
 
 ### File Structure Notes
 The contents of `/src/renderer/extended` folder is referenced by the `openfin.asar` (not contained in this project)
-
-
-### Building for Non Commercial license distribution
-
-In order to build the project for distribution without a commercial OpenFin license you will need to completely remove any file with the commercial license header, please review the LICENSE file.
