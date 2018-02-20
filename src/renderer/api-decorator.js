@@ -179,16 +179,18 @@ limitations under the License.
 
                 const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
 
-                if (initialOptions.contextMenu) {
-                    syncApiCall('show-menu', {
-                        uuid: identity.uuid,
-                        name: identity.name,
-                        editable: e.target.matches('input, textarea, [contenteditable]'),
-                        hasSelectedText: e.target.selectionStart !== e.target.selectionEnd,
-                        x: e.x,
-                        y: e.y
-                    }, false);
-                }
+                fin.desktop.Window.getCurrent().getOptions(options => {
+                    if (options.contextMenu) {
+                        syncApiCall('show-menu', {
+                            uuid: identity.uuid,
+                            name: identity.name,
+                            editable: e.target.matches('input, textarea, [contenteditable]'),
+                            hasSelectedText: e.target.selectionStart !== e.target.selectionEnd,
+                            x: e.x,
+                            y: e.y
+                        }, false);
+                    }
+                });
             }
         });
     }
