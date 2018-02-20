@@ -14,14 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import * as apiProtocolBase from './api_protocol_base';
-import * as coreState from '../../core_state';
-import { Identity, ServiceIdentity, OpenFinWindow } from '../../../shapes';
+import { getWindowByUuidName } from '../../core_state';
+import { Identity, OpenFinWindow, ServiceIdentity } from '../../../shapes';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
+import { RemoteAck } from '../transport_strategy/ack';
 import RequestHandler from '../transport_strategy/base_handler';
 import { sendToIdentity } from './api_protocol_base';
 import { Service } from '../../api/service';
-import { RemoteAck } from '../transport_strategy/ack';
 
 const SERVICE_API_ACTION = 'send-service-message';
 const SERVICE_APP_ACTION = 'process-service-action';
@@ -56,12 +55,12 @@ function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: 
     if (payload.connectAction) {
         // If initial connection to a service, identity may exist but not be registered;
         const serviceIdentity = Service.getServiceByUuid(uuid);
-        const targetIdentity = serviceIdentity && coreState.getWindowByUuidName(serviceIdentity.uuid, serviceIdentity.name);
+        const targetIdentity = serviceIdentity && getWindowByUuidName(serviceIdentity.uuid, serviceIdentity.name);
         return { targetIdentity, serviceIdentity };
     }
     // Sender could be service or client, want service Identity sent in payload either way
     const serviceIdentity = Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid);
-    const targetIdentity = coreState.getWindowByUuidName(uuid, name);
+    const targetIdentity = getWindowByUuidName(uuid, name);
     return { targetIdentity, serviceIdentity };
 }
 

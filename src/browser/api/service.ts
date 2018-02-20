@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { Identity, ServiceIdentity } from '../../shapes';
-import route from '../../common/route';
-import ofEvents from '../of_events';
 import { applyPendingServiceConnections } from '../api_protocol/api_handlers/service_middleware';
+import { Identity, ServiceIdentity } from '../../shapes';
+import ofEvents from '../of_events';
+import route from '../../common/route';
 
 
 const serviceMap: Map<string, ServiceIdentity> = new Map();
