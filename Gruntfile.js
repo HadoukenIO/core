@@ -37,6 +37,8 @@ const optionalDependencies = [
     'runtime-p2p/**'
 ];
 
+const jsAdapterPath = path.join('node_modules', 'hadouken-js-adapter', 'out');
+
 // https://github.com/beautify-web/js-beautify#options
 // (Options in above-linked page are hyphen-separarted but here must be either camelCase or underscore_separated.)
 const beautifierOptions = {
@@ -226,7 +228,9 @@ module.exports = (grunt) => {
         'copy',
         'build-deploy-modules',
         'sign-files',
+        'sign-adapter',
         'package',
+        'package-adapter',
         'sign-asar'
     ]);
 
@@ -248,7 +252,15 @@ module.exports = (grunt) => {
 
     grunt.registerTask('sign-asar', function() {
         openfinSign('out/app.asar');
+        openfinSign('out/js-adapter.asar');
         grunt.log.ok('Finished signing asar.');
+    });
+
+    grunt.registerTask('sign-adapter', function() {
+        const jsAdapterBundle = path.join(jsAdapterPath, 'js-adapter.js');
+
+        openfinSign(jsAdapterBundle);
+        grunt.log.ok('Finished signing js-adapter');
     });
 
     grunt.registerTask('clean', 'clean the out house', function() {
@@ -296,6 +308,15 @@ module.exports = (grunt) => {
             grunt.log.ok('Finished packaging as asar.');
             wrench.rmdirSyncRecursive('staging', true);
             grunt.log.ok('Cleaned up staging.');
+            done();
+        });
+    });
+
+    grunt.registerTask('package-adapter', 'Package the js-adapter', function() {
+        const done = this.async();
+
+        asar.createPackage(jsAdapterPath, 'out/js-adapter.asar', function () {
+            grunt.log.ok('Finished packaging the adapter as an asar');
             done();
         });
     });
