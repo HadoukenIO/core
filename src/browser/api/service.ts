@@ -24,7 +24,7 @@ const serviceMap: Map<string, ServiceIdentity> = new Map();
 
 export module Service {
     export function addEventListener(targetIdentity: Identity, type: string, listener: Function) {
-        // just uuid or uuid and name?
+        // treating like an application so it will work for external connections as well
         const eventString = route.service(type, targetIdentity.uuid);
         const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
         let unsubscribe;
@@ -54,18 +54,19 @@ export module Service {
         return serviceMap.get(uuid);
     }
 
+    // Could be any identifier
     export function getServiceByName(name: string): any {
         let serviceIdentity;
         serviceMap.forEach((value, key) => {
-            if (value.uuid === name) {
+            if (value.serviceName === name) {
                 serviceIdentity = serviceMap.get(key);
             }
         });
         return serviceIdentity;
     }
 
-    export function registerService (identity: Identity, serviceName: string) {
-        // If service already registered with that identifier, nack
+    export function registerService (identity: Identity, serviceName?: string) {
+        // If a service is already registered from that uuid, nack
         const { uuid, name } = identity;
         if (serviceMap.get(uuid)) {
             return false;
@@ -74,8 +75,8 @@ export module Service {
         const serviceIdentity = { uuid, name, serviceName };
         serviceMap.set(uuid, serviceIdentity);
 
-        // EVENTS CURRENTLY ASSUME THIS IS AN APP - IF EXTERNAL CONNECTION BECOMES OPTION AMEND THIS
-        // When service exits, remove from serviceMap - ToDo: Also send to connections? Or let service handle...?
+        // When service exits, remove from serviceMap
+        // Currently assumes this is an application, add logic for external connection here when that becomes option
         ofEvents.once(route.application('closed', uuid), () => {
             serviceMap.delete(uuid);
             ofEvents.emit(route.application('service-disconnected', uuid), {
@@ -84,14 +85,12 @@ export module Service {
             });
         });
 
-        ofEvents.emit(route.system('service-connected'), {
-            ...serviceIdentity
-        });
+        ofEvents.emit(route.system('service-connected'), serviceIdentity);
 
-        // execute any requests to connect for service that occured before service launch. Need timeout to ensure registration finished.
+        // execute requests to connect for service that occured before service registration. Timeout ensures registration concludes first.
         setTimeout(() => {
             applyPendingServiceConnections(uuid);
-        }, 20);
+        }, 1);
 
         return { serviceIdentity };
     }

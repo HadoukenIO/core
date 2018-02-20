@@ -21,38 +21,20 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import RequestHandler from '../transport_strategy/base_handler';
 import { sendToIdentity } from './api_protocol_base';
 import { Service } from '../../api/service';
-import { AckFunc, NackFunc } from '../transport_strategy/ack';
-
-interface RemoteAck {
-    ack: AckFunc;
-    nack: NackFunc;
-}
-
-const remoteAckMap: Map<string, RemoteAck> = new Map();
-const pendingServiceConnections: Map<string, MessagePackage[]> = new Map();
+import { RemoteAck } from '../transport_strategy/ack';
 
 const SERVICE_API_ACTION = 'send-service-message';
 const SERVICE_APP_ACTION = 'process-service-action';
 const SERVICE_ACK_ACTION = 'service-ack';
 
+const remoteAckMap: Map<string, RemoteAck> = new Map();
+const pendingServiceConnections: Map<string, MessagePackage[]> = new Map();
+
 function getAckKey(id: number, identity: Identity): string {
     return `${ id }-${ identity.uuid }`;
 }
 
-// If initial connection to a service, don't know Identity yet, only service Name
-function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: false | OpenFinWindow, serviceIdentity: ServiceIdentity } {
-    const { uuid, name } = payload;
-    if (payload.connectAction) {
-        const serviceIdentity = Service.getServiceByUuid(uuid);
-        const targetIdentity = serviceIdentity && coreState.getWindowByUuidName(serviceIdentity.uuid, serviceIdentity.name);
-        return { targetIdentity, serviceIdentity };
-    }
-    const serviceIdentity = Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid);
-    const targetIdentity = coreState.getWindowByUuidName(uuid, name);
-    return { targetIdentity, serviceIdentity };
-}
-
-function waitForService(uuid: string, msg: MessagePackage) {
+function waitForServiceRegistration(uuid: string, msg: MessagePackage) {
     if (!Array.isArray(pendingServiceConnections.get(uuid))) {
         pendingServiceConnections.set(uuid, []);
     }
@@ -65,20 +47,35 @@ export function applyPendingServiceConnections(uuid: string) {
         pendingConnections.forEach(connectionMsg => {
             handleServiceApiAction(connectionMsg);
         });
+        pendingServiceConnections.delete(uuid);
     }
 }
 
-//this preprocessor will check if the API call is a service action and forward it to the service to handle.
+function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: false | OpenFinWindow, serviceIdentity: ServiceIdentity } {
+    const { uuid, name } = payload;
+    if (payload.connectAction) {
+        // If initial connection to a service, identity may exist but not be registered;
+        const serviceIdentity = Service.getServiceByUuid(uuid);
+        const targetIdentity = serviceIdentity && coreState.getWindowByUuidName(serviceIdentity.uuid, serviceIdentity.name);
+        return { targetIdentity, serviceIdentity };
+    }
+    // Sender could be service or client, want service Identity sent in payload either way
+    const serviceIdentity = Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid);
+    const targetIdentity = coreState.getWindowByUuidName(uuid, name);
+    return { targetIdentity, serviceIdentity };
+}
+
+// This preprocessor will check if the API call is a service action and forward it to the service or client to handle.
 function handleServiceApiAction(msg: MessagePackage, next?: () => void): void {
     const { data, ack, nack, identity } = msg;
     const action = data && data.action;
 
     if (action === SERVICE_API_ACTION) {
         const payload = data && data.payload || {};
-        // If it is an initial connection to a service, don't know identity yet, only service Name
+
         const { targetIdentity, serviceIdentity } = setTargetIdentity(identity, payload);
 
-        // use to ensure the service / connection exists (unnecessary?)
+        // ensure the service / connection exists
         const browserWindow = targetIdentity && targetIdentity.browserWindow;
         if (targetIdentity && browserWindow && !browserWindow.isDestroyed()) {
             const { action: serviceAction, payload: messagePayload } = payload;
@@ -96,7 +93,7 @@ function handleServiceApiAction(msg: MessagePackage, next?: () => void): void {
                 success: true
             };
 
-            //foward the API call to the service or connection.
+            // Forward the API call to the service or connection.
             sendToIdentity(targetIdentity, {
                 action: SERVICE_APP_ACTION,
                 payload: {
@@ -110,7 +107,8 @@ function handleServiceApiAction(msg: MessagePackage, next?: () => void): void {
                 }
             });
         } else if (payload.connectAction && payload.wait) {
-            waitForService(payload.uuid, msg);
+            // Service not yet registered, hold connection request
+            waitForServiceRegistration(payload.uuid, msg);
         } else {
             nack('Error: service connection not found.');
         }
@@ -119,7 +117,7 @@ function handleServiceApiAction(msg: MessagePackage, next?: () => void): void {
     }
 }
 
-//this preprocessor will check if the API call is an 'ack' action from a service and tie it to the original request.
+// This preprocessor will check if the API call is an 'ack' action from a service and match it to the original request.
 function handleServiceAckAction(msg: MessagePackage, next: () => void): void {
     const { data, nack } = msg;
     const action = data && data.action;

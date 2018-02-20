@@ -53,3 +53,8 @@ export class NackPayload {
 export type AckFunc = (payload: AckPayload | NackPayload) => void;
 
 export type NackFunc = (error: string | Error) => void;
+
+export interface RemoteAck {
+    ack: AckFunc;
+    nack: NackFunc;
+}
