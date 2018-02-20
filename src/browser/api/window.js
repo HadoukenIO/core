@@ -29,6 +29,7 @@ let nativeImage = electron.nativeImage;
 
 // npm modules
 let _ = require('underscore');
+import * as Rx from 'rx';
 
 // local modules
 let animations = require('../animations.js');
@@ -43,6 +44,7 @@ let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
+import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
@@ -156,6 +158,9 @@ let optionSetters = {
 
         setOptOnBrowserWin('contextMenu', contextMenuBool, browserWin);
         browserWin.setMenu(null);
+    },
+    customData: function(newVal, browserWin) {
+        setOptOnBrowserWin('customData', newVal, browserWin);
     },
     frame: function(newVal, browserWin) {
         let frameBool = !!newVal;
@@ -564,25 +569,33 @@ Window.create = function(id, opts) {
             }
         });
 
-        const emitToAppAndWin = (...types) => {
+        const emitToAppAndWin = (type, payload) => {
             let isMainWindow = (uuid === name);
 
-            types.forEach(type => {
-                // Window crashed: inform Window "namespace"
-                ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type, uuid, name });
+            // Window crashed: inform Window "namespace"
+            ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
 
-                // Window crashed: inform Application "namespace" but with "window-" event string prefix
-                ofEvents.emit(route.application(`window-${type}`, uuid), { topic: 'application', type, uuid, name });
+            // Window crashed: inform Application "namespace" but with "window-" event string prefix
+            ofEvents.emit(route.application(`window-${type}`, uuid), Object.assign({ topic: 'application', type, uuid, name }, payload));
 
-                if (isMainWindow) {
-                    // Application crashed: inform Application "namespace"
-                    ofEvents.emit(route.application(type, uuid), { topic: 'application', type, uuid });
-                }
-            });
+            if (isMainWindow) {
+                // Application crashed: inform Application "namespace"
+                ofEvents.emit(route.application(type, uuid), Object.assign({ topic: 'application', type, uuid }, payload));
+            }
         };
 
-        webContents.on('crashed', () => {
-            emitToAppAndWin('crashed', 'out-of-memory');
+        webContents.on('crashed', (event, killed, terminationStatus) => {
+            emitToAppAndWin('crashed', {
+                reason: terminationStatus
+            });
+
+            // When the renderer crashes, remove blocking event listeners.
+            // Removing 'close-requested' listeners will allow the crashed window to be closed manually easily.
+            const closeRequested = route.window('close-requested', uuid, name);
+            ofEvents.removeAllListeners(closeRequested);
+            // Removing 'show-requested' listeners will allow the crashed window to be shown so it can be closed.
+            const showRequested = route.window('show-requested', uuid, name);
+            ofEvents.removeAllListeners(showRequested);
         });
 
         browserWindow.on('responsive', () => {
@@ -770,40 +783,69 @@ Window.create = function(id, opts) {
             }
         };
 
-        if (opts.url === 'about:blank') {
-            webContents.once('did-finish-load', () => {
-                webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
-                constructorCallbackMessage.data = {
-                    httpResponseCode
-                };
-                ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
-            });
+        //Legacy logic where we wait for the API to 'connect' before we invoke the callback method.
+        const apiInjectionObserver = Rx.Observable.create((observer) => {
+            if (opts.url === 'about:blank') {
+                webContents.once('did-finish-load', () => {
+                    webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
+                    constructorCallbackMessage.data = {
+                        httpResponseCode
+                    };
+                    observer.next(constructorCallbackMessage);
+                });
 
-        } else {
-            ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
-            ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
-            ofEvents.once(route.window('connected', uuid, name), () => {
-                webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
-                constructorCallbackMessage.data = {
-                    httpResponseCode,
-                    apiInjected: true
-                };
-                ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
-            });
-            ofEvents.once(route.window('api-injection-failed', uuid, name), () => {
-                electronApp.vlog(1, `api-injection-failed ${uuid}-${name}`);
-                // can happen if child window has a different domain.   @TODO allow injection for different domains
-                if (_options.autoShow) {
-                    browserWindow.show();
-                }
-                constructorCallbackMessage.data = {
-                    httpResponseCode,
-                    apiInjected: false
-                };
-                ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
-            });
-        }
+            } else {
+                ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+                ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
+                ofEvents.once(route.window('connected', uuid, name), () => {
+                    webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
+                    constructorCallbackMessage.data = {
+                        httpResponseCode,
+                        apiInjected: true
+                    };
+                    observer.next(constructorCallbackMessage);
+                });
+                ofEvents.once(route.window('api-injection-failed', uuid, name), () => {
+                    electronApp.vlog(1, `api-injection-failed ${uuid}-${name}`);
+                    // can happen if child window has a different domain.   @TODO allow injection for different domains
+                    if (_options.autoShow) {
+                        browserWindow.show();
+                    }
+                    constructorCallbackMessage.data = {
+                        httpResponseCode,
+                        apiInjected: false
+                    };
+                    observer.next(constructorCallbackMessage);
+                });
+            }
 
+        });
+
+        //Restoring window possitioning from disk cache.
+        //We treat this as a check point event, either succes or failure will raise the event.
+        const windowPositioningObserver = Rx.Observable.create(observer => {
+            if (!_options.saveWindowState) {
+                observer.next();
+            } else if (_options.waitForPageLoad) {
+                browserWindow.once('ready-to-show', () => {
+                    restoreWindowPosition(identity, () => observer.next());
+                });
+            } else {
+                restoreWindowPosition(identity, () => observer.next());
+            }
+        });
+
+        //We want to zip both event sources so that we get a single event only after both windowPositioning and apiInjection occur.
+        const subscription = Rx.Observable.zip(apiInjectionObserver, windowPositioningObserver).subscribe((event) => {
+            const constructorCallbackMessage = event[0];
+            if (_options.autoShow || _options.toShowOnRun) {
+                Window.show(identity);
+            }
+
+            ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
+            //need to use the old RXJS API: https://github.com/Reactive-Extensions/RxJS/blob/master/doc/api/core/operators/create.md
+            subscription.dispose();
+        });
     } // end noregister
 
     var winObj = {
@@ -836,6 +878,58 @@ Window.create = function(id, opts) {
     const { manifest } = coreState.getManifest(identity);
     const { plugins } = manifest || {};
     winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
+
+    const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
+        const app = coreState.getAppByUuid(identity.uuid);
+        if (!app) {
+            electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);
+            return;
+        }
+
+        // If enableAppLogging not set or false, skip sending to RVM
+        if (!app._options || !app._options.enableAppLogging) {
+            return;
+        }
+
+        // Hack: since this function is getting called from the native side with
+        // "webContents.on", there is weirdness where the "setTimeout(flushConsoleMessageQueue...)"
+        // in addConsoleMessageToRVMMessageQueue would only get called the first time, and not subsequent times,
+        // if you just called "addConsoleMessageToRVMMessageQueue" directly from here. So to get around that, we
+        // wrap this entire function in a "setTimeout" to put it in a different context. Eventually we should figure
+        // out if there is a way around this by using event.preventDefault or something similar
+        setTimeout(() => {
+            const appConfigUrl = coreState.getConfigUrlByUuid(identity.uuid);
+            if (!appConfigUrl) {
+                electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
+                return;
+            }
+
+            function checkPrependLeadingZero(num) {
+                let str = String(num);
+                if (str.length === 1) {
+                    str = '0' + str;
+                }
+
+                return str;
+            }
+
+            const date = new Date();
+            const month = checkPrependLeadingZero(date.getMonth() + 1);
+            const day = checkPrependLeadingZero(date.getDate());
+            const year = String(date.getFullYear()).slice(2);
+            const hour = checkPrependLeadingZero(date.getHours());
+            const minute = checkPrependLeadingZero(date.getMinutes());
+            const second = checkPrependLeadingZero(date.getSeconds());
+
+            // Format timestamp to match debug.log
+            const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
+
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp });
+
+        }, 1);
+    };
+
+    webContents.on('console-message', prepareConsoleMessageForRVM);
 
     // Set preload scripts' final loading states
     winObj.preloadScripts = (_options.preloadScripts || []);
@@ -878,11 +972,11 @@ Window.addEventListener = function(identity, targetIdentity, type, listener) {
     let unsubscribe, safeListener, browserWinIsDead;
 
     /*
-        for now, make a provision to auto-unhook if it fails to find
-        the browser window
+     for now, make a provision to auto-unhook if it fails to find
+     the browser window
 
-        TODO this needs to be added to the general unhook pipeline post
-             the identity problem getting solved
+     TODO this needs to be added to the general unhook pipeline post
+     the identity problem getting solved
      */
     safeListener = (...args) => {
 
@@ -2081,10 +2175,10 @@ function opacityChangedDecorator(payload, args) {
 }
 
 function visibilityChangedDecorator(payload, args) {
-    var propogate = false;
+    let propogate = false;
 
     if (args.length >= 2) {
-        var visible = args[1];
+        const [, visible, closing] = args;
 
         if (visible) {
             payload.type = 'shown';
@@ -2100,10 +2194,9 @@ function visibilityChangedDecorator(payload, args) {
             }
         } else {
             let openfinWindow = Window.wrap(payload.uuid, payload.name);
-
+            const { hideReason } = openfinWindow;
             payload.type = 'hidden';
-            payload.reason = openfinWindow.hideReason;
-
+            payload.reason = hideReason === 'hide' && closing ? 'closing' : hideReason;
             // reset to 'hide' in case visibility changes
             // due to a non-API related reason
             openfinWindow.hideReason = 'hide';
@@ -2338,6 +2431,55 @@ function getElectronBrowserWindow(identity, errDesc) {
     }
 
     return browserWindow;
+}
+
+function restoreWindowPosition(identity, cb) {
+    Window.getBoundsFromDisk(identity, savedBounds => {
+
+        const monitorInfo = System.getMonitorInfo();
+
+        if (!boundsVisible(savedBounds, monitorInfo)) {
+            const displayRoot = System.getNearestDisplayRoot({
+                x: savedBounds.left,
+                y: savedBounds.top
+            });
+
+            savedBounds.top = displayRoot.y;
+            savedBounds.left = displayRoot.x;
+        }
+
+        Window.setBounds(identity, savedBounds.left, savedBounds.top, savedBounds.width, savedBounds.height);
+        switch (savedBounds.windowState) {
+            case 'maximized':
+                Window.maximize(identity);
+                break;
+            case 'minimized':
+                Window.minimize(identity);
+                break;
+        }
+
+        cb();
+    }, (err) => {
+        //We care about errors but lets keep window creation going.
+        log.writeToLog('info', err);
+        cb();
+    });
+}
+
+function intersectsRect(bounds, rect) {
+    return !(bounds.left > rect.right || (bounds.left + bounds.width) < rect.left || bounds.top > rect.bottom || (bounds.top + bounds.height) < rect.top);
+}
+
+function boundsVisible(bounds, monitorInfo) {
+    let visible = false;
+    const monitors = [monitorInfo.primaryMonitor].concat(monitorInfo.nonPrimaryMonitors);
+
+    for (let i = 0; i < monitors.length; i++) {
+        if (intersectsRect(bounds, monitors[i].monitorRect)) {
+            visible = true;
+        }
+    }
+    return visible;
 }
 
 module.exports.Window = Window;

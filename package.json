@@ -1,7 +1,7 @@
 {
   "name": "openfin",
   "version": "0.0.1",
-  "description": "The core app of the OpenFin Runtime 6.0",
+  "description": "The core app of the OpenFin Runtime 8",
   "main": "index.js",
   "scripts": {
     "pretest": "grunt babel && grunt ts",
@@ -27,6 +27,7 @@
     "@types/mocha": "^2.2.39",
     "@types/mockery": "^1.4.29",
     "@types/node": "^6.0.49",
+    "@types/rx": "^4.1.1",
     "@types/underscore": "^1.8.0",
     "asar": "^0.12.1",
     "babel-preset-es2015": "^6.1.4",

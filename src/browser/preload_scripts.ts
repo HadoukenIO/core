@@ -16,7 +16,7 @@ limitations under the License.
 
 const Window = require('./api/window.js').Window;
 import { cachedFetch } from './cached_resource_fetcher';
-import { convertToElectron } from './convert_options';
+import { normalizePreloadScripts } from './convert_options';
 import { Identity, PreloadScript } from '../shapes';
 import { readFile } from 'fs';
 import { writeToLog } from './log';
@@ -87,7 +87,7 @@ export async function loadScripts(identity: Identity): Promise<PreloadScriptWith
     } else {
         options = Window.getOptions(identity);
     }
-    const { preloadScripts = [] }: {preloadScripts: Array<PreloadScript>} = convertToElectron(options);
+    const preloadScripts = normalizePreloadScripts(options);
     const promises = preloadScripts.map((preloadScript: PreloadScript) => loadScript(identity, preloadScript));
     return await Promise.all(promises);
 }

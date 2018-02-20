@@ -406,9 +406,7 @@ function getWindowGroup(identity, message, ack) {
     // while the adaptor expects it to be 'windowName'
     dataAck.data = _.map(Window.getGroup(windowIdentity), (window) => {
         if (payload.crossApp === true) {
-            var clone = _.clone(window);
-            clone.windowName = window.name;
-            return clone;
+            return { uuid: window.uuid, name: window.name, windowName: window.name };
         } else {
             return window.name; // backwards compatible
         }

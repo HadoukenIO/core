@@ -4,8 +4,9 @@ Copyright 2017 OpenFin Inc.
 Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
 Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
-import { rvmMessageBus } from '../rvm/rvm_message_bus';
-
+import { rvmMessageBus, ConsoleMessage } from '../rvm/rvm_message_bus';
+import { System } from '../api/system';
+import { setTimeout } from 'timers';
 /**
  * Interface for [sendToRVM] method
  */
@@ -14,6 +15,60 @@ interface SendToRVMOpts {
     action: string;
     sourceUrl?: string;
     data?: any;
+    runtimeVersion?: string;
+    payload?: any;
+}
+
+// 1 MB
+const maxBytes: number = 1000000;
+
+let consoleMessageQueue: ConsoleMessage[] = [];
+let isFlushScheduled: boolean = false;
+let totalBytes: number = 0;
+let timer: NodeJS.Timer = null;
+
+function flushConsoleMessageQueue(): void {
+    totalBytes = 0;
+    isFlushScheduled = false;
+
+    if (consoleMessageQueue.length <= 0) {
+        return;
+    }
+
+    const obj: SendToRVMOpts = {
+        topic: 'application',
+        action: 'application-log',
+        sourceUrl: '', // The actual sourceUrl's are contained in the payload
+        runtimeVersion: System.getVersion(),
+        payload: {
+            messages: JSON.parse(JSON.stringify(consoleMessageQueue))
+        }
+    };
+
+    consoleMessageQueue = [];
+    sendToRVM(obj);
+}
+
+export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage): void {
+    consoleMessageQueue.push(consoleMessage);
+
+    const byteLength = Buffer.byteLength(consoleMessage.message, 'utf8');
+    totalBytes += byteLength;
+
+    // If we have exceeded the byte threshold for messages, flush the queue immediately
+    if (totalBytes >= maxBytes) {
+        if (timer !== null) {
+            clearTimeout(timer);
+            timer = null;
+        }
+
+        flushConsoleMessageQueue();
+
+    // Otherwise if no timer already set, set one to flush the queue in 10s
+    } else if (!isFlushScheduled) {
+        isFlushScheduled = true;
+        timer = setTimeout(flushConsoleMessageQueue, 10000);
+    }
 }
 
 /**

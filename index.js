@@ -236,6 +236,10 @@ app.on('ready', function() {
     app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
     app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
 
+    if (process.platform === 'win32') {
+        log.writeToLog('info', `group-policy build: ${app.isGroupPolicyBuild()}`);
+    }
+    log.writeToLog('info', `build architecture: ${process.arch}`);
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
 
     rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
@@ -585,6 +589,8 @@ function initFirstApp(configObject, configUrl, licenseKey) {
     try {
         startupAppOptions = convertOptions.getStartupAppOptions(configObject);
 
+        validatePreloadScripts(startupAppOptions);
+
         // Needs proper configs
         firstApp = Application.create(startupAppOptions, configUrl);
 
@@ -680,4 +686,43 @@ function registerShortcuts() {
 
 function needsCrashReporter(argo) {
     return !!(argo['diagnostics'] || argo['enable-crash-reporting']);
+}
+
+function validatePreloadScripts(options) {
+    const { name, uuid } = options;
+    const genErrorMsg = (propName) => {
+        return `Invalid shape of '${propName}' window option. Please, consult the API documentation.`;
+    };
+    const isValidPreloadScriptsArray = (v = []) => v.every((e) => {
+        return typeof e === 'object' && typeof e.url === 'string';
+    });
+
+    if ('preload' in options) {
+        log.writeToLog('info', `[preloadScripts] [${uuid}]-[${name}]: 'preload' option ` +
+            `is deprecated, use 'preloadScripts' instead`);
+
+        if (Array.isArray(options.preload)) {
+            if (!isValidPreloadScriptsArray(options.preload)) {
+                throw new Error(genErrorMsg('preload'));
+            }
+        } else if (typeof options.preload !== 'string' && options.preload) {
+            throw new Error(genErrorMsg('preload'));
+        }
+
+    } else if ('preloadScripts' in options) {
+        if (Array.isArray(options.preloadScripts)) {
+            if (!isValidPreloadScriptsArray(options.preloadScripts)) {
+                throw new Error(genErrorMsg('preloadScripts'));
+            }
+        } else {
+            if (options.preloadScripts) {
+                throw new Error(genErrorMsg('preloadScripts'));
+            } else {
+                log.writeToLog('info', `[preloadScripts] [${uuid}]-[${name}]: Consider using an empty ` +
+                    `array with 'preloadScripts', instead of a falsy value`);
+            }
+        }
+    }
+
+    return true;
 }
