@@ -34,7 +34,6 @@ export class ServiceApiHandler {
     }
 
     private registerService(identity: Identity, message: any, ack: any, nack: any) {
-        // const { payload: { serviceName = null } = {} } = message;
         const { payload } = message;
         const { serviceName } = payload;
 
