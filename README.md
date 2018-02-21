@@ -4,6 +4,7 @@
 _The following setup is known to be working well. You can try other versions at your 
 own risk of losing a lot of time._
 * [Visual Studio 2015 Build Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools) *
+* [OpenFin runtime executables](https://developer.openfin.co/versions/?product=Runtime&version=stabe) 
 * [Node](https://nodejs.org/download/release/v6.9.0/) 6.9.0
 * Grunt (`grunt-cli` 1.2.0)
 * [Python 2.7.12](https://www.python.org/downloads/release/python-2712/)
