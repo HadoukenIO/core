@@ -16,6 +16,32 @@ limitations under the License.
 /* global routingId, isMainFrame */
 
 const electron = require('electron');
+const resolvePromise = Promise.resolve.bind(Promise);
+
+const { EventEmitter } = require('events');
+const webFrameFactory = process.atomBinding('web_frame').webFrame;
+
+const defaultWebFrame = webFrameFactory(0);
+
+// WebFrame is an EventEmitter.
+// TODO(SteveB) - Decouple native side from singleton factory and re-introduce correct prototype chain
+Object.setPrototypeOf(defaultWebFrame.__proto__, EventEmitter.prototype);
+
+// Lots of webview would subscribe to webFrame's events.
+defaultWebFrame.setMaxListeners(0);
+
+defaultWebFrame.createForRenderFrame = (id) => {
+    const wf = webFrameFactory(id);
+
+    // WebFrame is an EventEmitter.
+    // TODO(SteveB) - Decouple native side from singleton factory and re-introduce correct prototype chain
+    Object.setPrototypeOf(wf.__proto__, EventEmitter.prototype);
+
+    // Lots of webview would subscribe to webFrame's events.
+    wf.setMaxListeners(0);
+
+    return wf;
+};
 
 const susbcribeForTeardown = (routingId, handlers = []) => {
     process.once(`frame-exit-${routingId}`, () => {
@@ -45,10 +71,44 @@ const apiDecoratorAsString = electron.remote.require('./src/renderer/main').api(
 let perFrameData = {};
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');
 
+const hookWebFrame = (webFrame, renderFrameId) => {
+    console.log('hookWebFrame');
+    electron.ipcRenderer.on(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`, (event, method, args) => {
+        webFrame[method](...args);
+    });
+
+    electron.ipcRenderer.on(`ELECTRON_INTERNAL_RENDERER_SYNC_WEB_FRAME_METHOD-${renderFrameId}`, (event, requestId, method, args) => {
+        const result = webFrame[method](...args);
+        event.sender.send(renderFrameId, `ELECTRON_INTERNAL_BROWSER_SYNC_WEB_FRAME_RESPONSE_${requestId}`, result);
+    });
+
+    electron.ipcRenderer.on(`ELECTRON_INTERNAL_RENDERER_ASYNC_WEB_FRAME_METHOD-${renderFrameId}`, (event, requestId, method, args) => {
+        const responseCallback = function(result) {
+            resolvePromise(result)
+                .then((resolvedResult) => {
+                    event.sender.send(renderFrameId, `ELECTRON_INTERNAL_BROWSER_ASYNC_WEB_FRAME_RESPONSE_${requestId}`, null, resolvedResult);
+                })
+                .catch((resolvedError) => {
+                    event.sender.send(renderFrameId, `ELECTRON_INTERNAL_BROWSER_ASYNC_WEB_FRAME_RESPONSE_${requestId}`, resolvedError);
+                });
+        };
+        args.push(responseCallback);
+        webFrame[method](...args);
+    });
+
+    // Teardown
+    return () => {
+        electron.ipcRenderer.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`);
+        electron.ipcRenderer.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_SYNC_WEB_FRAME_METHOD-${renderFrameId}`);
+        electron.ipcRenderer.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_ASYNC_WEB_FRAME_METHOD-${renderFrameId}`);
+    };
+};
+
+
 // Handle spin-up and tear-down
 const registerAPI = (w, routingId, isMainFrame) => {
     const teardownHandlers = [];
-    // teardownHandlers.push(hookWebFrame(electron.webFrame.createForRenderFrame(routingId), routingId))
+    teardownHandlers.push(hookWebFrame(defaultWebFrame.createForRenderFrame(routingId), routingId));
 
     try {
         if (window.location.protocol === 'chrome-devtools:') {
