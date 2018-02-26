@@ -52,7 +52,8 @@ import { isFileUrl, isHttpUrl } from '../../common/main';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
-    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
+    DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
+    DEFAULT_RESIZE_SIDES
 } from '../../shapes';
 
 const subscriptionManager = new SubscriptionManager();
@@ -173,10 +174,11 @@ let optionSetters = {
             // reapply resize region
             applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
                 if (!browserWin.isDestroyed()) {
-                    let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {
+                    let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {});
+                    resizeRegion = Object.assign({}, {
                         size: DEFAULT_RESIZE_REGION_SIZE,
                         bottomRightCorner: DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER
-                    });
+                    }, resizeRegion);
                     browserWin.setResizeRegion(resizeRegion.size);
                     browserWin.setResizeRegionBottomRight(resizeRegion.bottomRightCorner);
                 }
@@ -185,6 +187,13 @@ let optionSetters = {
             // reapply top-left icon
             setTaskbar(browserWin, true);
         }
+        applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
+            if (!browserWin.isDestroyed()) {
+                let resizeRegion = getOptFromBrowserWin('resizeRegion', browserWin, {});
+                const sides = Object.assign({}, DEFAULT_RESIZE_SIDES, resizeRegion.sides);
+                browserWin.setResizeSides(sides.top, sides.right, sides.bottom, sides.left);
+            }
+        });
     },
     alphaMask: function(newVal, browserWin) {
         if (!newVal || typeof newVal.red !== 'number' || typeof newVal.green !== 'number' || typeof newVal.blue !== 'number') {
@@ -323,20 +332,31 @@ let optionSetters = {
         setTaskbarIcon(browserWin, getWinOptsIconUrl(browserWin._options));
     },
     resizeRegion: function(newVal, browserWin) {
-        if (!newVal || typeof newVal.size !== 'number' || typeof newVal.bottomRightCorner !== 'number') {
-            return;
-        }
+        if (newVal) {
+            if (typeof newVal.size === 'number' && typeof newVal.bottomRightCorner === 'number') {
 
-        applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
-            if (!browserWin.isDestroyed()) {
-                let frame = getOptFromBrowserWin('frame', browserWin, true);
-                if (!frame) {
-                    browserWin.setResizeRegion(newVal.size);
-                    browserWin.setResizeRegionBottomRight(newVal.bottomRightCorner);
-                }
+
+                applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
+                    if (!browserWin.isDestroyed()) {
+                        let frame = getOptFromBrowserWin('frame', browserWin, true);
+                        if (!frame) {
+                            browserWin.setResizeRegion(newVal.size);
+                            browserWin.setResizeRegionBottomRight(newVal.bottomRightCorner);
+                        }
+                    }
+                });
             }
-        });
-        setOptOnBrowserWin('resizeRegion', newVal, browserWin);
+            if (typeof newVal.sides === 'object') {
+                applyAdditionalOptionsToWindowOnVisible(browserWin, () => {
+                    if (!browserWin.isDestroyed()) {
+                        const sides = Object.assign({}, DEFAULT_RESIZE_SIDES, newVal.sides);
+                        browserWin.setResizeSides(sides.top, sides.right,
+                            sides.bottom, sides.left);
+                    }
+                });
+            }
+            setOptOnBrowserWin('resizeRegion', newVal, browserWin);
+        }
     },
     hasLoaded: function(newVal, browserWin) {
         if (typeof(newVal) === 'boolean') {
@@ -1658,7 +1678,9 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
     });
 
     const currentMenu = Menu.buildFromTemplate(menuTemplate);
-    currentMenu.popup(browserWindow);
+    currentMenu.popup(browserWindow, {
+        async: true
+    });
 };
 
 Window.defineDraggableArea = function() {};
@@ -1956,6 +1978,8 @@ function applyAdditionalOptionsToWindow(browserWindow) {
                 browserWindow.setResizeRegion(options.resizeRegion.size);
                 browserWindow.setResizeRegionBottomRight(options.resizeRegion.bottomRightCorner);
             }
+            browserWindow.setResizeSides(options.resizeRegion.sides.top, options.resizeRegion.sides.right,
+                options.resizeRegion.sides.bottom, options.resizeRegion.sides.left);
         }
     });
 }

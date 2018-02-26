@@ -541,9 +541,6 @@ function routeRequest(id: any, msg: NotificationMessage, ack: any) {
 
         case NoteAction.close:
             requestNoteClose(msg);
-
-            // TODO this should actually happen after the close happens
-            dispatchEvent('close', msg);
             break;
 
         case NoteAction.click:
@@ -700,7 +697,7 @@ function closeNotification(req: NotificationMessage): void {
 
     Window.animate(id, animateOpts, {}, () => {
         Window.close(id);
-
+        dispatchEvent('close', req);
         // TODO removeFromExternalMaps(id);
     }, (e: any) => { writeToLog('info', e); });
 }

@@ -20,11 +20,13 @@ import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
 import * as log from './log';
 import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
+import * as authenticationDelegate from './authentication_delegate';
 
 let appQuiting: Boolean = false;
 
 const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 const fetchMap: Map<string, Promise<any>> = new Map();
+const authMap: Map<string, Function> = new Map();  // auth UUID => auth callback
 
 app.on('quit', () => { appQuiting = true; });
 
@@ -176,6 +178,19 @@ function generateHash(str: string): string {
     return hash.digest('hex');
 }
 
+function authRequest(url: string, authInfo: any, authCallback: Function): void {
+    const uuid: string = app.generateGUID();
+    const identity = {
+        name: uuid,
+        uuid: uuid,
+        resourceFetch: true // not tied to a window
+    };
+    log.writeToLog(1, `fetchURL login event ${url} uuid ${uuid} ${JSON.stringify(authInfo)}`, true);
+    authMap.set(uuid, authCallback);
+    authenticationDelegate.addPendingAuthRequests(identity, authInfo, authCallback);
+    authenticationDelegate.createAuthUI(identity);
+}
+
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
@@ -213,10 +228,8 @@ function download(fileUrl: string, filePath: string): Promise<any> {
             });
         });
 
-        request.once('login', (authInfo: any, callback: Function) => {
-            //Simply provide empty credentials to raise the authentication error.
-            //https://github.com/rdepena/electron/blob/master/docs/api/client-request.md#event-login
-            callback();
+        request.on('login', (authInfo: any, callback: Function) => {
+            authRequest(filePath, authInfo, callback);
         });
 
         request.once('error', (err: Error) => {
@@ -256,11 +269,8 @@ export function fetchURL(url: string, done: (resp: any) => void, onError: (err: 
             }
         });
     });
-    request.once('login', (authInfo: any, callback: Function) => {
-        //Simply provide empty credentials to raise the authentication error.
-        //https://github.com/electron/blob/master/docs/api/client-request.md#event-login
-        log.writeToLog(1, `fetchURL login event ${url}`, true);
-        callback();
+    request.on('login', (authInfo: any, callback: Function) => {
+        authRequest(url, authInfo, callback);
     });
     request.once('error', (err: Error) => {
         onError(err);
@@ -284,7 +294,15 @@ export function fetchReadFile(url: string, isJSON: boolean): Promise<string|obje
                 .catch(reject);
 
         } else {
-            reject(new Error(`URL protocol is not supported in ${url}`));
+            stat(url, (err: null|Error) => {
+                if (err) {
+                    reject(new Error(`URL protocol is not supported in ${url}`));
+                } else {
+                    readFile(url, isJSON)
+                        .then(resolve)
+                        .catch(reject);
+                }
+            });
         }
     });
 }
@@ -302,4 +320,14 @@ export function readFile(pathToFile: string, isJSON: boolean): Promise<string|ob
             }
         });
     });
+}
+
+export function authenticateFetch(uuid: string, username: string, password: string): void {
+    if (authMap.has(uuid)) {
+        log.writeToLog(1, `Auth resource fetch uuid ${uuid} ${username}`, true);
+        authMap.get(uuid).call(null, username, password);
+        authMap.delete(uuid);
+    } else {
+        log.writeToLog(1, `Missing resource auth uuid ${uuid}`, true);
+    }
 }

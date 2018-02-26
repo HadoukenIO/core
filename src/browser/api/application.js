@@ -348,7 +348,7 @@ Application.grantWindowAccess = function() {
 };
 Application.isRunning = function(identity) {
     let uuid = identity && identity.uuid;
-    return uuid && coreState.getAppRunningState(uuid) && !coreState.getAppRestartingState(uuid);
+    return !!(uuid && coreState.getAppRunningState(uuid) && !coreState.getAppRestartingState(uuid));
 };
 Application.pingChildWindow = function() {
     console.warn('Deprecated');
@@ -632,7 +632,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
         coreState.removeApp(app.id);
 
-        if (!runtimeIsClosing && coreState.shouldCloseRuntime()) {
+        if (!app._options._runtimeAuthDialog && !runtimeIsClosing && coreState.shouldCloseRuntime()) {
             try {
                 runtimeIsClosing = true;
                 let appsToClose = coreState.getAllAppObjects();

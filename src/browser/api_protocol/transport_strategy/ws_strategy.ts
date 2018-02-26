@@ -108,14 +108,17 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
             ackObj.payload = payload;
             ackObj.correlationId = messageId;
 
-            try {
-                // Log all messages when -v=1
-                /* tslint:disable: max-line-length */
-                system.debugLog(1, `sent external-adapter <= ${id} ${JSON.stringify(ackObj)}`);
-            } catch (err) {
-                /* tslint:disable: no-empty */
+            // Don't try to send a response/ack using closed/closing websocket, because it will error out anyways.
+            // Instead, we are going to print nice error explaining what happened
+            if (!socketServer.isConnectionOpen(id)) {
+                system.debugLog(1,
+                    `Aborted trying to send a response to external-adapter (ID: ${id}). ` +
+                    `Message was going to send: ${JSON.stringify(ackObj)}`
+                );
+                return;
             }
 
+            system.debugLog(1, `sent external-adapter <= ${id} ${JSON.stringify(ackObj)}`);
             socketServer.send(id, JSON.stringify(ackObj));
         };
     }
