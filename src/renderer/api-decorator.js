@@ -40,9 +40,10 @@ limitations under the License.
     let windowId;
     let webContentsId = 0;
 
-    const initialOptions = glbl.__startOptions.options;
-    const entityInfo = glbl.__startOptions.entityInfo;
     const elIPCConfig = glbl.__startOptions.elIPCConfig;
+    const entityInfo = glbl.__startOptions.entityInfo;
+    const initialOptions = glbl.__startOptions.options;
+    const runtimeArguments = glbl.__startOptions.runtimeArguments;
     const socketServerState = glbl.__startOptions.socketServerState;
 
     let getOpenerSuccessCallbackCalled = () => {
@@ -444,7 +445,10 @@ limitations under the License.
         const { uuid, name } = initialOptions;
 
         if (!isNotificationType(name)) {
-            evalPlugins(uuid, name);
+            if (!runtimeArguments.includes('--async-plugins')) {
+                // Synchronous (old) implementation of plugin loading
+                evalPlugins(uuid, name);
+            }
             evalPreloadScripts(uuid, name);
         }
     });
