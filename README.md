@@ -35,7 +35,7 @@ npm install
 npm install -g openfin-cli
 ```
 
-* Create a manifest file [Manifest file docs](https://openfin.co/application-config/), targeting a valid version [Runtime versions](https://developer.openfin.co/versions/?product=Runtime&version=stabe)
+* Create a manifest file [Manifest file docs](https://openfin.co/application-config/), targeting a valid version [Runtime versions](https://developer.openfin.co/versions/?product=Runtime&version=stable)
 
 app.json
 ```javascript
