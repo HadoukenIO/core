@@ -18,30 +18,7 @@ limitations under the License.
 const electron = require('electron');
 const resolvePromise = Promise.resolve.bind(Promise);
 
-const { EventEmitter } = require('events');
-const webFrameFactory = process.atomBinding('web_frame').webFrame;
-
-const defaultWebFrame = webFrameFactory(0);
-
-// WebFrame is an EventEmitter.
-// TODO(SteveB) - Decouple native side from singleton factory and re-introduce correct prototype chain
-Object.setPrototypeOf(defaultWebFrame.__proto__, EventEmitter.prototype);
-
-// Lots of webview would subscribe to webFrame's events.
-defaultWebFrame.setMaxListeners(0);
-
-defaultWebFrame.createForRenderFrame = (id) => {
-    const wf = webFrameFactory(id);
-
-    // WebFrame is an EventEmitter.
-    // TODO(SteveB) - Decouple native side from singleton factory and re-introduce correct prototype chain
-    Object.setPrototypeOf(wf.__proto__, EventEmitter.prototype);
-
-    // Lots of webview would subscribe to webFrame's events.
-    wf.setMaxListeners(0);
-
-    return wf;
-};
+const defaultWebFrame = electron.webFrame;
 
 const susbcribeForTeardown = (routingId, handlers = []) => {
     process.once(`frame-exit-${routingId}`, () => {
