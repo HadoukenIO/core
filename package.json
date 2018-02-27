@@ -6,7 +6,9 @@
   "scripts": {
     "pretest": "grunt babel && grunt ts",
     "test": "grunt test",
-    "postinstall": "grunt"
+    "postinstall": "grunt",
+    "deploy": "grunt deploy",
+    "build": "grunt"
   },
   "repository": {
     "type": "git",

@@ -19,25 +19,30 @@ let fs = require('fs');
 let path = require('path');
 const coreState = require('../browser/core_state.js');
 
+function readAdapterFromSearchPaths(searchPaths, packageFile) {
+    let adapter = '';
+    for (let adapterPath of searchPaths) {
+        try {
+            adapter = fs.readFileSync(path.join(process.resourcesPath, adapterPath, packageFile), 'utf8');
+            break;
+        } catch (error) {
+            continue;
+        }
+    }
+    return adapter;
+}
+
 // check resources/adapter/openfin-desktop.js then
 // resources/adapter.asar/openfin-desktop.js
 // for ease of developement
-let jsAdapter = '';
 const searchPaths = ['adapter', 'adapter.asar'];
-for (let adapterPath of searchPaths) {
-    try {
-        jsAdapter = fs.readFileSync(path.join(process.resourcesPath, adapterPath, 'openfin-desktop.js'), 'utf8');
-        break;
-    } catch (error) {
-        continue;
-    }
-}
+const jsAdapter = readAdapterFromSearchPaths(searchPaths, 'openfin-desktop.js');
 
-let jsAdapterV2 = '';
-try {
-    const jsAdapterV2Path = path.join(process.resourcesPath, 'js-adapter.asar', 'js-adapter.js');
-    jsAdapterV2 = fs.readFileSync(jsAdapterV2Path, 'utf8');
-} catch (error) {}
+// check resources/js-adapter/js-adapter.js then
+// resources/js-adapter.asar/openfin-desktop.js
+// for ease of developement
+const searchPathsV2Api = ['js-adapter', 'js-adapter.asar'];
+const jsAdapterV2 = readAdapterFromSearchPaths(searchPathsV2Api, 'js-adapter.js');
 
 // Remove strict (Prevents, as of now, poorly understood memory lifetime scoping issues with remote module)
 let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
