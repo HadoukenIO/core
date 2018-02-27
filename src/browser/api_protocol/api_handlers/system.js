@@ -454,9 +454,7 @@ function SystemApiHandler() {
     }
 
     function flushCookieStore(identity, message, ack, nack) {
-        System.flushCookieStore(function() {
-            ack(successAck);
-        });
+        System.flushCookieStore(() => ack(successAck));
     }
 
     function terminateExternalProcess(identity, message, ack) {

@@ -628,9 +628,7 @@ exports.System = {
         }
     },
     flushCookieStore: function(callback) {
-        session.defaultSession.cookies.flushStore(() => {
-            callback();
-        });
+        session.defaultSession.cookies.flushStore(callback);
     },
     generateGUID: function() {
         return electronApp.generateGUID();
