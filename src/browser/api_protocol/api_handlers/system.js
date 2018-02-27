@@ -58,6 +58,7 @@ function SystemApiHandler() {
         'download-preload-scripts': downloadPreloadScripts,
         'download-runtime': { apiFunc: downloadRuntime, apiPath: '.downloadRuntime' },
         'exit-desktop': { apiFunc: exitDesktop, apiPath: '.exitDesktop' },
+        'flush-cookie-store': { apiFunc: flushCookieStore, apiPath: '.flushCookieStore' },
         'generate-guid': generateGuid,
         'get-all-applications': getAllApplications,
         'get-all-external-applications': getAllExternalApplications,
@@ -450,6 +451,12 @@ function SystemApiHandler() {
             nack(err);
         });
 
+    }
+
+    function flushCookieStore(identity, message, ack, nack) {
+        System.flushCookieStore(function() {
+            ack(successAck);
+        });
     }
 
     function terminateExternalProcess(identity, message, ack) {
