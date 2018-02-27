@@ -41,14 +41,18 @@ const pluginPaths: Map<string, string> = new Map();
 export async function getModules(identity: Identity): Promise<PluginWithContent[]> {
     const { url, manifest } = getManifest(identity);
     const { plugins = [] } = manifest || {};
-    const promises = plugins.map((plugin: Plugin) => getModule(identity, url, plugin));
+    const promises = plugins.map((plugin: Plugin) => getModule(identity, plugin, url));
     return await Promise.all(promises);
 }
 
 /**
  * Gets a single plugin module
  */
-async function getModule(identity: Identity, sourceUrl: string, plugin: Plugin): Promise<PluginWithContent> {
+export async function getModule(identity: Identity, plugin: Plugin, sourceUrl?: string): Promise<PluginWithContent> {
+    if (!sourceUrl) {
+        sourceUrl = getManifest(identity).url;
+    }
+
     const id = `${plugin.name}: ${plugin.version}`;
     let pluginPath;
 

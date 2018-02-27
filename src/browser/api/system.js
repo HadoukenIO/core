@@ -703,6 +703,10 @@ exports.System = {
         return downloadScripts(identity, preloadScripts);
     },
 
+    getPluginModule: function(identity, plugin) {
+        return plugins.getModule(identity, plugin);
+    },
+
     getPluginModules: function(identity) {
         return plugins.getModules(identity);
     },

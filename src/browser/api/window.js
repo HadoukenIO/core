@@ -1279,6 +1279,12 @@ Window.setWindowPluginState = function(identity, payload) {
     // Single plugin state change
     if (!allDone) {
         plugins = plugins.filter(e => e.name === pluginName && e.version === version);
+
+        // If plugin not found / invalid plugin specified, then exit early
+        if (!plugins.length) {
+            return;
+        }
+
         plugins[0].state = state;
     }
 
