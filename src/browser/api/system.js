@@ -627,6 +627,9 @@ exports.System = {
             errorCallback(`Error getting cookies`);
         }
     },
+    flushCookieStore: function(callback) {
+        session.defaultSession.cookies.flushStore(callback);
+    },
     generateGUID: function() {
         return electronApp.generateGUID();
     },
