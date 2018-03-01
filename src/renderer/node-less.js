@@ -123,6 +123,8 @@ const registerAPI = (w, routingId, isMainFrame) => {
 
         w.eval(apiDecoratorAsString);
 
+        w.console.warn('Using experimental feature: nodeless renderer');
+
         let inboundMessageTopic = '';
 
         if (w.fin) {
