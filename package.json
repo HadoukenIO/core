@@ -4,11 +4,11 @@
   "description": "The core app of the OpenFin Runtime 8",
   "main": "index.js",
   "scripts": {
-    "pretest": "grunt babel && grunt ts",
-    "test": "grunt test",
-    "postinstall": "grunt",
+    "build": "grunt",
     "deploy": "grunt deploy",
-    "build": "grunt"
+    "postinstall": "grunt",
+    "pretest": "grunt babel && grunt ts",
+    "test": "grunt test"
   },
   "repository": {
     "type": "git",
