@@ -110,10 +110,6 @@ limitations under the License.
         return socketServerState;
     }
 
-    function generateGuidSync() {
-        return syncApiCall('generate-guid');
-    }
-
     function convertOptionsToElectronSync(options) {
         return syncApiCall('convert-options', options);
     }
@@ -322,7 +318,7 @@ limitations under the License.
         let requestId = ++childWindowRequestId;
         // initialize what's needed to create a child window via window.open
         let url = ((options || {}).url || undefined);
-        let uniqueKey = generateGuidSync();
+        let uniqueKey = fin.desktop.getUuid();
         let frameName = `openfin-child-window-${uniqueKey}`; //((options || {}).frameName || undefined);
         let features = ((options || {}).features || undefined);
         let webContentsId = getWebContentsId();
@@ -417,7 +413,7 @@ limitations under the License.
                     onContentReady(window, cb);
                 }
             },
-            getUuid: generateGuidSync,
+            getUuid: process.getGUID,
             getVersion: () => {
                 return openfinVersion;
             }
