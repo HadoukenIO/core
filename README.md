@@ -61,7 +61,7 @@ openfin --config app.json --launch
 
 * Replace the OpenFin core with a built Hadouken core
 ```bash
-grunt deploy --target=C:\Users\[username]\AppData\Local\OpenFin\runtime\[replace this with a version]\OpenFin\resources
+npm run deploy -- --target=C:\Users\[username]\AppData\Local\OpenFin\runtime\[replace this with a version]\OpenFin\resources
 ```
 
 * Now you can re-launch the OpenFin runtime with the modified Hadouken core.
