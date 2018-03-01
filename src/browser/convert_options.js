@@ -74,7 +74,7 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'disableInitialReload': false,
-            'node': true,
+            'node': false,
             'v2Api': false
         },
         'frame': true,
