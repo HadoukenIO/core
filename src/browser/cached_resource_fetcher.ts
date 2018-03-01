@@ -104,6 +104,7 @@ function makeDirectory(location: string) {
     return new Promise((resolve, reject) => {
         mkdir(location, (err: null | Error) => {
             if (err) {
+                app.vlog(1, `cachedFetch makeDirectory error, check EEXIST ${err.message}`);
                 // EEXIST not an error
                 pathExists(location).then(value => value ? resolve() : reject(err))
                     .catch(() => {
@@ -117,8 +118,6 @@ function makeDirectory(location: string) {
     });
 }
 
-let makingCacheDir = false;
-let makingAppDir = false;
 
 async function prepDownloadLocation(appCacheDir: string) {
     const appCacheDirExists = await pathExists(appCacheDir);
@@ -130,16 +129,13 @@ async function prepDownloadLocation(appCacheDir: string) {
     const rootCachePath = getRootCachePath();
     const cacheRootPathExists = await pathExists(rootCachePath);
 
-    if (!cacheRootPathExists && !makingCacheDir) {
-        makingCacheDir = true;
+    if (!cacheRootPathExists) {
         await makeDirectory(rootCachePath);
-        makingCacheDir = false;
     }
 
-    if (!makingAppDir) {
-        makingAppDir = true;
+    const cacheAppPathExists = await pathExists(appCacheDir);
+    if (!cacheAppPathExists) {
         await makeDirectory(appCacheDir);
-        makingAppDir = false;
     }
 
     return;
