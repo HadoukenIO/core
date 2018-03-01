@@ -86,6 +86,8 @@ const registerAPI = (w, routingId, isMainFrame) => {
 
         w.eval(apiDecoratorAsString);
 
+        w.console.warn('node-less renderer');
+
         let inboundMessageTopic = '';
 
         if (w.fin) {
