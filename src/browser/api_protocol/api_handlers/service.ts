@@ -33,7 +33,7 @@ export class ServiceApiHandler {
         apiProtocolBase.registerActionMap(this.actionMap);
     }
 
-    private registerService(identity: Identity, message: any, ack: any, nack: any) {
+    private registerService(identity: Identity, message: any, ack: any, nack: any): void {
         const { payload } = message;
         const { serviceName } = payload;
 

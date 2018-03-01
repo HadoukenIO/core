@@ -97,7 +97,7 @@ function EventListenerApiHandler() {
                 const frameIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
                 const targetUuid = frameIdentity.uuid;
                 const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
-                const localUnsub = Frame.addEventListener(identity, frameIdentity, type, cb);
+                const localUnsub = Frame.addEventListener(frameIdentity, type, cb);
                 let remoteUnSub;
                 const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
@@ -160,9 +160,7 @@ function EventListenerApiHandler() {
         'service': {
             name: 'service',
             subscribe: function(identity, type, payload, cb) {
-                const {
-                    uuid
-                } = payload;
+                const { uuid } = payload;
                 const serviceIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
                 const targetUuid = serviceIdentity.uuid;
                 const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);

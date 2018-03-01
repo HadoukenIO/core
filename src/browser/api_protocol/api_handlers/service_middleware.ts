@@ -26,6 +26,11 @@ const SERVICE_API_ACTION = 'send-service-message';
 const SERVICE_APP_ACTION = 'process-service-action';
 const SERVICE_ACK_ACTION = 'service-ack';
 
+interface TargetIdentity {
+    targetIdentity: false | OpenFinWindow;
+    serviceIdentity: ServiceIdentity;
+}
+
 const remoteAckMap: Map<string, RemoteAck> = new Map();
 const pendingServiceConnections: Map<string, MessagePackage[]> = new Map();
 
@@ -33,14 +38,14 @@ function getAckKey(id: number, identity: Identity): string {
     return `${ id }-${ identity.uuid }`;
 }
 
-function waitForServiceRegistration(uuid: string, msg: MessagePackage) {
+function waitForServiceRegistration(uuid: string, msg: MessagePackage): void {
     if (!Array.isArray(pendingServiceConnections.get(uuid))) {
         pendingServiceConnections.set(uuid, []);
     }
     pendingServiceConnections.get(uuid).push(msg);
 }
 
-export function applyPendingServiceConnections(uuid: string) {
+export function applyPendingServiceConnections(uuid: string): void {
     const pendingConnections = pendingServiceConnections.get(uuid);
     if (pendingConnections) {
         pendingConnections.forEach(connectionMsg => {
@@ -50,7 +55,7 @@ export function applyPendingServiceConnections(uuid: string) {
     }
 }
 
-function setTargetIdentity(identity: Identity, payload: any): { targetIdentity: false | OpenFinWindow, serviceIdentity: ServiceIdentity } {
+function setTargetIdentity(identity: Identity, payload: any): TargetIdentity {
     const { uuid, name } = payload;
     if (payload.connectAction) {
         // If initial connection to a service, identity may exist but not be registered;

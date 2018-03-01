@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 import { applyPendingServiceConnections } from '../api_protocol/api_handlers/service_middleware';
-import { Identity, ServiceIdentity } from '../../shapes';
+import { Identity, ServiceIdentity, EventPayload } from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
 
@@ -23,14 +23,14 @@ import route from '../../common/route';
 const serviceMap: Map<string, ServiceIdentity> = new Map();
 
 export module Service {
-    export function addEventListener(targetIdentity: Identity, type: string, listener: Function) {
+    export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
         // treating like an application so it will work for external connections as well
         const eventString = route.service(type, targetIdentity.uuid);
         const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
         let unsubscribe;
         let browserWinIsDead;
 
-        const safeListener = (...args: any[]) => {
+        const safeListener = (...args: any[]): void => {
             try {
                 listener.call(null, ...args);
             } catch (err) {
@@ -44,13 +44,13 @@ export module Service {
 
         ofEvents.on(eventString, safeListener);
 
-        unsubscribe = () => {
+        unsubscribe = (): void => {
             ofEvents.removeListener(eventString, safeListener);
         };
         return unsubscribe;
     }
 
-    export function getServiceByUuid(uuid: string) {
+    export function getServiceByUuid(uuid: string): ServiceI {
         return serviceMap.get(uuid);
     }
 
