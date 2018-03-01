@@ -80,6 +80,7 @@ function SystemApiHandler() {
         'get-proxy-settings': getProxySettings,
         'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
         'get-rvm-info': getRvmInfo,
+        'get-plugin-module': getPluginModule,
         'get-plugin-modules': getPluginModules,
         'get-preload-scripts': getPreloadScripts,
         'get-version': getVersion,
@@ -542,6 +543,18 @@ function SystemApiHandler() {
             .then((preloadScripts) => {
                 const dataAck = _.clone(successAck);
                 dataAck.data = preloadScripts;
+                ack(dataAck);
+            })
+            .catch(nack);
+    }
+
+    function getPluginModule(identity, message, ack, nack) {
+        const { payload: { plugin } } = message;
+
+        System.getPluginModule(identity, plugin)
+            .then((pluginModule) => {
+                const dataAck = _.clone(successAck);
+                dataAck.data = pluginModule;
                 ack(dataAck);
             })
             .catch(nack);
