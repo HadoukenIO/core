@@ -24,7 +24,6 @@ const serviceMap: Map<string, ServiceIdentity> = new Map();
 
 export module Service {
     export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
-        // treating like an application so it will work for external connections as well
         const eventString = route.service(type, targetIdentity.uuid);
         const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
         let unsubscribe;
@@ -34,6 +33,7 @@ export module Service {
             try {
                 listener.call(null, ...args);
             } catch (err) {
+                // Treating this like app, amend when it can be external application as well
                 browserWinIsDead = errRegex.test(err.message);
 
                 if (browserWinIsDead) {
@@ -50,12 +50,12 @@ export module Service {
         return unsubscribe;
     }
 
-    export function getServiceByUuid(uuid: string): ServiceI {
+    export function getServiceByUuid(uuid: string): ServiceIdentity {
         return serviceMap.get(uuid);
     }
 
     // Could be any identifier
-    export function getServiceByName(name: string): any {
+    export function getServiceByName(name: string): ServiceIdentity {
         let serviceIdentity;
         serviceMap.forEach((value, key) => {
             if (value.serviceName === name) {
@@ -65,7 +65,7 @@ export module Service {
         return serviceIdentity;
     }
 
-    export function registerService (identity: Identity, serviceName?: string) {
+    export function registerService (identity: Identity, serviceName?: string): {serviceIdentity: ServiceIdentity} | false {
         // If a service is already registered from that uuid, nack
         const { uuid, name } = identity;
         if (serviceMap.get(uuid)) {
