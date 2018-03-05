@@ -48,7 +48,6 @@ const apiDecoratorAsString = electron.remote.require('./src/renderer/main').api(
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');
 
 const hookWebFrame = (webFrame, renderFrameId) => {
-    console.log('hookWebFrame');
     electron.ipcRenderer.on(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`, (event, method, args) => {
         webFrame[method](...args);
     });
