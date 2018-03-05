@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 import ofEvents from '../of_events';
-import { Identity, OpenFinWindow } from '../../shapes';
+import { Identity, OpenFinWindow, EventPayload } from '../../shapes';
 import route from '../../common/route';
 import * as  coreState from '../core_state';
 import * as log from '../log';
@@ -37,7 +37,7 @@ export class FrameInfo implements Shapes.FrameInfo {
 }
 
 export module Frame {
-    export function addEventListener (identity: Identity, targetIdentity: Identity, type: string, listener: Function) {
+    export function addEventListener (targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) {
         const eventString = route.frame(type, targetIdentity.uuid, targetIdentity.name);
         const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
         let unsubscribe;

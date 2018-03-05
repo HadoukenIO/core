@@ -20,6 +20,12 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
+export interface ServiceIdentity {
+    uuid: string;
+    name?: string;
+    serviceName: string;
+}
+
 export interface ResourceFetchIdentity extends Identity {
     resourceFetch?: boolean;
 }
@@ -323,4 +329,11 @@ export interface PreloadScript {
 
 export interface PreloadScriptState extends PreloadScript {
     state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
+}
+
+export interface EventPayload {
+    type: string;
+    topic: string;
+    uuid: string;
+    name?: string;
 }

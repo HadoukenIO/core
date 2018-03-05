@@ -27,6 +27,7 @@ let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
+import { Service } from '../../api/service';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -96,7 +97,7 @@ function EventListenerApiHandler() {
                 const frameIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
                 const targetUuid = frameIdentity.uuid;
                 const islocalWindow = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
-                const localUnsub = Frame.addEventListener(identity, frameIdentity, type, cb);
+                const localUnsub = Frame.addEventListener(frameIdentity, type, cb);
                 let remoteUnSub;
                 const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
@@ -140,6 +141,38 @@ function EventListenerApiHandler() {
                         uuid,
                         listenType: 'on',
                         className: 'application',
+                        eventName: type
+                    };
+
+                    addRemoteSubscription(subscription).then(unSubscribe => {
+                        remoteUnSub = unSubscribe;
+                    });
+                }
+
+                return () => {
+                    localUnsub();
+                    if (typeof remoteUnSub === 'function') {
+                        remoteUnSub();
+                    }
+                };
+            }
+        },
+        'service': {
+            name: 'service',
+            subscribe: function(identity, type, payload, cb) {
+                const { uuid } = payload;
+                const serviceIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+                const targetUuid = serviceIdentity.uuid;
+                const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
+                const localUnsub = Service.addEventListener(serviceIdentity, type, cb);
+                let remoteUnSub;
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+
+                if (!islocalApp && !isExternalClient) {
+                    const subscription = {
+                        uuid,
+                        listenType: 'on',
+                        className: 'service',
                         eventName: type
                     };
 
