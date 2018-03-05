@@ -45,7 +45,6 @@ process.versions.cachePath = electron.remote.app.getPath('userData');
 const mainWindowId = electron.remote.getCurrentWindow(process.versions.mainFrameRoutingId).id;
 const apiDecoratorAsString = electron.remote.require('./src/renderer/main').api(mainWindowId);
 
-let perFrameData = {};
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');
 
 const hookWebFrame = (webFrame, renderFrameId) => {
@@ -98,10 +97,7 @@ const registerAPI = (w, routingId, isMainFrame) => {
         // Mock as a Node/Electron environment
         // ===================================
         // let global = w;
-        w.getFrameData = (routingId) => {
-            perFrameData[routingId] = perFrameData[routingId] || {};
-            return perFrameData[routingId];
-        };
+        w.getFrameData = process.getFrameData;
 
         w.require = require;
         // w.debugMessages.push('w.require = require;');
