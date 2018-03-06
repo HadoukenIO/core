@@ -594,6 +594,16 @@ Window.create = function(id, opts) {
             // Removing 'show-requested' listeners will allow the crashed window to be shown so it can be closed.
             const showRequested = route.window('show-requested', uuid, name);
             ofEvents.removeAllListeners(showRequested);
+
+            const closeMessage = `Window ${uuid}/${name} crashed and was force closed`;
+            const closeFailMessage = `Window ${uuid}/${name} crashed and was not able to be cleaned up`;
+
+            try {
+                Window.close({ uuid, name }, true, () => log.writeToLog('info', closeMessage));
+            } catch (e) {
+                log.writeToLog('info', closeFailMessage);
+                log.writeToLog('info', e);
+            }
         });
 
         browserWindow.on('responsive', () => {
