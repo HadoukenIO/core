@@ -65,7 +65,7 @@ export module Service {
         return serviceIdentity;
     }
 
-    export function registerService (identity: Identity, serviceName?: string): {serviceIdentity: ServiceIdentity} | false {
+    export function registerService (identity: Identity, serviceName?: string): ServiceIdentity | false {
         // If a service is already registered from that uuid, nack
         const { uuid, name } = identity;
         if (serviceMap.get(uuid)) {
@@ -92,6 +92,6 @@ export module Service {
             applyPendingServiceConnections(uuid);
         }, 1);
 
-        return { serviceIdentity };
+        return serviceIdentity;
     }
 }
