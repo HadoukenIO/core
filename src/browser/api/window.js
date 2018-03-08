@@ -595,15 +595,7 @@ Window.create = function(id, opts) {
             const showRequested = route.window('show-requested', uuid, name);
             ofEvents.removeAllListeners(showRequested);
 
-            const closeMessage = `Window ${uuid}/${name} crashed and was force closed`;
-            const closeFailMessage = `Window ${uuid}/${name} crashed and was not able to be cleaned up`;
-
-            try {
-                Window.close({ uuid, name }, true, () => log.writeToLog('info', closeMessage));
-            } catch (e) {
-                log.writeToLog('info', closeFailMessage);
-                log.writeToLog('info', e);
-            }
+            coreState.setAppRunningState(uuid, false);
         });
 
         browserWindow.on('responsive', () => {
