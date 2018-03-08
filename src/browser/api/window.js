@@ -567,9 +567,8 @@ Window.create = function(id, opts) {
             }
         });
 
+        const isMainWindow = (uuid === name);
         const emitToAppAndWin = (type, payload) => {
-            let isMainWindow = (uuid === name);
-
             // Window crashed: inform Window "namespace"
             ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
 
@@ -591,11 +590,14 @@ Window.create = function(id, opts) {
             // Removing 'close-requested' listeners will allow the crashed window to be closed manually easily.
             const closeRequested = route.window('close-requested', uuid, name);
             ofEvents.removeAllListeners(closeRequested);
+
             // Removing 'show-requested' listeners will allow the crashed window to be shown so it can be closed.
             const showRequested = route.window('show-requested', uuid, name);
             ofEvents.removeAllListeners(showRequested);
 
-            coreState.setAppRunningState(uuid, false);
+            if (isMainWindow) {
+                coreState.setAppRunningState(uuid, false);
+            }
         });
 
         browserWindow.on('responsive', () => {
