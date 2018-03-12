@@ -73,6 +73,12 @@ function five0BaseOptions() {
         'draggable': false,
         'exitOnClose': false,
         'experimental': {
+            'api': {
+                'iframe': {
+                    'crossOriginInjection': false,
+                    'sameOriginInjection': true
+                }
+            },
             'disableInitialReload': false,
             'node': false,
             'v2Api': false
@@ -237,6 +243,7 @@ module.exports = {
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
+            api: newOptions.experimental.api,
             disableInitialReload: newOptions.experimental.disableInitialReload,
             nodeIntegration: false,
             plugins: newOptions.plugins,
