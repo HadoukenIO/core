@@ -35,7 +35,7 @@ const remoteAckMap: Map<string, RemoteAck> = new Map();
 const pendingServiceConnections: Map<string, MessagePackage[]> = new Map();
 
 function getAckKey(id: number, identity: Identity): string {
-    return `${ id }-${ identity.uuid }`;
+    return `${ id }-${ identity.uuid }-${ identity.name }`;
 }
 
 function waitForServiceRegistration(uuid: string, msg: MessagePackage): void {
