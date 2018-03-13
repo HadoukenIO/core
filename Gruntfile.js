@@ -28,6 +28,9 @@ const asar = require('asar');
 const nativeBuilder = require('electron-rebuild');
 const wrench = require('wrench');
 
+// OpenFin signing module
+const openfinSign = require('openfin-sign');
+
 const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
 const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
 
@@ -47,11 +50,6 @@ const beautifierOptions = {
     }
 };
 
-try {
-    var openfinSign = require('openfin-sign');
-} catch (err) {
-    openfinSign = function() {};
-}
 
 
 // OpenFin commercial license
