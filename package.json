@@ -21,7 +21,6 @@
   },
   "homepage": "https://github.com/openfin/openfin",
   "optionalDependencies": {
-    "openfin-sign": "git+ssh://git@github.com:openfin/openfin-sign.git#caee55ecbe6f81e6ed9630790781fe4d1835cb03",
     "runtime-p2p": "git+ssh://git@github.com:openfin/runtime-p2p.git#7426ace77dbe87b73a54181b46be0938c15d81ba"
   },
   "devDependencies": {
@@ -47,6 +46,7 @@
     "load-grunt-tasks": "^3.3.0",
     "mocha": "^3.0.2",
     "mockery": "^2.0.0",
+    "openfin-sign": "git+ssh://git@github.com:openfin/openfin-sign.git#v1.0.0",
     "rewire": "^2.5.2",
     "should": "^11.1.0",
     "should-sinon": "^0.0.5",
