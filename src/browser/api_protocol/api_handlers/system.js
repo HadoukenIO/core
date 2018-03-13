@@ -90,6 +90,7 @@ function SystemApiHandler() {
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
         'raise-event': raiseEvent,
+        'raise-many-events': raiseManyEvents,
         'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue', apiPolicyDelegate: ReadRegistryValuePolicyDelegate },
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
@@ -182,6 +183,10 @@ function SystemApiHandler() {
 
         System.raiseEvent(evt, eventArgs);
         ack(successAck);
+    }
+
+    function raiseManyEvents(identity, message) {
+        return System.raiseManyEvents(message.payload);
     }
 
     function convertOptions(identity, message, ack) {

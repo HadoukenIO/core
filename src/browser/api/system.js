@@ -642,6 +642,14 @@ exports.System = {
     raiseEvent: function(eventName, eventArgs) {
         return ofEvents.emit(eventName, eventArgs);
     },
+    // eventsIter is an Array or other iterable object (such as a Map or Set)
+    // whose elements are [key, value] pairs when iterated over
+    raiseManyEvents: function(eventsIter) {
+
+        for (let [eventName, args] of eventsIter) {
+            ofEvents.emit(eventName, args);
+        }
+    },
     downloadAsset: function(identity, asset, cb) {
         const srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
         const downloadId = asset.downloadId;
