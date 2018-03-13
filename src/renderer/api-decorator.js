@@ -215,21 +215,24 @@ limitations under the License.
         const { uuid, name, parent, entityType } = entityInfo;
         const winIdentity = { uuid, name };
         const parentFrameName = parent.name || name;
+        const eventMap = new Map();
 
-        raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
+        eventMap.set(`window/initialized/${uuid}-${name}`, winIdentity);
 
         // main window
         if (uuid === name) {
-            raiseEventSync(`application/initialized/${uuid}`);
+            eventMap.set(`application/initialized/${uuid}`);
         }
 
-        raiseEventSync(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
-        raiseEventSync(`window/connected/${uuid}-${name}`, winIdentity);
-        raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
+        eventMap.set(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
+        eventMap.set(`window/connected/${uuid}-${name}`, winIdentity);
+        eventMap.set(`window/frame-connected/${uuid}-${parentFrameName}`, {
             frameName: name,
             entityType
         });
-        raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
+        eventMap.set(`frame/connected/${uuid}-${name}`, winIdentity);
+
+        asyncApiCall('raise-many-events', [...eventMap]);
     }
 
     function deferByTick(callback) {
