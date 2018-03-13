@@ -34,7 +34,6 @@ const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
 //optional dependencies that we ship.
 const optionalDependencies = [
     'hadouken-js-adapter/**',
-    'runtime-p2p/**'
 ];
 
 const jsAdapterPath = path.join('node_modules', 'hadouken-js-adapter', 'out');

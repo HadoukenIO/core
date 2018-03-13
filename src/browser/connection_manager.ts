@@ -30,6 +30,7 @@ import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 import { ArgMap, PortInfo } from './port_discovery';
 import * as log from './log';
 import * as  coreState from './core_state';
+import { PeerConnectionManager } from './runtime_p2p/peer_connection_manager';
 
 const enableMeshFlag = 'enable-mesh';
 const securityRealmFlag = 'security-realm';
@@ -41,7 +42,7 @@ buildNoopConnectionManager();
 
 function startConnectionManager() {
     try {
-        connectionManager = require('runtime-p2p').connectionManager;
+        connectionManager = new PeerConnectionManager();
         meshEnabled = true;
         log.writeToLog('info', 'multi-runtime mode enabled');
     } catch (e) {
