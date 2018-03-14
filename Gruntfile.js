@@ -60,9 +60,6 @@ Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
 */
 `;
 
-// Open-source license
-const openSourceLic = `/*\n${ fs.readFileSync('./LICENSE') }*/\n`;
-
 module.exports = (grunt) => {
 
     // The default task is to build and and package resulting in an asar file in ./out/
@@ -339,6 +336,9 @@ module.exports = (grunt) => {
      * 3. grunt license:remove - will remove licenses from all files
      */
     grunt.registerTask('license', (option) => {
+        // Open-source license
+        const openSourceLic = `/*\n${ fs.readFileSync('./LICENSE') }*/\n`;
+
         let foundLicensingProblem = false;
 
         // List of files that must have OpenFin commercial license
