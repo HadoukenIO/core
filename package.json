@@ -43,7 +43,7 @@
     "load-grunt-tasks": "^3.3.0",
     "mocha": "^3.0.2",
     "mockery": "^2.0.0",
-    "openfin-sign": "git+ssh://git@github.com:openfin/openfin-sign.git#v1.0.0",
+    "openfin-sign": "openfin/openfin-sign.git#v1.0.0",
     "rewire": "^2.5.2",
     "should": "^11.1.0",
     "should-sinon": "^0.0.5",
