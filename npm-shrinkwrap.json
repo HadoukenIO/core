@@ -3860,8 +3860,8 @@
     },
     "openfin-sign": {
       "version": "1.0.0",
-      "from": "git+ssh://git@github.com/openfin/openfin-sign.git#v1.0.0",
-      "resolved": "git+ssh://git@github.com/openfin/openfin-sign.git#8a43b6cf28148c099a25663143263e42b5ef9b41",
+      "from": "openfin/openfin-sign#v1.0.0",
+      "resolved": "git://github.com/openfin/openfin-sign.git#8a43b6cf28148c099a25663143263e42b5ef9b41",
       "dev": true
     },
     "options": {
@@ -4225,12 +4225,6 @@
           "dev": true
         }
       }
-    },
-    "runtime-p2p": {
-      "version": "0.0.1",
-      "from": "runtime-p2p@git+ssh://git@github.com/openfin/runtime-p2p.git#7426ace77dbe87b73a54181b46be0938c15d81ba",
-      "resolved": "git+ssh://git@github.com/openfin/runtime-p2p.git#7426ace77dbe87b73a54181b46be0938c15d81ba",
-      "optional": true
     },
     "rx": {
       "version": "4.1.0",
