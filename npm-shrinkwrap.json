@@ -3845,8 +3845,8 @@
     },
     "openfin-sign": {
       "version": "1.0.0",
-      "from": "git+ssh://git@github.com/openfin/openfin-sign.git#v1.0.0",
-      "resolved": "git+ssh://git@github.com/openfin/openfin-sign.git#8a43b6cf28148c099a25663143263e42b5ef9b41",
+      "from": "openfin/openfin-sign#v1.0.0",
+      "resolved": "git://github.com/openfin/openfin-sign.git#8a43b6cf28148c099a25663143263e42b5ef9b41",
       "dev": true
     },
     "options": {
