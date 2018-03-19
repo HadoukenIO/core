@@ -4226,12 +4226,6 @@
         }
       }
     },
-    "runtime-p2p": {
-      "version": "0.0.1",
-      "from": "runtime-p2p@git+ssh://git@github.com/openfin/runtime-p2p.git#7426ace77dbe87b73a54181b46be0938c15d81ba",
-      "resolved": "git+ssh://git@github.com/openfin/runtime-p2p.git#7426ace77dbe87b73a54181b46be0938c15d81ba",
-      "optional": true
-    },
     "rx": {
       "version": "4.1.0",
       "from": "rx@https://registry.npmjs.org/rx/-/rx-4.1.0.tgz",
