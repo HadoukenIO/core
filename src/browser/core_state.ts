@@ -519,6 +519,16 @@ function anyAppRestarting(): boolean {
     return !!apps.find(app => app.isRestarting);
 }
 
+let isRemoteCloseActionInProress = false;
+
+export function getRemoteCloseActionInProgress() {
+    return isRemoteCloseActionInProress;
+}
+
+export function setRemoteCloseActionInProgress(isInProgress: boolean) {
+    isRemoteCloseActionInProress = !!isInProgress;
+}
+
 export function shouldCloseRuntime(ignoreArray: string[]|undefined): boolean {
     const ignoredApps = ignoreArray || [];
 

@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { AckMessage,  AckFunc, AckPayload, NackPayload } from './ack';
+import { AckMessage,  AckFunc, NackFunc, AckNackArgs, AckPayload, NackPayload, RemoteAck } from './ack';
 import { ApiTransportBase, MessagePackage, Identity } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
 import route from '../../../common/route';
 import * as log from '../../log';
-
+import * as coreState from '../../core_state';
+import { app } from 'electron'; //electronApp = electron.app;
 declare var require: any;
 
 import { ExternalApplication } from '../../api/external_application';
@@ -32,12 +33,15 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
         super(actionMap, requestHandler);
 
         this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
-            const {identity, data, ack, nack, strategyName} = mp;
+            const {identity, data, ack: origAck, nack: origNack, strategyName} = mp;
 
             if (strategyName !== this.constructor.name) {
                 next();
             } else {
-                const endpoint: Endpoint = actionMap[data.action];
+                const {action} = data;
+                const endpoint: Endpoint = actionMap[action];
+                const {ack, nack} = this.responseHandler(action, origAck, origNack);
+
                 if (endpoint) {
                     Promise.resolve()
                         .then(() => endpoint.apiFunc(identity, data, ack, nack))
@@ -52,6 +56,53 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
                 }
             }
         });
+    }
+
+    private responseHandler = (action: string, ack: AckFunc, nack: NackFunc): RemoteAck => {
+        const isNonCloseAction = !(action === 'close-window' || action === 'close-application');
+
+        if (isNonCloseAction) {
+            return {ack, nack};
+        } else {
+            coreState.setRemoteCloseActionInProgress(true);
+
+            return {
+                ack: this.addPotentialShutdownCall(ack),
+                nack: this.addPotentialShutdownCall(nack)
+            };
+        }
+    }
+//Promise<(payload: AckNackArgs) => Promise<void>>
+    private addPotentialShutdownCall = (fn: (AckFunc | NackFunc) , ctx: object = null): AckFunc => {
+        const origFn = fn;
+
+        return (payload: AckNackArgs) => {
+            return new Promise((resolve, reject) => {
+                origFn.call(ctx, payload).then(() => {
+
+                    if (coreState.shouldCloseRuntime([])) {
+                        app.exit(0);
+                    }
+                    resolve();
+                }).catch((err: Error) => {
+                    log.writeToLog(1, err, true);
+                }).finally(() => {
+                    coreState.setRemoteCloseActionInProgress(false);
+                    reject();
+                });
+            });
+
+            // try {
+            //     origFn.call(ctx, payload);
+            //     if (coreState.shouldCloseRuntime([])) {
+            //         app.exit(0);
+            //     }
+            // } catch (err) {
+            //     log.writeToLog(1, err, true);
+            // } finally {
+            //     coreState.setRemoteCloseActionInProgress(false);
+            // }
+        };
     }
 
     public registerMessageHandlers(): void {
@@ -114,21 +165,23 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     protected ackDecorator(id: number, messageId: number): AckFunc {
         const ackObj = new AckMessage();
         return (payload: any) => {
-            ackObj.payload = payload;
-            ackObj.correlationId = messageId;
+            return new Promise((resolve, reject) => {
+                ackObj.payload = payload;
+                ackObj.correlationId = messageId;
 
-            // Don't try to send a response/ack using closed/closing websocket, because it will error out anyways.
-            // Instead, we are going to print nice error explaining what happened
-            if (!socketServer.isConnectionOpen(id)) {
-                system.debugLog(1,
-                    `Aborted trying to send a response to external-adapter (ID: ${id}). ` +
-                    `Message was going to send: ${JSON.stringify(ackObj)}`
-                );
-                return;
-            }
+                // Don't try to send a response/ack using closed/closing websocket, because it will error out anyways.
+                // Instead, we are going to print nice error explaining what happened
+                if (!socketServer.isConnectionOpen(id)) {
+                    system.debugLog(1,
+                        `Aborted trying to send a response to external-adapter (ID: ${id}). ` +
+                        `Message was going to send: ${JSON.stringify(ackObj)}`
+                    );
+                    reject();
+                }
 
-            system.debugLog(1, `sent external-adapter <= ${id} ${JSON.stringify(ackObj)}`);
-            socketServer.send(id, JSON.stringify(ackObj));
+                system.debugLog(1, `sent external-adapter <= ${id} ${JSON.stringify(ackObj)}`);
+                socketServer.send(id, JSON.stringify(ackObj), resolve);
+            });
         };
     }
 

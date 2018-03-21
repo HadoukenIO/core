@@ -36,7 +36,7 @@ const apisToIgnore = new Set([
  * Verifies that API is called on applications and windows that exist,
  * otherwise a proper error callback is executed.
  */
-function verifyEntityExistence(msg: MessagePackage, next: () => void): void {
+function verifyEntityExistence(msg: MessagePackage, next: () => void): Promise<any> | void {
     const { data, nack } = msg;
     const payload = data && data.payload;
     const uuid = payload && payload.uuid;

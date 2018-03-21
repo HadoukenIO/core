@@ -659,7 +659,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                 console.error(err);
                 console.error(err.stack);
             } finally {
-                electronApp.exit(0);
+                if (!coreState.getRemoteCloseActionInProgress()) {
+                    electronApp.exit(0);
+                }
             }
         }
     });
