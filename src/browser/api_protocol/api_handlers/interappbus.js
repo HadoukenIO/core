@@ -43,8 +43,8 @@ function InterApplicationBusApiHandler() {
 
         let payload = message.payload;
         let topic = payload.topic;
-        let sourceUuid = payload.sourceUuid;
-        let sourceWindowName = payload.sourceWindowName || '';
+        let sourceUuid = '*';
+        let sourceWindowName = '*';
 
         const subscriptionArgs = [
             identity,
@@ -55,12 +55,9 @@ function InterApplicationBusApiHandler() {
             subScriptionTypes.MESSAGE
         ];
 
-        apiProtocolBase.removeSubscription(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE);
+        InterApplicationBus.emitSubscriberRemoved(identity, payload);
+        apiProtocolBase.removeSubscription(...subscriptionArgs);
 
-        // If subscription still exits, haven't called unsubscribe function so haven't emitted subscriber removed
-        if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
-            InterApplicationBus.emitSubscriberRemoved(identity, payload);
-        }
         ack(successAck);
     }
 
@@ -68,8 +65,8 @@ function InterApplicationBusApiHandler() {
         // let message = JSON.parse(JSON.stringify(rawMessage));
         let payload = message.payload;
         let topic = payload.topic;
-        let sourceUuid = payload.sourceUuid;
-        let sourceWindowName = payload.sourceWindowName || '';
+        let sourceUuid = '*';
+        let sourceWindowName = '*';
         let {
             messageKey: subscribedMessageKey
         } = payload;
@@ -110,10 +107,15 @@ function InterApplicationBusApiHandler() {
                 apiProtocolBase.removeSubscription(...subscriptionArgs);
             });
         } else {
+            const wildcardPayload = Object.assign({ sourceUuid: '*', sourceWindowName: '*' }, payload);
+            const subscriptionObj = InterApplicationBus.subscribe(identity, wildcardPayload, subscriptionCallback);
+            InterApplicationBus.emitSubscriberAdded(identity, payload);
 
-            const subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
-
-            apiProtocolBase.registerSubscription(subscriptionObj.unsubscribe, ...subscriptionArgs);
+            const unsub = function() {
+                InterApplicationBus.emitSubscriberRemoved(identity, payload);
+                subscriptionObj.unsubscribe();
+            };
+            apiProtocolBase.registerSubscription(unsub, ...subscriptionArgs);
 
             ofEvents.once(route.window('unload', identity.uuid, identity.name, false), () => {
                 apiProtocolBase.removeSubscription(...subscriptionArgs);
