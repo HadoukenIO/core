@@ -51,6 +51,8 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                         Promise.resolve()
                             .then(() => endpoint.apiFunc(identity, data, ack, nack))
                             .then(result => {
+                                log.writeToLog(1, 'made the call', true);
+                                log.writeToLog(1, JSON.stringify(data), true);
                                 // older action calls will invoke ack internally, newer ones will return a value
                                 if (result !== undefined) {
                                     ack(new AckPayload(result));
@@ -161,6 +163,10 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                 } catch (err) {
                     reject(err);
                 }
+
+                log.writeToLog(1, 'ackman', true);
+                log.writeToLog(1, JSON.stringify(ackObj), true);
+
 
                 if (!e.sender.isDestroyed()) {
                     e.returnValue = JSON.stringify(ackObj);

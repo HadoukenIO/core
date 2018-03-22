@@ -446,9 +446,11 @@ Application.revokeWindowAccess = function() {
 // userAppConfigArgs must be set to 'undefined' because
 // regular parameters cannot come after default parameters.
 Application.run = function(identity, configUrl = '', userAppConfigArgs = undefined) {
+    log.writeToLog(1, '$$$run1', true);
     if (!identity) {
         return;
     }
+
 
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = convertOpts.convertToElectron(app._options);
@@ -469,6 +471,7 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {
+    log.writeToLog(1, '$$$run2', true);
     const uuid = identity.uuid;
     const app = Application.wrap(uuid);
     const appState = coreState.appByUuid(uuid);

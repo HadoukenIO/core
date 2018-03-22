@@ -51,15 +51,7 @@ export class NackPayload {
 }
 
 export type AckFunc = (payload: AckNackArgs) => Promise<any>;
-// export type AckFunc = (payload: AckNackArgs) => Promise<(payload: AckNackArgs) => Promise<void>>;
-/*
-'Promise<(payload: AckNackArgs) => Promise<void>>'
-'(payload: AckNackArgs): Promise<void>'
-*/
-// export type NackFunc = (error: string | Error) => Promise<void>;
 export type NackFunc = (error: string | Error) => Promise<any>;
-
-// export type AckFunc = Promise<(payload: AckNackArgs) => Promise<void>>
 export type AckNackArgs =  AckPayload | NackPayload | string | Error;
 
 export interface RemoteAck {
