@@ -59,7 +59,9 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     private responseHandler = (action: string, ack: AckFunc, nack: NackFunc): RemoteAck => {
-        const isNonCloseAction = !(action === 'close-window' || action === 'close-application');
+        const closeActions = ['close-window', 'close-application', 'terminate-application'];
+
+        const isNonCloseAction = !(closeActions.indexOf(action) === -1);
 
         if (isNonCloseAction) {
             return {ack, nack};
