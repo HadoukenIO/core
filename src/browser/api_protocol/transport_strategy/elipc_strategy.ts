@@ -161,11 +161,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                 } catch (err) {
                     reject(err);
                 }
-
-                log.writeToLog(1, 'ackman', true);
-                log.writeToLog(1, JSON.stringify(ackObj), true);
-
-
+                
                 if (!e.sender.isDestroyed()) {
                     e.returnValue = JSON.stringify(ackObj);
                     resolve();
