@@ -20,7 +20,7 @@ import { Endpoint, ActionMap } from '../shapes';
 import route from '../../../common/route';
 import * as log from '../../log';
 import * as coreState from '../../core_state';
-import { app } from 'electron'; //electronApp = electron.app;
+import { app } from 'electron';
 declare var require: any;
 
 import { ExternalApplication } from '../../api/external_application';
@@ -72,7 +72,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
             };
         }
     }
-//Promise<(payload: AckNackArgs) => Promise<void>>
+
     private addPotentialShutdownCall = (fn: (AckFunc | NackFunc) , ctx: object = null): AckFunc => {
         const origFn = fn;
 
@@ -91,17 +91,6 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
                     reject();
                 });
             });
-
-            // try {
-            //     origFn.call(ctx, payload);
-            //     if (coreState.shouldCloseRuntime([])) {
-            //         app.exit(0);
-            //     }
-            // } catch (err) {
-            //     log.writeToLog(1, err, true);
-            // } finally {
-            //     coreState.setRemoteCloseActionInProgress(false);
-            // }
         };
     }
 

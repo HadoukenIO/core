@@ -521,7 +521,7 @@ function anyAppRestarting(): boolean {
 
 let isRemoteCloseActionInProress = false;
 
-export function getRemoteCloseActionInProgress() {
+export function remoteCloseActionInProgress() {
     return isRemoteCloseActionInProress;
 }
 
