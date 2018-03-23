@@ -471,7 +471,8 @@ exports.System = {
         const { port, securityRealm, version } =
         portDiscovery.getPortInfoByArgs(coreState.argo, socketServer.getPort());
         const manifestUrl = coreState.getConfigUrlByUuid(identity.uuid);
-        return { manifestUrl, port, securityRealm, version };
+        const architecture = process.arch;
+        return { manifestUrl, port, securityRealm, version, architecture };
     },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
