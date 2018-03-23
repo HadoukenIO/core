@@ -450,7 +450,6 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
         return;
     }
 
-
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = convertOpts.convertToElectron(app._options);
 
