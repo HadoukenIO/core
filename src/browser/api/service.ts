@@ -79,13 +79,13 @@ export module Service {
         // Currently assumes this is an application, add logic for external connection here when that becomes option
         ofEvents.once(route.application('closed', uuid), () => {
             serviceMap.delete(uuid);
-            ofEvents.emit(route.application('service-disconnected', uuid), {
+            ofEvents.emit(route.service('disconnected', uuid), {
                 uuid,
                 name
             });
         });
 
-        ofEvents.emit(route.system('service-connected'), serviceIdentity);
+        ofEvents.emit(route.service('connected', serviceIdentity.uuid), { topic: 'service', type: 'connected', ...serviceIdentity });
 
         // execute requests to connect for service that occured before service registration. Timeout ensures registration concludes first.
         setTimeout(() => {
