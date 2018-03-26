@@ -59,9 +59,9 @@ export abstract class ApiTransportBase<T> {
 
     protected abstract ackDecoratorSync(e: any, messageId: number): AckFunc;
 
-    protected nackDecorator(ackFunction: AckFunc): (err: Error | string) => void {
+    protected nackDecorator(ackFunction: AckFunc): NackFunc {
         return (err: Error | string) => {
-            ackFunction(new NackPayload(err));
+            return ackFunction(new NackPayload(err));
         };
     }
 

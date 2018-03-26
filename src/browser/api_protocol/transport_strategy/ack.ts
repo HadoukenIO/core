@@ -50,9 +50,9 @@ export class NackPayload {
     }
 }
 
-export type AckFunc = (payload: AckPayload | NackPayload) => void;
-
-export type NackFunc = (error: string | Error) => void;
+export type AckFunc = (payload: AckNackArgs) => Promise<any>;
+export type NackFunc = (error: string | Error) => Promise<any>;
+export type AckNackArgs =  AckPayload | NackPayload | string | Error;
 
 export interface RemoteAck {
     ack: AckFunc;

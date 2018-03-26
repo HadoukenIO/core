@@ -151,19 +151,22 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         const ackObj = new AckMessage();
         ackObj.correlationId = messageId;
 
-        return (payload: any): void => {
-            ackObj.payload = payload;
+        return (payload: any) => {
+            return new Promise((resolve, reject) => {
+                ackObj.payload = payload;
 
-            try {
-                // Log all messages when -v=1
-                system.debugLog(1, `sent sync in-runtime <= ${JSON.stringify(ackObj)}`);
-            } catch (err) {
-                /* tslint:disable: no-empty */
-            }
-
-            if (!e.sender.isDestroyed()) {
-                e.returnValue = JSON.stringify(ackObj);
-            }
+                try {
+                    // Log all messages when -v=1
+                    system.debugLog(1, `sent sync in-runtime <= ${JSON.stringify(ackObj)}`);
+                } catch (err) {
+                    reject(err);
+                }
+                
+                if (!e.sender.isDestroyed()) {
+                    e.returnValue = JSON.stringify(ackObj);
+                    resolve();
+                }
+            });
         };
     }
 
@@ -171,21 +174,23 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         const ackObj = new AckMessage();
         ackObj.correlationId = messageId;
 
-        return (payload: any): void => {
-            ackObj.payload = payload;
+        return (payload: any) => {
+            return new Promise((resolve, reject) => {
+                ackObj.payload = payload;
 
-            try {
-                // Log all messages when -v=1
-                /* tslint:disable: max-line-length */
-                system.debugLog(1, `sent in-runtime <= ${e.frameRoutingId} ${JSON.stringify(ackObj)}`);
-            } catch (err) {
-                /* tslint:disable: no-empty */
-            }
+                try {
+                    // Log all messages when -v=1
+                    /* tslint:disable: max-line-length */
+                    system.debugLog(1, `sent in-runtime <= ${e.frameRoutingId} ${JSON.stringify(ackObj)}`);
+                } catch (err) {
+                    reject(err);
+                }
 
-            if (!e.sender.isDestroyed()) {
-                e.sender.sendToFrame(e.frameRoutingId, electronIpc.channels.CORE_MESSAGE, JSON.stringify(ackObj));
-            }
+                if (!e.sender.isDestroyed()) {
+                    e.sender.sendToFrame(e.frameRoutingId, electronIpc.channels.CORE_MESSAGE, JSON.stringify(ackObj));
+                    resolve();
+                }
+            });
         };
-
     }
 }

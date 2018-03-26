@@ -55,9 +55,9 @@ let Server = function() {
         });
     };
 
-    me.send = function(id, message) {
+    me.send = function(id, message, cb = () => {}) {
         if (activeConnections[id]) {
-            activeConnections[id].send(message);
+            activeConnections[id].send(message, {}, cb);
         }
     };
 
