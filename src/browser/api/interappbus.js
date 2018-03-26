@@ -181,7 +181,7 @@ function subscribe(identity, payload, listener) {
     ofBus.on(keys.toApp, listener);
 
     // for the subscribe listeners:
-    emitSubscriberAdded(identity, payload);
+    //emitSubscriberAdded(identity, payload);
 
     //return a function that will unhook the listeners
     var unsubItem = {
@@ -191,7 +191,7 @@ function subscribe(identity, payload, listener) {
             ofBus.removeListener(keys.toWin, listener);
             ofBus.removeListener(keys.toApp, listener);
 
-            emitSubscriberRemoved(identity, payload);
+            //emitSubscriberRemoved(identity, payload);
         }
     };
 
