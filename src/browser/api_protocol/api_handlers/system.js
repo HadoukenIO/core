@@ -79,6 +79,7 @@ function SystemApiHandler() {
         'get-nearest-display-root': getNearestDisplayRoot,
         'get-proxy-settings': getProxySettings,
         'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
+        'get-runtime-info': getRuntimeInfo,
         'get-rvm-info': getRvmInfo,
         'get-plugin-module': getPluginModule,
         'get-plugin-modules': getPluginModules,
@@ -383,6 +384,12 @@ function SystemApiHandler() {
     function getVersion(identity, message, ack) {
         var dataAck = _.clone(successAck);
         dataAck.data = System.getVersion();
+        ack(dataAck);
+    }
+
+    function getRuntimeInfo(identity, message, ack, nack) {
+        var dataAck = _.clone(successAck);
+        dataAck.data = System.getRuntimeInfo(identity);
         ack(dataAck);
     }
 

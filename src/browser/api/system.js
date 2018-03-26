@@ -36,6 +36,9 @@ import { ExternalApplication } from './external_application';
 const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
+const socketServer = require('../transports/socket_server').server;
+const portDiscovery = require('../port_discovery').portDiscovery;
+
 import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
 import * as plugins from '../plugins';
@@ -463,6 +466,13 @@ exports.System = {
     },
     getVersion: function() {
         return process.versions['openfin'];
+    },
+    getRuntimeInfo: function(identity) {
+        const { port, securityRealm, version } =
+        portDiscovery.getPortInfoByArgs(coreState.argo, socketServer.getPort());
+        const manifestUrl = coreState.getConfigUrlByUuid(identity.uuid);
+        const architecture = process.arch;
+        return { manifestUrl, port, securityRealm, version, architecture };
     },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
