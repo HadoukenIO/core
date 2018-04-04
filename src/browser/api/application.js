@@ -592,7 +592,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
         } else {
             //Window was closed before constructor
-            let constructorCallbackMessage = {
+            const constructorCallbackMessage = {
                 success: false,
                 data: {
                     message: 'Window closed before web context initiatiated'
