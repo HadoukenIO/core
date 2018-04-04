@@ -19,6 +19,8 @@ import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
 import { Identity } from 'hadouken-js-adapter/out/src/identity';
+import { BrowserWindow } from 'electron';
+import { Window } from '../../api/window';
 
 const coreState = require('../../core_state');
 
@@ -31,6 +33,7 @@ const apiMessagesToIgnore: any = {
     'publish-message': true,
     'send-message': true,
     'subscribe': true,
+    'join-window-group': true,
     'unsubscribe': true,
     'subscriber-added': true,
     'subscriber-removed': true,
@@ -129,29 +132,73 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
-// function meshJoinWindowGroupMiddleware(msg:MessagePackage, next: () => void) {
-//     const { identity, data, ack, nack } = msg;
-//     const payload = data && data.payload;
-//     const uuid = payload && payload.uuid;
-//     const action = data && data.action;
-//     const isJoinWindowGroupAction = action === 'join-window-group';
+const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
+    const { uuid, name } = toGroup;
+    try {
+        const getHwndMessage = {
+            action: 'get-hwnd',
+            payload: {
+                uuid,
+                name
+            }
+        };
+        const id = await connectionManager.resolveIdentity({uuid});
+        const hwnd = await id.runtime.fin.System.executeOnRemote(identity, getHwndMessage);
 
-//     if (!isJoinWindowGroupAction) {
-//         next();
-//     }
+        const childWindowOptions = {
+            uuid: identity.uuid,
+            name,
+            hwnd: hwnd.data
+        };
+        const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
+        const parentId = parent && parent.browserWindow && parent.browserWindow.id;
+        const childId = new BrowserWindow(childWindowOptions).id;
 
-//     const isValidUuid = uuid !== void(0);
-//     const isValidIdentity = typeof (identity) === 'object';
-//     const isRemoteEntity = !isLocalUuid(uuid);
-//     const isLocalAction = !identity.runtimeUuid;
+        if (!coreState.addChildToWin(parentId, childId)) {
+            console.warn('failed to add child window');
+        }
+        Window.create(childId, childWindowOptions);
 
-//     if (isValidUuid && isValidIdentity && isRemoteEntity && isLocalAction) {
-//         try {
-//             const id = await connectionManager.resolveIdentity({uuid});
-//             const hwnd = await id.runtime.fin.System.executeOnRemote(identity, )
-//         }
-//     }
-// }
+        return hwnd;
+    } catch (e) {
+        log.writeToLog('info', e);
+        return;
+    }
+};
+
+async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?: object) => void) {
+    const { identity, data, ack, nack } = msg;
+    const payload = data && data.payload;
+    const action = data && data.action;
+    const isJoinWindowGroupAction = action === 'join-window-group';
+    const isLocalAction = !identity.runtimeUuid;
+    const isValidIdentity = typeof (identity) === 'object';
+
+    if (!isJoinWindowGroupAction || !isLocalAction || !isValidIdentity) {
+        next();
+        return;
+    }
+    // ALSO CHECK TO MAKE SURE WE ARE ON WINDOWS!!!!]
+    const window = {
+        uuid: payload.uuid,
+        name: payload.name
+    };
+    const grouping = {
+        uuid: payload.groupingUuid,
+        name: payload.groupingWindowName
+    };
+
+    const locals: any = {};
+
+    if (window.uuid !== void(0) && !isLocalUuid(window.uuid)) {
+        locals.hwnd = await handleExternalWindow(identity, window) || nack('Could not locate the requested window');
+    }
+    if (grouping.uuid !== void(0) && !isLocalUuid(grouping.uuid)) {
+        locals.groupingHwnd = await handleExternalWindow(identity, grouping) || nack('Could not locate the requested window');
+    }
+
+    next(locals);
+}
 
 //on a non InterAppBus API call, forward the message to the runtime that owns the uuid.
 function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
@@ -227,6 +274,7 @@ function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): vo
     requestHandler.addPreProcessor(subscriberEventMiddleware);
     requestHandler.addPreProcessor(publishMiddleware);
     requestHandler.addPreProcessor(sendMessageMiddleware);
+    requestHandler.addPreProcessor(meshJoinWindowGroupMiddleware);
     requestHandler.addPreProcessor(ferryActionMiddleware);
     requestHandler.addPreProcessor(aggregateFromExternalRuntime);
 }

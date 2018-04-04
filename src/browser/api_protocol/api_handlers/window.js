@@ -36,6 +36,7 @@ module.exports.windowApiMap = {
     'focus-window': focusWindow,
     'get-current-window-options': getCurrentWindowOptions,
     'get-all-frames': getAllFrames,
+    'get-hwnd': getHwnd,
     'get-window-bounds': getWindowBounds,
     'get-window-group': getWindowGroup,
     'get-window-info': getWindowInfo,
@@ -305,11 +306,14 @@ function leaveWindowGroup(identity, message, ack) {
 }
 
 function joinWindowGroup(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload),
-        groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
-
-    Window.joinGroup(windowIdentity, groupingIdentity, payload.hwnd);
+    const payload = message.payload;
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+    const groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
+    const { locals } = message;
+    if (locals && locals.hwnd || locals.groupingHwnd) {
+        locals.requester = identity;
+    }
+    Window.joinGroup(windowIdentity, groupingIdentity, locals);
     ack(successAck);
 }
 
@@ -330,6 +334,11 @@ function hideWindow(identity, message, ack) {
     ack(successAck);
 }
 
+function getHwnd(identity, message, ack) {
+    const { payload } = message;
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+    return Window.getHwnd(windowIdentity);
+}
 
 function getAllFrames(identity, message) {
     const { payload } = message;

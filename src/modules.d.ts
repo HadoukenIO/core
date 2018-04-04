@@ -55,6 +55,7 @@ declare module 'electron' {
     export class BrowserWindow {
         constructor(props: any);
 
+        id: number;
         _options: {
             minWidth: number;
             minHeight: number;

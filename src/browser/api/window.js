@@ -1229,6 +1229,13 @@ Window.getGroup = function(identity) {
 };
 
 
+Window.getHwnd = function(identity) {
+    const { uuid, name } = identity;
+    const window = coreState.getWindowByUuidName(uuid, name);
+    return window.browserWindow.nativeId;
+};
+
+
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
     const { plugins, preloadScripts } = Window.wrap(identity.uuid, identity.name);
@@ -1404,65 +1411,7 @@ Window.isShowing = function(identity) {
     return !!(browserWindow && browserWindow.isVisible());
 };
 
-
-Window.joinGroup = function(identity, grouping, hwnd) {
-    function isLocalUuid(uuid) {
-        const externalConn = coreState.getExternalAppObjByUuid(uuid);
-        const app = coreState.getAppObjByUuid(uuid);
-
-        return externalConn || app ? true : false;
-    }
-
-    function registerExternalWindow(identity, message, ack) {
-        let payload = message.payload;
-        let childWindowOptions = {
-            name: payload.name,
-            uuid: payload.uuid,
-            hwnd: payload.hwnd
-        };
-        let parent = coreState.getWindowByUuidName(payload.uuid, payload.uuid);
-        let parentBw = parent && parent.browserWindow;
-        let childBw = new BrowserWindow(childWindowOptions);
-
-        const parentId = parentBw.id;
-        const childId = childBw.id;
-
-        if (!coreState.addChildToWin(parentId, childId)) {
-            console.warn('failed to add');
-        }
-
-        Window.create(childId, childWindowOptions);
-
-        // electronApp.emit('child-window-created', parentBw.id, childBw.id, childWindowOptions);
-        ack();
-    }
-    const registerEx = (identity, grouping) => {
-        const { name } = grouping;
-        const uuid = identity.uuid;
-        // const browserWindow = getElectronBrowserWindow(grouping);
-
-        // const hwndBuffer = browserWindow.getNativeWindowHandle();
-        // const hwnd2 = String.fromCharCode.apply(null, new Uint16Array(hwndBuffer));
-
-        // let hwnd3 = parseInt(browserWindow.nativeId, 16);
-        const message = { payload: { uuid, name, hwnd } };
-        registerExternalWindow(identity, message, () => {});
-    };
-
-
-    if (!isLocalUuid(grouping.uuid)) {
-        registerEx(identity, grouping);
-        // return;
-    }
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(identity.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
-
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
+const meshJoinGroupEvents = (identity, grouping) => {
     const beginSubscription = {
         uuid: grouping.uuid,
         name: grouping.name,
@@ -1521,7 +1470,6 @@ Window.joinGroup = function(identity, grouping, hwnd) {
         ofEvents.emit(newEnd, newPayload);
     });
     ofEvents.on(oldChanging, payload => {
-        log.writeToLog(1, `**** pre moving payload ${JSON.stringify(payload, undefined, 4)}`, true);
         const newPayload = Object.assign({}, payload);
         newPayload.uuid = identity.uuid;
         ofEvents.emit(newChanging, newPayload);
@@ -1531,6 +1479,29 @@ Window.joinGroup = function(identity, grouping, hwnd) {
         newPayload.uuid = identity.uuid;
         ofEvents.emit(newChanged, newPayload);
     });
+};
+
+Window.joinGroup = function(identity, grouping, locals) {
+    let identityOfWindow;
+    let groupingOfWindow;
+    if (locals) {
+        const { requester, hwnd, groupingHwnd } = locals;
+        if (hwnd) {
+            meshJoinGroupEvents(requester, identity);
+            identityOfWindow = Window.wrap(requester.uuid, identity.name);
+        } else if (groupingHwnd) {
+            meshJoinGroupEvents(requester, grouping);
+            groupingOfWindow = Window.wrap(requester.uuid, grouping.name);
+        }
+    }
+    identityOfWindow = identityOfWindow || Window.wrap(identity.uuid, identity.name);
+    groupingOfWindow = groupingOfWindow || Window.wrap(grouping.uuid, grouping.name);
+    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
+    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
+
+    if (!identityBrowserWindow || !groupingBrowserWindow) {
+        return;
+    }
 
     WindowGroups.joinGroup(identityOfWindow, groupingOfWindow);
 };
