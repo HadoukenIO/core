@@ -578,16 +578,28 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
-        const pid = app.mainWindow.webContents.processId;
+        //edge case where the window might be destroyed by the time we get here.
+        if (!app.mainWindow.isDestroyed()) {
+            const pid = app.mainWindow.webContents.processId;
 
-        if (pid) {
-            app._processInfo = new ProcessInfo(pid);
+            if (pid) {
+                app._processInfo = new ProcessInfo(pid);
 
-            // Must call once to start measuring CPU usage
-            app._processInfo.getCpuUsage();
+                // Must call once to start measuring CPU usage
+                app._processInfo.getCpuUsage();
+            }
+
+            ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
+        } else {
+            //Window was closed before constructor
+            const constructorCallbackMessage = {
+                success: false,
+                data: {
+                    message: 'Window closed before web context initiatiated'
+                }
+            };
+            ofEvents.emit(route.window('fire-constructor-callback', uuid, uuid), constructorCallbackMessage);
         }
-
-        ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
     });
 
     // function finish() {
