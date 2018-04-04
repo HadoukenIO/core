@@ -18,6 +18,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
+import { Identity } from 'hadouken-js-adapter/out/src/identity';
 
 const coreState = require('../../core_state');
 
@@ -128,6 +129,30 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
+// function meshJoinWindowGroupMiddleware(msg:MessagePackage, next: () => void) {
+//     const { identity, data, ack, nack } = msg;
+//     const payload = data && data.payload;
+//     const uuid = payload && payload.uuid;
+//     const action = data && data.action;
+//     const isJoinWindowGroupAction = action === 'join-window-group';
+
+//     if (!isJoinWindowGroupAction) {
+//         next();
+//     }
+
+//     const isValidUuid = uuid !== void(0);
+//     const isValidIdentity = typeof (identity) === 'object';
+//     const isRemoteEntity = !isLocalUuid(uuid);
+//     const isLocalAction = !identity.runtimeUuid;
+
+//     if (isValidUuid && isValidIdentity && isRemoteEntity && isLocalAction) {
+//         try {
+//             const id = await connectionManager.resolveIdentity({uuid});
+//             const hwnd = await id.runtime.fin.System.executeOnRemote(identity, )
+//         }
+//     }
+// }
+
 //on a non InterAppBus API call, forward the message to the runtime that owns the uuid.
 function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     const { identity, data, ack, nack } = msg;
@@ -144,6 +169,11 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
 
     if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction) {
         try {
+            if (action === 'join-window-group') {
+                const win = coreState.getWindowByUuidName(data.payload.groupingUuid, data.payload.groupingWindowName);
+                const hwnd = win.browserWindow.nativeId;
+                data.payload.hwnd = hwnd;
+            }
             connectionManager.resolveIdentity({uuid})
             .then((id: any) => {
                 id.runtime.fin.System.executeOnRemote(identity, data)
@@ -201,4 +231,4 @@ function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): vo
     requestHandler.addPreProcessor(aggregateFromExternalRuntime);
 }
 
-export { registerMiddleware };
+export { registerMiddleware, isLocalUuid };

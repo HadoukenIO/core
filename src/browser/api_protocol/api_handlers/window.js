@@ -309,7 +309,7 @@ function joinWindowGroup(identity, message, ack) {
         windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload),
         groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
 
-    Window.joinGroup(windowIdentity, groupingIdentity);
+    Window.joinGroup(windowIdentity, groupingIdentity, payload.hwnd);
     ack(successAck);
 }
 

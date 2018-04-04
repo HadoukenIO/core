@@ -40,6 +40,7 @@ let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
 import { cachedFetch } from '../cached_resource_fetcher';
+import { addRemoteSubscription } from '../remote_subscriptions';
 let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
@@ -127,7 +128,13 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
-    }
+    },
+    'begin-user-bounds-change': {
+        topic: 'begin-user-bounds-changed'
+    },
+    'end-user-bounds-change': {
+        topic: 'end-user-bounds-changed'
+    },
     // 'move': {
     //     topic: 'bounds-changing'
     // }
@@ -490,7 +497,10 @@ Window.create = function(id, opts) {
         browserWindow._options = _options;
 
         // set taskbar icon
-        setTaskbar(browserWindow);
+        // DOES THIS MESS UP OTHER EXTERNAL WINDOWS?
+        if (!browserWindow.isExternalWindow()) {
+            setTaskbar(browserWindow);
+        }
 
         // apply options to browserWindow
         applyAdditionalOptionsToWindow(browserWindow);
@@ -1395,15 +1405,132 @@ Window.isShowing = function(identity) {
 };
 
 
-Window.joinGroup = function(identity, grouping) {
+Window.joinGroup = function(identity, grouping, hwnd) {
+    function isLocalUuid(uuid) {
+        const externalConn = coreState.getExternalAppObjByUuid(uuid);
+        const app = coreState.getAppObjByUuid(uuid);
+
+        return externalConn || app ? true : false;
+    }
+
+    function registerExternalWindow(identity, message, ack) {
+        let payload = message.payload;
+        let childWindowOptions = {
+            name: payload.name,
+            uuid: payload.uuid,
+            hwnd: payload.hwnd
+        };
+        let parent = coreState.getWindowByUuidName(payload.uuid, payload.uuid);
+        let parentBw = parent && parent.browserWindow;
+        let childBw = new BrowserWindow(childWindowOptions);
+
+        const parentId = parentBw.id;
+        const childId = childBw.id;
+
+        if (!coreState.addChildToWin(parentId, childId)) {
+            console.warn('failed to add');
+        }
+
+        Window.create(childId, childWindowOptions);
+
+        // electronApp.emit('child-window-created', parentBw.id, childBw.id, childWindowOptions);
+        ack();
+    }
+    const registerEx = (identity, grouping) => {
+        const { name } = grouping;
+        const uuid = identity.uuid;
+        // const browserWindow = getElectronBrowserWindow(grouping);
+
+        // const hwndBuffer = browserWindow.getNativeWindowHandle();
+        // const hwnd2 = String.fromCharCode.apply(null, new Uint16Array(hwndBuffer));
+
+        // let hwnd3 = parseInt(browserWindow.nativeId, 16);
+        const message = { payload: { uuid, name, hwnd } };
+        registerExternalWindow(identity, message, () => {});
+    };
+
+
+    if (!isLocalUuid(grouping.uuid)) {
+        registerEx(identity, grouping);
+        // return;
+    }
     let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
+    let groupingOfWindow = Window.wrap(identity.uuid, grouping.name);
     let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
     let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
 
     if (!identityBrowserWindow || !groupingBrowserWindow) {
         return;
     }
+
+    const beginSubscription = {
+        uuid: grouping.uuid,
+        name: grouping.name,
+        listenType: 'on',
+        className: 'window',
+        eventName: 'begin-user-bounds-changed'
+    };
+
+    addRemoteSubscription(beginSubscription);
+
+    const endSubscription = {
+        uuid: grouping.uuid,
+        name: grouping.name,
+        listenType: 'on',
+        className: 'window',
+        eventName: 'end-user-bounds-changed'
+    };
+
+    addRemoteSubscription(endSubscription);
+    const changingSubscription = {
+        uuid: grouping.uuid,
+        name: grouping.name,
+        listenType: 'on',
+        className: 'window',
+        eventName: 'bounds-changing'
+    };
+
+    addRemoteSubscription(changingSubscription);
+
+    const changedSubscription = {
+        uuid: grouping.uuid,
+        name: grouping.name,
+        listenType: 'on',
+        className: 'window',
+        eventName: 'bounds-changed'
+    };
+
+    addRemoteSubscription(changedSubscription);
+
+    const oldBegin = route.window('begin-user-bounds-changed', grouping.uuid, grouping.name);
+    const newBegin = route.externalWindow('begin-user-bounds-change', identity.uuid, grouping.name);
+    const oldEnd = route.window('end-user-bounds-changed', grouping.uuid, grouping.name);
+    const newEnd = route.externalWindow('end-user-bounds-change', identity.uuid, grouping.name);
+    const oldChanging = route.window('bounds-changing', grouping.uuid, grouping.name);
+    const newChanging = route.externalWindow('moving', identity.uuid, grouping.name);
+    const oldChanged = route.window('bounds-changed', grouping.uuid, grouping.name);
+    const newChanged = route.externalWindow('bounds-changed', identity.uuid, grouping.name);
+    ofEvents.on(oldBegin, payload => {
+        const newPayload = Object.assign({}, payload);
+        newPayload.uuid = identity.uuid;
+        ofEvents.emit(newBegin, newPayload);
+    });
+    ofEvents.on(oldEnd, payload => {
+        const newPayload = Object.assign({}, payload);
+        newPayload.uuid = identity.uuid;
+        ofEvents.emit(newEnd, newPayload);
+    });
+    ofEvents.on(oldChanging, payload => {
+        log.writeToLog(1, `**** pre moving payload ${JSON.stringify(payload, undefined, 4)}`, true);
+        const newPayload = Object.assign({}, payload);
+        newPayload.uuid = identity.uuid;
+        ofEvents.emit(newChanging, newPayload);
+    });
+    ofEvents.on(oldChanged, payload => {
+        const newPayload = Object.assign({}, payload);
+        newPayload.uuid = identity.uuid;
+        ofEvents.emit(newChanged, newPayload);
+    });
 
     WindowGroups.joinGroup(identityOfWindow, groupingOfWindow);
 };

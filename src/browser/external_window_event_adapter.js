@@ -22,6 +22,9 @@ electronApp.on('ready', () => {
 });
 import route from '../common/route';
 
+
+import * as log from './log'
+
 class ExternalWindowEventAdapter {
     constructor(browserWindow) {
         let options = browserWindow && browserWindow._options;
@@ -120,6 +123,7 @@ class ExternalWindowEventAdapter {
         });
 
         ofEvents.on(route.externalWindow('moving', uuid, name), () => {
+            log.writeToLog(1, `**** in moving - lbd ${disabledFrameState.leftButtonDown}`, true);
             if (disabledFrameState.leftButtonDown) {
                 let bounds = browserWindow.getBounds();
                 let mousePosition = MonitorInfo.getMousePosition();
@@ -137,6 +141,8 @@ class ExternalWindowEventAdapter {
                 if (xCursorDelta !== 0 || yCursorDelta !== 0) {
                     bounds.x = (cursorCurr.x - disabledFrameState.cursorStart.x) + disabledFrameState.boundsStart.x;
                     bounds.y = (cursorCurr.y - disabledFrameState.cursorStart.y) + disabledFrameState.boundsStart.y;
+
+                    log.writeToLog(1, `**** in moving ${JSON.stringify(bounds, undefined, 4)}`, true);
 
                     browserWindow.emit('disabled-frame-bounds-changing', {}, bounds, disabledFrameState.changeType);
 

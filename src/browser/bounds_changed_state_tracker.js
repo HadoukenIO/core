@@ -16,6 +16,7 @@ limitations under the License.
 /*
     src/browser/bounds_changed_state_tracker.js
  */
+import * as log from './log'
 
 let windowTransaction = require('electron').windowTransaction;
 
@@ -306,6 +307,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                     }
 
                     WindowGroups.getGroup(groupUuid).filter((win) => {
+                        log.writeToLog(1, `***** win name/uuid, name ${win.uuid} ${win.name} -  ${name}`, true);
                         win.browserWindow.bringToFront();
                         return win.name !== name;
                     }).forEach((win) => {
