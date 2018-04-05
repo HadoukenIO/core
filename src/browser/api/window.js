@@ -1412,73 +1412,105 @@ Window.isShowing = function(identity) {
 };
 
 const meshJoinGroupEvents = (identity, grouping) => {
-    const beginSubscription = {
-        uuid: grouping.uuid,
-        name: grouping.name,
-        listenType: 'on',
-        className: 'window',
-        eventName: 'begin-user-bounds-changed'
-    };
 
-    addRemoteSubscription(beginSubscription);
+    const initEvent = (event, other) => {
+        const subscription = {
+            uuid: grouping.uuid,
+            name: grouping.name,
+            listenType: 'on',
+            className: 'window',
+            eventName: event
+        }
+        addRemoteSubscription(subscription);
 
-    const endSubscription = {
-        uuid: grouping.uuid,
-        name: grouping.name,
-        listenType: 'on',
-        className: 'window',
-        eventName: 'end-user-bounds-changed'
-    };
+        const oldEvent = route.window(event, grouping.uuid, grouping.name);
+        const newEvent = route.externalWindow(other, identity.uuid, grouping.name);
 
-    addRemoteSubscription(endSubscription);
-    const changingSubscription = {
-        uuid: grouping.uuid,
-        name: grouping.name,
-        listenType: 'on',
-        className: 'window',
-        eventName: 'bounds-changing'
-    };
+        ofEvents.on(oldEvent, payload => {
+            const newPayload = Object.assign({}, payload);
+            newPayload.uuid = identity.uuid;
+            ofEvents.emit(newEvent, newPayload);
+        });
+    }
 
-    addRemoteSubscription(changingSubscription);
+    initEvent('begin-user-bounds-changed', 'begin-user-bounds-change');
+    initEvent('end-user-bounds-changed', 'end-user-bounds-change');
+    initEvent('bounds-changing', 'moving');
+    initEvent('bounds-changed', 'bounds-changed');
 
-    const changedSubscription = {
-        uuid: grouping.uuid,
-        name: grouping.name,
-        listenType: 'on',
-        className: 'window',
-        eventName: 'bounds-changed'
-    };
 
-    addRemoteSubscription(changedSubscription);
+    // do focus
 
-    const oldBegin = route.window('begin-user-bounds-changed', grouping.uuid, grouping.name);
-    const newBegin = route.externalWindow('begin-user-bounds-change', identity.uuid, grouping.name);
-    const oldEnd = route.window('end-user-bounds-changed', grouping.uuid, grouping.name);
-    const newEnd = route.externalWindow('end-user-bounds-change', identity.uuid, grouping.name);
-    const oldChanging = route.window('bounds-changing', grouping.uuid, grouping.name);
-    const newChanging = route.externalWindow('moving', identity.uuid, grouping.name);
-    const oldChanged = route.window('bounds-changed', grouping.uuid, grouping.name);
-    const newChanged = route.externalWindow('bounds-changed', identity.uuid, grouping.name);
-    ofEvents.on(oldBegin, payload => {
-        const newPayload = Object.assign({}, payload);
-        newPayload.uuid = identity.uuid;
-        ofEvents.emit(newBegin, newPayload);
-    });
-    ofEvents.on(oldEnd, payload => {
-        const newPayload = Object.assign({}, payload);
-        newPayload.uuid = identity.uuid;
-        ofEvents.emit(newEnd, newPayload);
-    });
-    ofEvents.on(oldChanging, payload => {
-        const newPayload = Object.assign({}, payload);
-        newPayload.uuid = identity.uuid;
-        ofEvents.emit(newChanging, newPayload);
-    });
-    ofEvents.on(oldChanged, payload => {
-        const newPayload = Object.assign({}, payload);
-        newPayload.uuid = identity.uuid;
-        ofEvents.emit(newChanged, newPayload);
-    });
+    // remove child by id (corestate) on close of parent
+
+
+    // const beginSubscription = {
+    //     uuid: grouping.uuid,
+    //     name: grouping.name,
+    //     listenType: 'on',
+    //     className: 'window',
+    //     eventName: 'begin-user-bounds-changed'
+    // };
+
+    // addRemoteSubscription(beginSubscription);
+
+    // const endSubscription = {
+    //     uuid: grouping.uuid,
+    //     name: grouping.name,
+    //     listenType: 'on',
+    //     className: 'window',
+    //     eventName: 'end-user-bounds-changed'
+    // };
+
+    // addRemoteSubscription(endSubscription);
+    // const changingSubscription = {
+    //     uuid: grouping.uuid,
+    //     name: grouping.name,
+    //     listenType: 'on',
+    //     className: 'window',
+    //     eventName: 'bounds-changing'
+    // };
+
+    // addRemoteSubscription(changingSubscription);
+
+    // const changedSubscription = {
+    //     uuid: grouping.uuid,
+    //     name: grouping.name,
+    //     listenType: 'on',
+    //     className: 'window',
+    //     eventName: 'bounds-changed'
+    // };
+
+    // addRemoteSubscription(changedSubscription);
+
+    // const oldBegin = route.window('begin-user-bounds-changed', grouping.uuid, grouping.name);
+    // const newBegin = route.externalWindow('begin-user-bounds-change', identity.uuid, grouping.name);
+    // const oldEnd = route.window('end-user-bounds-changed', grouping.uuid, grouping.name);
+    // const newEnd = route.externalWindow('end-user-bounds-change', identity.uuid, grouping.name);
+    // const oldChanging = route.window('bounds-changing', grouping.uuid, grouping.name);
+    // const newChanging = route.externalWindow('moving', identity.uuid, grouping.name);
+    // const oldChanged = route.window('bounds-changed', grouping.uuid, grouping.name);
+    // const newChanged = route.externalWindow('bounds-changed', identity.uuid, grouping.name);
+    // ofEvents.on(oldBegin, payload => {
+    //     const newPayload = Object.assign({}, payload);
+    //     newPayload.uuid = identity.uuid;
+    //     ofEvents.emit(newBegin, newPayload);
+    // });
+    // ofEvents.on(oldEnd, payload => {
+    //     const newPayload = Object.assign({}, payload);
+    //     newPayload.uuid = identity.uuid;
+    //     ofEvents.emit(newEnd, newPayload);
+    // });
+    // ofEvents.on(oldChanging, payload => {
+    //     const newPayload = Object.assign({}, payload);
+    //     newPayload.uuid = identity.uuid;
+    //     ofEvents.emit(newChanging, newPayload);
+    // });
+    // ofEvents.on(oldChanged, payload => {
+    //     const newPayload = Object.assign({}, payload);
+    //     newPayload.uuid = identity.uuid;
+    //     ofEvents.emit(newChanged, newPayload);
+    // });
 };
 
 Window.joinGroup = function(identity, grouping, locals) {

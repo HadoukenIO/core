@@ -21,6 +21,8 @@ import ofEvents from '../../of_events';
 import { Identity } from 'hadouken-js-adapter/out/src/identity';
 import { BrowserWindow } from 'electron';
 import { Window } from '../../api/window';
+import route from '../../../common/route';
+import { addRemoteSubscription, RemoteSubscriptionProps } from '../../remote_subscriptions';
 
 const coreState = require('../../core_state');
 
@@ -152,12 +154,32 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
         };
         const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
         const parentId = parent && parent.browserWindow && parent.browserWindow.id;
-        const childId = new BrowserWindow(childWindowOptions).id;
+        const childBw = new BrowserWindow(childWindowOptions);
+        const childId = childBw.id;
 
         if (!coreState.addChildToWin(parentId, childId)) {
             console.warn('failed to add child window');
         }
         Window.create(childId, childWindowOptions);
+
+        const teardownlistener = async () => {
+            const subscription: RemoteSubscriptionProps = {
+                uuid,
+                name,
+                listenType: 'on',
+                className: 'window',
+                eventName: 'close-requested'
+            };
+            const unsubscribe = await addRemoteSubscription(subscription);
+            ofEvents.on(route.window('close-requested', uuid, name), () =>{});
+            ofEvents.removeListener(route.window('close-requested', identity.uuid, identity.name), listener);
+            Window.close(identity, true, unsubscribe);
+        };
+
+        const listener = async() => {
+            await teardownlistener();
+        };
+        ofEvents.on(route.window('close-requested', identity.uuid, identity.name), listener);
 
         return hwnd;
     } catch (e) {
@@ -179,21 +201,21 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
         return;
     }
     // ALSO CHECK TO MAKE SURE WE ARE ON WINDOWS!!!!]
-    const window = {
+    const window: Identity = {
         uuid: payload.uuid,
         name: payload.name
     };
-    const grouping = {
+    const grouping: Identity = {
         uuid: payload.groupingUuid,
         name: payload.groupingWindowName
     };
 
     const locals: any = {};
 
-    if (window.uuid !== void(0) && !isLocalUuid(window.uuid)) {
+    if (window.uuid && !isLocalUuid(window.uuid)) {
         locals.hwnd = await handleExternalWindow(identity, window) || nack('Could not locate the requested window');
     }
-    if (grouping.uuid !== void(0) && !isLocalUuid(grouping.uuid)) {
+    if (grouping.uuid && !isLocalUuid(grouping.uuid)) {
         locals.groupingHwnd = await handleExternalWindow(identity, grouping) || nack('Could not locate the requested window');
     }
 

@@ -77,6 +77,7 @@ declare module 'electron' {
         emit(routeString: string, ...args: any[]): void;
         getBounds(): Rectangle;
         setWindowPlacement(bounds: Rectangle): void;
+        close(): void;
     }
 
     export class ipcMain {
