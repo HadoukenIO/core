@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+    <head>
+	    <meta charset="utf-8">
+	    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	    <title>Warning</title>
+    </head>
+    <body>
+	    <div class="container">
+	        <h4>A JavaScript error occurred in the main process</h4>
+	        Uncaught Exception:
+	        <p id="error-body"></p>
+	    </div>
+	    <div class="container-btn">
+	        <button class="close-btn" onclick="closeWin()">OK</button>
+	    </div>
+	    <script>
+	        document.addEventListener('DOMContentLoaded', () => {
+	            getExceptionData();
+	        });
+
+	        async function closeWin() {
+	            try {
+		            const win = await fin.Window.getCurrent();
+		            return win.close();
+	            } catch (err) {
+		            console.log(err);
+	            }
+	        }
+
+	        async function getExceptionData() {
+	            const win = await fin.Window.getCurrent();
+	            const { customData } = await win.getOptions();
+	            const errBodySpan = document.querySelector('#error-body');
+
+	            errBodySpan.innerHTML = customData.error.message;
+	            document.body.addEventListener("copy", (event) => {
+		            fin.Clipboard.writeText({ data: customData.error.stack });
+	            });
+	        }
+	    </script>
+	    <style>
+	        body {
+	            margin: 0;
+	            overflow: hidden;
+	            font-size: medium;
+	        }
+	        h4 {
+	            color: darkblue;
+	        }
+	        .container {
+	            margin:8px;
+	            height: 140px
+	        }
+
+	        .container-btn {
+	            width: 100%;
+	            height: 60px;
+	            display: block;
+	            background-color: #F0F0F0;
+	            text-align: right;
+	        }
+
+	        .container-btn button {
+	            margin: 10px;
+	            width: 70px;
+	        }
+	        #error-body {
+	            height: 100px;
+	            white-space: pre-wrap;
+	            font-family: inherit;
+	            overflow: hidden;
+	        }
+	    </style>
+    </body>
+</html>

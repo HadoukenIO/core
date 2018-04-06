@@ -72,7 +72,6 @@ let appIsReady = false;
 const deferredLaunches = [];
 const USER_DATA = app.getPath('userData');
 
-
 app.on('child-window-created', function(parentId, childId, childOptions) {
 
     if (!coreState.addChildToWin(parentId, childId)) {
@@ -163,6 +162,12 @@ includeFlashPlugin();
 
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
+
+if (coreState.argo['safe-errors']) {
+    process.on('uncaughtException', (err) => {
+        errors.createErrorUI(err);
+    });
+}
 
 // Has a local copy of an app config
 if (coreState.argo['local-startup-url']) {

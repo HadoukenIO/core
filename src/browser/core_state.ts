@@ -65,7 +65,7 @@ export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
-const apps: Shapes.App[] = [];
+let apps: Shapes.App[] = [];
 
 let startManifest = {};
 const manifests: Map <string, Shapes.Manifest> = new Map();
@@ -426,6 +426,10 @@ export function removeApp(id: number): void {
     // apps = apps.filter(app => app.id !== id);
 
     // return apps;
+}
+
+export function deleteApp(uuid: string): void {
+    apps = apps.filter(app => app.uuid !== uuid);
 }
 
 export function getWindowOptionsById(id: number): Shapes.WindowOptions|boolean {
