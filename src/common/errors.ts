@@ -56,7 +56,6 @@ export function createErrorUI(err: Error) {
                 saveWindowState: false,
                 showTaskbarIcon: false,
                 autoShow: true,
-                frame: true,
                 alwaysOnTop: true,
                 resizable: false,
                 contextMenu: false,
@@ -78,7 +77,7 @@ export function createErrorUI(err: Error) {
             coreState.deleteApp(appUuid);
         });
 
-        Application.run({ uuid: errorAppOptions.uuid });
+        Application.run({ uuid: appUuid });
         log.writeToLog('info', err);
 
     } catch (err) {
