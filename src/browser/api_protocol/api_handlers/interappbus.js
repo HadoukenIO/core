@@ -116,9 +116,6 @@ function InterApplicationBusApiHandler() {
                 subscriptionObj.unsubscribe();
             };
             apiProtocolBase.registerSubscription(unsub, ...subscriptionArgs);
-            apiProtocolBase.onClientDisconnect(identity, () => {
-                apiProtocolBase.removeAllSubscriptions(identity);
-            });
 
             ofEvents.once(route.window('unload', identity.uuid, identity.name, false), () => {
                 apiProtocolBase.removeSubscription(...subscriptionArgs);

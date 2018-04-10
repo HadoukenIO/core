@@ -107,10 +107,6 @@ export function removeSubscription(identity: any, ...args: any[]) {
     return subscriptionManager.removeSubscription(identity, ...args);
 }
 
-export function removeAllSubscriptions(identity: any) {
-    return subscriptionManager.removeAllSubscriptions(identity);
-}
-
 export function getDefaultRequestHandler(): RequestHandler<MessagePackage> {
     return requestHandler;
 }
@@ -139,11 +135,8 @@ export function onClientAuthenticated(cb: any) {
     webSocketStrategy.onClientAuthenticated(cb);
 }
 
-export function onClientDisconnect(identity: any, cb: any) {
-    const externalConnection = ExternalApplication.getExternalConnectionByUuid(identity.uuid);
-    if (externalConnection) {
-        webSocketStrategy.onClientDisconnect(onDisconnect(externalConnection.id, cb));
-    }
+export function onClientDisconnect(id: any, cb: any) {
+    webSocketStrategy.onClientDisconnect(onDisconnect(id, cb));
 }
 
 function onDisconnect(id: any, cb: any) {
