@@ -1355,7 +1355,7 @@ Window.getSnapshot = function(identity, callback = () => {}) {
     }
 
     browserWindow.capturePage(img => {
-        callback(undefined, img.toPng().toString('base64'));
+        callback(undefined, img.toPNG().toString('base64'));
     });
 };
 
