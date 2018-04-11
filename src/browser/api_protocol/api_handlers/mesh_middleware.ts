@@ -22,7 +22,7 @@ import { Identity } from '../../../shapes';
 import { BrowserWindow } from 'electron';
 import { Window } from '../../api/window';
 import route from '../../../common/route';
-import { addRemoteSubscription, RemoteSubscriptionProps } from '../../remote_subscriptions';
+import { addRemoteSubscription } from '../../remote_subscriptions';
 
 const coreState = require('../../core_state');
 
@@ -165,24 +165,6 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
         }
         Window.create(childId, childWindowOptions);
 
-        const teardownListener = async () => {
-            const subscription: RemoteSubscriptionProps = {
-                uuid,
-                name,
-                listenType: 'on',
-                className: 'window',
-                eventName: 'close-requested'
-            };
-            const unsubscribe = await addRemoteSubscription(subscription);
-            coreState.removeChildById(childId);
-            childBw.emit('close');
-            childBw.close();
-            childBw.emit('closed');
-            unsubscribe();
-        };
-
-        Window.setBeforeWindowClose(teardownListener);
-
         return hwnd;
     } catch (e) {
         log.writeToLog('info', e);
@@ -240,11 +222,6 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
 
     if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction) {
         try {
-            if (action === 'join-window-group') {
-                const win = coreState.getWindowByUuidName(data.payload.groupingUuid, data.payload.groupingWindowName);
-                const hwnd = win.browserWindow.nativeId;
-                data.payload.hwnd = hwnd;
-            }
             connectionManager.resolveIdentity({uuid})
             .then((id: any) => {
                 id.runtime.fin.System.executeOnRemote(identity, data)

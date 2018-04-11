@@ -497,7 +497,6 @@ Window.create = function(id, opts) {
         browserWindow._options = _options;
 
         // set taskbar icon
-        // DOES THIS MESS UP OTHER EXTERNAL WINDOWS?
         if (!browserWindow.isExternalWindow()) {
             setTaskbar(browserWindow);
         }
@@ -1072,15 +1071,9 @@ Window.close = function(identity, force, callback = () => {}) {
 
     let defaultAction = () => {
         if (!browserWindow.isDestroyed()) {
-            const ofWindow = Window.wrap(identity.uuid, identity.name);
-            ofWindow.forceClose = true;
-
-            if (beforeWindowClose) {
-                beforeWindowClose().then(browserWindow.close);
-            } else {
-                browserWindow.close();
-            }
-
+            let openfinWindow = Window.wrap(identity.uuid, identity.name);
+            openfinWindow.forceClose = true;
+            browserWindow.close();
         }
     };
 
@@ -1408,10 +1401,6 @@ Window.isShowing = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     return !!(browserWindow && browserWindow.isVisible());
-};
-
-Window.setBeforeWindowClose = (fn) => {
-    beforeWindowClose = fn;
 };
 
 const meshJoinGroupEvents = (identity, grouping) => {

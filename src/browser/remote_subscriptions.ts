@@ -47,7 +47,7 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
 /**
  * Shape of remote subscription props
  */
-export interface RemoteSubscriptionProps extends Identity {
+interface RemoteSubscriptionProps extends Identity {
     className: 'application'|'window'|'system'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
@@ -95,11 +95,9 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
         connectionManager.resolveIdentity({
             uuid: subscription.uuid
 
-        // }).then((id) => {
-        }).then(async (id) => {
+        }).then((id) => {
             // Found app/window in a remote runtime, subscribing
-            // applyRemoteSubscription(subscription, id.runtime);
-            await applyRemoteSubscription(subscription, id.runtime);
+            applyRemoteSubscription(subscription, id.runtime);
 
         }).catch(() => {
             // App/window not found. We are assuming it will come up sometime in the future.
@@ -150,8 +148,7 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
     });
 
     // Subscribe to an event on a remote runtime
-    // classEventEmitter[listenType](eventName, listener);
-    await classEventEmitter[listenType](eventName, listener);
+    classEventEmitter[listenType](eventName, listener);
 }
 
 /**
