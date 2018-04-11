@@ -95,9 +95,11 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
         connectionManager.resolveIdentity({
             uuid: subscription.uuid
 
-        }).then((id) => {
+        // }).then((id) => {
+        }).then(async (id) => {
             // Found app/window in a remote runtime, subscribing
-            applyRemoteSubscription(subscription, id.runtime);
+            // applyRemoteSubscription(subscription, id.runtime);
+            await applyRemoteSubscription(subscription, id.runtime);
 
         }).catch(() => {
             // App/window not found. We are assuming it will come up sometime in the future.
@@ -138,9 +140,6 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
         cleanUpSubscription(subscription, runtimeKey);
     };
 
-    // Subscribe to an event on a remote runtime
-    classEventEmitter[listenType](eventName, listener);
-
     // Store a cleanup function for the added listener in
     // un-subscription map, so that later we can remove extra subscriptions
     if (!Array.isArray(unSubscriptions.get(runtimeKey))) {
@@ -149,6 +148,10 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
     unSubscriptions.get(runtimeKey).push(() => {
         classEventEmitter.removeListener(eventName, listener);
     });
+
+    // Subscribe to an event on a remote runtime
+    // classEventEmitter[listenType](eventName, listener);
+    await classEventEmitter[listenType](eventName, listener);
 }
 
 /**

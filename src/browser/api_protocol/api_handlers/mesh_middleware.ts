@@ -18,7 +18,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
-import { Identity } from 'hadouken-js-adapter/out/src/identity';
+import { Identity } from '../../../shapes';
 import { BrowserWindow } from 'electron';
 import { Window } from '../../api/window';
 import route from '../../../common/route';
@@ -136,9 +136,12 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
 
 const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
     const { uuid, name } = toGroup;
+    if (coreState.getWindowByUuidName(identity.uuid, name)) {
+        return 'registered';
+    }
     try {
         const getHwndMessage = {
-            action: 'get-hwnd',
+            action: 'get-window-native-id',
             payload: {
                 uuid,
                 name
@@ -162,7 +165,7 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
         }
         Window.create(childId, childWindowOptions);
 
-        const teardownlistener = async () => {
+        const teardownListener = async () => {
             const subscription: RemoteSubscriptionProps = {
                 uuid,
                 name,
@@ -171,15 +174,14 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
                 eventName: 'close-requested'
             };
             const unsubscribe = await addRemoteSubscription(subscription);
-            ofEvents.on(route.window('close-requested', uuid, name), () =>{});
-            ofEvents.removeListener(route.window('close-requested', identity.uuid, identity.name), listener);
-            Window.close(identity, true, unsubscribe);
+            coreState.removeChildById(childId);
+            childBw.emit('close');
+            childBw.close();
+            childBw.emit('closed');
+            unsubscribe();
         };
 
-        const listener = async() => {
-            await teardownlistener();
-        };
-        ofEvents.on(route.window('close-requested', identity.uuid, identity.name), listener);
+        Window.setBeforeWindowClose(teardownListener);
 
         return hwnd;
     } catch (e) {
@@ -200,7 +202,7 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
         next();
         return;
     }
-    // ALSO CHECK TO MAKE SURE WE ARE ON WINDOWS!!!!]
+    // CHECK TO MAKE SURE WE ARE ON WINDOWS?
     const window: Identity = {
         uuid: payload.uuid,
         name: payload.name

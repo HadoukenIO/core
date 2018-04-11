@@ -36,7 +36,6 @@ module.exports.windowApiMap = {
     'focus-window': focusWindow,
     'get-current-window-options': getCurrentWindowOptions,
     'get-all-frames': getAllFrames,
-    'get-hwnd': getHwnd,
     'get-window-bounds': getWindowBounds,
     'get-window-group': getWindowGroup,
     'get-window-info': getWindowInfo,
@@ -332,12 +331,6 @@ function hideWindow(identity, message, ack) {
 
     Window.hide(windowIdentity);
     ack(successAck);
-}
-
-function getHwnd(identity, message, ack) {
-    const { payload } = message;
-    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    return Window.getHwnd(windowIdentity);
 }
 
 function getAllFrames(identity, message) {

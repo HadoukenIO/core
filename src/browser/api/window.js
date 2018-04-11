@@ -1072,9 +1072,15 @@ Window.close = function(identity, force, callback = () => {}) {
 
     let defaultAction = () => {
         if (!browserWindow.isDestroyed()) {
-            let openfinWindow = Window.wrap(identity.uuid, identity.name);
-            openfinWindow.forceClose = true;
-            browserWindow.close();
+            const ofWindow = Window.wrap(identity.uuid, identity.name);
+            ofWindow.forceClose = true;
+
+            if (beforeWindowClose) {
+                beforeWindowClose().then(browserWindow.close);
+            } else {
+                browserWindow.close();
+            }
+
         }
     };
 
@@ -1226,13 +1232,6 @@ Window.getGroup = function(identity) {
 
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
     return WindowGroups.getGroup(openfinWindow.groupUuid);
-};
-
-
-Window.getHwnd = function(identity) {
-    const { uuid, name } = identity;
-    const window = coreState.getWindowByUuidName(uuid, name);
-    return window.browserWindow.nativeId;
 };
 
 
@@ -1411,106 +1410,55 @@ Window.isShowing = function(identity) {
     return !!(browserWindow && browserWindow.isVisible());
 };
 
+Window.setBeforeWindowClose = (fn) => {
+    beforeWindowClose = fn;
+};
+
 const meshJoinGroupEvents = (identity, grouping) => {
 
-    const initEvent = (event, other) => {
+    const unsubscriptions = [];
+    const eventMap = {
+        'begin-user-bounds-changed': 'begin-user-bounds-change',
+        'end-user-bounds-changed': 'end-user-bounds-change',
+        'bounds-changing': 'moving',
+        'bounds-changed': 'bounds-changed',
+        'focused': 'focus',
+        'minimized': 'state-change',
+        'maximized': 'state-change',
+        'restored': 'state-change',
+        'closed': 'close',
+    };
+
+    Object.keys(eventMap).forEach(key => {
+        const event = key;
+        const bwEvent = eventMap[key]
+
         const subscription = {
             uuid: grouping.uuid,
             name: grouping.name,
             listenType: 'on',
             className: 'window',
             eventName: event
-        }
-        addRemoteSubscription(subscription);
+        };
 
-        const oldEvent = route.window(event, grouping.uuid, grouping.name);
-        const newEvent = route.externalWindow(other, identity.uuid, grouping.name);
+        const incomingEvent = route.window(event, grouping.uuid, grouping.name);
+        const newEvent = route.externalWindow(bwEvent, identity.uuid, grouping.name);
 
-        ofEvents.on(oldEvent, payload => {
+        ofEvents.on(incomingEvent, payload => {
             const newPayload = Object.assign({}, payload);
             newPayload.uuid = identity.uuid;
             ofEvents.emit(newEvent, newPayload);
         });
-    }
+        
+        unsubscriptions.push(addRemoteSubscription(subscription));
+    });
 
-    initEvent('begin-user-bounds-changed', 'begin-user-bounds-change');
-    initEvent('end-user-bounds-changed', 'end-user-bounds-change');
-    initEvent('bounds-changing', 'moving');
-    initEvent('bounds-changed', 'bounds-changed');
-
-
-    // do focus
-
-    // remove child by id (corestate) on close of parent
-
-
-    // const beginSubscription = {
-    //     uuid: grouping.uuid,
-    //     name: grouping.name,
-    //     listenType: 'on',
-    //     className: 'window',
-    //     eventName: 'begin-user-bounds-changed'
-    // };
-
-    // addRemoteSubscription(beginSubscription);
-
-    // const endSubscription = {
-    //     uuid: grouping.uuid,
-    //     name: grouping.name,
-    //     listenType: 'on',
-    //     className: 'window',
-    //     eventName: 'end-user-bounds-changed'
-    // };
-
-    // addRemoteSubscription(endSubscription);
-    // const changingSubscription = {
-    //     uuid: grouping.uuid,
-    //     name: grouping.name,
-    //     listenType: 'on',
-    //     className: 'window',
-    //     eventName: 'bounds-changing'
-    // };
-
-    // addRemoteSubscription(changingSubscription);
-
-    // const changedSubscription = {
-    //     uuid: grouping.uuid,
-    //     name: grouping.name,
-    //     listenType: 'on',
-    //     className: 'window',
-    //     eventName: 'bounds-changed'
-    // };
-
-    // addRemoteSubscription(changedSubscription);
-
-    // const oldBegin = route.window('begin-user-bounds-changed', grouping.uuid, grouping.name);
-    // const newBegin = route.externalWindow('begin-user-bounds-change', identity.uuid, grouping.name);
-    // const oldEnd = route.window('end-user-bounds-changed', grouping.uuid, grouping.name);
-    // const newEnd = route.externalWindow('end-user-bounds-change', identity.uuid, grouping.name);
-    // const oldChanging = route.window('bounds-changing', grouping.uuid, grouping.name);
-    // const newChanging = route.externalWindow('moving', identity.uuid, grouping.name);
-    // const oldChanged = route.window('bounds-changed', grouping.uuid, grouping.name);
-    // const newChanged = route.externalWindow('bounds-changed', identity.uuid, grouping.name);
-    // ofEvents.on(oldBegin, payload => {
-    //     const newPayload = Object.assign({}, payload);
-    //     newPayload.uuid = identity.uuid;
-    //     ofEvents.emit(newBegin, newPayload);
-    // });
-    // ofEvents.on(oldEnd, payload => {
-    //     const newPayload = Object.assign({}, payload);
-    //     newPayload.uuid = identity.uuid;
-    //     ofEvents.emit(newEnd, newPayload);
-    // });
-    // ofEvents.on(oldChanging, payload => {
-    //     const newPayload = Object.assign({}, payload);
-    //     newPayload.uuid = identity.uuid;
-    //     ofEvents.emit(newChanging, newPayload);
-    // });
-    // ofEvents.on(oldChanged, payload => {
-    //     const newPayload = Object.assign({}, payload);
-    //     newPayload.uuid = identity.uuid;
-    //     ofEvents.emit(newChanged, newPayload);
-    // });
+    Promise.all(unsubscriptions).then(unsubs => {
+        const externalClose = route.window('closed', grouping.uuid, grouping.name);
+        const childClose = route.externalWindow('close', grouping.uuid, grouping.name);
+        ofEvents.on(externalClose, () => unsubs.forEach(unsub => unsub()));
+        ofEvents.on(childClose, () => unsubs.forEach(unsub => unsub()));
+    })
 };
 
 Window.joinGroup = function(identity, grouping, locals) {
@@ -1519,10 +1467,15 @@ Window.joinGroup = function(identity, grouping, locals) {
     if (locals) {
         const { requester, hwnd, groupingHwnd } = locals;
         if (hwnd) {
-            meshJoinGroupEvents(requester, identity);
+            if (hwnd !== 'registered') {
+                meshJoinGroupEvents(requester, identity);
+            }
             identityOfWindow = Window.wrap(requester.uuid, identity.name);
-        } else if (groupingHwnd) {
-            meshJoinGroupEvents(requester, grouping);
+        }
+        if (groupingHwnd) {
+            if (groupingHwnd !== 'registered') {
+                meshJoinGroupEvents(requester, grouping);
+            }
             groupingOfWindow = Window.wrap(requester.uuid, grouping.name);
         }
     }
@@ -1540,6 +1493,7 @@ Window.joinGroup = function(identity, grouping, locals) {
 
 
 Window.leaveGroup = function(identity) {
+    // deal with leaveGroup...
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
