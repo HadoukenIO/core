@@ -1420,7 +1420,7 @@ const meshJoinGroupEvents = (identity, grouping) => {
 
     Object.keys(eventMap).forEach(key => {
         const event = key;
-        const bwEvent = eventMap[key]
+        const bwEvent = eventMap[key];
 
         const subscription = {
             uuid: grouping.uuid,
@@ -1438,7 +1438,7 @@ const meshJoinGroupEvents = (identity, grouping) => {
             newPayload.uuid = identity.uuid;
             ofEvents.emit(newEvent, newPayload);
         });
-        
+
         unsubscriptions.push(addRemoteSubscription(subscription));
     });
 
@@ -1447,7 +1447,7 @@ const meshJoinGroupEvents = (identity, grouping) => {
         const childClose = route.externalWindow('close', grouping.uuid, grouping.name);
         ofEvents.on(externalClose, () => unsubs.forEach(unsub => unsub()));
         ofEvents.on(childClose, () => unsubs.forEach(unsub => unsub()));
-    })
+    });
 };
 
 Window.joinGroup = function(identity, grouping, locals) {

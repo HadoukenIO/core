@@ -137,7 +137,11 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
 const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
     const { uuid, name } = toGroup;
     if (coreState.getWindowByUuidName(identity.uuid, name)) {
+        // External window already created and registered
         return 'registered';
+    }
+    if (!uuid || isLocalUuid(uuid)) {
+        return;
     }
     try {
         const getHwndMessage = {
@@ -158,7 +162,7 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
         const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
         const parentId = parent && parent.browserWindow && parent.browserWindow.id;
         const childBw = new BrowserWindow(childWindowOptions);
-        const childId = childBw.id;
+        const childId = childBw && childBw.id;
 
         if (!coreState.addChildToWin(parentId, childId)) {
             console.warn('failed to add child window');
@@ -168,7 +172,7 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
         return hwnd;
     } catch (e) {
         log.writeToLog('info', e);
-        return;
+        return e;
     }
 };
 
@@ -177,10 +181,9 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
     const payload = data && data.payload;
     const action = data && data.action;
     const isJoinWindowGroupAction = action === 'join-window-group';
-    const isLocalAction = !identity.runtimeUuid;
     const isValidIdentity = typeof (identity) === 'object';
 
-    if (!isJoinWindowGroupAction || !isLocalAction || !isValidIdentity) {
+    if (!isJoinWindowGroupAction || !isValidIdentity) {
         next();
         return;
     }
@@ -196,14 +199,16 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
 
     const locals: any = {};
 
-    if (window.uuid && !isLocalUuid(window.uuid)) {
-        locals.hwnd = await handleExternalWindow(identity, window) || nack('Could not locate the requested window');
-    }
-    if (grouping.uuid && !isLocalUuid(grouping.uuid)) {
-        locals.groupingHwnd = await handleExternalWindow(identity, grouping) || nack('Could not locate the requested window');
-    }
+    locals.hwnd = await handleExternalWindow(identity, window);
+    locals.groupingHwnd = await handleExternalWindow(identity, grouping);
 
-    next(locals);
+    if (locals.hwnd instanceof Error) {
+        nack(locals.hwnd);
+    } else if (locals.groupingHwnd instanceof Error) {
+        nack(locals.groupingHwnd);
+    } else {
+        next(locals);
+    }
 }
 
 //on a non InterAppBus API call, forward the message to the runtime that owns the uuid.
