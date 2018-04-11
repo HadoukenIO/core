@@ -182,8 +182,9 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
     const action = data && data.action;
     const isJoinWindowGroupAction = action === 'join-window-group';
     const isValidIdentity = typeof (identity) === 'object';
+    const optInFlag = coreState.argo['mesh-join-group'];
 
-    if (!isJoinWindowGroupAction || !isValidIdentity) {
+    if (!isJoinWindowGroupAction || !isValidIdentity || !optInFlag) {
         next();
         return;
     }
@@ -285,4 +286,4 @@ function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): vo
     requestHandler.addPreProcessor(aggregateFromExternalRuntime);
 }
 
-export { registerMiddleware, isLocalUuid };
+export { registerMiddleware };
