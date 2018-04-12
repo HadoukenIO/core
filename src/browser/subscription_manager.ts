@@ -33,7 +33,7 @@ export default class SubscriptionManager {
         });
 
         ofEvents.on(route('externalconn', 'closed'), (identity: Identity) => {
-            this.removeAllSubscriptions(identity);
+            this.removeAllSubscriptions({uuid: identity.uuid, name: identity.uuid});
         });
 
         ofEvents.on(route.frame('disconnected'), (identity: Identity) => {
