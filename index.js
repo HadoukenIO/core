@@ -27,6 +27,7 @@ let crashReporter = electron.crashReporter;
 let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
 let ipc = electron.ipcMain;
+let Menu = electron.Menu;
 
 // npm modules
 let _ = require('underscore');
@@ -275,6 +276,7 @@ app.on('ready', function() {
     launchApp(coreState.argo, true);
 
     registerShortcuts();
+    registerMacMenu();
 
     //subscribe to auth requests:
     app.on('login', (event, webContents, request, authInfo, callback) => {
@@ -652,10 +654,6 @@ function registerShortcuts() {
         const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
         const accelerator = windowOptions && windowOptions.accelerator || {};
         const webContents = browserWindow.webContents;
-        const copy = () => { webContents.copy(); };
-        const paste = () => { webContents.paste(); };
-        globalShortcut.register('CommandOrControl+C', copy);
-        globalShortcut.register('CommandOrControl+V', paste);
 
         if (accelerator.zoom) {
             const zoom = increment => { return () => { webContents.send('zoom', { increment }); }; };
@@ -695,6 +693,23 @@ function registerShortcuts() {
 
     app.on('browser-window-closed', unhookShortcuts);
     app.on('browser-window-blur', unhookShortcuts);
+}
+
+function registerMacMenu() {
+    if (process.platform === 'darwin') {
+        const template = [{
+                label: 'OpenFin',
+                submenu: [
+                    { role: 'quit' }
+                ]
+            },
+            {
+                role: 'editMenu'
+            }
+        ];
+        const menu = Menu.buildFromTemplate(template);
+        Menu.setApplicationMenu(menu);
+    }
 }
 
 function needsCrashReporter(argo) {
