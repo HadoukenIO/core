@@ -65,13 +65,13 @@ export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
-const apps: Shapes.App[] = [];
+let apps: Shapes.App[] = [];
 
 let startManifest = {};
 const manifests: Map <string, Shapes.Manifest> = new Map();
 
 // TODO: This needs to go go away, pending socket server refactor.
-let socketServerState = {};
+let socketServerState: PortInfo|{} = {};
 
 const manifestProxySettings: Shapes.ProxySettings = {
     proxyAddress: '',
@@ -428,6 +428,10 @@ export function removeApp(id: number): void {
     // return apps;
 }
 
+export function deleteApp(uuid: string): void {
+    apps = apps.filter(app => app.uuid !== uuid);
+}
+
 export function getWindowOptionsById(id: number): Shapes.WindowOptions|boolean {
     const win = getWinById(id);
     return win && win.openfinWindow && win.openfinWindow._options;
@@ -547,7 +551,7 @@ export function setSocketServerState(state: PortInfo) {
 }
 
 //TODO: This needs to go go away, pending socket server refactor.
-export function getSocketServerState() {
+export function getSocketServerState(): PortInfo|{} {
     return socketServerState;
 }
 
@@ -715,19 +719,21 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
     }
 }
 
-export function getWindowInitialOptionSet(windowId: number): any {
-    const options = <any>getWindowOptionsById(windowId);
+export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
+    const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
+    const options = ofWin._options;
     const { uuid, name } = options;
     const entityInfo = getEntityInfo({ uuid, name });
     const elIPCConfig = {
         channels: electronIPC.channels
     };
-    const socketServerState = getSocketServerState();
+    const socketServerState = <PortInfo>getSocketServerState();
 
     return {
         options,
         entityInfo,
         elIPCConfig,
-        socketServerState
+        socketServerState,
+        frames: Array.from(ofWin.frames.values())
     };
 }

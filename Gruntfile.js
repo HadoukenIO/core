@@ -91,6 +91,12 @@ module.exports = (grunt) => {
                     dest: 'staging/core/'
                 }]
             },
+            error: { //error dialog artifacts that need copying
+                files: [{
+                    src: ['src/error/*'],
+                    dest: 'staging/core/'
+                }]
+            },
             certificate: { //certificate dialog artifacts that need copying
                 files: [{
                     src: ['src/certificate/*'],

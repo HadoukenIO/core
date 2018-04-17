@@ -69,9 +69,9 @@ let firstApp = null;
 let rvmBus;
 let otherInstanceRunning = false;
 let appIsReady = false;
+let handlingErrors = false;
 const deferredLaunches = [];
 const USER_DATA = app.getPath('userData');
-
 
 app.on('child-window-created', function(parentId, childId, childOptions) {
 
@@ -164,6 +164,9 @@ includeFlashPlugin();
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
 
+// Opt in to display non-blocking errors
+handleSafeErrors(coreState.argo);
+
 // Has a local copy of an app config
 if (coreState.argo['local-startup-url']) {
     try {
@@ -178,12 +181,22 @@ if (coreState.argo['local-startup-url']) {
     }
 }
 
+function handleSafeErrors(argo) {
+    if (!handlingErrors && argo['safe-errors']) {
+        process.on('uncaughtException', (err) => {
+            errors.createErrorUI(err);
+        });
+        handlingErrors = true;
+    }
+}
+
 const handleDelegatedLaunch = function(commandLine) {
     let otherInstanceArgo = minimist(commandLine);
     const socketServerState = coreState.getSocketServerState();
     const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
 
     initializeCrashReporter(otherInstanceArgo);
+    handleSafeErrors(otherInstanceArgo);
 
     // delegated args from a second instance
     launchApp(otherInstanceArgo, false);

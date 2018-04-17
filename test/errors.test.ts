@@ -14,6 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import * as assert from 'assert';
+import * as mockery from 'mockery';
+import {mockElectron, lastLogValue, lastVlogValue} from './electron';
+
+mockery.registerMock('electron', mockElectron);
+mockery.enable();
 import * as errors from '../src/common/errors';
 
 describe('Errors', () => {

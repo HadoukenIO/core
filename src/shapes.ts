@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import { PortInfo } from './browser/port_discovery';
+
 export interface Identity {
     uuid: string;
     name?: string;
@@ -336,4 +338,19 @@ export interface EventPayload {
     topic: string;
     uuid: string;
     name?: string;
+}
+
+export interface ElectronIpcChannels {
+    CORE_MESSAGE: string;
+    WINDOW_MESSAGE: string;
+}
+
+export interface WindowInitialOptionSet {
+    options: WindowOptions;
+    entityInfo: FrameInfo;
+    socketServerState: PortInfo;
+    frames: ChildFrameInfo[];
+    elIPCConfig: {
+        channels: ElectronIpcChannels
+    };
 }
