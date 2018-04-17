@@ -157,7 +157,8 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
         const childWindowOptions = {
             uuid: identity.uuid,
             name,
-            hwnd: hwnd.data
+            hwnd: hwnd.data,
+            meshJoinGroup: true
         };
         const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
         const parentId = parent && parent.browserWindow && parent.browserWindow.id;

@@ -497,7 +497,7 @@ Window.create = function(id, opts) {
         browserWindow._options = _options;
 
         // set taskbar icon
-        if (!browserWindow.isExternalWindow()) {
+        if (!opts.meshJoinGroup) {
             setTaskbar(browserWindow);
         }
 
