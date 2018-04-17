@@ -317,6 +317,30 @@ limitations under the License.
         }
     }
 
+    //extend open
+    const originalOpen = global.open;
+
+    global.open = (...args) => {
+        const [url, requestedName, features = ''] = args; // jshint ignore:line
+        const requestId = ++childWindowRequestId;
+        const webContentsId = getWebContentsId();
+        const name = !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
+        const responseChannel = `${name}-created`;
+
+        const options = Object.assign(featuresToOptionsObj(features), {
+            uuid: initialOptions.uuid,
+            name: name,
+            saveWindowState: false,
+            autoShow: true
+        });
+
+        const convertedOpts = convertOptionsToElectronSync(options);
+        ipc.send(renderFrameId, 'add-child-window-request', responseChannel, name, webContentsId,
+                 requestId, JSON.stringify(convertedOpts));
+
+        return originalOpen(url, name, features);
+    };
+
     function createChildWindow(options, cb) {
         let requestId = ++childWindowRequestId;
         // initialize what's needed to create a child window via window.open
@@ -339,7 +363,7 @@ limitations under the License.
         ipc.once(responseChannel, () => {
             setTimeout(() => {
                 // Synchronous execution of window.open to trigger state tracking of child window
-                let nativeWindow = window.open((url !== 'about:blank' ? url : ''), frameName, features);
+                let nativeWindow = originalOpen((url !== 'about:blank' ? url : ''), frameName, features);
 
                 let popResponseChannel = `${frameName}-pop-request`;
                 ipc.once(popResponseChannel, (sender, meta) => {
@@ -406,6 +430,62 @@ limitations under the License.
                 callback();
             });
         });
+    }
+
+    //https://developer.mozilla.org/en-US/docs/Web/API/Window/open
+    //All features can be set to yes or 1, or just be present to be "on". Set them to 'no' or 0, or in most cases just omit them, to be "off".
+    function featureToBool(value = '') {
+        switch (value.toLowerCase()) {
+            case '0':
+                return false;
+            case 'no':
+                return false;
+            default:
+                return true;
+        }
+    }
+
+    //We need to do this as all values are text and convertToElectron does not handle type changes only name translation.
+    function featuresToOptionsObj(features) {
+        features = features.trim();
+        let featuresObj = {};
+        features.split(',').forEach(item => {
+            const splitItem = item.split('=');
+            const [name, value] = splitItem;
+
+            switch (name) {
+                case 'height':
+                    featuresObj['defaultHeight'] = +value;
+                    break;
+                case 'width':
+                    featuresObj['defaultWidth'] = +value;
+                    break;
+                case 'top':
+                    featuresObj['defaultTop'] = +value;
+                    break;
+                case 'left':
+                    featuresObj['defaultleft'] = +value;
+                    break;
+                case 'centerscreen':
+                    featuresObj['defaultCentered'] = featureToBool(value);
+                    break;
+                case 'resizable':
+                    featuresObj[name] = featureToBool(value);
+                    break;
+                case 'chrome':
+                    featuresObj['frame'] = featureToBool(value);
+                    break;
+                case 'alwaysRaised':
+                    featuresObj['alwaysOnTop'] = featureToBool(value);
+                    break;
+                case 'minimizable':
+                    featuresObj[name] = featureToBool(value);
+                    break;
+                default:
+                    featuresObj[name] = value;
+            }
+        });
+        return featuresObj;
     }
 
     ///external API Decorator:
@@ -489,6 +569,8 @@ limitations under the License.
 
         asyncApiCall(action, { allDone: true });
     }
+
+
 
     /**
      * Request preload scripts from the Core and execute them in the current window
