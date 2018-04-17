@@ -337,13 +337,12 @@ limitations under the License.
         const options = Object.assign(featuresToOptionsObj(features), {
             uuid: initialOptions.uuid,
             name: name,
-            saveWindowState: false,
             autoShow: true
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
         ipc.send(renderFrameId, 'add-child-window-request', responseChannel, name, webContentsId,
-                 requestId, JSON.stringify(convertedOpts));
+            requestId, JSON.stringify(convertedOpts));
 
         return originalOpen(url, name, features);
     };
