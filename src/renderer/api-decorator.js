@@ -40,11 +40,18 @@ limitations under the License.
     let windowId;
     let webContentsId = 0;
 
-    const elIPCConfig = glbl.__startOptions.elIPCConfig;
-    const entityInfo = glbl.__startOptions.entityInfo;
-    const initialOptions = glbl.__startOptions.options;
-    const runtimeArguments = glbl.__startOptions.runtimeArguments;
-    const socketServerState = glbl.__startOptions.socketServerState;
+    const {
+        elIPCConfig,
+        options: initialOptions,
+        runtimeArguments,
+        socketServerState,
+        frames
+    } = glbl.__startOptions;
+
+    // The following will check whether it is an iframe and update
+    // entity information accordingly
+    const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
+    const entityInfo = frameInfo || glbl.__startOptions.entityInfo;
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
