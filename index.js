@@ -639,10 +639,6 @@ function registerShortcuts() {
         const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
         const accelerator = windowOptions && windowOptions.accelerator || {};
         const webContents = browserWindow.webContents;
-        const copy = () => { webContents.copy(); };
-        const paste = () => { webContents.paste(); };
-        globalShortcut.register('CommandOrControl+C', copy);
-        globalShortcut.register('CommandOrControl+V', paste);
 
         if (accelerator.zoom) {
             const zoom = increment => { return () => { webContents.send('zoom', { increment }); }; };
