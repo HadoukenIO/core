@@ -463,8 +463,7 @@ limitations under the License.
         features = features.trim();
         let featuresObj = {};
         features.split(',').forEach(item => {
-            const splitItem = item.split('=');
-            const [name, value] = splitItem;
+            const [name, value] = item.split('=');
 
             switch (name) {
                 case 'height':
