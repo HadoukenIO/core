@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { getWindowByUuidName } from '../../core_state';
+import { getWindowByUuidName, getExternalAppObjByUuid } from '../../core_state';
 import { Identity, OpenFinWindow, ServiceIdentity } from '../../../shapes';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { RemoteAck } from '../transport_strategy/ack';
@@ -27,7 +27,7 @@ const SERVICE_APP_ACTION = 'process-service-action';
 const SERVICE_ACK_ACTION = 'service-ack';
 
 interface TargetIdentity {
-    targetIdentity: false | OpenFinWindow;
+    targetIdentity: false | void | OpenFinWindow | Identity;
     serviceIdentity: ServiceIdentity;
 }
 
@@ -60,12 +60,12 @@ function setTargetIdentity(identity: Identity, payload: any): TargetIdentity {
     if (payload.connectAction) {
         // If initial connection to a service, identity may exist but not be registered;
         const serviceIdentity = Service.getServiceByUuid(uuid);
-        const targetIdentity = serviceIdentity && getWindowByUuidName(serviceIdentity.uuid, serviceIdentity.name);
+        const targetIdentity = serviceIdentity && (getExternalAppObjByUuid(uuid) || getWindowByUuidName(uuid, name));
         return { targetIdentity, serviceIdentity };
     }
     // Sender could be service or client, want service Identity sent in payload either way
     const serviceIdentity = Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid);
-    const targetIdentity = getWindowByUuidName(uuid, name);
+    const targetIdentity = getExternalAppObjByUuid(uuid) || getWindowByUuidName(uuid, name);
     return { targetIdentity, serviceIdentity };
 }
 
@@ -80,8 +80,7 @@ function handleServiceApiAction(msg: MessagePackage, next?: () => void): void {
         const { targetIdentity, serviceIdentity } = setTargetIdentity(identity, payload);
 
         // ensure the service / connection exists
-        const browserWindow = targetIdentity && targetIdentity.browserWindow;
-        if (targetIdentity && browserWindow && !browserWindow.isDestroyed()) {
+        if (targetIdentity) {
             const { action: serviceAction, payload: messagePayload } = payload;
             const ackKey = getAckKey(data.messageId, identity);
             remoteAckMap.set(ackKey, { ack, nack });
