@@ -460,7 +460,7 @@ limitations under the License.
 
     //We need to do this as all values are text and convertToElectron does not handle type changes only name translation.
     function featuresToOptionsObj(features) {
-        features = features.trim();
+        features = features.split(' ').join('');
         let featuresObj = {};
         features.split(',').forEach(item => {
             const [name, value] = item.split('=');
