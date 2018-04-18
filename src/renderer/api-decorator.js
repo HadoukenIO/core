@@ -52,6 +52,7 @@ limitations under the License.
     // entity information accordingly
     const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
     const entityInfo = frameInfo || glbl.__startOptions.entityInfo;
+    const decorateOpen = !runtimeArguments.includes('--native-window-open');
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
@@ -327,7 +328,7 @@ limitations under the License.
     //extend open
     const originalOpen = global.open;
 
-    global.open = (...args) => {
+    function openChildWindow(...args) {
         const [url, requestedName, features = ''] = args; // jshint ignore:line
         const requestId = ++childWindowRequestId;
         const webContentsId = getWebContentsId();
@@ -346,7 +347,12 @@ limitations under the License.
             requestId, JSON.stringify(convertedOpts));
 
         return originalOpen(url, name, features);
-    };
+    }
+
+    //Only decorate global open if flag is not present.
+    if (decorateOpen) {
+        global.open = openChildWindow;
+    }
 
     function createChildWindow(options, cb) {
         let requestId = ++childWindowRequestId;
