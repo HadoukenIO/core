@@ -335,6 +335,7 @@ limitations under the License.
         const responseChannel = `${name}-created`;
 
         const options = Object.assign(featuresToOptionsObj(features), {
+            url,
             uuid: initialOptions.uuid,
             name: name,
             autoShow: true
@@ -470,7 +471,7 @@ limitations under the License.
                     featuresObj['defaultTop'] = +value;
                     break;
                 case 'left':
-                    featuresObj['defaultleft'] = +value;
+                    featuresObj['defaultLeft'] = +value;
                     break;
                 case 'centerscreen':
                     featuresObj['defaultCentered'] = featureToBool(value);
