@@ -52,6 +52,7 @@ limitations under the License.
     // entity information accordingly
     const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
     const entityInfo = frameInfo || glbl.__startOptions.entityInfo;
+    const decorateOpen = !runtimeArguments.includes('--native-window-open');
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
@@ -324,6 +325,35 @@ limitations under the License.
         }
     }
 
+    //extend open
+    const originalOpen = global.open;
+
+    function openChildWindow(...args) {
+        const [url, requestedName, features = ''] = args; // jshint ignore:line
+        const requestId = ++childWindowRequestId;
+        const webContentsId = getWebContentsId();
+        const name = !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
+        const responseChannel = `${name}-created`;
+
+        const options = Object.assign(featuresToOptionsObj(features), {
+            url,
+            uuid: initialOptions.uuid,
+            name: name,
+            autoShow: true
+        });
+
+        const convertedOpts = convertOptionsToElectronSync(options);
+        ipc.send(renderFrameId, 'add-child-window-request', responseChannel, name, webContentsId,
+            requestId, JSON.stringify(convertedOpts));
+
+        return originalOpen(url, name, features);
+    }
+
+    //Only decorate global open if flag is not present.
+    if (decorateOpen) {
+        global.open = openChildWindow;
+    }
+
     function createChildWindow(options, cb) {
         let requestId = ++childWindowRequestId;
         // initialize what's needed to create a child window via window.open
@@ -346,7 +376,7 @@ limitations under the License.
         ipc.once(responseChannel, () => {
             setTimeout(() => {
                 // Synchronous execution of window.open to trigger state tracking of child window
-                let nativeWindow = window.open((url !== 'about:blank' ? url : ''), frameName, features);
+                let nativeWindow = originalOpen((url !== 'about:blank' ? url : ''), frameName, features);
 
                 let popResponseChannel = `${frameName}-pop-request`;
                 ipc.once(popResponseChannel, (sender, meta) => {
@@ -413,6 +443,53 @@ limitations under the License.
                 callback();
             });
         });
+    }
+
+    //https://developer.mozilla.org/en-US/docs/Web/API/Window/open
+    //All features can be set to yes or 1, or just be present to be "on". Set them to 'no' or 0, or in most cases just omit them, to be "off".
+    function featureToBool(value = '') {
+        switch (value.toLowerCase()) {
+            case '0':
+                return false;
+            case 'no':
+                return false;
+            default:
+                return true;
+        }
+    }
+
+    //We need to do this as all values are text and convertToElectron does not handle type changes only name translation.
+    function featuresToOptionsObj(features) {
+        let featuresObj = {};
+        features.split(' ').join('').split(',').map((item) => {
+            const [name, value] = item.split('=');
+            switch (name) {
+                /*jshint -W093 */
+                case 'height':
+                    return featuresObj['defaultHeight'] = +value;
+                case 'width':
+                    return featuresObj['defaultWidth'] = +value;
+                case 'top':
+                    return featuresObj['defaultTop'] = +value;
+                case 'left':
+                    return featuresObj['defaultLeft'] = +value;
+                case 'centerscreen':
+                    return featuresObj['defaultCentered'] = featureToBool(value);
+                case 'resizable':
+                    return featuresObj[name] = featureToBool(value);
+                case 'chrome':
+                    return featuresObj['frame'] = featureToBool(value);
+                case 'alwaysRaised':
+                    return featuresObj['alwaysOnTop'] = featureToBool(value);
+                case 'minimizable':
+                    return featuresObj[name] = featureToBool(value);
+                default:
+                    return featuresObj[name] = value;
+                    /*jshint +W093 */
+            }
+        });
+
+        return featuresObj;
     }
 
     ///external API Decorator:
@@ -496,6 +573,8 @@ limitations under the License.
 
         asyncApiCall(action, { allDone: true });
     }
+
+
 
     /**
      * Request preload scripts from the Core and execute them in the current window
