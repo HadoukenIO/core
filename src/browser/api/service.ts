@@ -18,36 +18,18 @@ import { applyPendingServiceConnections } from '../api_protocol/api_handlers/ser
 import { Identity, ServiceIdentity, EventPayload } from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
-
+import { getExternalOrOfWindowIdentity } from '../core_state';
 
 const serviceMap: Map<string, ServiceIdentity> = new Map();
 
 export module Service {
     export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
         const eventString = route.service(type, targetIdentity.uuid);
-        const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
-        let unsubscribe;
-        let browserWinIsDead;
+        ofEvents.on(eventString, listener);
 
-        const safeListener = (...args: any[]): void => {
-            try {
-                listener.call(null, ...args);
-            } catch (err) {
-                // Treating this like app, amend when it can be external application as well
-                browserWinIsDead = errRegex.test(err.message);
-
-                if (browserWinIsDead) {
-                    ofEvents.removeListener(eventString, safeListener);
-                }
-            }
+        return (): void => {
+            ofEvents.removeListener(eventString, listener);
         };
-
-        ofEvents.on(eventString, safeListener);
-
-        unsubscribe = (): void => {
-            ofEvents.removeListener(eventString, safeListener);
-        };
-        return unsubscribe;
     }
 
     export function getServiceByUuid(uuid: string): ServiceIdentity {
@@ -66,18 +48,19 @@ export module Service {
     }
 
     export function registerService (identity: Identity, serviceName?: string): ServiceIdentity | false {
+        const serviceIdentity = getExternalOrOfWindowIdentity(identity);
         // If a service is already registered from that uuid, nack
-        const { uuid, name } = identity;
-        if (serviceMap.get(uuid)) {
+        if (!serviceIdentity || serviceMap.get(serviceIdentity.uuid)) {
             return false;
         }
+        const { uuid, isExternal } = serviceIdentity;
 
-        const serviceIdentity = { uuid, name, serviceName };
+        serviceIdentity.serviceName = serviceName;
         serviceMap.set(uuid, serviceIdentity);
 
         // When service exits, remove from serviceMap
-        // Currently assumes this is an application, add logic for external connection here when that becomes option
-        ofEvents.once(route.application('closed', uuid), () => {
+        const eventString = isExternal ? route.externalApplication('closed', uuid) : route.application('closed', uuid);
+        ofEvents.once(eventString, () => {
             serviceMap.delete(uuid);
             ofEvents.emit(route.service('disconnected', uuid), {
                 uuid,
@@ -85,7 +68,7 @@ export module Service {
             });
         });
 
-        ofEvents.emit(route.service('connected', serviceIdentity.uuid), { topic: 'service', type: 'connected', ...serviceIdentity });
+        ofEvents.emit(route.service('connected', uuid), { topic: 'service', type: 'connected', ...serviceIdentity });
 
         // execute requests to connect for service that occured before service registration. Timeout ensures registration concludes first.
         setTimeout(() => {

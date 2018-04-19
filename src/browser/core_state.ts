@@ -119,6 +119,27 @@ export function getEntityInfo(identity: Shapes.Identity) {
     }
 }
 
+export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes.ServiceIdentity|undefined {
+    const { uuid, name } = identity;
+    const externalConn = getExternalAppObjByUuid(uuid);
+    if (externalConn) {
+        return {...externalConn, isExternal: true };
+    }
+
+    const ofWindow = getWindowByUuidName(uuid, name);
+    const browserWindow = ofWindow && ofWindow.browserWindow;
+    if (browserWindow && !browserWindow.isDestroyed()) {
+        return { uuid, name, isExternal: false };
+    }
+}
+
+export function isLocalUuid(uuid: string): Boolean {
+    const externalConn = getExternalAppObjByUuid(uuid);
+    const app = getAppObjByUuid(uuid);
+
+    return externalConn || app ? true : false;
+}
+
 // Returns string on error
 export function setManifestProxySettings(proxySettings: ProxySettingsArgs): void|string {
 

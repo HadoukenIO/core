@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { getWindowByUuidName, getExternalAppObjByUuid } from '../../core_state';
+import { getWindowByUuidName, getExternalOrOfWindowIdentity } from '../../core_state';
 import { Identity, OpenFinWindow, ServiceIdentity } from '../../../shapes';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { RemoteAck } from '../transport_strategy/ack';
@@ -27,7 +27,7 @@ const SERVICE_APP_ACTION = 'process-service-action';
 const SERVICE_ACK_ACTION = 'service-ack';
 
 interface TargetIdentity {
-    targetIdentity: false | void | OpenFinWindow | Identity;
+    targetIdentity: ServiceIdentity|void;
     serviceIdentity: ServiceIdentity;
 }
 
@@ -60,12 +60,12 @@ function setTargetIdentity(identity: Identity, payload: any): TargetIdentity {
     if (payload.connectAction) {
         // If initial connection to a service, identity may exist but not be registered;
         const serviceIdentity = Service.getServiceByUuid(uuid);
-        const targetIdentity = serviceIdentity && (getExternalAppObjByUuid(uuid) || getWindowByUuidName(uuid, name));
+        const targetIdentity = serviceIdentity && getExternalOrOfWindowIdentity(payload);
         return { targetIdentity, serviceIdentity };
     }
     // Sender could be service or client, want service Identity sent in payload either way
     const serviceIdentity = Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid);
-    const targetIdentity = getExternalAppObjByUuid(uuid) || getWindowByUuidName(uuid, name);
+    const targetIdentity = getExternalOrOfWindowIdentity(payload);
     return { targetIdentity, serviceIdentity };
 }
 
@@ -113,7 +113,7 @@ function handleServiceApiAction(msg: MessagePackage, next?: () => void): void {
             // Service not yet registered, hold connection request
             waitForServiceRegistration(payload.uuid, msg);
         } else {
-            nack('Error: service connection not found.');
+            nack('Service connection not found.');
         }
     } else {
         next();
@@ -142,7 +142,7 @@ function handleServiceAckAction(msg: MessagePackage, next: () => void): void {
             }
             remoteAckMap.delete(ackKey);
         } else {
-            nack('Error: Ack failed, initial service message not found.');
+            nack('Ack failed, initial service message not found.');
         }
     } else {
         next();

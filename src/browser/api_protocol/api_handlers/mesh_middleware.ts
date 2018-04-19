@@ -18,6 +18,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
+import { isLocalUuid } from '../../core_state';
 
 const coreState = require('../../core_state');
 
@@ -49,13 +50,6 @@ const subscriberTriggeredEvents: any = {
     'subscribe': true,
     'unsubscribe': true
 };
-
-function isLocalUuid(uuid: string): Boolean {
-    const externalConn = coreState.getExternalAppObjByUuid(uuid);
-    const app = coreState.getAppObjByUuid(uuid);
-
-    return externalConn || app ? true : false;
-}
 
 //on a InterAppBus subscribe/unsubscribe send a subscriber-added/subscriber-removed event.
 function subscriberEventMiddleware(msg: MessagePackage, next: () => void) {
