@@ -20,8 +20,6 @@ import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
 import { isLocalUuid } from '../../core_state';
 
-const coreState = require('../../core_state');
-
 const SUBSCRIBE_ACTION = 'subscribe';
 const PUBLISH_ACTION = 'publish-message';
 const SEND_MESSAGE_ACTION = 'send-message';

@@ -53,22 +53,20 @@ export module Service {
         if (!serviceIdentity || serviceMap.get(serviceIdentity.uuid)) {
             return false;
         }
-        const { uuid, isExternal } = serviceIdentity;
-
         serviceIdentity.serviceName = serviceName;
+        const { uuid, isExternal, ...eventPayload } = serviceIdentity;
+
         serviceMap.set(uuid, serviceIdentity);
 
         // When service exits, remove from serviceMap
         const eventString = isExternal ? route.externalApplication('closed', uuid) : route.application('closed', uuid);
         ofEvents.once(eventString, () => {
             serviceMap.delete(uuid);
-            ofEvents.emit(route.service('disconnected', uuid), {
-                uuid,
-                name
-            });
+            ofEvents.emit(route.service('disconnected', uuid), eventPayload);
         });
 
-        ofEvents.emit(route.service('connected', uuid), { topic: 'service', type: 'connected', ...serviceIdentity });
+
+        ofEvents.emit(route.service('connected', uuid), eventPayload);
 
         // execute requests to connect for service that occured before service registration. Timeout ensures registration concludes first.
         setTimeout(() => {
