@@ -134,7 +134,7 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
-const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
+const handleExternalWindow = async (identity: Identity, toGroup: Identity): Promise<string|void> => {
     const { uuid, name } = toGroup;
     if (coreState.getWindowByUuidName(identity.uuid, name)) {
         // External window already created and registered
@@ -170,14 +170,14 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity) => {
         }
         Window.create(childId, childWindowOptions);
 
-        return hwnd;
+        return hwnd.data;
     } catch (e) {
         log.writeToLog('info', e);
         return e;
     }
 };
 
-async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?: object) => void) {
+async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?: object) => void): Promise<void> {
     const { identity, data, ack, nack } = msg;
     const payload = data && data.payload;
     const action = data && data.action;

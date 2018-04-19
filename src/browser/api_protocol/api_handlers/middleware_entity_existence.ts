@@ -23,9 +23,9 @@ import { windowApiMap } from './window.js';
 const apisToIgnore = new Set([
     // Application
     'create-application',
-    'join-window-group',
     'create-child-window',
     'is-application-running',
+    'join-window-group',
     //TODO: we do not check run for .NET, the adapter will create an application then run it without waiting for the ack.
     'run-application',
     // Window
