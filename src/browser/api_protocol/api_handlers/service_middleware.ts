@@ -60,7 +60,7 @@ function setTargetIdentity(identity: Identity, payload: any): TargetIdentity {
     if (payload.connectAction) {
         // If initial connection to a service, identity may exist but not be registered;
         const serviceIdentity = Service.getServiceByUuid(uuid);
-        const targetIdentity = serviceIdentity && getExternalOrOfWindowIdentity(payload);
+        const targetIdentity = serviceIdentity && getExternalOrOfWindowIdentity(serviceIdentity);
         return { targetIdentity, serviceIdentity };
     }
     // Sender could be service or client, want service Identity sent in payload either way

@@ -27,7 +27,7 @@ export module Service {
         const eventString = route.service(type, targetIdentity.uuid);
         ofEvents.on(eventString, listener);
 
-        return (): void => {
+        return () => {
             ofEvents.removeListener(eventString, listener);
         };
     }
