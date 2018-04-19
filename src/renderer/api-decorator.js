@@ -460,43 +460,35 @@ limitations under the License.
 
     //We need to do this as all values are text and convertToElectron does not handle type changes only name translation.
     function featuresToOptionsObj(features) {
-        features = features.split(' ').join('');
         let featuresObj = {};
-        features.split(',').forEach(item => {
+        features.split(' ').join('').split(',').map((item) => {
             const [name, value] = item.split('=');
-
             switch (name) {
+                /*jshint -W093 */
                 case 'height':
-                    featuresObj['defaultHeight'] = +value;
-                    break;
+                    return featuresObj['defaultHeight'] = +value;
                 case 'width':
-                    featuresObj['defaultWidth'] = +value;
-                    break;
+                    return featuresObj['defaultWidth'] = +value;
                 case 'top':
-                    featuresObj['defaultTop'] = +value;
-                    break;
+                    return featuresObj['defaultTop'] = +value;
                 case 'left':
-                    featuresObj['defaultLeft'] = +value;
-                    break;
+                    return featuresObj['defaultLeft'] = +value;
                 case 'centerscreen':
-                    featuresObj['defaultCentered'] = featureToBool(value);
-                    break;
+                    return featuresObj['defaultCentered'] = featureToBool(value);
                 case 'resizable':
-                    featuresObj[name] = featureToBool(value);
-                    break;
+                    return featuresObj[name] = featureToBool(value);
                 case 'chrome':
-                    featuresObj['frame'] = featureToBool(value);
-                    break;
+                    return featuresObj['frame'] = featureToBool(value);
                 case 'alwaysRaised':
-                    featuresObj['alwaysOnTop'] = featureToBool(value);
-                    break;
+                    return featuresObj['alwaysOnTop'] = featureToBool(value);
                 case 'minimizable':
-                    featuresObj[name] = featureToBool(value);
-                    break;
+                    return featuresObj[name] = featureToBool(value);
                 default:
-                    featuresObj[name] = value;
+                    return featuresObj[name] = value;
+                    /*jshint +W093 */
             }
         });
+
         return featuresObj;
     }
 
