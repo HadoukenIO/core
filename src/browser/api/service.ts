@@ -65,7 +65,6 @@ export module Service {
             ofEvents.emit(route.service('disconnected', uuid), eventPayload);
         });
 
-
         ofEvents.emit(route.service('connected', uuid), eventPayload);
 
         // execute requests to connect for service that occured before service registration. Timeout ensures registration concludes first.
