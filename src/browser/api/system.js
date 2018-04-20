@@ -22,7 +22,7 @@ const electronApp = electron.app;
 const electronBrowserWindow = electron.BrowserWindow;
 const session = electron.session;
 const shell = electron.shell;
-const { crashReporter } = electron;
+const { crashReporter, idleState } = electron;
 
 // npm modules
 const path = require('path');
@@ -32,16 +32,15 @@ const _ = require('underscore');
 // local modules
 const convertOptions = require('../convert_options.js');
 const coreState = require('../core_state.js');
-const electronIPC = require('../transports/electron_ipc.js');
 import { ExternalApplication } from './external_application';
 const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
 import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
-import { FrameInfo } from './frame';
 import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
+import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch } from '../cached_resource_fetcher';
 
 const defaultProc = {
@@ -221,6 +220,14 @@ exports.System = {
 
 
     },
+    createProxySocket: function(options, callback, errorCallback) {
+        createChromiumSocket(Object.assign({}, options, { callback, errorCallback }));
+    },
+    authenticateProxySocket: function(options) {
+        const url = options && options.url;
+        electronApp.vlog(1, `authenticateProxySocket ${url}`);
+        authenticateChromiumSocket(options);
+    },
     deleteCacheOnExit: function(callback, errorCallback) {
         const folders = [{
             name: electronApp.getPath('userData') // deleteIfEmpty defaults to false on RVM side
@@ -294,23 +301,7 @@ exports.System = {
         return electronApp.getHostToken();
     },
     getEntityInfo: function(identity) {
-        const entityInfo = coreState.getInfoByUuidFrame(identity);
-
-        if (entityInfo) {
-            return new FrameInfo(entityInfo);
-        } else if (ExternalApplication.getExternalConnectionByUuid(identity.uuid)) {
-            const externalAppInfo = ExternalApplication.getInfo(identity);
-            return new FrameInfo({
-                uuid: identity.uuid,
-                entityType: 'external connection',
-                parent: externalAppInfo.parent
-            });
-        } else {
-
-            // this covers the case of a wrapped entity that does not exist
-            // where you only know the uuid and name you gave it
-            return new FrameInfo(identity);
-        }
+        return coreState.getEntityInfo(identity);
     },
     getEnvironmentVariable: function(varsToExpand) {
         if (Array.isArray(varsToExpand)) {
@@ -328,15 +319,18 @@ exports.System = {
         return uuid ? { uuid, name } : null;
     },
     getHostSpecs: function() {
-        return {
+        let state = new idleState();
+        const theme = (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {};
+        return Object.assign({
             cpus: os.cpus(),
             memory: os.totalmem(),
             name: electronApp.getSystemName(),
             arch: electronApp.getSystemArch(),
             gpu: {
                 name: electronApp.getGpuName()
-            }
-        };
+            },
+            screenSaver: state.isScreenSaverRunning(),
+        }, theme);
     },
     getLog: function(name, resolve) {
         // Prevent abuse of trying to read files with a path relative to cache directory
@@ -554,9 +548,7 @@ exports.System = {
         const reporterOptions = Object.assign({ configUrl }, options);
 
         log.setToVerbose();
-        crashReporter.startOFCrashReporter(reporterOptions);
-
-        return crashReporter.crashReporterState();
+        return crashReporter.startOFCrashReporter(reporterOptions);
     },
     terminateExternalProcess: function(processUuid, timeout = 3000, child = false) {
         let status = ProcessTracker.terminate(processUuid, timeout, child);
@@ -635,19 +627,11 @@ exports.System = {
             errorCallback(`Error getting cookies`);
         }
     },
-    getWebSocketServerState: function() {
-        return coreState.getSocketServerState();
-    },
     generateGUID: function() {
         return electronApp.generateGUID();
     },
     convertOptions: function(options) {
         return convertOptions.convertToElectron(options);
-    },
-    getElIPCConfiguration: function() {
-        return {
-            channels: electronIPC.channels
-        };
     },
     getNearestDisplayRoot: function(point) {
         return MonitorInfo.getNearestDisplayRoot(point);

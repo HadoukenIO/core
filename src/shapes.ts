@@ -20,10 +20,15 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
+export interface ResourceFetchIdentity extends Identity {
+    resourceFetch?: boolean;
+}
+
 export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
+export type AuthCallback = (username: string, password: string) => void;
 
 export interface FrameInfo extends Identity {
-    name: string;
+    name?: string;
     parent: Identity;
     entityType: EntityType;
 }
@@ -183,6 +188,7 @@ export interface WindowOptions {
     description?: string;
     disableIabSecureLogging?: boolean;
     draggable?: boolean;
+    enableAppLogging?: boolean;
     'enable-plugins'?: boolean;
     enableLargerThanScreen?: boolean;
     exitOnClose?: boolean;
@@ -207,7 +213,8 @@ export interface WindowOptions {
     nonPersistant?: boolean;  // deprecated, backwards compatible
     opacity?: number;
     plugins?: boolean;
-    preload?: string;
+    preload?: string|PreloadScript[]; // deprecated, use 'preloadScripts'
+    preloadScripts?: PreloadScript[];
     resizable?: boolean;
     resize?: boolean;
     resizeRegion?: {

@@ -18,40 +18,45 @@ limitations under the License.
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
 (function() {
-
+    const glbl = global;
+    const QUEUE_COUNTER_NAME = 'queueCounter';
+    const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
-
-    let renderFrameId = global.routingId;
-    let customData = global.getFrameData(renderFrameId);
-    let glbl = global;
+    let renderFrameId = glbl.routingId;
+    let customData = glbl.getFrameData(renderFrameId);
 
     const electron = require('electron');
 
-    if (global.shouldStartCrashReporter) {
-        try {
-            const crashReporter = electron.crashReporter;
-            crashReporter.startOFCrashReporter({ configUrl: global.configUrl });
-        } catch (e) {
-            console.warn(e);
-            console.warn('For the crash reporter to connect successfully, please ensure' +
-                ' "--no-sandbox" is present in the app\'s config');
-        }
-    }
+    // Mock webFrame if unavailable
+    const webFrame = (electron.webFrame ?
+        electron.webFrame.createForRenderFrame(renderFrameId) : {
+            getZoomLevel: () => { return 1.0; },
+            setZoomLevel: () => {}
+        });
 
-    const webFrame = electron.webFrame.createForRenderFrame(renderFrameId);
     const ipc = electron.ipcRenderer;
-
     let childWindowRequestId = 0;
     let windowId;
     let webContentsId = 0;
-    const initialOptions = getCurrentWindowOptionsSync();
-    const entityInfo = getEntityInfoSync(initialOptions.uuid, initialOptions.name);
+
+    const initialOptions = glbl.__startOptions.options;
+    const entityInfo = glbl.__startOptions.entityInfo;
+    const elIPCConfig = glbl.__startOptions.elIPCConfig;
+    const socketServerState = glbl.__startOptions.socketServerState;
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
         return customData.openerSuccessCalled;
     };
+
+    function isNotificationType(name) {
+
+        const isNotification = noteGuidRegex.test(name);
+        const isQueueCounter = name === QUEUE_COUNTER_NAME;
+
+        return isNotification || isQueueCounter;
+    }
 
     // used by the notification service to emit the ready event
     function emitNoteProxyReady() {
@@ -92,29 +97,16 @@ limitations under the License.
         return initialOptions;
     }
 
-    function getCurrentWindowOptionsSync() {
-        return syncApiCall('get-current-window-options');
-    }
-
-    function getWindowOptionsSync(identity) {
-        return syncApiCall('get-window-options', identity);
-    }
-
-    function getEntityInfoSync(uuid, name) {
-        return syncApiCall('get-entity-info', { uuid, name });
-    }
-
     function getWindowIdentitySync() {
-        let winOpts = getCurrentWindowOptionsSync();
 
         return {
-            uuid: winOpts.uuid,
-            name: winOpts.name
+            uuid: initialOptions.uuid,
+            name: initialOptions.name
         };
     }
 
     function getSocketServerStateSync() {
-        return syncApiCall('get-websocket-state');
+        return socketServerState;
     }
 
     function generateGuidSync() {
@@ -133,38 +125,7 @@ limitations under the License.
     }
 
     function getIpcConfigSync() {
-        return syncApiCall('get-el-ipc-config');
-    }
-
-    function getCachedBoundsSync(uuid, name) {
-        let bounds;
-        try {
-            bounds = syncApiCall('window-get-cached-bounds', {
-                uuid: uuid,
-                name: name
-            });
-        } catch (e) {
-            //we really do not need to handle this error, as its probably just that the file did not exist.
-            bounds = {};
-        }
-
-        return bounds;
-    }
-
-    function getMonitorInfoSync() {
-        return syncApiCall('get-monitor-info');
-    }
-
-    function getNearestDisplayrootSync(point) {
-        return syncApiCall('get-nearest-display-root', point);
-    }
-
-    function updateWindowOptionsSync(name, uuid, opts) {
-        return syncApiCall('update-window-options', {
-            name: name,
-            uuid: uuid,
-            options: opts
-        });
+        return elIPCConfig;
     }
 
     function raiseEventSync(eventName, eventArgs) {
@@ -211,136 +172,25 @@ limitations under the License.
         });
     }
 
-    function intersectsRect(bounds, rect) {
-        return !(bounds.left > rect.right || (bounds.left + bounds.width) < rect.left || bounds.top > rect.bottom || (bounds.top + bounds.height) < rect.top);
-    }
-
-    function boundsVisible(bounds, monitorInfo) {
-        let visible = false;
-        let monitors = [monitorInfo.primaryMonitor].concat(monitorInfo.nonPrimaryMonitors);
-
-        for (let i = 0; i < monitors.length; i++) {
-            if (intersectsRect(bounds, monitors[i].monitorRect)) {
-                visible = true;
-            }
-        }
-        return visible;
-    }
-
-    function setWindowBoundsSync(uuid, name, bounds) {
-        try {
-            syncApiCall('set-window-bounds', {
-                uuid,
-                name,
-                left: bounds.left,
-                top: bounds.top,
-                width: bounds.width,
-                height: bounds.height
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function showWindowSync(uuid, name) {
-        try {
-            syncApiCall('show-window', {
-                uuid,
-                name
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function maximizeWindowSync(uuid, name) {
-        try {
-            syncApiCall('maximize-window', {
-                uuid,
-                name
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function minimizeWindowSync(uuid, name) {
-        try {
-            syncApiCall('minimize-window', {
-                uuid,
-                name
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function showOnReady(global, currWindowOpts) {
-        let autoShow = currWindowOpts.autoShow;
-        let toShowOnRun = currWindowOpts.toShowOnRun;
-        let onFinish = callback => {
-            if (autoShow || toShowOnRun) {
-                callback();
-            }
-
-            updateWindowOptionsSync(currWindowOpts.name, currWindowOpts.uuid, {
-                hasLoaded: true
-            });
-        };
-
-        if (currWindowOpts.saveWindowState && !currWindowOpts.hasLoaded) {
-            let savedBounds = getCachedBoundsSync(currWindowOpts.uuid, currWindowOpts.name);
-            let monitorInfo = getMonitorInfoSync();
-            let restoreBounds = savedBounds;
-
-            if (!boundsVisible(savedBounds, monitorInfo)) {
-                let displayRoot = getNearestDisplayrootSync({
-                    x: savedBounds.left,
-                    y: savedBounds.top
-                });
-                restoreBounds.top = displayRoot.y;
-                restoreBounds.left = displayRoot.x;
-            }
-
-            setWindowBoundsSync(currWindowOpts.uuid, currWindowOpts.name, restoreBounds);
-            onFinish(() => {
-                switch (restoreBounds.windowState) {
-                    case 'maximized':
-                        maximizeWindowSync(currWindowOpts.uuid, currWindowOpts.name);
-                        break;
-                    case 'minimized':
-                        minimizeWindowSync(currWindowOpts.uuid, currWindowOpts.name);
-                        break;
-                    default:
-                        showWindowSync(currWindowOpts.uuid, currWindowOpts.name);
-                        break;
-                }
-            });
-        } else {
-            onFinish(() => {
-                showWindowSync(currWindowOpts.uuid, currWindowOpts.name);
-            });
-        }
-    }
-
     function wireUpMenu(global) {
         global.addEventListener('contextmenu', e => {
             if (!e.defaultPrevented) {
                 e.preventDefault();
 
                 const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
-                const options = getWindowOptionsSync(identity);
 
-                if (options.contextMenu) {
-                    syncApiCall('show-menu', {
-                        uuid: identity.uuid,
-                        name: identity.name,
-                        editable: e.target.matches('input, textarea, [contenteditable]'),
-                        hasSelectedText: e.target.selectionStart !== e.target.selectionEnd,
-                        x: e.x,
-                        y: e.y
-                    }, false);
-                }
+                fin.desktop.Window.getCurrent().getOptions(options => {
+                    if (options.contextMenu) {
+                        syncApiCall('show-menu', {
+                            uuid: identity.uuid,
+                            name: identity.name,
+                            editable: e.target.matches('input, textarea, [contenteditable]'),
+                            hasSelectedText: e.target.selectionStart !== e.target.selectionEnd,
+                            x: e.x,
+                            y: e.y
+                        }, false);
+                    }
+                });
             }
         });
     }
@@ -402,14 +252,6 @@ limitations under the License.
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
 
-
-        // Prevent iframes from attempting to do windowing actions, these will always be handled
-        // by the main window frame.
-        // TODO this needs to be revisited when we have xorigin frame api
-        if (!window.frameElement) {
-            showOnReady(glbl, initialOptions);
-        }
-
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
@@ -452,7 +294,12 @@ limitations under the License.
         if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
-                    callback();
+                    const userAppConfigArgs = initialOptions.userAppConfigArgs;
+                    if (userAppConfigArgs) { // handle deep linking callback
+                        callback(userAppConfigArgs);
+                    } else {
+                        callback();
+                    }
                 });
             });
         }
@@ -514,12 +361,8 @@ limitations under the License.
 
         const convertedOpts = convertOptionsToElectronSync(options);
         const { preloadScripts } = 'preloadScripts' in convertedOpts ? convertedOpts : initialOptions;
-        const windowIsNotification = syncApiCall('window-is-notification-type', {
-            uuid: convertedOpts.uuid,
-            name: convertedOpts.name
-        });
 
-        if (!(preloadScripts && preloadScripts.length) || windowIsNotification) {
+        if (!(preloadScripts && preloadScripts.length) || isNotificationType(options.name)) {
             proceed(); // short-circuit preload scripts fetch
         } else {
             const preloadScriptsPayload = {
@@ -582,7 +425,6 @@ limitations under the License.
             ipc: ipc,
             routingId: renderFrameId,
             getWindowIdentity: getWindowIdentitySync,
-            convertOptionsToEl: convertOptionsToElectronSync,
             getCurrentWindowId: getWindowId,
             windowExists: windowExistsSync,
             ipcconfig: getIpcConfigSync(),
@@ -600,9 +442,8 @@ limitations under the License.
      */
     ipc.once(`post-api-injection-${renderFrameId}`, () => {
         const { uuid, name } = initialOptions;
-        const windowIsNotification = syncApiCall('window-is-notification-type', { uuid, name });
 
-        if (!windowIsNotification) {
+        if (!isNotificationType(name)) {
             evalPlugins(uuid, name);
             evalPreloadScripts(uuid, name);
         }

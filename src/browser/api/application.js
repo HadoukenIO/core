@@ -20,6 +20,7 @@ limitations under the License.
 // built-in modules
 let path = require('path');
 let electron = require('electron');
+let queryString = require('querystring');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let dialog = electron.dialog;
@@ -62,7 +63,6 @@ let registeredUsersByApp = {};
 //     'error',
 //     'crashed',
 //     'not-responding',
-//     'out-of-memory',
 //     'responding',
 //     'started',
 //     'run-requested',
@@ -511,7 +511,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             }
         };
     };
-    const appEventsForRVM = ['closed', 'ready', 'run-requested', 'crashed', 'error', 'not-responding', 'out-of-memory'];
+    const appEventsForRVM = ['closed', 'ready', 'run-requested', 'crashed', 'error', 'not-responding'];
     const appStartedHandler = () => {
         rvmBus.registerLicenseInfo({ data: genLicensePayload() }, sourceUrl);
     };
@@ -557,7 +557,8 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             // only resend if we've sent once before(meaning 1 window has shown)
             Application.emitHideSplashScreen(identity);
         }
-        Application.emitRunRequested(identity, userAppConfigArgs);
+
+        Application.emitRunRequested(identity, queryString.parse(userAppConfigArgs));
         return;
     }
 
@@ -838,7 +839,7 @@ Application.emitHideSplashScreen = function(identity) {
 };
 
 Application.emitRunRequested = function(identity, userAppConfigArgs) {
-    var uuid = identity && identity.uuid;
+    const uuid = identity && identity.uuid;
     if (uuid) {
         ofEvents.emit(route.application('run-requested', uuid), {
             topic: 'application',

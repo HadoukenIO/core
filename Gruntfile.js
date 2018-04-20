@@ -28,6 +28,9 @@ const asar = require('asar');
 const nativeBuilder = require('electron-rebuild');
 const wrench = require('wrench');
 
+// OpenFin signing module
+const openfinSign = require('openfin-sign');
+
 const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
 const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
 
@@ -37,6 +40,8 @@ const optionalDependencies = [
     'runtime-p2p/**'
 ];
 
+const jsAdapterPath = path.join('node_modules', 'hadouken-js-adapter', 'out');
+
 // https://github.com/beautify-web/js-beautify#options
 // (Options in above-linked page are hyphen-separarted but here must be either camelCase or underscore_separated.)
 const beautifierOptions = {
@@ -45,11 +50,6 @@ const beautifierOptions = {
     }
 };
 
-try {
-    var openfinSign = require('openfin-sign');
-} catch (err) {
-    openfinSign = function() {};
-}
 
 
 // OpenFin commercial license
@@ -137,7 +137,6 @@ module.exports = (grunt) => {
             files: {
                 src: [
                     'src/**/*.ts',
-                    '!src/browser/api/notifications/*.ts',
                     '!src/**/*.d.ts',
                     'test/**/*.ts',
                     '!test/**/*.d.ts',
@@ -227,7 +226,9 @@ module.exports = (grunt) => {
         'copy',
         'build-deploy-modules',
         'sign-files',
+        'sign-adapter',
         'package',
+        'package-adapter',
         'sign-asar'
     ]);
 
@@ -249,7 +250,15 @@ module.exports = (grunt) => {
 
     grunt.registerTask('sign-asar', function() {
         openfinSign('out/app.asar');
+        openfinSign('out/js-adapter.asar');
         grunt.log.ok('Finished signing asar.');
+    });
+
+    grunt.registerTask('sign-adapter', function() {
+        const jsAdapterBundle = path.join(jsAdapterPath, 'js-adapter.js');
+
+        openfinSign(jsAdapterBundle);
+        grunt.log.ok('Finished signing js-adapter');
     });
 
     grunt.registerTask('clean', 'clean the out house', function() {
@@ -301,6 +310,15 @@ module.exports = (grunt) => {
         });
     });
 
+    grunt.registerTask('package-adapter', 'Package the js-adapter', function() {
+        const done = this.async();
+
+        asar.createPackage(jsAdapterPath, 'out/js-adapter.asar', function () {
+            grunt.log.ok('Finished packaging the adapter as an asar');
+            done();
+        });
+    });
+
     grunt.registerTask('copy-local', function() {
         const target = grunt.option('target');
         const done = this.async();
@@ -340,31 +358,7 @@ module.exports = (grunt) => {
         let foundLicensingProblem = false;
 
         // List of files that must have OpenFin commercial license
-        const ofLicensedFiles = [
-            'src/browser/api/external_application.ts',
-            'src/browser/api_protocol/external_application.js',
-            'src/browser/api_protocol/transport_strategy/base_handler.ts',
-            'src/browser/api_protocol/transport_strategy/ws_strategy.ts',
-            'src/browser/api_protocol/api_handlers/authorization.js',
-            'src/browser/api_protocol/api_handlers/api_policy_processor.ts',
-            'src/browser/api_protocol/api_handlers/external_application.ts',
-            'src/browser/api_protocol/api_handlers/mesh_middleware.ts',
-            'src/browser/port_discovery.ts',
-            'src/browser/rvm/rvm_message_bus.ts',
-            'src/browser/rvm/runtime_initiated_topics/app_assets.ts',
-            'src/browser/remote_subscriptions.ts',
-            'src/browser/rvm/runtime_initiated_topics/rvm_info.js',
-            'src/browser/rvm/utils.ts',
-            'src/browser/external_window_event_adapter.js',
-            'src/browser/connection_manager.ts',
-            'src/browser/plugins.ts',
-            'src/browser/transport.ts',
-            'src/browser/transports/socket_server.js',
-            'src/browser/transports/wm_copydata.ts',
-            'src/browser/transports/base.ts',
-            'src/browser/transports/chromium_ipc.ts',
-            'src/browser/transports/electron_ipc.ts'
-        ];
+        const ofLicensedFiles = [];
 
         // List of files that need to have some kind of license
         const allFilesForLicense = grunt.file.expand(

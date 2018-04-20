@@ -20,7 +20,8 @@ import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
 import * as log from './log';
 import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
-import * as authenticationDelegate from './authentication_delegate';
+import { addPendingAuthRequests, createAuthUI } from './authentication_delegate';
+import { AuthCallback } from '../shapes';
 
 let appQuiting: Boolean = false;
 
@@ -178,7 +179,7 @@ function generateHash(str: string): string {
     return hash.digest('hex');
 }
 
-function authRequest(url: string, authInfo: any, authCallback: Function): void {
+function authRequest(url: string, authInfo: any, authCallback: AuthCallback): void {
     const uuid: string = app.generateGUID();
     const identity = {
         name: uuid,
@@ -187,8 +188,8 @@ function authRequest(url: string, authInfo: any, authCallback: Function): void {
     };
     log.writeToLog(1, `fetchURL login event ${url} uuid ${uuid} ${JSON.stringify(authInfo)}`, true);
     authMap.set(uuid, authCallback);
-    authenticationDelegate.addPendingAuthRequests(identity, authInfo, authCallback);
-    authenticationDelegate.createAuthUI(identity);
+    addPendingAuthRequests(identity, authInfo, authCallback);
+    createAuthUI(identity);
 }
 
 /**
@@ -228,7 +229,7 @@ function download(fileUrl: string, filePath: string): Promise<any> {
             });
         });
 
-        request.on('login', (authInfo: any, callback: Function) => {
+        request.on('login', (authInfo: any, callback: AuthCallback) => {
             authRequest(filePath, authInfo, callback);
         });
 
@@ -269,7 +270,7 @@ export function fetchURL(url: string, done: (resp: any) => void, onError: (err: 
             }
         });
     });
-    request.on('login', (authInfo: any, callback: Function) => {
+    request.on('login', (authInfo: any, callback: AuthCallback) => {
         authRequest(url, authInfo, callback);
     });
     request.once('error', (err: Error) => {

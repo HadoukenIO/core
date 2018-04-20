@@ -20,6 +20,7 @@ limitations under the License.
 // built-in modules
 let fs = require('fs');
 let path = require('path');
+let queryString = require('querystring');
 
 // npm modules
 let _ = require('underscore');
@@ -73,6 +74,7 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'disableInitialReload': false,
+            'node': true,
             'v2Api': false
         },
         'frame': true,
@@ -228,17 +230,26 @@ module.exports = {
             }
         }
 
+        const useNodeInRenderer = newOptions.experimental.node;
+        const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
+
         // Electron BrowserWindow options
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
             disableInitialReload: newOptions.experimental.disableInitialReload,
             nodeIntegration: false,
-            plugins: newOptions.plugins
+            plugins: newOptions.plugins,
+            preload: (!useNodeInRenderer ? noNodePreload : ''),
+            sandbox: !useNodeInRenderer
         };
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
             newOptions.webPreferences.webSecurity = false;
+        }
+
+        if (coreState.argo['user-app-config-args']) {
+            newOptions.userAppConfigArgs = queryString.parse(coreState.argo['user-app-config-args']);
         }
 
         if (options.message !== undefined) {
@@ -254,8 +265,7 @@ module.exports = {
         }
 
         if ('preloadScripts' in options || 'preload' in options) {
-            const preloadScripts = options.preloadScripts || options.preload;
-            newOptions.preloadScripts = normalizePreload(preloadScripts);
+            newOptions.preloadScripts = this.normalizePreloadScripts(options);
         }
 
         const plugin = options['plugin'];
@@ -337,27 +347,24 @@ module.exports = {
                 configUrl
             });
         }, errorCallback);
+    },
+
+    normalizePreloadScripts(options) {
+        let preloadScripts = [];
+
+        if ('preload' in options) {
+            if (typeof options.preload === 'string') {
+                preloadScripts = [{ url: options.preload }];
+            } else if (Array.isArray(options.preload)) {
+                preloadScripts = options.preload;
+            }
+        }
+
+        if ('preloadScripts' in options && Array.isArray(options.preloadScripts)) {
+            preloadScripts = options.preloadScripts;
+        }
+
+        return preloadScripts;
     }
 
 };
-
-function normalizePreload(preload) {
-    if (preload === null || preload === false) {
-        preload = '';
-    }
-
-    if (typeof preload === 'string') {
-        // convert legacy `preload` option into modern `preload` option
-        return preload === '' ? [] : [{ url: preload }];
-    }
-
-    if (
-        Array.isArray(preload) &&
-        preload.every(p => typeof p === 'object' && typeof p.url === 'string')
-    ) {
-        return preload.filter(p => p.url !== ''); // filter out empties
-    }
-
-    log.writeToLog('warning', 'Expected `preload` option to be null, false, string, or array of objects with `url` string properties.');
-    return []; // no preloads when bad option
-}

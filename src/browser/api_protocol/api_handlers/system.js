@@ -50,6 +50,8 @@ function SystemApiHandler() {
 
     let SystemApiHandlerMap = {
         'clear-cache': { apiFunc: clearCache, apiPath: '.clearCache' },
+        'create-proxy-socket': createProxySocket,
+        'authenticate-proxy-socket': authenticateProxySocket,
         'convert-options': convertOptions,
         'delete-cache-request': deleteCacheRequest, // apiPath: '.deleteCacheOnRestart' -> deprecated
         'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset' },
@@ -66,7 +68,6 @@ function SystemApiHandler() {
         'get-crash-reporter-state': getCrashReporterState,
         'get-device-id': { apiFunc: getDeviceId, apiPath: '.getDeviceId' },
         'get-device-user-id': getDeviceUserId,
-        'get-el-ipc-config': getElIPCConfig,
         'get-entity-info': getEntityInfo,
         'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
         'get-focused-window': getFocusedWindow,
@@ -81,7 +82,6 @@ function SystemApiHandler() {
         'get-plugin-modules': getPluginModules,
         'get-preload-scripts': getPreloadScripts,
         'get-version': getVersion,
-        'get-websocket-state': getWebSocketState,
         'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
         'list-logs': { apiFunc: listLogs, apiPath: '.getLogList' },
         'monitor-external-process': { apiFunc: monitorExternalProcess, apiPath: '.monitorExternalProcess' },
@@ -145,7 +145,7 @@ function SystemApiHandler() {
     function startCrashReporter(identity, message, ack) {
         const dataAck = _.clone(successAck);
         const { payload } = message;
-        dataAck.data = System.startCrashReporter(identity, payload, false);
+        dataAck.data = System.startCrashReporter(identity, payload);
         ack(dataAck);
     }
 
@@ -182,26 +182,12 @@ function SystemApiHandler() {
         ack(successAck);
     }
 
-    function getElIPCConfig(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getElIPCConfiguration();
-        ack(dataAck);
-    }
-
     function convertOptions(identity, message, ack) {
         let dataAck = _.clone(successAck);
 
         dataAck.data = System.convertOptions(message.payload);
         ack(dataAck);
 
-    }
-
-    function getWebSocketState(identity, message, ack) {
-        let dataAck = _.clone(successAck);
-
-        dataAck.data = System.getWebSocketServerState();
-        ack(dataAck);
     }
 
     function generateGuid(identity, message, ack) {
@@ -223,6 +209,14 @@ function SystemApiHandler() {
                 nack(err);
             }
         });
+    }
+
+    function createProxySocket(identity, message, ack, nack) {
+        System.createProxySocket(message.payload, ack, nack);
+    }
+
+    function authenticateProxySocket(identity, message) {
+        System.authenticateProxySocket(message.payload);
     }
 
     function deleteCacheRequest(identity, message, ack, nack) {

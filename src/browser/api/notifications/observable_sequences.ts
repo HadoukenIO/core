@@ -13,10 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/// <reference path="../../../../node_modules/rx/ts/rx.all.d.ts" />
 import * as Rx from 'rx';
-
-/// <reference path="./shapes.ts" />
 import {Identity} from './shapes';
 
 export const createdNotes = new Rx.Subject();
@@ -54,7 +51,7 @@ export const noteStack = Rx.Observable.merge(
     .scan((acc, value) => {
 
         if (value.create) {
-            let idxRemoved = acc.map(x => x.name).indexOf(value.name);
+            const idxRemoved = acc.map(x => x.name).indexOf(value.name);
 
             if (idxRemoved === -1) {
                 acc.push({
@@ -65,7 +62,7 @@ export const noteStack = Rx.Observable.merge(
             }
 
         } else {
-            let idxRemoved = acc.map(x => x.name).indexOf(value.name);
+            const idxRemoved = acc.map(x => x.name).indexOf(value.name);
 
             if (idxRemoved !== -1) {
                 acc.splice(idxRemoved, 1);

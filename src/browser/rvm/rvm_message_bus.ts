@@ -1,8 +1,17 @@
 /*
 Copyright 2017 OpenFin Inc.
 
-Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
-Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 import { WMCopyData } from '../transport';
 import { EventEmitter } from 'events';
@@ -26,11 +35,29 @@ export interface RvmMsgBase {
 
 // topic: application -----
 type applicationTopic = 'application';
+type applicationLogAction = 'application-log';
 type registerUserAction = 'register-user';
 type hideSplashscreenAction = 'hide-splashscreen';
 type relaunchOnCloseAction = 'relaunch-on-close';
 type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
 type downloadRuntimeAction = 'runtime-download';
+
+export interface ApplicationLog extends RvmMsgBase {
+    topic: applicationTopic;
+    action: applicationLogAction;
+    sourceUrl: string;
+    runtimeVersion: string;
+    payload: {
+        messages: ConsoleMessage[];
+    };
+}
+
+export interface ConsoleMessage {
+    appConfigUrl: string;
+    level: number;
+    message: string;
+    timeStamp: string;
+}
 
 export interface RegisterUser extends RvmMsgBase {
     topic: applicationTopic;
@@ -172,7 +199,7 @@ export interface System extends RvmMsgBase {
 }
 
 // topic: application-events -----
-type EventType = 'started'| 'closed' | 'ready' | 'run-requested' | 'crashed' | 'error' | 'not-responding' | 'out-of-memory';
+type EventType = 'started'| 'closed' | 'ready' | 'run-requested' | 'crashed' | 'error' | 'not-responding';
 type ApplicationEventTopic = 'application-event';
 export interface ApplicationEvent extends RvmMsgBase {
     topic: ApplicationEventTopic;
@@ -212,8 +239,7 @@ export class RVMMessageBus extends EventEmitter  {
         RUN_REQUESTED: 'run-requested',
         CRASHED: 'crashed',
         ERROR: 'error',
-        NOT_RESPONDING: 'not-responding',
-        OUT_OF_MEMORY: 'out-of-memory'
+        NOT_RESPONDING: 'not-responding'
     };
 
     constructor() {

@@ -27,6 +27,7 @@ declare module 'electron' {
         export function getCommandLineArgv(): string[];
         export function getPath(str: string): string;
         export function getTickCount(): number;
+        export function isAeroGlassEnabled(): boolean;
         export function log(level: string, message: any): any;
         export function on(event: string, callback: () => void): void;
         export function setMinLogLevel(level: number): void;
@@ -39,6 +40,9 @@ declare module 'electron' {
 
     export namespace net {
         export function request(url: string): any;
+    }
+    export namespace socketNet {
+        export function socketRequest(url: string): any;
     }
 
     export interface Rectangle {
@@ -88,6 +92,7 @@ declare module 'electron' {
     export class idleState {
         public isIdle(): boolean;
         public elapsedTime(): number;
+        public isScreenSaverRunning(): boolean;
     }
 
     export class nativeTimer {
@@ -107,5 +112,11 @@ declare module 'electron' {
         export function readRtf(type?: string): string;
         export function readHtml(type?: string): string;
         export function readText(type?: string): string;
+    }
+}
+
+declare namespace Rx {
+    interface IScheduler {
+        scheduleFuture<TState>(state: TState, dueTime: number | Date, action: (scheduler: IScheduler, state: TState) => IDisposable): IDisposable;
     }
 }

@@ -76,8 +76,7 @@ module.exports.windowApiMap = {
     'window-authenticate': windowAuthenticate,
     'window-embedded': windowEmbedded,
     'window-exists': windowExists,
-    'window-get-cached-bounds': getCachedBounds,
-    'window-is-notification-type': windowIsNotificationType
+    'window-get-cached-bounds': getCachedBounds
 };
 
 module.exports.init = function() {
@@ -406,9 +405,7 @@ function getWindowGroup(identity, message, ack) {
     // while the adaptor expects it to be 'windowName'
     dataAck.data = _.map(Window.getGroup(windowIdentity), (window) => {
         if (payload.crossApp === true) {
-            var clone = _.clone(window);
-            clone.windowName = window.name;
-            return clone;
+            return { uuid: window.uuid, name: window.name, windowName: window.name };
         } else {
             return window.name; // backwards compatible
         }
@@ -570,15 +567,4 @@ function setZoomLevel(identity, message, ack) {
 
     Window.setZoomLevel(windowIdentity, level);
     ack(successAck);
-}
-
-function windowIsNotificationType(identity, message, ack) {
-    const { payload } = message;
-    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.isNotificationType(windowIdentity, (isNotification) => {
-        const dataAck = _.clone(successAck);
-        dataAck.data = isNotification;
-        ack(dataAck);
-    });
 }
