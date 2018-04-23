@@ -44,6 +44,7 @@ limitations under the License.
         elIPCConfig,
         options: initialOptions,
         socketServerState,
+        runtimeArguments,
         frames
     } = glbl.__startOptions;
 
