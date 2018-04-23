@@ -54,6 +54,8 @@ module.exports.api = (windowId) => {
     const enableV2Api = (mainWindowOptions.experimental || {}).v2Api;
     const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
 
+    windowOptionSet.runtimeArguments = JSON.stringify(coreState.args);
+
     return [
         `global.__startOptions = ${JSON.stringify(windowOptionSet)}`,
         me,
