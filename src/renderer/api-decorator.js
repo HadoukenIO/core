@@ -223,22 +223,22 @@ limitations under the License.
         const { uuid, name, parent, entityType } = entityInfo;
         const winIdentity = { uuid, name };
         const parentFrameName = parent.name || name;
-        const eventMap = new Map();
+        const eventMap = [];
 
-        eventMap.set(`window/initialized/${uuid}-${name}`, winIdentity);
+        eventMap.push([`window/initialized/${uuid}-${name}`, winIdentity]);
 
         // main window
         if (uuid === name) {
-            eventMap.set(`application/initialized/${uuid}`);
+            eventMap.push([`application/initialized/${uuid}`, undefined]);
         }
 
-        eventMap.set(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
-        eventMap.set(`window/connected/${uuid}-${name}`, winIdentity);
-        eventMap.set(`window/frame-connected/${uuid}-${parentFrameName}`, {
+        eventMap.push([`window/dom-content-loaded/${uuid}-${name}`, winIdentity]);
+        eventMap.push([`window/connected/${uuid}-${name}`, winIdentity]);
+        eventMap.push([`window/frame-connected/${uuid}-${parentFrameName}`, {
             frameName: name,
             entityType
-        });
-        eventMap.set(`frame/connected/${uuid}-${name}`, winIdentity);
+        }]);
+        eventMap.push([`frame/connected/${uuid}-${name}`, winIdentity]);
 
         asyncApiCall('raise-many-events', [...eventMap]);
     }
