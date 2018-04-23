@@ -134,7 +134,7 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
-const handleExternalWindow = async (identity: Identity, toGroup: Identity): Promise<string|void> => {
+const handleExternalWindow = async (identity: Identity, toGroup: Identity): Promise<string|void|Error> => {
     const { uuid, name } = toGroup;
     if (coreState.getWindowByUuidName(identity.uuid, name)) {
         // External window already created and registered
