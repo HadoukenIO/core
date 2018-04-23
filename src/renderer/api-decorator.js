@@ -43,7 +43,6 @@ limitations under the License.
     const {
         elIPCConfig,
         options: initialOptions,
-        runtimeArguments,
         socketServerState,
         frames
     } = glbl.__startOptions;
@@ -517,8 +516,7 @@ limitations under the License.
             openerSuccessCBCalled: openerSuccessCBCalled,
             emitNoteProxyReady: emitNoteProxyReady,
             initialOptions,
-            entityInfo,
-            runtimeArguments
+            entityInfo
         }
     };
 
@@ -529,52 +527,9 @@ limitations under the License.
         const { uuid, name } = initialOptions;
 
         if (!isNotificationType(name)) {
-            if (!runtimeArguments.includes('--async-plugins')) {
-                // Synchronous (old) implementation of plugin loading
-                evalPlugins(uuid, name);
-            }
             evalPreloadScripts(uuid, name);
         }
     });
-
-    /**
-     * Request plugin modules from the Core and execute them in the current window
-     */
-    function evalPlugins(uuid, name) {
-        const action = 'set-window-plugin-state';
-        const plugins = syncApiCall('get-plugin-modules');
-        const log = (msg) => {
-            asyncApiCall('write-to-log', {
-                level: 'info',
-                message: `[plugins] [${uuid}]-[${name}]: ${msg}`
-            });
-        };
-
-        plugins.forEach((plugin) => {
-            // _content: contains plugin module code as a string to eval in this window
-            const { name, version, _content } = plugin;
-
-            if (!_content) {
-                log(`Skipped execution of plugin module [${name} ${version}], ` +
-                    `because the content is not available`);
-                return;
-            }
-
-            try {
-                window.eval(_content); /* jshint ignore:line */
-                log(`Succeeded execution of plugin module [${name} ${version}]`);
-                asyncApiCall(action, { name, version, state: 'succeeded' });
-            } catch (error) {
-                window.console.error(`${error.name}: ${error.message}\nPlugin: ${name} ${version}`);
-                log(`Failed execution of plugin module [${name} ${version}]`);
-                asyncApiCall(action, { name, version, state: 'failed' });
-            }
-        });
-
-        asyncApiCall(action, { allDone: true });
-    }
-
-
 
     /**
      * Request preload scripts from the Core and execute them in the current window

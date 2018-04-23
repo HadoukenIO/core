@@ -275,14 +275,6 @@ module.exports = {
             newOptions.preloadScripts = this.normalizePreloadScripts(options);
         }
 
-        const plugin = options['plugin'];
-        if (!plugin) {
-            // for all falsy values
-            newOptions.plugin = [];
-        } else {
-            newOptions.plugin = plugin;
-        }
-
         if (options.customRequestHeaders !== undefined) {
             newOptions.customRequestHeaders = options.customRequestHeaders;
         }
