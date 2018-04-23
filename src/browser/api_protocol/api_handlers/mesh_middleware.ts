@@ -20,10 +20,10 @@ import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
 import { Identity } from '../../../shapes';
 import { BrowserWindow } from 'electron';
-import { Window } from '../../api/window';
 import route from '../../../common/route';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 
+const { Window } = require('../../api/window');
 const coreState = require('../../core_state');
 
 const SUBSCRIBE_ACTION = 'subscribe';
@@ -134,7 +134,7 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
-const handleExternalWindow = async (identity: Identity, toGroup: Identity): Promise<string|void|Error> => {
+const handleExternalWindow = async (identity: Identity, toGroup: Identity): Promise<string|void> => {
     const { uuid, name } = toGroup;
     if (coreState.getWindowByUuidName(identity.uuid, name)) {
         // External window already created and registered
@@ -143,38 +143,33 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity): Prom
     if (!uuid || isLocalUuid(uuid)) {
         return;
     }
-    try {
-        const getHwndMessage = {
-            action: 'get-window-native-id',
-            payload: {
-                uuid,
-                name
-            }
-        };
-        const id = await connectionManager.resolveIdentity({uuid});
-        const hwnd = await id.runtime.fin.System.executeOnRemote(identity, getHwndMessage);
-
-        const childWindowOptions = {
-            uuid: identity.uuid,
-            name,
-            hwnd: hwnd.data,
-            meshJoinGroup: true
-        };
-        const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
-        const parentId = parent && parent.browserWindow && parent.browserWindow.id;
-        const childBw = new BrowserWindow(childWindowOptions);
-        const childId = childBw && childBw.id;
-
-        if (!coreState.addChildToWin(parentId, childId)) {
-            console.warn('failed to add child window');
+    const getHwndMessage = {
+        action: 'get-window-native-id',
+        payload: {
+            uuid,
+            name
         }
-        Window.create(childId, childWindowOptions);
+    };
+    const id = await connectionManager.resolveIdentity({uuid});
+    const hwnd = await id.runtime.fin.System.executeOnRemote(identity, getHwndMessage);
 
-        return hwnd.data;
-    } catch (e) {
-        log.writeToLog('info', e);
-        return e;
+    const childWindowOptions = {
+        uuid: identity.uuid,
+        name,
+        hwnd: hwnd.data,
+        meshJoinGroup: true
+    };
+    const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
+    const parentId = parent && parent.browserWindow && parent.browserWindow.id;
+    const childBw = new BrowserWindow(childWindowOptions);
+    const childId = childBw && childBw.id;
+
+    if (!coreState.addChildToWin(parentId, childId)) {
+        console.warn('failed to add child window');
     }
+    Window.create(childId, childWindowOptions);
+
+    return hwnd.data;
 };
 
 async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?: object) => void): Promise<void> {
@@ -201,15 +196,13 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
 
     const locals: any = {};
 
-    locals.hwnd = await handleExternalWindow(identity, window);
-    locals.groupingHwnd = await handleExternalWindow(identity, grouping);
-
-    if (locals.hwnd instanceof Error) {
-        nack(locals.hwnd);
-    } else if (locals.groupingHwnd instanceof Error) {
-        nack(locals.groupingHwnd);
-    } else {
+    try {
+        locals.hwnd = await handleExternalWindow(identity, window);
+        locals.groupingHwnd = await handleExternalWindow(identity, grouping);
         next(locals);
+    } catch (err) {
+        log.writeToLog('info', err);
+        nack(err);
     }
 }
 
