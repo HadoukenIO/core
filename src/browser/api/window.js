@@ -40,6 +40,7 @@ let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
 import { cachedFetch } from '../cached_resource_fetcher';
+import { addRemoteSubscription } from '../remote_subscriptions';
 let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
@@ -127,7 +128,13 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
-    }
+    },
+    'begin-user-bounds-change': {
+        topic: 'begin-user-bounds-changed'
+    },
+    'end-user-bounds-change': {
+        topic: 'end-user-bounds-changed'
+    },
     // 'move': {
     //     topic: 'bounds-changing'
     // }
@@ -490,7 +497,9 @@ Window.create = function(id, opts) {
         browserWindow._options = _options;
 
         // set taskbar icon
-        setTaskbar(browserWindow);
+        if (!opts.meshJoinGroup) {
+            setTaskbar(browserWindow);
+        }
 
         // apply options to browserWindow
         applyAdditionalOptionsToWindow(browserWindow);
@@ -1365,10 +1374,73 @@ Window.isShowing = function(identity) {
     return !!(browserWindow && browserWindow.isVisible());
 };
 
+const meshJoinGroupEvents = (identity, grouping) => {
 
-Window.joinGroup = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
+    const unsubscriptions = [];
+    const eventMap = {
+        'begin-user-bounds-changed': 'begin-user-bounds-change',
+        'end-user-bounds-changed': 'end-user-bounds-change',
+        'bounds-changing': 'moving',
+        'bounds-changed': 'bounds-changed',
+        'focused': 'focus',
+        'minimized': 'state-change',
+        'maximized': 'state-change',
+        'restored': 'state-change',
+        'closed': 'close',
+    };
+
+    Object.keys(eventMap).forEach(key => {
+        const event = key;
+        const bwEvent = eventMap[key];
+
+        const subscription = {
+            uuid: grouping.uuid,
+            name: grouping.name,
+            listenType: 'on',
+            className: 'window',
+            eventName: event
+        };
+
+        const incomingEvent = route.window(event, grouping.uuid, grouping.name);
+        const newEvent = route.externalWindow(bwEvent, identity.uuid, grouping.name);
+
+        ofEvents.on(incomingEvent, payload => {
+            const newPayload = Object.assign({}, payload);
+            newPayload.uuid = identity.uuid;
+            ofEvents.emit(newEvent, newPayload);
+        });
+
+        unsubscriptions.push(addRemoteSubscription(subscription));
+    });
+
+    Promise.all(unsubscriptions).then(unsubs => {
+        const externalClose = route.window('closed', grouping.uuid, grouping.name);
+        const childClose = route.externalWindow('close', grouping.uuid, grouping.name);
+        ofEvents.on(externalClose, () => unsubs.forEach(unsub => unsub()));
+        ofEvents.on(childClose, () => unsubs.forEach(unsub => unsub()));
+    });
+};
+
+Window.joinGroup = function(identity, grouping, locals) {
+    let identityOfWindow;
+    let groupingOfWindow;
+    if (locals) {
+        const { requester, hwnd, groupingHwnd } = locals;
+        if (hwnd) {
+            if (hwnd !== 'registered') {
+                meshJoinGroupEvents(requester, identity);
+            }
+            identityOfWindow = Window.wrap(requester.uuid, identity.name);
+        }
+        if (groupingHwnd) {
+            if (groupingHwnd !== 'registered') {
+                meshJoinGroupEvents(requester, grouping);
+            }
+            groupingOfWindow = Window.wrap(requester.uuid, grouping.name);
+        }
+    }
+    identityOfWindow = identityOfWindow || Window.wrap(identity.uuid, identity.name);
+    groupingOfWindow = groupingOfWindow || Window.wrap(grouping.uuid, grouping.name);
     let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
     let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
 
@@ -1381,6 +1453,7 @@ Window.joinGroup = function(identity, grouping) {
 
 
 Window.leaveGroup = function(identity) {
+    // deal with leaveGroup...
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {

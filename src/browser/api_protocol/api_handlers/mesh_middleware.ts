@@ -18,7 +18,12 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
+import { Identity } from '../../../shapes';
+import { BrowserWindow } from 'electron';
+import route from '../../../common/route';
+import { addRemoteSubscription } from '../../remote_subscriptions';
 
+const { Window } = require('../../api/window');
 const coreState = require('../../core_state');
 
 const SUBSCRIBE_ACTION = 'subscribe';
@@ -30,6 +35,7 @@ const apiMessagesToIgnore: any = {
     'publish-message': true,
     'send-message': true,
     'subscribe': true,
+    'join-window-group': true,
     'unsubscribe': true,
     'subscriber-added': true,
     'subscriber-removed': true,
@@ -128,6 +134,78 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
+const handleExternalWindow = async (identity: Identity, toGroup: Identity): Promise<string|void> => {
+    const { uuid, name } = toGroup;
+    if (coreState.getWindowByUuidName(identity.uuid, name)) {
+        // External window already created and registered
+        return 'registered';
+    }
+    if (!uuid || isLocalUuid(uuid)) {
+        return;
+    }
+    const getHwndMessage = {
+        action: 'get-window-native-id',
+        payload: {
+            uuid,
+            name
+        }
+    };
+    const id = await connectionManager.resolveIdentity({uuid});
+    const hwnd = await id.runtime.fin.System.executeOnRemote(identity, getHwndMessage);
+
+    const childWindowOptions = {
+        uuid: identity.uuid,
+        name,
+        hwnd: hwnd.data,
+        meshJoinGroup: true
+    };
+    const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
+    const parentId = parent && parent.browserWindow && parent.browserWindow.id;
+    const childBw = new BrowserWindow(childWindowOptions);
+    const childId = childBw && childBw.id;
+
+    if (!coreState.addChildToWin(parentId, childId)) {
+        console.warn('failed to add child window');
+    }
+    Window.create(childId, childWindowOptions);
+
+    return hwnd.data;
+};
+
+async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?: object) => void): Promise<void> {
+    const { identity, data, ack, nack } = msg;
+    const payload = data && data.payload;
+    const action = data && data.action;
+    const isJoinWindowGroupAction = action === 'join-window-group';
+    const isValidIdentity = typeof (identity) === 'object';
+    const optInFlag = coreState.argo['mesh-join-group'];
+
+    if (!isJoinWindowGroupAction || !isValidIdentity || !optInFlag) {
+        next();
+        return;
+    }
+    // CHECK TO MAKE SURE WE ARE ON WINDOWS?
+    const window: Identity = {
+        uuid: payload.uuid,
+        name: payload.name
+    };
+    const grouping: Identity = {
+        uuid: payload.groupingUuid,
+        name: payload.groupingWindowName
+    };
+
+    const locals: any = {};
+
+    try {
+        locals.hwnd = await handleExternalWindow(identity, window);
+        locals.groupingHwnd = await handleExternalWindow(identity, grouping);
+        next(locals);
+    } catch (err) {
+        log.writeToLog('info', err);
+        nack(err);
+    }
+}
+
 //on a non InterAppBus API call, forward the message to the runtime that owns the uuid.
 function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     const { identity, data, ack, nack } = msg;
@@ -197,6 +275,7 @@ function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): vo
     requestHandler.addPreProcessor(subscriberEventMiddleware);
     requestHandler.addPreProcessor(publishMiddleware);
     requestHandler.addPreProcessor(sendMessageMiddleware);
+    requestHandler.addPreProcessor(meshJoinWindowGroupMiddleware);
     requestHandler.addPreProcessor(ferryActionMiddleware);
     requestHandler.addPreProcessor(aggregateFromExternalRuntime);
 }

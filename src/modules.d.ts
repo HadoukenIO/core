@@ -55,6 +55,7 @@ declare module 'electron' {
     export class BrowserWindow {
         constructor(props: any);
 
+        id: number;
         _options: {
             minWidth: number;
             minHeight: number;
@@ -76,6 +77,7 @@ declare module 'electron' {
         emit(routeString: string, ...args: any[]): void;
         getBounds(): Rectangle;
         setWindowPlacement(bounds: Rectangle): void;
+        close(): void;
     }
 
     export class ipcMain {

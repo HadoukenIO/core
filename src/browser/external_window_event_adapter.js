@@ -38,7 +38,9 @@ class ExternalWindowEventAdapter {
         let cachedState = null;
 
         ofEvents.on(route.externalWindow('focus', uuid, name), () => {
-            browserWindow.emit('focus');
+            if (!browserWindow.isDestroyed()) {
+                browserWindow.emit('focus');
+            }
         });
 
         ofEvents.on(route.externalWindow('blur', uuid, name), () => {
@@ -148,9 +150,11 @@ class ExternalWindowEventAdapter {
         });
 
         ofEvents.on(route.externalWindow('close', uuid, name), () => {
-            browserWindow.emit('close');
-            browserWindow.close();
-            browserWindow.emit('closed');
+            if (!browserWindow.isDestroyed()) {
+                browserWindow.emit('close');
+                browserWindow.close();
+                browserWindow.emit('closed');
+            }
         });
     }
 }

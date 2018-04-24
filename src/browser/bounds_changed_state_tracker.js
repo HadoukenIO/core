@@ -16,7 +16,6 @@ limitations under the License.
 /*
     src/browser/bounds_changed_state_tracker.js
  */
-
 let windowTransaction = require('electron').windowTransaction;
 
 let _ = require('underscore');
