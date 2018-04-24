@@ -728,10 +728,6 @@ exports.System = {
         return plugins.getModule(identity, plugin);
     },
 
-    getPluginModules: function(identity) {
-        return plugins.getModules(identity);
-    },
-
     getPreloadScripts: function(identity) {
         return loadScripts(identity);
     }

@@ -141,7 +141,8 @@ function onRequestAuthorization(id, data) {
                     client: externalApplicationOptions.client,
                     uuid,
                     parentApp: {
-                        uuid: null
+                        uuid: null,
+                        configUrl: null
                     }
                 }
             }, externalApplicationOptions.configUrl);
