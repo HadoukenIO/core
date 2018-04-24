@@ -499,6 +499,8 @@ Window.create = function(id, opts) {
         // set taskbar icon
         if (!opts.meshJoinGroup) {
             setTaskbar(browserWindow);
+        } else {
+            _options.meshJoinGroup = true;
         }
 
         // apply options to browserWindow
@@ -1975,6 +1977,10 @@ function createWindowTearDown(identity, id) {
                         name: child.name,
                         uuid: child.uuid
                     };
+
+                    if (child._options.meshJoinGroup && child.browserWindow.isExternalWindow()) {
+                        browserWindow.setExternalWindowNativeId('0x0');
+                    }
 
                     Window.close(childIdentity, true, () => {
                         closedChildren++;
