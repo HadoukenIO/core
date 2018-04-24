@@ -74,7 +74,7 @@ function clipboardWriteRtf(identity: Identity,
     const {data, type} = message.payload;
     ack({
         success: true,
-        data: clipboard.writeRtf(data, type)
+        data: clipboard.writeRTF(data, type)
     });
 }
 
@@ -84,7 +84,7 @@ function clipboardWriteHtml(identity: Identity,
     const {data, type} = message.payload;
     ack({
         success: true,
-        data: clipboard.writeHtml(data, type)
+        data: clipboard.writeHTML(data, type)
     });
 }
 
@@ -122,7 +122,7 @@ function clipboardReadRtf(identity: Identity,
     const {type} = message.payload;
     ack({
         success: true,
-        data: clipboard.readRtf(type)
+        data: clipboard.readRTF(type)
     });
 }
 
@@ -132,7 +132,7 @@ function clipboardReadHtml(identity: Identity,
     const {type} = message.payload;
     ack({
         success: true,
-        data: clipboard.readHtml(type)
+        data: clipboard.readHTML(type)
     });
 }
 
