@@ -57,6 +57,7 @@ module.exports.windowApiMap = {
     'navigate-window-back': navigateWindowBack,
     'navigate-window-forward': navigateWindowForward,
     'stop-window-navigation': stopWindowNavigation,
+    'register-window-name': registerWindowName,
     'reload-window': reloadWindow,
     'redirect-window-to-url': redirectWindowToUrl, // Deprecated
     'resize-window': resizeWindow,
@@ -566,5 +567,13 @@ function setZoomLevel(identity, message, ack) {
     let level = payload.level;
 
     Window.setZoomLevel(windowIdentity, level);
+    ack(successAck);
+}
+
+function registerWindowName(identity, message, ack) {
+    const payload = message.payload;
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+    Window.registerWindowName(windowIdentity);
     ack(successAck);
 }
