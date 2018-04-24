@@ -456,7 +456,6 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
 
                     if (groupLeader.type === 'api') {
                         handleBoundsChange(false, true);
-                        //TBD:  if external window, ignore next bounds changed
                     }
                 } else {
                     if (!animations.getAnimationHandler().hasWindow(browserWindow.id) && !isUserBoundsChangeActive()) {
