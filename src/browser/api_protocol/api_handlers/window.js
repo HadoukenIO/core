@@ -290,8 +290,10 @@ function maximizeWindow(identity, message, ack) {
 function leaveWindowGroup(identity, message, ack) {
     var payload = message.payload,
         windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.leaveGroup(windowIdentity);
+    const { locals } = message;
+    //rename from hwnd
+    const hwnd = locals && locals.hwnd;
+    Window.leaveGroup(windowIdentity, hwnd);
     ack(successAck);
 }
 
@@ -386,6 +388,16 @@ function getWindowNativeId(identity, message, ack) {
         windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 
     dataAck.data = Window.getNativeId(windowIdentity);
+    ack(dataAck);
+}
+
+function setMeshWindowGroupUuid(identity, message, ack) {
+    const { payload } = message;
+    const uuid = payload && payload.groupUuid;
+    const dataAck = _.clone(successAck);
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+    dataAck.data = Window.setWindowGroupUuid(windowIdentity, uuid);
     ack(dataAck);
 }
 

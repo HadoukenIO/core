@@ -25,6 +25,8 @@ import { addRemoteSubscription } from '../../remote_subscriptions';
 
 const { Window } = require('../../api/window');
 const coreState = require('../../core_state');
+const WindowGroup = require('../../window_groups.js');
+
 
 const SUBSCRIBE_ACTION = 'subscribe';
 const PUBLISH_ACTION = 'publish-message';
@@ -36,6 +38,7 @@ const apiMessagesToIgnore: any = {
     'send-message': true,
     'subscribe': true,
     'join-window-group': true,
+    'leave-window-group': true,
     'unsubscribe': true,
     'subscriber-added': true,
     'subscriber-removed': true,
@@ -134,14 +137,16 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
-const handleExternalWindow = async (identity: Identity, toGroup: Identity): Promise<string|void> => {
+const handleExternalWindow = async (action: string, identity: Identity, toGroup: Identity): Promise<string|void> => {
     const { uuid, name } = toGroup;
-    if (coreState.getWindowByUuidName(identity.uuid, name)) {
-        // External window already created and registered
-        return 'registered';
-    }
+    // ADD HASH TO NAME - return it to the other window to be stored in groupUuid as external/uuid/name
     if (!uuid || isLocalUuid(uuid)) {
         return;
+    }
+    const registeredWindow = WindowGroup.getMeshWindow(toGroup);
+    if (registeredWindow || action === 'leave-window-group') {
+        // External window already created and registered
+        return registeredWindow;
     }
     const getHwndMessage = {
         action: 'get-window-native-id',
@@ -157,7 +162,7 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity): Prom
         uuid: identity.uuid,
         name,
         hwnd: hwnd.data,
-        meshJoinGroup: true
+        meshJoinGroupIdentity: { uuid, name }
     };
     const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
     const parentId = parent && parent.browserWindow && parent.browserWindow.id;
@@ -169,6 +174,8 @@ const handleExternalWindow = async (identity: Identity, toGroup: Identity): Prom
     }
     Window.create(childId, childWindowOptions);
 
+    WindowGroup.addMeshWindow(toGroup, childWindowOptions);
+
     return hwnd.data;
 };
 
@@ -176,7 +183,7 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
     const { identity, data, ack, nack } = msg;
     const payload = data && data.payload;
     const action = data && data.action;
-    const isJoinWindowGroupAction = action === 'join-window-group';
+    const isJoinWindowGroupAction = action === 'join-window-group' || action === 'leave-window-group';
     const isValidIdentity = typeof (identity) === 'object';
     const optInFlag = coreState.argo['mesh-join-group'];
 
@@ -197,8 +204,8 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
     const locals: any = {};
 
     try {
-        locals.hwnd = await handleExternalWindow(identity, window);
-        locals.groupingHwnd = await handleExternalWindow(identity, grouping);
+        locals.hwnd = await handleExternalWindow(action, identity, window);
+        locals.groupingHwnd = await handleExternalWindow(action, identity, grouping);
         next(locals);
     } catch (err) {
         log.writeToLog('info', err);

@@ -497,10 +497,10 @@ Window.create = function(id, opts) {
         browserWindow._options = _options;
 
         // set taskbar icon
-        if (!opts.meshJoinGroup) {
+        if (!opts.meshJoinGroupIdentity) {
             setTaskbar(browserWindow);
         } else {
-            _options.meshJoinGroup = true;
+            _options.meshJoinGroupIdentity = opts.meshJoinGroupIdentity;
         }
 
         // apply options to browserWindow
@@ -1255,6 +1255,11 @@ Window.getNativeId = function(identity) {
     return browserWindow.nativeId;
 };
 
+Window.setWindowGroupUuid = function(identity, uuid) {
+    const ofWindow = Window.wrap(identity.uuid, identity.name);
+    ofWindow.groupUuid = uuid;
+    return Window.getNativeId(identity);
+}
 
 Window.getNativeWindow = function() {};
 
@@ -1416,10 +1421,10 @@ const meshJoinGroupEvents = (identity, grouping) => {
     });
 
     Promise.all(unsubscriptions).then(unsubs => {
-        const externalClose = route.window('closed', grouping.uuid, grouping.name);
-        const childClose = route.externalWindow('close', grouping.uuid, grouping.name);
-        ofEvents.on(externalClose, () => unsubs.forEach(unsub => unsub()));
-        ofEvents.on(childClose, () => unsubs.forEach(unsub => unsub()));
+        const realWindowClose = route.window('closed', grouping.uuid, grouping.name);
+        const externalWindowClose = route.externalWindow('close', identity.uuid, grouping.name);
+        ofEvents.on(realWindowClose, () => unsubs.forEach(unsub => unsub()));
+        ofEvents.on(externalWindowClose, () => unsubs.forEach(unsub => unsub()));
     });
 };
 
@@ -1429,13 +1434,13 @@ Window.joinGroup = function(identity, grouping, locals) {
     if (locals) {
         const { requester, hwnd, groupingHwnd } = locals;
         if (hwnd) {
-            if (hwnd !== 'registered') {
+            if (typeof hwnd !== 'object') {
                 meshJoinGroupEvents(requester, identity);
             }
             identityOfWindow = Window.wrap(requester.uuid, identity.name);
         }
         if (groupingHwnd) {
-            if (groupingHwnd !== 'registered') {
+            if (typeof groupingHwnd !== 'object') {
                 meshJoinGroupEvents(requester, grouping);
             }
             groupingOfWindow = Window.wrap(requester.uuid, grouping.name);
@@ -1454,15 +1459,18 @@ Window.joinGroup = function(identity, grouping, locals) {
 };
 
 
-Window.leaveGroup = function(identity) {
-    // deal with leaveGroup...
-    let browserWindow = getElectronBrowserWindow(identity);
+Window.leaveGroup = function(identity, locals) {
+    let openfinWindow;
+    if (locals) {
+        openfinWindow = Window.wrap(locals.uuid, locals.name);
+    }
+    openfinWindow = openfinWindow || Window.wrap(identity.uuid, identity.name);
+    const browserWindow = openfinWindow && openfinWindow.browserWindow;
 
     if (!browserWindow) {
         return;
     }
 
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
     WindowGroups.leaveGroup(openfinWindow);
 };
 
@@ -1978,8 +1986,8 @@ function createWindowTearDown(identity, id) {
                         uuid: child.uuid
                     };
 
-                    if (child._options.meshJoinGroup && child.browserWindow.isExternalWindow()) {
-                        browserWindow.setExternalWindowNativeId('0x0');
+                    if (child._options.meshJoinGroupIdentity && child.browserWindow.isExternalWindow()) {
+                        child.browserWindow.setExternalWindowNativeId('0x0');
                     }
 
                     Window.close(childIdentity, true, () => {

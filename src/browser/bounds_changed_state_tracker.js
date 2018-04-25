@@ -290,7 +290,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                 }
 
                 groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid) || {};
-                if (groupLeader.name === name && checkTrackingApi(groupLeader)) {
+                if (groupLeader.name === name && checkTrackingApi(groupLeader) && !ofWindow.skipNext) {
                     var delta = getBoundsDelta(currentBounds, cachedBounds);
                     var wt; // window-transaction
                     let hwndToId = {};
@@ -336,6 +336,10 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
                             }
                             const [w, h] = [width, height];
                             wt.setWindowPos(hwnd, { x, y, w, h, flags });
+
+                            if (win._options.meshJoinGroupIdentity && groupLeader.type === 'api') {
+                                win.skipNext = true;
+                            }
                         } else {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
@@ -380,6 +384,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
             sizeChanged = false;
             positionChanged = false;
         }
+        var ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
 
         return dispatchedChange;
     };
@@ -446,6 +451,11 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         },
         'bounds-changed': () => {
             var ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
+            if (ofWindow.skipNext) {
+                ofWindow.skipNext = false;
+                updateCachedBounds(getCurrentBounds());
+                return;
+            }
             var groupUuid = ofWindow.groupUuid;
 
             var dispatchedChange = handleBoundsChange(true);
@@ -456,7 +466,9 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
 
                     if (groupLeader.type === 'api') {
                         handleBoundsChange(false, true);
-                        //TBD:  if external window, ignore next bounds changed
+                        if (ofWindow._options.meshJoinGroupIdentity) {
+
+                        }
                     }
                 } else {
                     if (!animations.getAnimationHandler().hasWindow(browserWindow.id) && !isUserBoundsChangeActive()) {

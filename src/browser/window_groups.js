@@ -13,6 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+import ofEvents from './of_events';
+import route from '../common/route';
+const coreState = require('./core_state');
 var _ = require('underscore'),
     EventEmitter = require('events').EventEmitter,
     util = require('util');
@@ -23,9 +27,32 @@ function WindowGroups() {
     EventEmitter.call(this);
 
     this._windowGroups = {};
+    this._meshWindowGroupMap = new Map();
 }
 
 util.inherits(WindowGroups, EventEmitter);
+
+
+
+WindowGroups.prototype.addMeshWindow = function(realWindow, externalWindow) {
+    const realKey = getMeshWindowKey(realWindow);
+    if (this._meshWindowGroupMap.get(realKey)) {
+        return this._meshWindowGroupMap.get(realKey);
+    }
+    this._meshWindowGroupMap.set(realKey, externalWindow);
+};
+
+WindowGroups.prototype.getMeshWindow = function(identity) {
+    const key = getMeshWindowKey(identity);
+    return this._meshWindowGroupMap.get(key);
+};
+
+WindowGroups.prototype.removeMeshWindow = function(identity) {
+    const key = getMeshWindowKey(identity);
+    if (key) {
+        this._meshWindowGroupMap.delete(key);
+    }
+};
 
 WindowGroups.prototype.getGroup = function(uuid) {
     return _.values(this._windowGroups[uuid]);
@@ -83,6 +110,7 @@ WindowGroups.prototype.joinGroup = function(source, target) {
     if (sourceGroupUuid) {
         this._handleDisbandingGroup(sourceGroupUuid);
     }
+
 };
 
 WindowGroups.prototype.leaveGroup = function(win) {
@@ -105,6 +133,17 @@ WindowGroups.prototype.leaveGroup = function(win) {
 
     if (groupUuid) {
         this._handleDisbandingGroup(groupUuid);
+    }
+
+};
+
+WindowGroups.prototype.removeExternalWindow = function(ofWindow) {
+    if (ofWindow._options.meshJoinGroupIdentity) {
+        ofWindow.browserWindow.setExternalWindowNativeId('0x0');
+        coreState.removeChildById(ofWindow.browserWindow.id);
+        const closeEvent = route.externalWindow('close', ofWindow.uuid, ofWindow.name);
+        ofEvents.emit(closeEvent);
+        this.removeMeshWindow(ofWindow._options.meshJoinGroupIdentity);
     }
 };
 
@@ -166,6 +205,7 @@ WindowGroups.prototype._addWindowToGroup = function(uuid, win) {
 
 WindowGroups.prototype._removeWindowFromGroup = function(uuid, win) {
     delete this._windowGroups[uuid][win.name];
+    this.removeExternalWindow(win);
 };
 
 WindowGroups.prototype._handleDisbandingGroup = function(groupUuid) {
@@ -214,6 +254,10 @@ function mapEventWindowGroups(group) {
             windowName: win.name
         };
     });
+}
+
+function getMeshWindowKey(identity) {
+    return `${ identity.uuid }-${ identity.name }`;
 }
 
 module.exports = new WindowGroups();
