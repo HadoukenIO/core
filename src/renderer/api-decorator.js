@@ -129,6 +129,13 @@ limitations under the License.
         });
     }
 
+    function registerWindowNameSync(uuid, name) {
+        syncApiCall('register-window-name', {
+            uuid,
+            name
+        });
+    }
+
     function getIpcConfigSync() {
         return elIPCConfig;
     }
@@ -511,6 +518,7 @@ limitations under the License.
             getWindowIdentity: getWindowIdentitySync,
             getCurrentWindowId: getWindowId,
             windowExists: windowExistsSync,
+            registerWindowName: registerWindowNameSync,
             ipcconfig: getIpcConfigSync(),
             createChildWindow: createChildWindow,
             getCachedWindowOptionsSync: getCachedWindowOptionsSync,
