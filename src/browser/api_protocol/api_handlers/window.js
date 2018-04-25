@@ -65,6 +65,7 @@ module.exports.windowApiMap = {
     'show-menu': showMenu,
     'show-window': showWindow,
     'set-foreground-window': setForegroundWindow,
+    'set-mesh-group-uuid': setMeshWindowGroupUuid,
     'set-window-bounds': setWindowBounds,
     'set-window-preload-state': setWindowPreloadState,
     'set-zoom-level': setZoomLevel,
@@ -393,7 +394,7 @@ function getWindowNativeId(identity, message, ack) {
 
 function setMeshWindowGroupUuid(identity, message, ack) {
     const { payload } = message;
-    const uuid = payload && payload.groupUuid;
+    const uuid = payload && payload.meshGroupUuid;
     const dataAck = _.clone(successAck);
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 

@@ -18,7 +18,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
-import { Identity } from '../../../shapes';
+import { Identity, OpenFinWindow } from '../../../shapes';
 import { BrowserWindow } from 'electron';
 import route from '../../../common/route';
 import { addRemoteSubscription } from '../../remote_subscriptions';
@@ -137,7 +137,7 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
-const handleExternalWindow = async (action: string, identity: Identity, toGroup: Identity): Promise<string|void> => {
+const handleExternalWindow = async (action: string, identity: Identity, toGroup: Identity): Promise<string|void| Identity> => {
     const { uuid, name } = toGroup;
     // ADD HASH TO NAME - return it to the other window to be stored in groupUuid as external/uuid/name
     if (!uuid || isLocalUuid(uuid)) {
@@ -149,10 +149,11 @@ const handleExternalWindow = async (action: string, identity: Identity, toGroup:
         return registeredWindow;
     }
     const getHwndMessage = {
-        action: 'get-window-native-id',
+        action: 'set-mesh-group-uuid',
         payload: {
             uuid,
-            name
+            name,
+            meshGroupUuid: identity.uuid
         }
     };
     const id = await connectionManager.resolveIdentity({uuid});
@@ -164,7 +165,7 @@ const handleExternalWindow = async (action: string, identity: Identity, toGroup:
         hwnd: hwnd.data,
         meshJoinGroupIdentity: { uuid, name }
     };
-    const parent = coreState.getWindowByUuidName(identity.uuid, identity.name);
+    const parent = coreState.getWindowByUuidName(identity.uuid, identity.uuid);
     const parentId = parent && parent.browserWindow && parent.browserWindow.id;
     const childBw = new BrowserWindow(childWindowOptions);
     const childId = childBw && childBw.id;
@@ -201,11 +202,54 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
         name: payload.groupingWindowName
     };
 
+    let parentIdentity;
+    // make sure target window isnt in group in another RT
+    if (grouping.uuid && !isLocalUuid(grouping.uuid)) {
+        const getGroupMessage = {
+            action: 'get-window-group',
+            payload: grouping
+        };
+        const id = await connectionManager.resolveIdentity({uuid: grouping.uuid});
+        const windowGroup = await id.runtime.fin.System.executeOnRemote(identity, getGroupMessage);
+        if (windowGroup && windowGroup.length) {
+            id.runtime.fin.System.executeOnRemote(identity, data)
+            .then(ack)
+            .catch(nack);
+        }
+    }
+    const groupingOfWindow: OpenFinWindow|undefined = coreState.getWindowByUuidName(grouping.uuid, grouping.name);
+    const externalParentUuid = groupingOfWindow && groupingOfWindow.meshGroupUuid;
+    if (externalParentUuid) {
+        try {
+            const id = await connectionManager.resolveIdentity({uuid: groupingOfWindow.meshGroupUuid});
+            const message = {...data, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
+            id.runtime.fin.System.executeOnRemote({ uuid: externalParentUuid, name: externalParentUuid }, message)
+                .then(ack)
+                .catch(nack);
+            return;
+        } catch (e) {
+            groupingOfWindow.meshGroupUuid = null;
+            next();
+        }
+    }
+    let targetGroup;
+    if (groupingOfWindow && groupingOfWindow.groupUuid) {
+        targetGroup = Window.getGroup(grouping);
+    }
+    if (targetGroup && targetGroup.length) {
+        targetGroup.forEach((win: Identity) => {
+            const ofWindow = coreState.getWindowByUuidName(grouping.uuid, grouping.name);
+            if (ofWindow._options.meshJoinGroupIdentity) {
+                // delegate to same app as any other external apps if necessary
+                parentIdentity = { uuid: ofWindow.uuid, name: ofWindow.uuid };
+            }
+        });
+    }
     const locals: any = {};
-
+    parentIdentity = parentIdentity || identity;
     try {
-        locals.hwnd = await handleExternalWindow(action, identity, window);
-        locals.groupingHwnd = await handleExternalWindow(action, identity, grouping);
+        locals.hwnd = await handleExternalWindow(action, parentIdentity, window);
+        locals.groupingHwnd = await handleExternalWindow(action, parentIdentity, grouping);
         next(locals);
     } catch (err) {
         log.writeToLog('info', err);

@@ -1255,12 +1255,6 @@ Window.getNativeId = function(identity) {
     return browserWindow.nativeId;
 };
 
-Window.setWindowGroupUuid = function(identity, uuid) {
-    const ofWindow = Window.wrap(identity.uuid, identity.name);
-    ofWindow.groupUuid = uuid;
-    return Window.getNativeId(identity);
-}
-
 Window.getNativeWindow = function() {};
 
 Window.getOptions = function(identity) {
@@ -1461,7 +1455,7 @@ Window.joinGroup = function(identity, grouping, locals) {
 
 Window.leaveGroup = function(identity, locals) {
     let openfinWindow;
-    if (locals) {
+    if (locals && typeof locals === 'object') {
         openfinWindow = Window.wrap(locals.uuid, locals.name);
     }
     openfinWindow = openfinWindow || Window.wrap(identity.uuid, identity.name);
@@ -1472,6 +1466,15 @@ Window.leaveGroup = function(identity, locals) {
     }
 
     WindowGroups.leaveGroup(openfinWindow);
+};
+
+
+Window.setWindowGroupUuid = function(identity, uuid) {
+    const ofWindow = Window.wrap(identity.uuid, identity.name);
+    // Window.leaveGroup(identity);
+    // LEAVE EXTERNAL GROUPS - EVENT?
+    ofWindow.meshGroupUuid = uuid;
+    return Window.getNativeId(identity);
 };
 
 

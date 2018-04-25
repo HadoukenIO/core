@@ -111,6 +111,7 @@ export interface OpenFinWindow {
     preloadScripts: PreloadScriptState[];
     uuid: string;
     mainFrameRoutingId: number;
+    meshGroupUuid: string;
 }
 
 export interface BrowserWindow {

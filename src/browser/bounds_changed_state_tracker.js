@@ -384,7 +384,6 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
             sizeChanged = false;
             positionChanged = false;
         }
-        var ofWindow = coreState.getWindowByUuidName(uuid, name) || {};
 
         return dispatchedChange;
     };
@@ -466,9 +465,9 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
 
                     if (groupLeader.type === 'api') {
                         handleBoundsChange(false, true);
-                        if (ofWindow._options.meshJoinGroupIdentity) {
+                        // if (ofWindow._options.meshJoinGroupIdentity) {
 
-                        }
+                        // }
                     }
                 } else {
                     if (!animations.getAnimationHandler().hasWindow(browserWindow.id) && !isUserBoundsChangeActive()) {

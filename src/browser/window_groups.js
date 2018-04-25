@@ -16,6 +16,7 @@ limitations under the License.
 
 import ofEvents from './of_events';
 import route from '../common/route';
+import connectionManager from './connection_manager';
 const coreState = require('./core_state');
 var _ = require('underscore'),
     EventEmitter = require('events').EventEmitter,
@@ -42,13 +43,13 @@ WindowGroups.prototype.addMeshWindow = function(realWindow, externalWindow) {
     this._meshWindowGroupMap.set(realKey, externalWindow);
 };
 
-WindowGroups.prototype.getMeshWindow = function(identity) {
-    const key = getMeshWindowKey(identity);
+WindowGroups.prototype.getMeshWindow = function(realIdentity) {
+    const key = getMeshWindowKey(realIdentity);
     return this._meshWindowGroupMap.get(key);
 };
 
-WindowGroups.prototype.removeMeshWindow = function(identity) {
-    const key = getMeshWindowKey(identity);
+WindowGroups.prototype.removeMeshWindow = function(realIdentity) {
+    const key = getMeshWindowKey(realIdentity);
     if (key) {
         this._meshWindowGroupMap.delete(key);
     }
@@ -114,7 +115,26 @@ WindowGroups.prototype.joinGroup = function(source, target) {
 };
 
 WindowGroups.prototype.leaveGroup = function(win) {
-    var groupUuid = win && win.groupUuid;
+    const meshGroupUuid = win && win.meshGroupUuid;
+    const groupUuid = win && win.groupUuid;
+
+    if (meshGroupUuid) {
+        connectionManager.resolveIdentity({ uuid: meshGroupUuid })
+            .then(id => {
+                const { uuid, name } = win;
+                const leaveGroupMessage = {
+                    action: 'leave-window-group',
+                    payload: {
+                        uuid,
+                        name,
+                    }
+                };
+                id.runtime.fin.System.executeOnRemote({ uuid, name }, leaveGroupMessage)
+            }).catch((e) => {
+                //Uuid was not found in the mesh
+                win.meshGroupUuid = null;
+            });
+    }
 
     // cannot leave a group if you don't belong to one
     if (!groupUuid) {
