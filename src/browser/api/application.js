@@ -119,7 +119,7 @@ electronApp.on('ready', function() {
             log.writeToLog('info', 'error processing RVM Request to close-app');
             log.writeToLog('info', err);
             rvmBus.sendCloseAppError(payload, err).catch(e => {
-                log.writeToLog('info', 'error sending close ap response to RVM');
+                log.writeToLog('info', 'error sending close app response to RVM');
                 log.writeToLog('info', err);
             });
         }
