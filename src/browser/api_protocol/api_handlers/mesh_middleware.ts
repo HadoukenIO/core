@@ -38,7 +38,7 @@ const apiMessagesToIgnore: any = {
     'send-message': true,
     'subscribe': true,
     'join-window-group': true,
-    'leave-window-group': true,
+    // 'leave-window-group': true,
     'unsubscribe': true,
     'subscriber-added': true,
     'subscriber-removed': true,
@@ -137,6 +137,59 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
     }
 }
 
+const meshJoinGroupEvents = (identity: Identity, grouping: Identity) => {
+
+    const unsubscriptions: any = [];
+    const localUnsubscriptions: any = [];
+    const eventMap: any = {
+        'begin-user-bounds-changed': 'begin-user-bounds-change',
+        'end-user-bounds-changed': 'end-user-bounds-change',
+        'bounds-changing': 'moving',
+        'bounds-changed': 'bounds-changed',
+        'focused': 'focus',
+        'minimized': 'state-change',
+        'maximized': 'state-change',
+        'restored': 'state-change',
+        'closed': 'close'
+    };
+
+    Object.keys(eventMap).forEach(key => {
+        const event = key;
+        const bwEvent = eventMap[key];
+
+        const subscription: any = {
+            uuid: grouping.uuid,
+            name: grouping.name,
+            listenType: 'on',
+            className: 'window',
+            eventName: event
+        };
+
+        const incomingEvent = route.window(event, grouping.uuid, grouping.name);
+        const newEvent = route.externalWindow(bwEvent, identity.uuid, grouping.name);
+
+        const internalListener = (payload: any) => {
+            const newPayload = Object.assign({}, payload);
+            newPayload.uuid = identity.uuid;
+            ofEvents.emit(newEvent, newPayload);
+        };
+
+        ofEvents.on(incomingEvent, internalListener);
+        localUnsubscriptions.push(() => ofEvents.removeListener(incomingEvent, internalListener));
+        unsubscriptions.push(addRemoteSubscription(subscription));
+    });
+
+    Promise.all(unsubscriptions).then((unsubs: any) => {
+        // const realWindowClose = route.window('closed', grouping.uuid, grouping.name);
+        const externalWindowClose = route.externalWindow('close', identity.uuid, grouping.name);
+        // ofEvents.once(realWindowClose, () => unsubs.forEach((unsub: any) => unsub()));
+        ofEvents.on(externalWindowClose, () => {
+            unsubs.forEach((unsub: any) => unsub());
+            localUnsubscriptions.forEach((unsub: any) => unsub());
+        });
+    });
+};
+
 const handleExternalWindow = async (action: string, identity: Identity, toGroup: Identity): Promise<string|void| Identity> => {
     const { uuid, name } = toGroup;
     // ADD HASH TO NAME - return it to the other window to be stored in groupUuid as external/uuid/name
@@ -175,6 +228,7 @@ const handleExternalWindow = async (action: string, identity: Identity, toGroup:
     }
     Window.create(childId, childWindowOptions);
 
+    meshJoinGroupEvents(identity, toGroup);
     WindowGroup.addMeshWindow(toGroup, childWindowOptions);
 
     return hwnd.data;
@@ -210,26 +264,37 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
             payload: grouping
         };
         const id = await connectionManager.resolveIdentity({uuid: grouping.uuid});
-        const windowGroup = await id.runtime.fin.System.executeOnRemote(identity, getGroupMessage);
+        const windowGroupResponse = await id.runtime.fin.System.executeOnRemote(identity, getGroupMessage);
+        const windowGroup = windowGroupResponse && windowGroupResponse.data;
         if (windowGroup && windowGroup.length) {
-            id.runtime.fin.System.executeOnRemote(identity, data)
+            id.runtime.fin.System.executeOnRemote(grouping, data)
             .then(ack)
             .catch(nack);
+            return;
         }
     }
     const groupingOfWindow: OpenFinWindow|undefined = coreState.getWindowByUuidName(grouping.uuid, grouping.name);
-    const externalParentUuid = groupingOfWindow && groupingOfWindow.meshGroupUuid;
+    let externalParentUuid = groupingOfWindow && groupingOfWindow.meshGroupUuid;
+    if (action === 'leave-window-group') {
+        const ofWindow: OpenFinWindow|undefined = coreState.getWindowByUuidName(window.uuid, window.name);
+        externalParentUuid = ofWindow && ofWindow.meshGroupUuid;
+    }
     if (externalParentUuid) {
         try {
-            const id = await connectionManager.resolveIdentity({uuid: groupingOfWindow.meshGroupUuid});
-            const message = {...data, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
+            const id = await connectionManager.resolveIdentity({uuid: externalParentUuid});
+            // THE BELOW IS NOT CHANGING GROUPINGUUID.....
+            // const message = {...data, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
+            const message = {...data };
+            message.payload = {...message.payload, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
             id.runtime.fin.System.executeOnRemote({ uuid: externalParentUuid, name: externalParentUuid }, message)
-                .then(ack)
-                .catch(nack);
+            .then(ack)
+            .catch(nack);
+            // IF leavegroup get rid of meshGroupUUid
             return;
         } catch (e) {
-            groupingOfWindow.meshGroupUuid = null;
+            // groupingOfWindow.meshGroupUuid = null;
             next();
+            return;
         }
     }
     let targetGroup;

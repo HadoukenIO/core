@@ -126,10 +126,13 @@ WindowGroups.prototype.leaveGroup = function(win) {
                     action: 'leave-window-group',
                     payload: {
                         uuid,
-                        name,
+                        name
                     }
                 };
                 id.runtime.fin.System.executeOnRemote({ uuid, name }, leaveGroupMessage)
+                    .then(() => {
+                        win.meshGroupUuid = null;
+                    });
             }).catch((e) => {
                 //Uuid was not found in the mesh
                 win.meshGroupUuid = null;
@@ -141,29 +144,27 @@ WindowGroups.prototype.leaveGroup = function(win) {
         return;
     }
 
-    this._removeWindowFromGroup(groupUuid, win);
-    if (groupUuid) {
-        this.emit('group-changed', {
-            groupUuid,
-            payload: generatePayload('leave', win, win, this.getGroup(groupUuid), [])
-        });
-    }
+    this.emit('group-changed', {
+        groupUuid,
+        payload: generatePayload('leave', win, win, this.getGroup(groupUuid), [])
+    });
     // updating the window's groupUuid after since it still needs to receive the event
     win.groupUuid = null;
 
-    if (groupUuid) {
-        this._handleDisbandingGroup(groupUuid);
-    }
+    this._removeWindowFromGroup(groupUuid, win);
 
+    this._handleDisbandingGroup(groupUuid);
 };
 
 WindowGroups.prototype.removeExternalWindow = function(ofWindow) {
-    if (ofWindow._options.meshJoinGroupIdentity) {
-        ofWindow.browserWindow.setExternalWindowNativeId('0x0');
-        coreState.removeChildById(ofWindow.browserWindow.id);
-        const closeEvent = route.externalWindow('close', ofWindow.uuid, ofWindow.name);
-        ofEvents.emit(closeEvent);
+    if (ofWindow && ofWindow._options.meshJoinGroupIdentity) {
         this.removeMeshWindow(ofWindow._options.meshJoinGroupIdentity);
+        if (!ofWindow.browserWindow.isDestroyed()) {
+            ofWindow.browserWindow.setExternalWindowNativeId('0x0');
+            coreState.removeChildById(ofWindow.browserWindow.id);
+            const closeEvent = route.externalWindow('close', ofWindow.uuid, ofWindow.name);
+            ofEvents.emit(closeEvent);
+        }
     }
 };
 
