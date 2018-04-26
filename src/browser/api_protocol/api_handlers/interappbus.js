@@ -55,8 +55,11 @@ function InterApplicationBusApiHandler() {
             subScriptionTypes.MESSAGE
         ];
 
-        InterApplicationBus.emitSubscriberRemoved(identity, payload);
         apiProtocolBase.removeSubscription(...subscriptionArgs);
+        if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
+            //if it still has the subscription, it didn't emit subscriber removed event.
+            InterApplicationBus.emitSubscriberRemoved(identity, payload);
+        }
 
         ack(successAck);
     }

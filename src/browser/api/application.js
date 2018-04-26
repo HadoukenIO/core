@@ -105,6 +105,26 @@ electronApp.on('ready', function() {
         }
     });
 
+    // listen to and process close-app requests originating from the RVM.
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'close-app'), payload => {
+        try {
+            const { uuid } = payload;
+            log.writeToLog('info', `received an RVM request to close application with uuid ${uuid}`);
+            if (uuid) {
+                Application.close({ uuid }, true);
+                //we cannot wait for the callback here because of the shutdown sequence bug. also fire and forget mode.
+                rvmBus.sendCloseAppRequested(payload);
+            }
+        } catch (err) {
+            log.writeToLog('info', 'error processing RVM Request to close-app');
+            log.writeToLog('info', err);
+            rvmBus.sendCloseAppError(payload, err).catch(e => {
+                log.writeToLog('info', 'error sending close app response to RVM');
+                log.writeToLog('info', err);
+            });
+        }
+    });
+
 });
 
 Application.create = function(opts, configUrl = '', parentIdentity = {}) {
