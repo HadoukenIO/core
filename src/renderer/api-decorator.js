@@ -23,6 +23,7 @@ limitations under the License.
     const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
+    const isMainFrame = glbl.isMainFrame;
     let renderFrameId = glbl.routingId;
     let customData = glbl.getFrameData(renderFrameId);
 
@@ -51,7 +52,7 @@ limitations under the License.
     // The following will check whether it is an iframe and update
     // entity information accordingly
     const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
-    const entityInfo = frameInfo || glbl.__startOptions.entityInfo;
+    const entityInfo = isMainFrame ? glbl.__startOptions.entityInfo : frameInfo;
     const decorateOpen = !runtimeArguments.includes('--native-window-open');
 
     let getOpenerSuccessCallbackCalled = () => {
