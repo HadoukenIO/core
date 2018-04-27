@@ -22,39 +22,26 @@ import { rvmMessageBus } from './rvm/rvm_message_bus';
 import { writeToLog } from './log';
 
 /**
- * A map of already-retrieved plugin module paths.
- *
- * Examples:
- * 'pluginName: 1.0.0' -> 'path\to\plugin\injectable\script.js'
- * 'pluginName2: 0.0.1' -> '' // plugin/version doesn't exist
- */
-const pluginPaths: Map<string, string> = new Map();
-
-/**
  * Gets a single plugin module
  */
-export async function getModule(identity: Identity, plugin: Plugin, sourceUrl?: string): Promise<string> {
-    if (!sourceUrl) {
-        sourceUrl = getManifest(identity).url;
+export async function getModule(identity: Identity, name: string): Promise<string> {
+    const { url: sourceUrl, manifest: { plugins = [] } } = getManifest(identity);
+    const plugin = plugins.find((e: Plugin) => e.name === name);
+
+    if (!plugin) {
+        writeToLog('info', '[plugins] Failed to find specified plugin in the manifest');
+        throw new Error('Failed to find specified plugin in the manifest');
     }
 
-    const id = `${plugin.name}: ${plugin.version}`;
-    let pluginPath;
+    const { payload } = await rvmMessageBus.getPluginInfo(sourceUrl, plugin);
+    const { error, target, path } = payload;
 
-    if (pluginPaths.has(id)) {
-        pluginPath = pluginPaths.get(id);
-    } else {
-        const { payload } = await rvmMessageBus.getPluginInfo(sourceUrl, plugin);
-        const { error, target, path } = payload;
-
-        if (error) {
-            writeToLog('info', `[plugins] failed to get plugin info from RVM: ${error}`);
-            throw error;
-        }
-
-        pluginPath = joinPath(path, target);
-        pluginPaths.set(id, pluginPath);
+    if (error) {
+        writeToLog('info', `[plugins] Failed to get plugin info from RVM: ${error}`);
+        throw new Error(error);
     }
+
+    const pluginPath = joinPath(path, target);
 
     return await getContent(pluginPath);
 }

@@ -291,6 +291,7 @@ export interface Manifest {
         futureVersion?: string;
         version: string;
     };
+    services?: string[];
     shortcut?: {
         company: string;
         description?: string;
