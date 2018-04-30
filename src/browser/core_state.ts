@@ -73,6 +73,9 @@ const manifests: Map <string, Shapes.Manifest> = new Map();
 // TODO: This needs to go go away, pending socket server refactor.
 let socketServerState: PortInfo|{} = {};
 
+// an array of window identities that are currently in flight
+let pendingWindows: Shapes.Identity[] = [];
+
 const manifestProxySettings: Shapes.ProxySettings = {
     proxyAddress: '',
     proxyPort: 0,
@@ -141,8 +144,20 @@ export function getManifestProxySettings(): Shapes.ProxySettings {
     return manifestProxySettings;
 }
 
+export function registerPendingWindowName(uuid: string, name: string): void {
+    pendingWindows.push({
+        uuid,
+        name
+    });
+}
+
+export function deregisterPendingWindowName(uuid: string, name: string): void {
+    pendingWindows = pendingWindows.filter(win => !(win.uuid === uuid && win.name === name));
+}
+
 export function windowExists(uuid: string, name: string): boolean {
-    return !!getOfWindowByUuidName(uuid, name);
+    const pendingWindowExists = !!pendingWindows.find(win => win.uuid === uuid && win.name === name);
+    return !!getOfWindowByUuidName(uuid, name) || pendingWindowExists;
 }
 
 export function removeChildById(id: number): void {
