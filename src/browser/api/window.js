@@ -1374,73 +1374,16 @@ Window.isShowing = function(identity) {
     return !!(browserWindow && browserWindow.isVisible());
 };
 
-// const meshJoinGroupEvents = (identity, grouping) => {
-
-//     const unsubscriptions = [];
-//     const eventMap = {
-//         'begin-user-bounds-changed': 'begin-user-bounds-change',
-//         'end-user-bounds-changed': 'end-user-bounds-change',
-//         'bounds-changing': 'moving',
-//         'bounds-changed': 'bounds-changed',
-//         'focused': 'focus',
-//         'minimized': 'state-change',
-//         'maximized': 'state-change',
-//         'restored': 'state-change',
-//         'closed': 'close',
-//     };
-
-//     Object.keys(eventMap).forEach(key => {
-//         const event = key;
-//         const bwEvent = eventMap[key];
-
-//         const subscription = {
-//             uuid: grouping.uuid,
-//             name: grouping.name,
-//             listenType: 'on',
-//             className: 'window',
-//             eventName: event
-//         };
-
-//         const incomingEvent = route.window(event, grouping.uuid, grouping.name);
-//         const newEvent = route.externalWindow(bwEvent, identity.uuid, grouping.name);
-
-//         ofEvents.on(incomingEvent, payload => {
-//             const newPayload = Object.assign({}, payload);
-//             newPayload.uuid = identity.uuid;
-//             ofEvents.emit(newEvent, newPayload);
-//         });
-
-//         unsubscriptions.push(addRemoteSubscription(subscription));
-//     });
-
-//     Promise.all(unsubscriptions).then(unsubs => {
-//         const realWindowClose = route.window('closed', grouping.uuid, grouping.name);
-//         const externalWindowClose = route.externalWindow('close', identity.uuid, grouping.name);
-//         ofEvents.once(realWindowClose, () => unsubs.forEach(unsub => unsub()));
-//         ofEvents.once(externalWindowClose, () => unsubs.forEach(unsub => unsub()));
-//     });
-// };
-
 Window.joinGroup = function(identity, grouping, locals) {
     let identityOfWindow;
     let groupingOfWindow;
     if (locals) {
-        const { requester, hwnd, groupingHwnd } = locals;
+        const { hwnd, groupingHwnd } = locals;
         if (hwnd) {
-            if (typeof hwnd !== 'object') {
-                // meshJoinGroupEvents(requester, identity);
-                identityOfWindow = Window.wrap(requester.uuid, identity.name);
-            } else {
-                identityOfWindow = Window.wrap(hwnd.uuid, hwnd.name);
-            }
+            identityOfWindow = Window.wrap(hwnd.uuid, hwnd.name);
         }
         if (groupingHwnd) {
-            if (typeof groupingHwnd !== 'object') {
-                // meshJoinGroupEvents(requester, grouping);
-                groupingOfWindow = Window.wrap(requester.uuid, grouping.name);
-            } else {
-                groupingOfWindow = Window.wrap(groupingHwnd.uuid, groupingHwnd.name);
-            }
+            groupingOfWindow = Window.wrap(groupingHwnd.uuid, groupingHwnd.name);
         }
     }
     identityOfWindow = identityOfWindow || Window.wrap(identity.uuid, identity.name);
@@ -1474,8 +1417,8 @@ Window.leaveGroup = function(identity, locals) {
 
 Window.setWindowGroupUuid = function(identity, uuid) {
     const ofWindow = Window.wrap(identity.uuid, identity.name);
-    // Window.leaveGroup(identity);
-    // LEAVE EXTERNAL GROUPS - EVENT?
+    Window.leaveGroup(identity);
+    // LEAVE GROUP HERE? 
     ofWindow.meshGroupUuid = uuid;
     return Window.getNativeId(identity);
 };

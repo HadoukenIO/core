@@ -303,9 +303,7 @@ function joinWindowGroup(identity, message, ack) {
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
     const groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
     const { locals } = message;
-    if (locals && (locals.hwnd || locals.groupingHwnd)) {
-        locals.requester = identity;
-    }
+
     Window.joinGroup(windowIdentity, groupingIdentity, locals);
     ack(successAck);
 }
