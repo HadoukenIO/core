@@ -570,7 +570,7 @@ limitations under the License.
             }
 
             try {
-                window.eval(_content); /* jshint ignore:line */
+                process.eval(_content); /* jshint ignore:line */
                 log(`Succeeded execution of plugin module [${name} ${version}]`);
                 asyncApiCall(action, { name, version, state: 'succeeded' });
             } catch (error) {
@@ -629,7 +629,7 @@ limitations under the License.
                 }
 
                 try {
-                    window.eval(_content); /* jshint ignore:line */
+                    process.eval(_content); /* jshint ignore:line */
                     log(`Succeeded execution of preload script for URL [${url}]`);
                     asyncApiCall(action, { url, state: 'succeeded' });
                 } catch (error) {

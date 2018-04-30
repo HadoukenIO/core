@@ -116,7 +116,7 @@ const registerAPI = (w, routingId, isMainFrame) => {
         // teardownHandlers.push(override(w, routingId, chromiumWindowAlertEnabled))
         // ===================================
 
-        w.eval(apiDecoratorAsString);
+        w.process.eval(apiDecoratorAsString);
 
         let inboundMessageTopic = '';
 
