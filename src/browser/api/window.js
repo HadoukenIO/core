@@ -934,6 +934,7 @@ Window.create = function(id, opts) {
     winObj.framePreloadScripts = {}; // frame ID => [{url, state}]
 
     if (!coreState.getWinObjById(id)) {
+        coreState.deregisterPendingWindowName(uuid, name);
         coreState.setWindowObj(id, winObj);
 
         ofEvents.emit(route.application('window-created', uuid), {
@@ -1815,6 +1816,10 @@ Window.setZoomLevel = function(identity, level) {
 Window.onUnload = (identity) => {
     ofEvents.emit(route.window('unload', identity.uuid, identity.name, false), identity);
     ofEvents.emit(route.window('init-subscription-listeners'), identity);
+};
+
+Window.registerWindowName = (identity) => {
+    coreState.registerPendingWindowName(identity.uuid, identity.name);
 };
 
 function emitCloseEvents(identity) {

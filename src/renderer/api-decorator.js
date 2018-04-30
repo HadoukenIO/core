@@ -23,6 +23,7 @@ limitations under the License.
     const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
+    const isMainFrame = glbl.isMainFrame;
     let renderFrameId = glbl.routingId;
     let customData = glbl.getFrameData(renderFrameId);
 
@@ -51,7 +52,7 @@ limitations under the License.
     // The following will check whether it is an iframe and update
     // entity information accordingly
     const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
-    const entityInfo = frameInfo || glbl.__startOptions.entityInfo;
+    const entityInfo = isMainFrame ? glbl.__startOptions.entityInfo : frameInfo;
     const decorateOpen = !runtimeArguments.includes('--native-window-open');
 
     let getOpenerSuccessCallbackCalled = () => {
@@ -124,6 +125,13 @@ limitations under the License.
 
     function windowExistsSync(uuid, name) {
         return syncApiCall('window-exists', {
+            uuid,
+            name
+        });
+    }
+
+    function registerWindowNameSync(uuid, name) {
+        syncApiCall('register-window-name', {
             uuid,
             name
         });
@@ -223,22 +231,22 @@ limitations under the License.
         const { uuid, name, parent, entityType } = entityInfo;
         const winIdentity = { uuid, name };
         const parentFrameName = parent.name || name;
-        const eventMap = new Map();
+        const eventMap = [];
 
-        eventMap.set(`window/initialized/${uuid}-${name}`, winIdentity);
+        eventMap.push([`window/initialized/${uuid}-${name}`, winIdentity]);
 
         // main window
         if (uuid === name) {
-            eventMap.set(`application/initialized/${uuid}`);
+            eventMap.push([`application/initialized/${uuid}`, undefined]);
         }
 
-        eventMap.set(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
-        eventMap.set(`window/connected/${uuid}-${name}`, winIdentity);
-        eventMap.set(`window/frame-connected/${uuid}-${parentFrameName}`, {
+        eventMap.push([`window/dom-content-loaded/${uuid}-${name}`, winIdentity]);
+        eventMap.push([`window/connected/${uuid}-${name}`, winIdentity]);
+        eventMap.push([`window/frame-connected/${uuid}-${parentFrameName}`, {
             frameName: name,
             entityType
-        });
-        eventMap.set(`frame/connected/${uuid}-${name}`, winIdentity);
+        }]);
+        eventMap.push([`frame/connected/${uuid}-${name}`, winIdentity]);
 
         asyncApiCall('raise-many-events', [...eventMap]);
     }
@@ -511,6 +519,7 @@ limitations under the License.
             getWindowIdentity: getWindowIdentitySync,
             getCurrentWindowId: getWindowId,
             windowExists: windowExistsSync,
+            registerWindowName: registerWindowNameSync,
             ipcconfig: getIpcConfigSync(),
             createChildWindow: createChildWindow,
             getCachedWindowOptionsSync: getCachedWindowOptionsSync,
@@ -576,7 +585,7 @@ limitations under the License.
                 }
 
                 try {
-                    window.eval(_content); /* jshint ignore:line */
+                    process.eval(_content); /* jshint ignore:line */
                     log(`Succeeded execution of preload script for URL [${url}]`);
                     asyncApiCall(action, { url, state: 'succeeded' });
                 } catch (error) {
