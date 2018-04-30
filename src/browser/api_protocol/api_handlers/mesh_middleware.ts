@@ -180,9 +180,7 @@ const meshJoinGroupEvents = (identity: Identity, grouping: Identity) => {
     });
 
     Promise.all(unsubscriptions).then((unsubs: any) => {
-        // const realWindowClose = route.window('closed', grouping.uuid, grouping.name);
         const externalWindowClose = route.externalWindow('close', identity.uuid, grouping.name);
-        // ofEvents.once(realWindowClose, () => unsubs.forEach((unsub: any) => unsub()));
         ofEvents.on(externalWindowClose, () => {
             unsubs.forEach((unsub: any) => unsub());
             localUnsubscriptions.forEach((unsub: any) => unsub());
@@ -234,7 +232,7 @@ const handleExternalWindow = async (action: string, identity: Identity, toGroup:
     return hwnd.data;
 };
 
-async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?: object) => void): Promise<void> {
+const meshJoinWindowGroupMiddleware = async (msg: MessagePackage, next: (locals?: object) => void): Promise<void> => {
     const { identity, data, ack, nack } = msg;
     const payload = data && data.payload;
     const action = data && data.action;
@@ -256,8 +254,7 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
         name: payload.groupingWindowName
     };
 
-    let parentIdentity;
-    // make sure target window isnt in group in another RT
+    // If grouping is not local, make sure window isnt in a group in it's own runtime
     if (grouping.uuid && !isLocalUuid(grouping.uuid)) {
         const getGroupMessage = {
             action: 'get-window-group',
@@ -267,50 +264,58 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
         const windowGroupResponse = await id.runtime.fin.System.executeOnRemote(identity, getGroupMessage);
         const windowGroup = windowGroupResponse && windowGroupResponse.data;
         if (windowGroup && windowGroup.length) {
+            // If it is in a group in another RT - send to its own RT to execute
             id.runtime.fin.System.executeOnRemote(grouping, data)
             .then(ack)
             .catch(nack);
             return;
         }
     }
+
+    const handleExternallyGroupedLocalWindow = async (ofWindow: OpenFinWindow, msg: MessagePackage) => {
+        const externalParentUuid = ofWindow && ofWindow.meshGroupUuid;
+        const { data, ack, nack } = msg;
+        const action = data && data.action;
+
+        const id = await connectionManager.resolveIdentity({uuid: externalParentUuid});
+        const message = {...data };
+        if (action !== 'leave-window-group') {
+            message.payload = {...message.payload, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
+        }
+        id.runtime.fin.System.executeOnRemote({ uuid: externalParentUuid, name: externalParentUuid }, message)
+        .then(ack)
+        .catch(nack);
+        return;
+    };
+
+    // if local grouping window is in a group in another RT, handle in that runtime
     const groupingOfWindow: OpenFinWindow|undefined = coreState.getWindowByUuidName(grouping.uuid, grouping.name);
-    let externalParentUuid = groupingOfWindow && groupingOfWindow.meshGroupUuid;
+    if (groupingOfWindow && groupingOfWindow.meshGroupUuid) {
+        return await handleExternallyGroupedLocalWindow(groupingOfWindow, msg);
+    }
+    // if local window leaving group is in a group in another RT, handle in that runtime
     if (action === 'leave-window-group') {
         const ofWindow: OpenFinWindow|undefined = coreState.getWindowByUuidName(window.uuid, window.name);
-        externalParentUuid = ofWindow && ofWindow.meshGroupUuid;
-    }
-    if (externalParentUuid) {
-        try {
-            const id = await connectionManager.resolveIdentity({uuid: externalParentUuid});
-            // THE BELOW IS NOT CHANGING GROUPINGUUID.....
-            // const message = {...data, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
-            const message = {...data };
-            if (action !== 'leave-window-group') {
-                message.payload = {...message.payload, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
-            }
-            id.runtime.fin.System.executeOnRemote({ uuid: externalParentUuid, name: externalParentUuid }, message)
-            .then(ack)
-            .catch(nack);
-            // IF leavegroup get rid of meshGroupUUid
-            return;
-        } catch (e) {
-            // groupingOfWindow.meshGroupUuid = null;
-            next();
-            return;
+        if (ofWindow && ofWindow.meshGroupUuid) {
+            return await handleExternallyGroupedLocalWindow(ofWindow, msg);
         }
     }
-    let targetGroup;
+
+    let parentIdentity;
+    // If local grouping window is in a group locally, see if there are any external windows in the group
     if (groupingOfWindow && groupingOfWindow.groupUuid) {
-        targetGroup = Window.getGroup(grouping);
-    }
-    if (targetGroup && targetGroup.length) {
-        targetGroup.forEach((win: Identity) => {
-            const ofWindow = coreState.getWindowByUuidName(grouping.uuid, grouping.name);
-            if (ofWindow._options.meshJoinGroupIdentity) {
-                // delegate to same app as any other external apps if necessary
-                parentIdentity = { uuid: ofWindow.uuid, name: ofWindow.uuid };
-            }
-        });
+        const targetGroup = Window.getGroup(grouping);
+
+        if (targetGroup && targetGroup.length) {
+            targetGroup.forEach((win: Identity) => {
+                // const ofWindow = coreState.getWindowByUuidName(grouping.uuid, grouping.name);
+                const ofWindow = coreState.getWindowByUuidName(win.uuid, win.name);
+                if (ofWindow._options.meshJoinGroupIdentity) {
+                    // there is an external window; delegate new window parent to same app
+                    parentIdentity = { uuid: ofWindow.uuid, name: ofWindow.uuid };
+                }
+            });
+        }
     }
     const locals: any = {};
     parentIdentity = parentIdentity || identity;
@@ -322,7 +327,7 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
         log.writeToLog('info', err);
         nack(err);
     }
-}
+};
 
 //on a non InterAppBus API call, forward the message to the runtime that owns the uuid.
 function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
