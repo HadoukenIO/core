@@ -285,7 +285,9 @@ async function meshJoinWindowGroupMiddleware(msg: MessagePackage, next: (locals?
             // THE BELOW IS NOT CHANGING GROUPINGUUID.....
             // const message = {...data, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
             const message = {...data };
-            message.payload = {...message.payload, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
+            if (action !== 'leave-window-group') {
+                message.payload = {...message.payload, groupingUuid: externalParentUuid, groupingWindowName: externalParentUuid };
+            }
             id.runtime.fin.System.executeOnRemote({ uuid: externalParentUuid, name: externalParentUuid }, message)
             .then(ack)
             .catch(nack);
