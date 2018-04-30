@@ -17,7 +17,6 @@ let ofEvents = require('./of_events.js').default;
 let electronApp = require('electron').app;
 
 let MonitorInfo;
-const unsubscriptions = [];
 electronApp.on('ready', () => {
     MonitorInfo = require('./monitor_info.js');
 });
@@ -28,6 +27,7 @@ class ExternalWindowEventAdapter {
         let options = browserWindow && browserWindow._options;
         let uuid = options.uuid;
         let name = options.name;
+        const unsubscriptions = [];
 
         let disabledFrameState = {
             leftButtonDown: false,
