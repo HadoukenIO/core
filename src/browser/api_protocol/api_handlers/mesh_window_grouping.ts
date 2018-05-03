@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
@@ -120,7 +119,7 @@ const setMeshJoinGroup = async (parent: Identity, toGroup: Identity): Promise<AP
 
 const handleExternalWindow = async (action: string, identity: Identity, toGroup: Identity): Promise<void|Identity> => {
     const { uuid, name } = toGroup;
-    // ADD HASH TO NAME - return it to the other window to be stored in groupUuid as external/uuid/name
+
     if (!uuid || isLocalUuid(uuid)) {
         return;
     }
@@ -145,7 +144,7 @@ const handleExternalWindow = async (action: string, identity: Identity, toGroup:
     const childId = childBw && childBw.id;
 
     if (!coreState.addChildToWin(parentId, childId)) {
-        console.warn('failed to add child window');
+        log.writeToLog('info', 'failed to add child window');
     }
     Window.create(childId, childWindowOptions);
 
@@ -218,8 +217,8 @@ export const meshJoinWindowGroupMiddleware = async (msg: MessagePackage, next: (
         if (targetGroup && targetGroup.length) {
             targetGroup.forEach((win: Identity) => {
                 // const ofWindow = coreState.getWindowByUuidName(grouping.uuid, grouping.name);
-                const ofWindow = coreState.getWindowByUuidName(win.uuid, win.name);
-                if (ofWindow._options.meshJoinGroupIdentity) {
+                const ofWindow: OpenFinWindow|undefined = coreState.getWindowByUuidName(win.uuid, win.name);
+                if (ofWindow && ofWindow._options.meshJoinGroupIdentity) {
                     // there is an external window; delegate new window parent to same app
                     parentIdentity = { uuid: ofWindow.uuid, name: ofWindow.uuid };
                 }

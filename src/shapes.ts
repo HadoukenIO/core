@@ -213,6 +213,7 @@ export interface WindowOptions {
     maxHeight?: number;
     maximizable?: boolean;
     maxWidth?: number;
+    meshJoinGroupIdentity?: Identity;
     minHeight?: number;
     minimizable?: boolean;
     minWidth?: number;

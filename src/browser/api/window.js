@@ -1418,7 +1418,6 @@ Window.leaveGroup = function(identity, locals) {
 Window.setWindowGroupUuid = function(identity, uuid) {
     const ofWindow = Window.wrap(identity.uuid, identity.name);
     Window.leaveGroup(identity);
-    // LEAVE GROUP HERE? 
     ofWindow.meshGroupUuid = uuid;
     return Window.getNativeId(identity);
 };

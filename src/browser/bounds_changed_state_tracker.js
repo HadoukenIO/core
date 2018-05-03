@@ -465,9 +465,6 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
 
                     if (groupLeader.type === 'api') {
                         handleBoundsChange(false, true);
-                        // if (ofWindow._options.meshJoinGroupIdentity) {
-
-                        // }
                     }
                 } else {
                     if (!animations.getAnimationHandler().hasWindow(browserWindow.id) && !isUserBoundsChangeActive()) {
