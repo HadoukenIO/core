@@ -110,7 +110,9 @@ function InterApplicationBusApiHandler() {
                 apiProtocolBase.removeSubscription(...subscriptionArgs);
             });
         } else {
-            const wildcardPayload = Object.assign({ sourceUuid: '*', sourceWindowName: '*' }, payload);
+            const wildcardPayload = Object.assign({}, payload);
+            wildcardPayload.sourceUuid = '*';
+            wildcardPayload.sourceWindowName = '*';
             const subscriptionObj = InterApplicationBus.subscribe(identity, wildcardPayload, subscriptionCallback);
             InterApplicationBus.emitSubscriberAdded(identity, payload);
 
