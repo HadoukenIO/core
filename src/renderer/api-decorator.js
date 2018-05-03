@@ -49,6 +49,9 @@ limitations under the License.
         frames
     } = glbl.__startOptions;
 
+    //Check if we need to use the process.eval in a nodeless environment.
+    const geval = initialOptions.experimental.node ? glbl.eval : glbl.process.eval;
+
     // The following will check whether it is an iframe and update
     // entity information accordingly
     const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
@@ -585,7 +588,7 @@ limitations under the License.
                 }
 
                 try {
-                    process.eval(_content); /* jshint ignore:line */
+                    geval(_content); /* jshint ignore:line */
                     log(`Succeeded execution of preload script for URL [${url}]`);
                     asyncApiCall(action, { url, state: 'succeeded' });
                 } catch (error) {
