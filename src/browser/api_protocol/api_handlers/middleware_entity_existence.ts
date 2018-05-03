@@ -19,20 +19,24 @@ import { appByUuid, windowExists } from '../../core_state';
 import { applicationApiMap } from './application.js';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { windowApiMap } from './window.js';
+const coreState = require('../../core_state');
 
 const apisToIgnore = new Set([
     // Application
     'create-application',
     'create-child-window',
     'is-application-running',
-    'join-window-group',
-    'leave-window-group',
     //TODO: we do not check run for .NET, the adapter will create an application then run it without waiting for the ack.
     'run-application',
     // Window
     'window-exists',
     'window-is-notification-type'
 ]);
+
+if (coreState.argo && coreState.argo['mesh-join-group']) {
+    apisToIgnore.add('join-window-group');
+    apisToIgnore.add('leave-window-group');
+}
 
 /**
  * Verifies that API is called on applications and windows that exist,

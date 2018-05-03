@@ -299,10 +299,9 @@ function leaveWindowGroup(identity, message, ack) {
 }
 
 function joinWindowGroup(identity, message, ack) {
-    const payload = message.payload;
+    const { payload, locals } = message;
     const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
     const groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
-    const { locals } = message;
 
     Window.joinGroup(windowIdentity, groupingIdentity, locals);
     ack(successAck);
