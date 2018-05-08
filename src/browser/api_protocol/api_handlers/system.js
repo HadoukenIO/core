@@ -560,9 +560,9 @@ function SystemApiHandler() {
     }
 
     function getPluginModule(identity, message, ack, nack) {
-        const { payload: { plugin } } = message;
+        const { payload: name } = message;
 
-        System.getPluginModule(identity, plugin)
+        System.getPluginModule(identity, name)
             .then((pluginModule) => {
                 const dataAck = _.clone(successAck);
                 dataAck.data = pluginModule;

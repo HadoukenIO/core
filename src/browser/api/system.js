@@ -724,8 +724,8 @@ exports.System = {
         return downloadScripts(identity, preloadScripts);
     },
 
-    getPluginModule: function(identity, plugin) {
-        return plugins.getModule(identity, plugin);
+    getPluginModule: function(identity, name) {
+        return plugins.getModule(identity, name);
     },
 
     getPreloadScripts: function(identity) {
