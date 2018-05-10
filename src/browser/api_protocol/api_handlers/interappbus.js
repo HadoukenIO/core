@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -43,8 +43,8 @@ function InterApplicationBusApiHandler() {
 
         let payload = message.payload;
         let topic = payload.topic;
-        let sourceUuid = payload.sourceUuid;
-        let sourceWindowName = payload.sourceWindowName || '';
+        let sourceUuid = '*';
+        let sourceWindowName = '*';
 
         const subscriptionArgs = [
             identity,
@@ -55,12 +55,12 @@ function InterApplicationBusApiHandler() {
             subScriptionTypes.MESSAGE
         ];
 
-        apiProtocolBase.removeSubscription(identity, topic, identity.uuid, sourceUuid, sourceWindowName, subScriptionTypes.MESSAGE);
-
-        // If subscription still exits, haven't called unsubscribe function so haven't emitted subscriber removed
+        apiProtocolBase.removeSubscription(...subscriptionArgs);
         if (apiProtocolBase.subscriptionExists(...subscriptionArgs)) {
+            //if it still has the subscription, it didn't emit subscriber removed event.
             InterApplicationBus.emitSubscriberRemoved(identity, payload);
         }
+
         ack(successAck);
     }
 
@@ -68,8 +68,8 @@ function InterApplicationBusApiHandler() {
         // let message = JSON.parse(JSON.stringify(rawMessage));
         let payload = message.payload;
         let topic = payload.topic;
-        let sourceUuid = payload.sourceUuid;
-        let sourceWindowName = payload.sourceWindowName || '';
+        let sourceUuid = '*';
+        let sourceWindowName = '*';
         let {
             messageKey: subscribedMessageKey
         } = payload;
@@ -110,10 +110,17 @@ function InterApplicationBusApiHandler() {
                 apiProtocolBase.removeSubscription(...subscriptionArgs);
             });
         } else {
+            const wildcardPayload = Object.assign({}, payload);
+            wildcardPayload.sourceUuid = '*';
+            wildcardPayload.sourceWindowName = '*';
+            const subscriptionObj = InterApplicationBus.subscribe(identity, wildcardPayload, subscriptionCallback);
+            InterApplicationBus.emitSubscriberAdded(identity, payload);
 
-            const subscriptionObj = InterApplicationBus.subscribe(identity, payload, subscriptionCallback);
-
-            apiProtocolBase.registerSubscription(subscriptionObj.unsubscribe, ...subscriptionArgs);
+            const unsub = function() {
+                InterApplicationBus.emitSubscriberRemoved(identity, payload);
+                subscriptionObj.unsubscribe();
+            };
+            apiProtocolBase.registerSubscription(unsub, ...subscriptionArgs);
 
             ofEvents.once(route.window('unload', identity.uuid, identity.name, false), () => {
                 apiProtocolBase.removeSubscription(...subscriptionArgs);

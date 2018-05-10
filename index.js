@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -27,6 +27,7 @@ let crashReporter = electron.crashReporter;
 let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
 let ipc = electron.ipcMain;
+let Menu = electron.Menu;
 
 // npm modules
 let _ = require('underscore');
@@ -69,9 +70,9 @@ let firstApp = null;
 let rvmBus;
 let otherInstanceRunning = false;
 let appIsReady = false;
+let handlingErrors = false;
 const deferredLaunches = [];
 const USER_DATA = app.getPath('userData');
-
 
 app.on('child-window-created', function(parentId, childId, childOptions) {
 
@@ -164,6 +165,9 @@ includeFlashPlugin();
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
 
+// Opt in to display non-blocking errors
+handleSafeErrors(coreState.argo);
+
 // Has a local copy of an app config
 if (coreState.argo['local-startup-url']) {
     try {
@@ -178,12 +182,22 @@ if (coreState.argo['local-startup-url']) {
     }
 }
 
+function handleSafeErrors(argo) {
+    if (!handlingErrors && argo['safe-errors']) {
+        process.on('uncaughtException', (err) => {
+            errors.createErrorUI(err);
+        });
+        handlingErrors = true;
+    }
+}
+
 const handleDelegatedLaunch = function(commandLine) {
     let otherInstanceArgo = minimist(commandLine);
     const socketServerState = coreState.getSocketServerState();
     const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
 
     initializeCrashReporter(otherInstanceArgo);
+    handleSafeErrors(otherInstanceArgo);
 
     // delegated args from a second instance
     launchApp(otherInstanceArgo, false);
@@ -262,6 +276,7 @@ app.on('ready', function() {
     launchApp(coreState.argo, true);
 
     registerShortcuts();
+    registerMacMenu();
 
     //subscribe to auth requests:
     app.on('login', (event, webContents, request, authInfo, callback) => {
@@ -678,6 +693,23 @@ function registerShortcuts() {
 
     app.on('browser-window-closed', unhookShortcuts);
     app.on('browser-window-blur', unhookShortcuts);
+}
+
+function registerMacMenu() {
+    if (process.platform === 'darwin') {
+        const template = [{
+                label: 'OpenFin',
+                submenu: [
+                    { role: 'quit' }
+                ]
+            },
+            {
+                role: 'editMenu'
+            }
+        ];
+        const menu = Menu.buildFromTemplate(template);
+        Menu.setApplicationMenu(menu);
+    }
 }
 
 function needsCrashReporter(argo) {

@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -58,6 +58,7 @@ function SystemApiHandler() {
         'download-preload-scripts': downloadPreloadScripts,
         'download-runtime': { apiFunc: downloadRuntime, apiPath: '.downloadRuntime' },
         'exit-desktop': { apiFunc: exitDesktop, apiPath: '.exitDesktop' },
+        'flush-cookie-store': { apiFunc: flushCookieStore, apiPath: '.flushCookieStore' },
         'generate-guid': generateGuid,
         'get-all-applications': getAllApplications,
         'get-all-external-applications': getAllExternalApplications,
@@ -78,7 +79,9 @@ function SystemApiHandler() {
         'get-nearest-display-root': getNearestDisplayRoot,
         'get-proxy-settings': getProxySettings,
         'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
+        'get-runtime-info': getRuntimeInfo,
         'get-rvm-info': getRvmInfo,
+        'get-plugin-module': getPluginModule,
         'get-plugin-modules': getPluginModules,
         'get-preload-scripts': getPreloadScripts,
         'get-version': getVersion,
@@ -88,6 +91,7 @@ function SystemApiHandler() {
         'open-url-with-browser': openUrlWithBrowser,
         'process-snapshot': processSnapshot,
         'raise-event': raiseEvent,
+        'raise-many-events': raiseManyEvents,
         'read-registry-value': { apiFunc: readRegistryValue, apiPath: '.readRegistryValue', apiPolicyDelegate: ReadRegistryValuePolicyDelegate },
         'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
         'resolve-uuid': resolveUuid,
@@ -180,6 +184,10 @@ function SystemApiHandler() {
 
         System.raiseEvent(evt, eventArgs);
         ack(successAck);
+    }
+
+    function raiseManyEvents(identity, message) {
+        return System.raiseManyEvents(message.payload);
     }
 
     function convertOptions(identity, message, ack) {
@@ -379,6 +387,12 @@ function SystemApiHandler() {
         ack(dataAck);
     }
 
+    function getRuntimeInfo(identity, message, ack, nack) {
+        var dataAck = _.clone(successAck);
+        dataAck.data = System.getRuntimeInfo(identity);
+        ack(dataAck);
+    }
+
     function getRvmInfo(identity, message, ack, nack) {
         System.getRvmInfo(identity, function(data) {
             let dataAck = _.clone(successAck);
@@ -450,6 +464,10 @@ function SystemApiHandler() {
             nack(err);
         });
 
+    }
+
+    function flushCookieStore(identity, message, ack, nack) {
+        System.flushCookieStore(() => ack(successAck));
     }
 
     function terminateExternalProcess(identity, message, ack) {
@@ -537,6 +555,18 @@ function SystemApiHandler() {
             .then((preloadScripts) => {
                 const dataAck = _.clone(successAck);
                 dataAck.data = preloadScripts;
+                ack(dataAck);
+            })
+            .catch(nack);
+    }
+
+    function getPluginModule(identity, message, ack, nack) {
+        const { payload: { plugin } } = message;
+
+        System.getPluginModule(identity, plugin)
+            .then((pluginModule) => {
+                const dataAck = _.clone(successAck);
+                dataAck.data = pluginModule;
                 ack(dataAck);
             })
             .catch(nack);

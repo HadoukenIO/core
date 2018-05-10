@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,6 +30,7 @@ import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 import { ArgMap, PortInfo } from './port_discovery';
 import * as log from './log';
 import * as  coreState from './core_state';
+import { PeerConnectionManager } from './runtime_p2p/peer_connection_manager';
 
 const enableMeshFlag = 'enable-mesh';
 const securityRealmFlag = 'security-realm';
@@ -41,7 +42,7 @@ buildNoopConnectionManager();
 
 function startConnectionManager() {
     try {
-        connectionManager = require('runtime-p2p').connectionManager;
+        connectionManager = new PeerConnectionManager();
         meshEnabled = true;
         log.writeToLog('info', 'multi-runtime mode enabled');
     } catch (e) {

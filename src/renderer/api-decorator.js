@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,6 +23,7 @@ limitations under the License.
     const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
     const openfinVersion = process.versions.openfin;
     const processVersions = JSON.parse(JSON.stringify(process.versions));
+    const isMainFrame = glbl.isMainFrame;
     let renderFrameId = glbl.routingId;
     let customData = glbl.getFrameData(renderFrameId);
 
@@ -40,10 +41,22 @@ limitations under the License.
     let windowId;
     let webContentsId = 0;
 
-    const initialOptions = glbl.__startOptions.options;
-    const entityInfo = glbl.__startOptions.entityInfo;
-    const elIPCConfig = glbl.__startOptions.elIPCConfig;
-    const socketServerState = glbl.__startOptions.socketServerState;
+    const {
+        elIPCConfig,
+        options: initialOptions,
+        runtimeArguments,
+        socketServerState,
+        frames
+    } = glbl.__startOptions;
+
+    //Check if we need to use the process.eval in a nodeless environment.
+    const geval = initialOptions.experimental.node ? glbl.eval : glbl.process.eval;
+
+    // The following will check whether it is an iframe and update
+    // entity information accordingly
+    const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
+    const entityInfo = isMainFrame ? glbl.__startOptions.entityInfo : frameInfo;
+    const decorateOpen = !runtimeArguments.includes('--native-window-open');
 
     let getOpenerSuccessCallbackCalled = () => {
         customData.openerSuccessCalled = customData.openerSuccessCalled || false;
@@ -109,16 +122,19 @@ limitations under the License.
         return socketServerState;
     }
 
-    function generateGuidSync() {
-        return syncApiCall('generate-guid');
-    }
-
     function convertOptionsToElectronSync(options) {
         return syncApiCall('convert-options', options);
     }
 
     function windowExistsSync(uuid, name) {
         return syncApiCall('window-exists', {
+            uuid,
+            name
+        });
+    }
+
+    function registerWindowNameSync(uuid, name) {
+        syncApiCall('register-window-name', {
             uuid,
             name
         });
@@ -218,21 +234,24 @@ limitations under the License.
         const { uuid, name, parent, entityType } = entityInfo;
         const winIdentity = { uuid, name };
         const parentFrameName = parent.name || name;
+        const eventMap = [];
 
-        raiseEventSync(`window/initialized/${uuid}-${name}`, winIdentity);
+        eventMap.push([`window/initialized/${uuid}-${name}`, winIdentity]);
 
         // main window
         if (uuid === name) {
-            raiseEventSync(`application/initialized/${uuid}`);
+            eventMap.push([`application/initialized/${uuid}`, undefined]);
         }
 
-        raiseEventSync(`window/dom-content-loaded/${uuid}-${name}`, winIdentity);
-        raiseEventSync(`window/connected/${uuid}-${name}`, winIdentity);
-        raiseEventSync(`window/frame-connected/${uuid}-${parentFrameName}`, {
+        eventMap.push([`window/dom-content-loaded/${uuid}-${name}`, winIdentity]);
+        eventMap.push([`window/connected/${uuid}-${name}`, winIdentity]);
+        eventMap.push([`window/frame-connected/${uuid}-${parentFrameName}`, {
             frameName: name,
             entityType
-        });
-        raiseEventSync(`frame/connected/${uuid}-${name}`, winIdentity);
+        }]);
+        eventMap.push([`frame/connected/${uuid}-${name}`, winIdentity]);
+
+        asyncApiCall('raise-many-events', [...eventMap]);
     }
 
     function deferByTick(callback) {
@@ -317,11 +336,40 @@ limitations under the License.
         }
     }
 
+    //extend open
+    const originalOpen = global.open;
+
+    function openChildWindow(...args) {
+        const [url, requestedName, features = ''] = args; // jshint ignore:line
+        const requestId = ++childWindowRequestId;
+        const webContentsId = getWebContentsId();
+        const name = !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
+        const responseChannel = `${name}-created`;
+
+        const options = Object.assign(featuresToOptionsObj(features), {
+            url,
+            uuid: initialOptions.uuid,
+            name: name,
+            autoShow: true
+        });
+
+        const convertedOpts = convertOptionsToElectronSync(options);
+        ipc.send(renderFrameId, 'add-child-window-request', responseChannel, name, webContentsId,
+            requestId, JSON.stringify(convertedOpts));
+
+        return originalOpen(url, name, features);
+    }
+
+    //Only decorate global open if flag is not present.
+    if (decorateOpen) {
+        global.open = openChildWindow;
+    }
+
     function createChildWindow(options, cb) {
         let requestId = ++childWindowRequestId;
         // initialize what's needed to create a child window via window.open
         let url = ((options || {}).url || undefined);
-        let uniqueKey = generateGuidSync();
+        let uniqueKey = fin.desktop.getUuid();
         let frameName = `openfin-child-window-${uniqueKey}`; //((options || {}).frameName || undefined);
         let features = ((options || {}).features || undefined);
         let webContentsId = getWebContentsId();
@@ -339,7 +387,7 @@ limitations under the License.
         ipc.once(responseChannel, () => {
             setTimeout(() => {
                 // Synchronous execution of window.open to trigger state tracking of child window
-                let nativeWindow = window.open((url !== 'about:blank' ? url : ''), frameName, features);
+                let nativeWindow = originalOpen((url !== 'about:blank' ? url : ''), frameName, features);
 
                 let popResponseChannel = `${frameName}-pop-request`;
                 ipc.once(popResponseChannel, (sender, meta) => {
@@ -408,6 +456,53 @@ limitations under the License.
         });
     }
 
+    //https://developer.mozilla.org/en-US/docs/Web/API/Window/open
+    //All features can be set to yes or 1, or just be present to be "on". Set them to 'no' or 0, or in most cases just omit them, to be "off".
+    function featureToBool(value = '') {
+        switch (value.toLowerCase()) {
+            case '0':
+                return false;
+            case 'no':
+                return false;
+            default:
+                return true;
+        }
+    }
+
+    //We need to do this as all values are text and convertToElectron does not handle type changes only name translation.
+    function featuresToOptionsObj(features) {
+        let featuresObj = {};
+        features.split(' ').join('').split(',').map((item) => {
+            const [name, value] = item.split('=');
+            switch (name) {
+                /*jshint -W093 */
+                case 'height':
+                    return featuresObj['defaultHeight'] = +value;
+                case 'width':
+                    return featuresObj['defaultWidth'] = +value;
+                case 'top':
+                    return featuresObj['defaultTop'] = +value;
+                case 'left':
+                    return featuresObj['defaultLeft'] = +value;
+                case 'centerscreen':
+                    return featuresObj['defaultCentered'] = featureToBool(value);
+                case 'resizable':
+                    return featuresObj[name] = featureToBool(value);
+                case 'chrome':
+                    return featuresObj['frame'] = featureToBool(value);
+                case 'alwaysRaised':
+                    return featuresObj['alwaysOnTop'] = featureToBool(value);
+                case 'minimizable':
+                    return featuresObj[name] = featureToBool(value);
+                default:
+                    return featuresObj[name] = value;
+                    /*jshint +W093 */
+            }
+        });
+
+        return featuresObj;
+    }
+
     ///external API Decorator:
     global.fin = {
         desktop: {
@@ -416,7 +511,7 @@ limitations under the License.
                     onContentReady(window, cb);
                 }
             },
-            getUuid: generateGuidSync,
+            getUuid: process.getGUID,
             getVersion: () => {
                 return openfinVersion;
             }
@@ -427,13 +522,15 @@ limitations under the License.
             getWindowIdentity: getWindowIdentitySync,
             getCurrentWindowId: getWindowId,
             windowExists: windowExistsSync,
+            registerWindowName: registerWindowNameSync,
             ipcconfig: getIpcConfigSync(),
             createChildWindow: createChildWindow,
             getCachedWindowOptionsSync: getCachedWindowOptionsSync,
             openerSuccessCBCalled: openerSuccessCBCalled,
             emitNoteProxyReady: emitNoteProxyReady,
             initialOptions,
-            entityInfo
+            entityInfo,
+            runtimeArguments
         }
     };
 
@@ -444,7 +541,10 @@ limitations under the License.
         const { uuid, name } = initialOptions;
 
         if (!isNotificationType(name)) {
-            evalPlugins(uuid, name);
+            if (!runtimeArguments.includes('--async-plugins')) {
+                // Synchronous (old) implementation of plugin loading
+                evalPlugins(uuid, name);
+            }
             evalPreloadScripts(uuid, name);
         }
     });
@@ -473,7 +573,7 @@ limitations under the License.
             }
 
             try {
-                window.eval(_content); /* jshint ignore:line */
+                geval(_content); /* jshint ignore:line */
                 log(`Succeeded execution of plugin module [${name} ${version}]`);
                 asyncApiCall(action, { name, version, state: 'succeeded' });
             } catch (error) {
@@ -485,6 +585,8 @@ limitations under the License.
 
         asyncApiCall(action, { allDone: true });
     }
+
+
 
     /**
      * Request preload scripts from the Core and execute them in the current window
@@ -530,7 +632,7 @@ limitations under the License.
                 }
 
                 try {
-                    window.eval(_content); /* jshint ignore:line */
+                    geval(_content); /* jshint ignore:line */
                     log(`Succeeded execution of preload script for URL [${url}]`);
                     asyncApiCall(action, { url, state: 'succeeded' });
                 } catch (error) {

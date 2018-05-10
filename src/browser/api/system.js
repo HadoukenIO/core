@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,6 +36,9 @@ import { ExternalApplication } from './external_application';
 const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
+const socketServer = require('../transports/socket_server').server;
+const portDiscovery = require('../port_discovery').portDiscovery;
+
 import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
 import * as plugins from '../plugins';
@@ -464,6 +467,13 @@ exports.System = {
     getVersion: function() {
         return process.versions['openfin'];
     },
+    getRuntimeInfo: function(identity) {
+        const { port, securityRealm, version } =
+        portDiscovery.getPortInfoByArgs(coreState.argo, socketServer.getPort());
+        const manifestUrl = coreState.getConfigUrlByUuid(identity.uuid);
+        const architecture = process.arch;
+        return { manifestUrl, port, securityRealm, version, architecture };
+    },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
         let sourceUrl = (appObject || {})._configUrl || '';
@@ -627,6 +637,9 @@ exports.System = {
             errorCallback(`Error getting cookies`);
         }
     },
+    flushCookieStore: function(callback) {
+        session.defaultSession.cookies.flushStore(callback);
+    },
     generateGUID: function() {
         return electronApp.generateGUID();
     },
@@ -638,6 +651,14 @@ exports.System = {
     },
     raiseEvent: function(eventName, eventArgs) {
         return ofEvents.emit(eventName, eventArgs);
+    },
+    // eventsIter is an Array or other iterable object (such as a Map or Set)
+    // whose elements are [key, value] pairs when iterated over
+    raiseManyEvents: function(eventsIter) {
+
+        for (let [eventName, args] of eventsIter) {
+            ofEvents.emit(eventName, args);
+        }
     },
     downloadAsset: function(identity, asset, cb) {
         const srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
@@ -701,6 +722,10 @@ exports.System = {
 
     downloadPreloadScripts: function(identity, preloadScripts) {
         return downloadScripts(identity, preloadScripts);
+    },
+
+    getPluginModule: function(identity, plugin) {
+        return plugins.getModule(identity, plugin);
     },
 
     getPluginModules: function(identity) {

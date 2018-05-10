@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,10 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import { PortInfo } from './browser/port_discovery';
+
 export interface Identity {
     uuid: string;
     name?: string;
     runtimeUuid?: string;
+}
+
+export interface ServiceIdentity {
+    uuid: string;
+    name?: string;
+    serviceName: string;
 }
 
 export interface ResourceFetchIdentity extends Identity {
@@ -323,4 +331,26 @@ export interface PreloadScript {
 
 export interface PreloadScriptState extends PreloadScript {
     state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
+}
+
+export interface EventPayload {
+    type: string;
+    topic: string;
+    uuid: string;
+    name?: string;
+}
+
+export interface ElectronIpcChannels {
+    CORE_MESSAGE: string;
+    WINDOW_MESSAGE: string;
+}
+
+export interface WindowInitialOptionSet {
+    options: WindowOptions;
+    entityInfo: FrameInfo;
+    socketServerState: PortInfo;
+    frames: ChildFrameInfo[];
+    elIPCConfig: {
+        channels: ElectronIpcChannels
+    };
 }

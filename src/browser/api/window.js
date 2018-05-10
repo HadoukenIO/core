@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -567,9 +567,8 @@ Window.create = function(id, opts) {
             }
         });
 
+        const isMainWindow = (uuid === name);
         const emitToAppAndWin = (type, payload) => {
-            let isMainWindow = (uuid === name);
-
             // Window crashed: inform Window "namespace"
             ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
 
@@ -591,9 +590,14 @@ Window.create = function(id, opts) {
             // Removing 'close-requested' listeners will allow the crashed window to be closed manually easily.
             const closeRequested = route.window('close-requested', uuid, name);
             ofEvents.removeAllListeners(closeRequested);
+
             // Removing 'show-requested' listeners will allow the crashed window to be shown so it can be closed.
             const showRequested = route.window('show-requested', uuid, name);
             ofEvents.removeAllListeners(showRequested);
+
+            if (isMainWindow) {
+                coreState.setAppRunningState(uuid, false);
+            }
         });
 
         browserWindow.on('responsive', () => {
@@ -934,6 +938,7 @@ Window.create = function(id, opts) {
     winObj.framePreloadScripts = {}; // frame ID => [{url, state}]
 
     if (!coreState.getWinObjById(id)) {
+        coreState.deregisterPendingWindowName(uuid, name);
         coreState.setWindowObj(id, winObj);
 
         ofEvents.emit(route.application('window-created', uuid), {
@@ -1279,6 +1284,12 @@ Window.setWindowPluginState = function(identity, payload) {
     // Single plugin state change
     if (!allDone) {
         plugins = plugins.filter(e => e.name === pluginName && e.version === version);
+
+        // If plugin not found / invalid plugin specified, then exit early
+        if (!plugins.length) {
+            return;
+        }
+
         plugins[0].state = state;
     }
 
@@ -1834,6 +1845,10 @@ Window.setZoomLevel = function(identity, level) {
 Window.onUnload = (identity) => {
     ofEvents.emit(route.window('unload', identity.uuid, identity.name, false), identity);
     ofEvents.emit(route.window('init-subscription-listeners'), identity);
+};
+
+Window.registerWindowName = (identity) => {
+    coreState.registerPendingWindowName(identity.uuid, identity.name);
 };
 
 function emitCloseEvents(identity) {

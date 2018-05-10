@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,13 +65,16 @@ export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
-const apps: Shapes.App[] = [];
+let apps: Shapes.App[] = [];
 
 let startManifest = {};
 const manifests: Map <string, Shapes.Manifest> = new Map();
 
 // TODO: This needs to go go away, pending socket server refactor.
-let socketServerState = {};
+let socketServerState: PortInfo|{} = {};
+
+// an array of window identities that are currently in flight
+let pendingWindows: Shapes.Identity[] = [];
 
 const manifestProxySettings: Shapes.ProxySettings = {
     proxyAddress: '',
@@ -141,8 +144,20 @@ export function getManifestProxySettings(): Shapes.ProxySettings {
     return manifestProxySettings;
 }
 
+export function registerPendingWindowName(uuid: string, name: string): void {
+    pendingWindows.push({
+        uuid,
+        name
+    });
+}
+
+export function deregisterPendingWindowName(uuid: string, name: string): void {
+    pendingWindows = pendingWindows.filter(win => !(win.uuid === uuid && win.name === name));
+}
+
 export function windowExists(uuid: string, name: string): boolean {
-    return !!getOfWindowByUuidName(uuid, name);
+    const pendingWindowExists = !!pendingWindows.find(win => win.uuid === uuid && win.name === name);
+    return !!getOfWindowByUuidName(uuid, name) || pendingWindowExists;
 }
 
 export function removeChildById(id: number): void {
@@ -428,6 +443,10 @@ export function removeApp(id: number): void {
     // return apps;
 }
 
+export function deleteApp(uuid: string): void {
+    apps = apps.filter(app => app.uuid !== uuid);
+}
+
 export function getWindowOptionsById(id: number): Shapes.WindowOptions|boolean {
     const win = getWinById(id);
     return win && win.openfinWindow && win.openfinWindow._options;
@@ -449,12 +468,12 @@ export function getMainWindowOptions(id: number): Shapes.WindowOptions|void {
     return app.appObj._options;
 }
 
-export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinWindow|boolean {
+export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinWindow|false {
     const win = getOfWindowByUuidName(uuid, name);
     return win && win.openfinWindow;
 }
 
-function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|undefined {
+function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|false {
     return getWinList().find(win => win.openfinWindow &&
         win.openfinWindow.uuid === uuid &&
         win.openfinWindow.name === name
@@ -547,7 +566,7 @@ export function setSocketServerState(state: PortInfo) {
 }
 
 //TODO: This needs to go go away, pending socket server refactor.
-export function getSocketServerState() {
+export function getSocketServerState(): PortInfo|{} {
     return socketServerState;
 }
 
@@ -715,19 +734,21 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
     }
 }
 
-export function getWindowInitialOptionSet(windowId: number): any {
-    const options = <any>getWindowOptionsById(windowId);
+export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
+    const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
+    const options = ofWin._options;
     const { uuid, name } = options;
     const entityInfo = getEntityInfo({ uuid, name });
     const elIPCConfig = {
         channels: electronIPC.channels
     };
-    const socketServerState = getSocketServerState();
+    const socketServerState = <PortInfo>getSocketServerState();
 
     return {
         options,
         entityInfo,
         elIPCConfig,
-        socketServerState
+        socketServerState,
+        frames: Array.from(ofWin.frames.values())
     };
 }

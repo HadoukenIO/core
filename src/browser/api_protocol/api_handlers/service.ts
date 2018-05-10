@@ -14,22 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+
 import * as apiProtocolBase from './api_protocol_base';
-
-import { ExternalApplication } from '../../api/external_application';
-import { Identity } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
+import { Service } from '../../api/service';
+import { Identity } from '../../../shapes';
 
-export class ExternalApplicationApiHandler {
+const successAck = {
+    success: true
+};
+
+export class ServiceApiHandler {
     private readonly actionMap: ActionSpecMap = {
-        'get-external-application-info': this.getInfo
+        'register-service': this.registerService
     };
 
     constructor() {
         apiProtocolBase.registerActionMap(this.actionMap);
     }
 
-    private getInfo(source: Identity, message: any) {
-        return ExternalApplication.getInfo(message.payload);
+    private registerService(identity: Identity, message: any, ack: any, nack: any): void {
+        const { payload } = message;
+        const { serviceName } = payload;
+
+        const serviceIdentity = Service.registerService(identity, serviceName);
+        const dataAck = Object.assign({}, successAck, { data: serviceIdentity });
+        serviceIdentity ? ack(dataAck) : nack('Only one service may be registered per application/connection.');
     }
+
 }

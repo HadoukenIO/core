@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,6 +41,7 @@ type hideSplashscreenAction = 'hide-splashscreen';
 type relaunchOnCloseAction = 'relaunch-on-close';
 type getDesktopOwnerSettingsAction = 'get-desktop-owner-settings';
 type downloadRuntimeAction = 'runtime-download';
+
 
 export interface ApplicationLog extends RvmMsgBase {
     topic: applicationTopic;
@@ -102,6 +103,11 @@ interface DownloadRuntimeMsg extends RvmMsgBase {
     sourceUrl: string;
     action: downloadRuntimeAction;
 
+}
+
+export interface AppCloseRequestedOptions {
+    uuid: string;
+    sourceUrl: string;
 }
 
 // topic: application (used only by the utils module)
@@ -403,6 +409,42 @@ export class RVMMessageBus extends EventEmitter  {
             };
 
             this.publish(rvmMsg, resolve);
+        });
+    }
+
+    /**
+     * Confirms to the RVM that the close-app request has been processed.
+     */
+    public sendCloseAppRequested(opts: AppCloseRequestedOptions): Promise<RvmMsgBase> {
+        return new Promise((resolve, reject) => {
+            try {
+                const rvmMsg = {
+                    topic: 'application',
+                    action: 'close-app-requested',
+                    uuid: opts.uuid,
+                    sourceUrl: opts.sourceUrl
+                };
+                this.publish(rvmMsg, resolve);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    public sendCloseAppError(opts: AppCloseRequestedOptions, err: Error): Promise<RvmMsgBase> {
+        return new Promise((resolve, reject) => {
+            try {
+                const rvmMsg = {
+                    topic: 'application',
+                    action: 'close-app-error',
+                    uuid: opts.uuid,
+                    sourceUrl: opts.sourceUrl,
+                    error: err.message
+                };
+                this.publish(rvmMsg, resolve);
+            } catch (err) {
+                reject(err);
+            }
         });
     }
 }

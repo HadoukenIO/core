@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 import ofEvents from '../of_events';
-import { Identity, OpenFinWindow } from '../../shapes';
+import { Identity, OpenFinWindow, EventPayload } from '../../shapes';
 import route from '../../common/route';
 import * as  coreState from '../core_state';
 import * as log from '../log';
@@ -37,7 +37,7 @@ export class FrameInfo implements Shapes.FrameInfo {
 }
 
 export module Frame {
-    export function addEventListener (identity: Identity, targetIdentity: Identity, type: string, listener: Function) {
+    export function addEventListener (targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) {
         const eventString = route.frame(type, targetIdentity.uuid, targetIdentity.name);
         const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
         let unsubscribe;

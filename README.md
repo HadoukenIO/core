@@ -35,7 +35,7 @@ npm install
 npm install -g openfin-cli
 ```
 
-* Create a manifest file [Manifest file docs](https://openfin.co/application-config/), targeting a valid version [Runtime versions](https://developer.openfin.co/versions/?product=Runtime&version=stabe)
+* Create a manifest file [Manifest file docs](https://openfin.co/application-config/), targeting a valid version [Runtime versions](https://developer.openfin.co/versions/?product=Runtime&version=stable)
 
 app.json
 ```javascript
@@ -61,7 +61,7 @@ openfin --config app.json --launch
 
 * Replace the OpenFin core with a built Hadouken core
 ```bash
-grunt deploy --target=C:\Users\[username]\AppData\Local\OpenFin\runtime\[replace this with a version]\OpenFin\resources
+npm run deploy -- --target=C:\Users\[username]\AppData\Local\OpenFin\runtime\[replace this with a version]\OpenFin\resources
 ```
 
 * Now you can re-launch the OpenFin runtime with the modified Hadouken core.

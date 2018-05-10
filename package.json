@@ -4,23 +4,22 @@
   "description": "The core app of the OpenFin Runtime 8",
   "main": "index.js",
   "scripts": {
+    "build": "grunt",
+    "deploy": "grunt deploy",
+    "postinstall": "grunt",
     "pretest": "grunt babel && grunt ts",
-    "test": "grunt test",
-    "postinstall": "grunt"
+    "test": "grunt test"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/openfin/openfin.git"
   },
   "author": "OpenFin",
-  "license": "Apache2 + Commercial",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/openfin/openfin/issues"
   },
   "homepage": "https://github.com/openfin/openfin",
-  "optionalDependencies": {
-    "runtime-p2p": "git+ssh://git@github.com:openfin/runtime-p2p.git#7426ace77dbe87b73a54181b46be0938c15d81ba"
-  },
   "devDependencies": {
     "@types/minimist": "^1.2.0",
     "@types/mocha": "^2.2.39",
@@ -62,6 +61,7 @@
     "rx": "^4.1.0",
     "ultron": "^1.0.2",
     "underscore": "^1.8.3",
-    "ws": "1.1.1"
+    "ws": "1.1.1",
+    "hadouken-js-adapter": "0.30.2"
   }
 }

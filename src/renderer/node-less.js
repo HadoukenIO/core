@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,30 +18,7 @@ limitations under the License.
 const electron = require('electron');
 const resolvePromise = Promise.resolve.bind(Promise);
 
-const { EventEmitter } = require('events');
-const webFrameFactory = process.atomBinding('web_frame').webFrame;
-
-const defaultWebFrame = webFrameFactory(0);
-
-// WebFrame is an EventEmitter.
-// TODO(SteveB) - Decouple native side from singleton factory and re-introduce correct prototype chain
-Object.setPrototypeOf(defaultWebFrame.__proto__, EventEmitter.prototype);
-
-// Lots of webview would subscribe to webFrame's events.
-defaultWebFrame.setMaxListeners(0);
-
-defaultWebFrame.createForRenderFrame = (id) => {
-    const wf = webFrameFactory(id);
-
-    // WebFrame is an EventEmitter.
-    // TODO(SteveB) - Decouple native side from singleton factory and re-introduce correct prototype chain
-    Object.setPrototypeOf(wf.__proto__, EventEmitter.prototype);
-
-    // Lots of webview would subscribe to webFrame's events.
-    wf.setMaxListeners(0);
-
-    return wf;
-};
+const defaultWebFrame = electron.webFrame;
 
 const susbcribeForTeardown = (routingId, handlers = []) => {
     process.once(`frame-exit-${routingId}`, () => {
@@ -68,11 +45,9 @@ process.versions.cachePath = electron.remote.app.getPath('userData');
 const mainWindowId = electron.remote.getCurrentWindow(process.versions.mainFrameRoutingId).id;
 const apiDecoratorAsString = electron.remote.require('./src/renderer/main').api(mainWindowId);
 
-let perFrameData = {};
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');
 
 const hookWebFrame = (webFrame, renderFrameId) => {
-    console.log('hookWebFrame');
     electron.ipcRenderer.on(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`, (event, method, args) => {
         webFrame[method](...args);
     });
@@ -121,10 +96,7 @@ const registerAPI = (w, routingId, isMainFrame) => {
         // Mock as a Node/Electron environment
         // ===================================
         // let global = w;
-        w.getFrameData = (routingId) => {
-            perFrameData[routingId] = perFrameData[routingId] || {};
-            return perFrameData[routingId];
-        };
+        w.getFrameData = process.getFrameData;
 
         w.require = require;
         // w.debugMessages.push('w.require = require;');
@@ -144,7 +116,7 @@ const registerAPI = (w, routingId, isMainFrame) => {
         // teardownHandlers.push(override(w, routingId, chromiumWindowAlertEnabled))
         // ===================================
 
-        w.eval(apiDecoratorAsString);
+        w.process.eval(apiDecoratorAsString);
 
         let inboundMessageTopic = '';
 

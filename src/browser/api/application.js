@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -102,6 +102,26 @@ electronApp.on('ready', function() {
             });
         } else {
             log.writeToLog(1, `Received manifest-changed event from RVM with invalid data object: ${payload}`, true);
+        }
+    });
+
+    // listen to and process close-app requests originating from the RVM.
+    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'close-app'), payload => {
+        try {
+            const { uuid } = payload;
+            log.writeToLog('info', `received an RVM request to close application with uuid ${uuid}`);
+            if (uuid) {
+                Application.close({ uuid }, true);
+                //we cannot wait for the callback here because of the shutdown sequence bug. also fire and forget mode.
+                rvmBus.sendCloseAppRequested(payload);
+            }
+        } catch (err) {
+            log.writeToLog('info', 'error processing RVM Request to close-app');
+            log.writeToLog('info', err);
+            rvmBus.sendCloseAppError(payload, err).catch(e => {
+                log.writeToLog('info', 'error sending close app response to RVM');
+                log.writeToLog('info', err);
+            });
         }
     });
 
@@ -578,16 +598,28 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
-        const pid = app.mainWindow.webContents.processId;
+        //edge case where the window might be destroyed by the time we get here.
+        if (!app.mainWindow.isDestroyed()) {
+            const pid = app.mainWindow.webContents.processId;
 
-        if (pid) {
-            app._processInfo = new ProcessInfo(pid);
+            if (pid) {
+                app._processInfo = new ProcessInfo(pid);
 
-            // Must call once to start measuring CPU usage
-            app._processInfo.getCpuUsage();
+                // Must call once to start measuring CPU usage
+                app._processInfo.getCpuUsage();
+            }
+
+            ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
+        } else {
+            //Window was closed before constructor
+            const constructorCallbackMessage = {
+                success: false,
+                data: {
+                    message: 'Window closed before web context initiatiated'
+                }
+            };
+            ofEvents.emit(route.window('fire-constructor-callback', uuid, uuid), constructorCallbackMessage);
         }
-
-        ofEvents.emit(route.application('connected', uuid), { topic: 'application', type: 'connected', uuid });
     });
 
     // function finish() {

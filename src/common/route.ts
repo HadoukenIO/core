@@ -1,11 +1,11 @@
 /*
-Copyright 2017 OpenFin Inc.
+Copyright 2018 OpenFin Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -46,6 +46,7 @@ export interface Route {
     'external-window': WindowRoute;
 
     system: SimpleRoute;
+    service: SimpleRoute;
     server: SimpleRoute;
     connection: SimpleRoute;
     runtime: SimpleRoute;
@@ -96,6 +97,7 @@ route.frame = <WindowRoute>router.bind(HYPHEN, 'frame');
 route.window = <WindowRoute>router.bind(HYPHEN, 'window');
 route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
 
+route.service = <SimpleRoute>router.bind(null, 'service');
 route.system = <SimpleRoute>router.bind(null, 'system');
 route.rvmMessageBus = route['rvm-message-bus'] = <SimpleRoute>router.bind(null, 'rvm-message-bus');
 route.server = <SimpleRoute>router.bind(null, 'server');
