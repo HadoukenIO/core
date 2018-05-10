@@ -80,7 +80,7 @@ function five0BaseOptions() {
                 }
             },
             'disableInitialReload': false,
-            'node': true,
+            'node': false,
             'v2Api': false
         },
         'frame': true,
