@@ -1081,7 +1081,6 @@ Window.disableFrame = function(identity) {
     }
 
     browserWindow.setUserMovementEnabled(false);
-    setOptOnBrowserWin('frame', false, browserWindow);
 };
 
 Window.embed = function(identity, parentHwnd) {
@@ -1114,7 +1113,6 @@ Window.enableFrame = function(identity) {
     }
 
     browserWindow.setUserMovementEnabled(true);
-    setOptOnBrowserWin('frame', true, browserWindow);
 };
 
 Window.executeJavascript = function(identity, code, callback = () => {}) {
