@@ -295,7 +295,7 @@ export class RVMMessageBus extends EventEmitter  {
         });
     }
 
-    public publish = (msg: RvmMsgBase, callback: (x: any) => any = ()  => undefined): boolean => {
+    public publish = (msg: RvmMsgBase, callback: (x: any) => any = ()  => undefined, maskPayload?: boolean): boolean => {
 
         if (!msg || typeof msg !== 'object') {
             log.writeToLog('ERROR', 'Argument must be an object');
@@ -319,9 +319,11 @@ export class RVMMessageBus extends EventEmitter  {
 
         this.recordCallbackInfo(callback, timeToLive, envelope);
 
-        log.writeToLog(1, envelope, true);
+        if (!maskPayload) {
+            log.writeToLog(1, envelope, true);
+        }
 
-        return this.transport.publish(envelope);
+        return this.transport.publish(envelope, maskPayload);
     }
 
     public registerLicenseInfo = (licInfo: LicenseInfo, sourceUrl: string = null): boolean => {

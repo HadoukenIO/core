@@ -57,7 +57,7 @@ class WMCopyDataTransport extends BaseTransport {
         });
     }
 
-    public publish(data: any): boolean {
+    public publish(data: any, maskPayload?: boolean): boolean {
         // on windows x64 platform still returns win32
         if (process.platform.indexOf('win32') !== -1) {
 
@@ -68,7 +68,7 @@ class WMCopyDataTransport extends BaseTransport {
             let sent = false;
             let i = 0;
             for (i = 0; i < this.messageRetry && !sent; i++) {
-                sent = this._messageWindow.sendbyname(this.targetClass, '', JSON.stringify(data));
+                sent = this._messageWindow.sendbyname(this.targetClass, '', JSON.stringify(data), !!maskPayload);
                 if (!sent) {
                     log.writeToLog(1, 'error sending message to ' + this.targetClass + ', retry=' + i, true);
                 }

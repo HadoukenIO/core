@@ -26,6 +26,7 @@ interface SendToRVMOpts {
     data?: any;
     runtimeVersion?: string;
     payload?: any;
+    maskPayload?: boolean;
 }
 
 // 1 MB
@@ -51,7 +52,8 @@ function flushConsoleMessageQueue(): void {
         runtimeVersion: System.getVersion(),
         payload: {
             messages: JSON.parse(JSON.stringify(consoleMessageQueue))
-        }
+        },
+        maskPayload: true
     };
 
     consoleMessageQueue = [];
@@ -130,7 +132,7 @@ export function sendToRVM(opts: SendToRVMOpts): Promise<any> {
 
             resolve(payload);
 
-        });
+        }, opts.maskPayload);
 
         if (!messageSent) {
             reject(new Error('Failed to send a message to the RVM'));
