@@ -508,16 +508,19 @@ export function getAllAppObjects(): Shapes.AppObj[] {
 }
 
 export function getAllWindows(): WindowMeta[] {
-    const getBounds = require('./api/window.js').Window.getBounds; // do not move this line!
+    const windowApi = require('./api/window.js').Window; // do not move this line!
     return apps.map(app => {
         const windowBounds = app.children
             .filter(win => win.openfinWindow)
             .map(win => {
-                const bounds = getBounds({
+                const identity = {
                     name: win.openfinWindow.name,
                     uuid: win.openfinWindow.uuid
-                });
+                };
+                const bounds = windowApi.getBounds(identity);
                 bounds.name = win.openfinWindow.name;
+                bounds.state = windowApi.getState(identity);
+                bounds.isShowing = windowApi.isShowing(identity);
                 return bounds;
             });
 
