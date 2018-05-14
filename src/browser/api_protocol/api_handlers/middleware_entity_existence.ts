@@ -19,6 +19,7 @@ import { appByUuid, windowExists } from '../../core_state';
 import { applicationApiMap } from './application.js';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { windowApiMap } from './window.js';
+const coreState = require('../../core_state');
 
 const apisToIgnore = new Set([
     // Application
@@ -32,6 +33,11 @@ const apisToIgnore = new Set([
     'window-exists',
     'window-is-notification-type'
 ]);
+
+if (coreState.argo && coreState.argo['mesh-join-group']) {
+    apisToIgnore.add('join-window-group');
+    apisToIgnore.add('leave-window-group');
+}
 
 /**
  * Verifies that API is called on applications and windows that exist,

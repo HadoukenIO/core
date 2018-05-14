@@ -111,6 +111,7 @@ export interface OpenFinWindow {
     preloadScripts: PreloadScriptState[];
     uuid: string;
     mainFrameRoutingId: number;
+    meshGroupUuid: string;
 }
 
 export interface BrowserWindow {
@@ -212,6 +213,7 @@ export interface WindowOptions {
     maxHeight?: number;
     maximizable?: boolean;
     maxWidth?: number;
+    meshJoinGroupIdentity?: Identity;
     minHeight?: number;
     minimizable?: boolean;
     minWidth?: number;

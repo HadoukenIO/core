@@ -18,8 +18,10 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
+import { meshJoinWindowGroupMiddleware } from './mesh_window_grouping';
 
 const coreState = require('../../core_state');
+
 
 const SUBSCRIBE_ACTION = 'subscribe';
 const PUBLISH_ACTION = 'publish-message';
@@ -30,6 +32,7 @@ const apiMessagesToIgnore: any = {
     'publish-message': true,
     'send-message': true,
     'subscribe': true,
+    'join-window-group': true,
     'unsubscribe': true,
     'subscriber-added': true,
     'subscriber-removed': true,
@@ -197,6 +200,7 @@ function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): vo
     requestHandler.addPreProcessor(subscriberEventMiddleware);
     requestHandler.addPreProcessor(publishMiddleware);
     requestHandler.addPreProcessor(sendMessageMiddleware);
+    requestHandler.addPreProcessor(meshJoinWindowGroupMiddleware);
     requestHandler.addPreProcessor(ferryActionMiddleware);
     requestHandler.addPreProcessor(aggregateFromExternalRuntime);
 }

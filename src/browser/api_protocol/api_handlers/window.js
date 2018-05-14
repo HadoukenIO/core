@@ -66,6 +66,7 @@ module.exports.windowApiMap = {
     'show-menu': showMenu,
     'show-window': showWindow,
     'set-foreground-window': setForegroundWindow,
+    'set-mesh-group-uuid': setMeshWindowGroupUuid,
     'set-window-bounds': setWindowBounds,
     'set-window-preload-state': setWindowPreloadState,
     'set-zoom-level': setZoomLevel,
@@ -291,17 +292,19 @@ function maximizeWindow(identity, message, ack) {
 function leaveWindowGroup(identity, message, ack) {
     var payload = message.payload,
         windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-
-    Window.leaveGroup(windowIdentity);
+    const { locals } = message;
+    //rename from hwnd
+    const hwnd = locals && locals.hwnd;
+    Window.leaveGroup(windowIdentity, hwnd);
     ack(successAck);
 }
 
 function joinWindowGroup(identity, message, ack) {
-    var payload = message.payload,
-        windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload),
-        groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
+    const { payload, locals } = message;
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+    const groupingIdentity = apiProtocolBase.getGroupingWindowIdentity(payload);
 
-    Window.joinGroup(windowIdentity, groupingIdentity);
+    Window.joinGroup(windowIdentity, groupingIdentity, locals);
     ack(successAck);
 }
 
@@ -321,7 +324,6 @@ function hideWindow(identity, message, ack) {
     Window.hide(windowIdentity);
     ack(successAck);
 }
-
 
 function getAllFrames(identity, message) {
     const { payload } = message;
@@ -385,6 +387,16 @@ function getWindowNativeId(identity, message, ack) {
         windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 
     dataAck.data = Window.getNativeId(windowIdentity);
+    ack(dataAck);
+}
+
+function setMeshWindowGroupUuid(identity, message, ack) {
+    const { payload } = message;
+    const uuid = payload && payload.meshGroupUuid;
+    const dataAck = _.clone(successAck);
+    const windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+
+    dataAck.data = Window.setWindowGroupUuid(windowIdentity, uuid);
     ack(dataAck);
 }
 

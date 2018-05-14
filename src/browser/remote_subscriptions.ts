@@ -47,7 +47,7 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
 /**
  * Shape of remote subscription props
  */
-interface RemoteSubscriptionProps extends Identity {
+export interface RemoteSubscriptionProps extends Identity {
     className: 'application'|'window'|'system'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
@@ -138,9 +138,6 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
         cleanUpSubscription(subscription, runtimeKey);
     };
 
-    // Subscribe to an event on a remote runtime
-    classEventEmitter[listenType](eventName, listener);
-
     // Store a cleanup function for the added listener in
     // un-subscription map, so that later we can remove extra subscriptions
     if (!Array.isArray(unSubscriptions.get(runtimeKey))) {
@@ -149,6 +146,9 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
     unSubscriptions.get(runtimeKey).push(() => {
         classEventEmitter.removeListener(eventName, listener);
     });
+
+    // Subscribe to an event on a remote runtime
+    classEventEmitter[listenType](eventName, listener);
 }
 
 /**
