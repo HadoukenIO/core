@@ -383,7 +383,6 @@ Window.create = function(id, opts) {
     };
     let baseOpts;
     let browserWindow;
-    let _openListeners;
     let webContents;
     let _options;
     let _boundsChangedHandler;
@@ -450,12 +449,6 @@ Window.create = function(id, opts) {
             ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
         };
 
-        // this is a first pass at teardown. for now, push the unsubscribe
-        // function for each subscription you make, on closed, remove them all
-        // if you listen on 'closed' it will crash as your resources are
-        // already gone at that point
-        _openListeners = [];
-
         webContents = browserWindow.webContents;
 
         //Legacy 5.0 feature, if customWindowAlert flag is found all alerts will be suppresed,
@@ -506,16 +499,6 @@ Window.create = function(id, opts) {
             _externalWindowEventAdapter = new ExternalWindowEventAdapter(browserWindow);
         }
 
-        let teardownListeners = () => {
-            // tear down any listeners...
-            _openListeners.forEach(unhook => {
-                unhook();
-            });
-
-            //tear down any listeners on external event emitters.
-            webContents.removeListener(OF_WINDOW_UNLOADED, ofUnloadedHandler);
-        };
-
         let windowTeardown = createWindowTearDown(identity, id);
 
         // once the window is closed, be sure to close all the children
@@ -558,12 +541,12 @@ Window.create = function(id, opts) {
                     windowTeardown();
                     // These were causing an exception on close if the window was reloaded
                     _boundsChangedHandler.teardown();
-                    teardownListeners();
+                    browserWindow.removeAllListeners();
                 });
             } else {
                 windowTeardown();
                 _boundsChangedHandler.teardown();
-                teardownListeners();
+                browserWindow.removeAllListeners();
             }
         });
 
@@ -643,11 +626,6 @@ Window.create = function(id, opts) {
                 };
 
                 eventEmitter.on(evnt, electronEventListener);
-
-                // push the unhooking functions in to the queue
-                _openListeners.push(() => {
-                    eventEmitter.removeListener(evnt, electronEventListener);
-                });
             });
         };
 
@@ -854,7 +832,6 @@ Window.create = function(id, opts) {
         name,
         uuid,
         _options,
-        _openListeners,
         id,
         browserWindow,
         groupUuid,
