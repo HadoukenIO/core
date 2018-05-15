@@ -100,6 +100,7 @@ function five0BaseOptions() {
         'name': '',
         'opacity': 1,
         'plugins': false,
+        'spellCheck': false, // app level
         'resizable': true,
         'resize': true,
         'resizeRegion': {
@@ -248,7 +249,8 @@ module.exports = {
             nodeIntegration: false,
             plugins: newOptions.plugins,
             preload: (!useNodeInRenderer ? noNodePreload : ''),
-            sandbox: !useNodeInRenderer
+            sandbox: !useNodeInRenderer,
+            spellCheck: newOptions.spellCheck
         };
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
