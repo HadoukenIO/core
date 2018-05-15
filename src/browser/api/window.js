@@ -581,6 +581,10 @@ Window.create = function(id, opts) {
             }
         };
 
+        webContents.once('close', () => {
+            webContents.removeAllListeners();
+        });
+
         webContents.on('crashed', (event, killed, terminationStatus) => {
             emitToAppAndWin('crashed', {
                 reason: terminationStatus
