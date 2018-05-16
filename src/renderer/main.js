@@ -15,52 +15,41 @@ limitations under the License.
 */
 'use strict';
 
-let fs = require('fs');
-let path = require('path');
-const coreState = require('../browser/core_state.js');
+import { join } from 'path';
+import { readFileSync } from 'fs';
+import { getWindowInitialOptionSet } from '../browser/core_state.js';
 
-function readAdapterFromSearchPaths(searchPaths, packageFile) {
+function getAdapter(searchPaths, packageFile) {
     let adapter = '';
-    for (let adapterPath of searchPaths) {
+
+    for (const partialPath of searchPaths) {
         try {
-            adapter = fs.readFileSync(path.join(process.resourcesPath, adapterPath, packageFile), 'utf8');
+            const adapterPath = join(process.resourcesPath, partialPath, packageFile);
+            adapter = readFileSync(adapterPath, 'utf8');
             break;
         } catch (error) {
             continue;
         }
     }
+
     return adapter;
 }
 
-// check resources/adapter/openfin-desktop.js then
-// resources/adapter.asar/openfin-desktop.js
-// for ease of developement
-const searchPaths = ['adapter', 'adapter.asar'];
-const jsAdapter = readAdapterFromSearchPaths(searchPaths, 'openfin-desktop.js');
+export const api = (windowId) => {
+    const windowOptionSet = getWindowInitialOptionSet(windowId);
+    const enableV2Api = (windowOptionSet.options.experimental || {}).v2Api;
+    const jsAdapter = getAdapter(['adapter', 'adapter.asar'], 'openfin-desktop.js');
+    const jsAdapterV2 = enableV2Api ? getAdapter(['js-adapter', 'js-adapter.asar'], 'js-adapter.js') : '';
+    let apiDecorator = readFileSync(join(__dirname, 'api-decorator.js'), 'utf8');
 
-// check resources/js-adapter/js-adapter.js then
-// resources/js-adapter.asar/openfin-desktop.js
-// for ease of developement
-const searchPathsV2Api = ['js-adapter', 'js-adapter.asar'];
-const jsAdapterV2 = readAdapterFromSearchPaths(searchPathsV2Api, 'js-adapter.js');
-
-// Remove strict (Prevents, as of now, poorly understood memory lifetime scoping issues with remote module)
-let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
-me = me.slice(13);
-
-module.exports.api = (windowId) => {
-    const windowOptionSet = coreState.getWindowInitialOptionSet(windowId);
-    const mainWindowOptions = windowOptionSet.options || {};
-    const enableV2Api = (mainWindowOptions.experimental || {}).v2Api;
-    const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
-
-    windowOptionSet.runtimeArguments = JSON.stringify(coreState.args);
+    // This removes 'use strict' (For now, poorly understood memory lifetime scoping issues with remote module)
+    apiDecorator = apiDecorator.slice(13);
 
     return [
         `global.__startOptions = ${JSON.stringify(windowOptionSet)}`,
-        me,
+        apiDecorator,
         jsAdapter,
-        v2AdapterShim,
+        jsAdapterV2,
         `fin.__internal_.ipc = null`
     ].join(';');
 };

@@ -745,10 +745,11 @@ export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitia
     const socketServerState = <PortInfo>getSocketServerState();
 
     return {
-        options,
-        entityInfo,
         elIPCConfig,
+        entityInfo,
+        frames: Array.from(ofWin.frames.values()),
+        options,
+        runtimeArguments: args,
         socketServerState,
-        frames: Array.from(ofWin.frames.values())
     };
 }
