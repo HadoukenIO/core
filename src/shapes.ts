@@ -340,11 +340,12 @@ export interface ElectronIpcChannels {
 }
 
 export interface WindowInitialOptionSet {
-    options: WindowOptions;
-    entityInfo: FrameInfo;
-    socketServerState: PortInfo;
-    frames: ChildFrameInfo[];
     elIPCConfig: {
         channels: ElectronIpcChannels
     };
+    entityInfo: FrameInfo;
+    frames: ChildFrameInfo[];
+    options: WindowOptions;
+    runtimeArguments: string;
+    socketServerState: PortInfo;
 }
