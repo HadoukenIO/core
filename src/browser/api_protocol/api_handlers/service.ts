@@ -39,7 +39,8 @@ export class ServiceApiHandler {
 
         const serviceIdentity = Service.registerService(identity, serviceName);
         const dataAck = Object.assign({}, successAck, { data: serviceIdentity });
-        serviceIdentity ? ack(dataAck) : nack('Only one service may be registered per application/connection.');
+        const nackString = 'Register Failed: Please note that only one service may be registered per application.';
+        serviceIdentity ? ack(dataAck) : nack(nackString);
     }
 
 }
