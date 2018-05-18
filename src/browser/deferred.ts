@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { BrowserWindow, Rectangle } from 'electron';
+import { BrowserWindow as BrowserWindowOF } from '../shapes';
 import { toSafeInt } from '../common/safe_int';
 import clipBounds from './clip_bounds';
 
@@ -32,7 +33,7 @@ interface Bounds {
 }
 
 function handleMove(windowId: string, bounds: Bounds): void {
-    const browserWindow = BrowserWindow.fromId(windowId);
+    const browserWindow = <BrowserWindowOF>BrowserWindow.fromId(windowId);
 
     if (isWin32 && browserWindow && (browserWindow.isMinimized() || browserWindow.isMaximized())) {
         const oldBounds: Rectangle = browserWindow.getBounds();

@@ -25,7 +25,7 @@ limitations under the License.
 * */
 
 import * as minimist from 'minimist';
-import { app } from 'electron';
+import { app, webContents, session } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
@@ -473,7 +473,37 @@ export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinW
     return win && win.openfinWindow;
 }
 
-function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|false {
+export function getBrowserWindow(identity: Shapes.Identity): Shapes.BrowserWindow|undefined {
+    const { uuid, name } = identity;
+    const wnd: Shapes.Window = getOfWindowByUuidName(uuid, name);
+
+    if (
+        wnd &&
+        wnd.openfinWindow &&
+        wnd.openfinWindow.browserWindow &&
+        !wnd.openfinWindow.browserWindow.isDestroyed()
+    ) {
+        return wnd.openfinWindow.browserWindow;
+    }
+}
+
+export function getWebContents(identity: Shapes.Identity): webContents|undefined {
+    const browserWindow = getBrowserWindow(identity);
+
+    if (browserWindow) {
+        return browserWindow.webContents;
+    }
+}
+
+export function getSession(identity: Shapes.Identity): session|undefined {
+    const webContents = getWebContents(identity);
+
+    if (webContents) {
+        return webContents.session;
+    }
+}
+
+function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|undefined {
     return getWinList().find(win => win.openfinWindow &&
         win.openfinWindow.uuid === uuid &&
         win.openfinWindow.name === name

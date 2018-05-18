@@ -46,7 +46,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { isFileUrl, isHttpUrl } from '../../common/main';
+import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -473,23 +473,13 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = convertOpts.convertToElectron(app._options);
 
-    const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
-    const { uuid, name } = mainWindowOpts;
-    const windowIdentity = { uuid, name };
-
-    if (coreState.getAppRunningState(uuid)) {
-        proceed();
-    } else {
-        // Flow through preload script logic (eg. re-download of failed preload scripts)
-        // only if app is not already running.
-        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts)
-            .then(proceed)
-            .catch(proceed);
-    }
+    run(identity, mainWindowOpts, userAppConfigArgs);
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {
+    const windowIdentity = getIdentityFromObject(mainWindowOpts);
     const uuid = identity.uuid;
+    const appWasAlreadyRunning = coreState.getAppRunningState(uuid);
     const app = Application.wrap(uuid);
     const appState = coreState.appByUuid(uuid);
     let sourceUrl = appState.appObj._configUrl;
@@ -572,7 +562,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         sourceUrl = argo['startup-url'] || argo['config'];
     }
 
-    if (coreState.getAppRunningState(uuid)) {
+    if (appWasAlreadyRunning) {
         if (coreState.sentFirstHideSplashScreen(uuid)) {
             // only resend if we've sent once before(meaning 1 window has shown)
             Application.emitHideSplashScreen(identity);
@@ -625,10 +615,6 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     // function finish() {
     // turn on plugins for the main window
     hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
-
-    // loadUrl will synchronously cause an event to be fired from the native side 'use-plugins-requested'
-    // to determine whether plugins should be enabled. The event is handled at the top of the file
-    app.mainWindow.loadURL(app._options.url);
 
     // give other windows a chance to not have plugins enabled
     hasPlugins = false;
@@ -696,9 +682,24 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         }
     });
 
-    coreState.setAppRunningState(uuid, true);
+    const { preloadScripts } = mainWindowOpts;
+    const loadUrl = () => {
+        app.mainWindow.loadURL(app._options.url);
+        coreState.setAppRunningState(uuid, true);
+        ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+    };
 
-    ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+    if (appWasAlreadyRunning) {
+        loadUrl();
+    } else {
+        System.downloadPreloadScripts(windowIdentity, preloadScripts)
+            .catch((error) => {
+                log.writeToLog(1, 'Error while downloading preload scripts for identity ' +
+                    `${uuid}-${name} on app run. Will proceed running the app. ` +
+                    `Error received: ${error}`, true);
+            })
+            .then(loadUrl);
+    }
 }
 
 /**
@@ -756,11 +757,11 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     // cleanup the old one so it can be replaced
     removeTrayIcon(app);
 
-    let mainWindowIdentity = app.identity;
+    const mainWindowIdentity = app.identity;
 
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
-    cachedFetch(app.uuid, iconUrl, (error, iconFilepath) => {
+    cachedFetch(mainWindowIdentity, iconUrl, (error, iconFilepath) => {
         if (!error) {
             if (app) {
                 const iconImage = nativeImage.createFromPath(iconFilepath);
