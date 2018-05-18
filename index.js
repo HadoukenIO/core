@@ -211,9 +211,18 @@ const handleDelegatedLaunch = function(commandLine) {
     return true;
 };
 
+function handleDeferredLaunches() {
+    deferredLaunches.forEach((commandLine) => {
+        handleDelegatedLaunch(commandLine);
+    });
+
+    deferredLaunches.length = 0;
+}
+
 app.on('chrome-browser-process-created', function() {
     otherInstanceRunning = app.makeSingleInstance((commandLine) => {
-        if (appIsReady) {
+        const socketServerState = coreState.getSocketServerState();
+        if (appIsReady && socketServerState && socketServerState.port) {
             return handleDelegatedLaunch(commandLine);
         } else {
             deferredLaunches.push(commandLine);
@@ -372,13 +381,7 @@ app.on('ready', function() {
         }
     });
 
-    // handle deferred launches
-    deferredLaunches.forEach((commandLine) => {
-        handleDelegatedLaunch(commandLine);
-    });
-
-    deferredLaunches.length = 0;
-
+    handleDeferredLaunches();
 }); // end app.ready
 
 function staggerPortBroadcast(myPortInfo) {
@@ -518,6 +521,7 @@ function initServer() {
     socketServer.on('server/open', function(port) {
         console.log('Opened on', port);
         portDiscovery.broadcast(portDiscovery.getPortInfoByArgs(coreState.argo, port));
+        handleDeferredLaunches();
     });
 
     socketServer.on('connection/message', function(id, message) {
