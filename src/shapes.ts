@@ -96,7 +96,6 @@ export interface Window {
 export interface OpenFinWindow {
     isIframe?: boolean;
     parentFrameId?: number;
-    _openListeners: (() => void)[];
     _options: WindowOptions;
     _window: BrowserWindow;
     app_uuid: string;
