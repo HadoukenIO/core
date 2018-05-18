@@ -22,10 +22,9 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
-export interface ServiceIdentity {
-    uuid: string;
-    name?: string;
-    serviceName: string;
+export interface ServiceIdentity extends Identity {
+    serviceName?: string;
+    isExternal?: boolean;
 }
 
 export interface ResourceFetchIdentity extends Identity {
