@@ -109,53 +109,73 @@ electronApp.on('synth-desktop-icon-clicked', payload => {
     ofEvents.emit(route.system('desktop-icon-clicked'), payload);
 });
 
-ofEvents.on(route.application('created', '*'), payload => {
-    ofEvents.emit(route.system('application-created'), {
-        topic: 'system',
-        type: 'application-created',
-        uuid: payload.source
+const eventPropagationMap = new Map();
+eventPropagationMap.set(route.application('created', '*'), 'application-created');
+eventPropagationMap.set(route.application('started', '*'), 'application-started');
+eventPropagationMap.set(route.application('closed', '*'), 'application-closed');
+eventPropagationMap.set(route.application('crashed', '*'), 'application-crashed');
+eventPropagationMap.set(route.application('window-created', '*'), 'window-created');
+eventPropagationMap.set(route.application('window-started', '*'), 'window-started');
+eventPropagationMap.set(route.application('window-closed', '*'), 'window-closed');
+eventPropagationMap.set(route.application('window-crashed', '*'), 'window-crashed');
+eventPropagationMap.set(route.externalApplication('connected'), 'external-application-connected');
+eventPropagationMap.set(route.externalApplication('disconnected'), 'external-application-disconnected');
+
+eventPropagationMap.forEach((systemEvent, eventString) => {
+    ofEvents.on(eventString, payload => {
+        const systemEventProps = { topic: 'system', type: systemEvent };
+        ofEvents.emit(route.system(systemEvent), Object.assign({}, ...payload.data, systemEventProps));
     });
 });
 
-ofEvents.on(route.application('started', '*'), payload => {
-    ofEvents.emit(route.system('application-started'), {
-        topic: 'system',
-        type: 'application-started',
-        uuid: payload.source
-    });
-});
 
-ofEvents.on(route.application('closed', '*'), payload => {
-    ofEvents.emit(route.system('application-closed'), {
-        topic: 'system',
-        type: 'application-closed',
-        uuid: payload.source
-    });
-});
+// ofEvents.on(route.application('created', '*'), payload => {
+//     ofEvents.emit(route.system('application-created'), {
+//         topic: 'system',
+//         type: 'application-created',
+//         uuid: payload.source
+//     });
+// });
 
-ofEvents.on(route.application('crashed', '*'), payload => {
-    ofEvents.emit(route.system('application-crashed'), {
-        topic: 'system',
-        type: 'application-crashed',
-        uuid: payload.source
-    });
-});
+// ofEvents.on(route.application('started', '*'), payload => {
+//     ofEvents.emit(route.system('application-started'), {
+//         topic: 'system',
+//         type: 'application-started',
+//         uuid: payload.source
+//     });
+// });
 
-ofEvents.on(route.externalApplication('connected'), payload => {
-    ofEvents.emit(route.system('external-application-connected'), {
-        topic: 'system',
-        type: 'external-application-connected',
-        uuid: payload.uuid
-    });
-});
+// ofEvents.on(route.application('closed', '*'), payload => {
+//     ofEvents.emit(route.system('application-closed'), {
+//         topic: 'system',
+//         type: 'application-closed',
+//         uuid: payload.source
+//     });
+// });
 
-ofEvents.on(route.externalApplication('disconnected'), payload => {
-    ofEvents.emit(route.system('external-application-disconnected'), {
-        topic: 'system',
-        type: 'external-application-disconnected',
-        uuid: payload.uuid
-    });
-});
+// ofEvents.on(route.application('crashed', '*'), payload => {
+//     ofEvents.emit(route.system('application-crashed'), {
+//         topic: 'system',
+//         type: 'application-crashed',
+//         uuid: payload.source
+//     });
+// });
+
+// ofEvents.on(route.externalApplication('connected'), payload => {
+//     ofEvents.emit(route.system('external-application-connected'), {
+//         topic: 'system',
+//         type: 'external-application-connected',
+//         uuid: payload.uuid
+//     });
+// });
+
+// ofEvents.on(route.externalApplication('disconnected'), payload => {
+//     ofEvents.emit(route.system('external-application-disconnected'), {
+//         topic: 'system',
+//         type: 'external-application-disconnected',
+//         uuid: payload.uuid
+//     });
+// });
 
 exports.System = {
     addEventListener: function(type, listener) {
