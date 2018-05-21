@@ -61,7 +61,6 @@ import {
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-const userCache = electronApp.getPath('userCache');
 const WindowsMessages = {
     WM_KEYDOWN: 0x0100,
     WM_KEYUP: 0x0101,
@@ -1923,6 +1922,7 @@ function saveBoundsToDisk(identity, bounds, callback) {
     };
 
     try {
+        const userCache = electronApp.getPath('userCache');
         fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
             fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
                 callback(writeFileErr);
@@ -1936,6 +1936,7 @@ function saveBoundsToDisk(identity, bounds, callback) {
 //make sure the uuid/names with special characters do not break the bounds cache.
 function getBoundsCacheSafeFileName(identity) {
     let safeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+    const userCache = electronApp.getPath('userCache');
     return path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 }
 

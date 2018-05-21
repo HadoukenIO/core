@@ -166,6 +166,9 @@ portDiscovery.on('runtime/launched', (portInfo) => {
 
 includeFlashPlugin();
 
+// Enable Single tenant for MAC
+handleMacSingleTenant();
+
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
 
@@ -720,6 +723,19 @@ function registerMacMenu() {
         ];
         const menu = Menu.buildFromTemplate(template);
         Menu.setApplicationMenu(menu);
+    }
+}
+
+// Set usrData & userCache path specifically for each application for MAC_OS
+function handleMacSingleTenant() {
+    if (process.platform === 'darwin') {
+        const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
+        let pathPost = encodeURIComponent(configUrl);
+        if (coreState.argo['security-realm']) {
+            pathPost = pathPost.concat(coreState.argo['security-realm']);
+        }
+        app.setPath('userData', path.join(USER_DATA, pathPost));
+        app.setPath('userCache', path.join(USER_DATA, pathPost));
     }
 }
 
