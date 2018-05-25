@@ -127,8 +127,6 @@ eventPropagationMap.forEach((systemEvent, eventString) => {
     });
 });
 
-delete eventPropagationMap;
-
 exports.System = {
     addEventListener: function(type, listener) {
         ofEvents.on(route.system(type), listener);
