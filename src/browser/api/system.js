@@ -123,7 +123,8 @@ eventPropagationMap.set(route.externalApplication('disconnected'), 'external-app
 eventPropagationMap.forEach((systemEvent, eventString) => {
     ofEvents.on(eventString, payload => {
         const systemEventProps = { topic: 'system', type: systemEvent };
-        ofEvents.emit(route.system(systemEvent), Object.assign({}, ...payload.data, systemEventProps));
+        const initialPayload = payload.data || [];
+        ofEvents.emit(route.system(systemEvent), Object.assign({}, ...initialPayload, systemEventProps));
     });
 });
 
