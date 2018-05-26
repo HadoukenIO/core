@@ -446,7 +446,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
             const payload = { uuid, name, top: cachedBounds.y, left: cachedBounds.x };
             ofEvents.emit(route.window('begin-user-bounds-changing', uuid, name), Object.assign(payload, cachedBounds));
         },
-        'end-user-bounds-change': (p) => {
+        'end-user-bounds-change': () => {
             setUserBoundsChangeActive(false);
             const bounds = getCurrentBounds();
             const payload = { uuid, name, top: bounds.y, left: bounds.x };
