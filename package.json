@@ -20,6 +20,9 @@
     "url": "https://github.com/openfin/openfin/issues"
   },
   "homepage": "https://github.com/openfin/openfin",
+  "optionalDependencies": {
+    "unix-dgram": "^2.0.2"
+  },
   "devDependencies": {
     "@types/minimist": "^1.2.0",
     "@types/mocha": "^2.2.39",

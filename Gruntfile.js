@@ -18,6 +18,12 @@ const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
 const stagingNodeModulesPath = path.join('staging', 'core', 'node_modules');
 const jsAdapterPath = path.join('node_modules', 'hadouken-js-adapter', 'out');
 
+// optional dependencies that we ship.
+const optionalDependencies = [
+    'bindings/**',  // needed by unix-dgram
+    'unix-dgram/**'
+];
+
 // https://github.com/beautify-web/js-beautify#options
 // (Options in above-linked page are hyphen-separarted but here must be either camelCase or underscore_separated.)
 const beautifierOptions = {
@@ -47,7 +53,7 @@ module.exports = (grunt) => {
                 files: [{
                     cwd: './node_modules',
                     expand: true,
-                    src: [dependencies],
+                    src: [dependencies, optionalDependencies],
                     dest: stagingNodeModulesPath
                 }]
             },
