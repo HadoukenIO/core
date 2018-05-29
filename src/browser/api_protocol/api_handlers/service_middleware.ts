@@ -64,7 +64,10 @@ function setTargetIdentity(identity: Identity, payload: any): TargetIdentity {
         return { targetIdentity, serviceIdentity };
     }
     // Sender could be service or client, want service Identity sent in payload either way
-    const serviceIdentity = Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid);
+    let serviceIdentity = Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid);
+    if (!serviceIdentity && identity.runtimeUuid) {
+        serviceIdentity = identity;
+    }
     const targetIdentity = getExternalOrOfWindowIdentity(payload);
     return { targetIdentity, serviceIdentity };
 }
