@@ -61,7 +61,6 @@ import {
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-const userCache = electronApp.getPath('userCache');
 const WindowsMessages = {
     WM_KEYDOWN: 0x0100,
     WM_KEYUP: 0x0101,
@@ -1591,11 +1590,12 @@ Window.show = function(identity, force = false) {
     let payload = {};
     let defaultAction = () => {
         const dontShow = (
-            browserWindow.isMinimized() ||
-
             // RUN-2905: To match v5 behavior, for maximized window, avoid showInactive() because it does an
             // erroneous restore(), an apparent Electron oversight (a restore _is_ needed in all other cases).
-            browserWindow.isMaximized() && browserWindow.isVisible()
+            // RUN-4122: For minimized window we should allow to show it when
+            // it is hidden.
+            browserWindow.isVisible() &&
+            (browserWindow.isMinimized() || browserWindow.isMaximized())
         );
 
         if (!dontShow) {
@@ -1923,6 +1923,7 @@ function saveBoundsToDisk(identity, bounds, callback) {
     };
 
     try {
+        const userCache = electronApp.getPath('userCache');
         fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
             fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
                 callback(writeFileErr);
@@ -1936,6 +1937,7 @@ function saveBoundsToDisk(identity, bounds, callback) {
 //make sure the uuid/names with special characters do not break the bounds cache.
 function getBoundsCacheSafeFileName(identity) {
     let safeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+    const userCache = electronApp.getPath('userCache');
     return path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 }
 

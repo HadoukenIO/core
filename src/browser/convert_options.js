@@ -81,7 +81,7 @@ function five0BaseOptions() {
             },
             'disableInitialReload': false,
             'node': false,
-            'v2Api': false
+            'v2Api': true
         },
         'frame': true,
         'frameConnect': '',
@@ -111,6 +111,7 @@ function five0BaseOptions() {
         'shadow': false,
         'showTaskbarIcon': true,
         'smallWindow': false,
+        'spellCheck': false, // app level
         'state': 'normal',
         'taskbarIcon': '',
         'taskbarIconGroup': '',
@@ -248,7 +249,8 @@ module.exports = {
             nodeIntegration: false,
             plugins: newOptions.plugins,
             preload: (!useNodeInRenderer ? noNodePreload : ''),
-            sandbox: !useNodeInRenderer
+            sandbox: !useNodeInRenderer,
+            spellCheck: newOptions.spellCheck
         };
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
