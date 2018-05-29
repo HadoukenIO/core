@@ -21,6 +21,7 @@ import route from '../../common/route';
 import { getExternalOrOfWindowIdentity } from '../core_state';
 
 const serviceMap: Map<string, ServiceIdentity> = new Map();
+let serviceId = 1;
 
 export module Service {
     export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
@@ -32,15 +33,15 @@ export module Service {
         };
     }
 
-    export function getServiceByUuid(uuid: string): ServiceIdentity {
-        return serviceMap.get(uuid);
+    export function getServiceByChannelId(channelId: string): ServiceIdentity {
+        return serviceMap.get(channelId);
     }
 
     // Could be any identifier
-    export function getServiceByName(name: string): ServiceIdentity {
+    export function getServiceByUuid(uuid: string): ServiceIdentity {
         let serviceIdentity;
         serviceMap.forEach((value, key) => {
-            if (value.serviceName === name) {
+            if (value.uuid === uuid) {
                 serviceIdentity = serviceMap.get(key);
             }
         });
@@ -50,18 +51,20 @@ export module Service {
     export function registerService (identity: Identity, serviceName?: string): ServiceIdentity | false {
         const serviceIdentity = getExternalOrOfWindowIdentity(identity);
         // If a service is already registered from that uuid, nack
-        if (!serviceIdentity || serviceMap.get(serviceIdentity.uuid)) {
+        if (!serviceIdentity || getServiceByUuid(identity.uuid)) {
             return false;
         }
         serviceIdentity.serviceName = serviceName;
         const { uuid, isExternal, ...eventPayload } = serviceIdentity;
+        serviceIdentity.channelId = `${uuid}/${serviceId}`;
+        serviceId = serviceId + 1;
 
-        serviceMap.set(uuid, serviceIdentity);
+        serviceMap.set(serviceIdentity.channelId, serviceIdentity);
 
         // When service exits, remove from serviceMap
         const eventString = isExternal ? route.externalApplication('closed', uuid) : route.application('closed', uuid);
         ofEvents.once(eventString, () => {
-            serviceMap.delete(uuid);
+            serviceMap.delete(serviceIdentity.channelId);
             ofEvents.emit(route.service('disconnected', uuid), eventPayload);
         });
 
