@@ -27,8 +27,6 @@ import * as Deferred from './deferred';
 let WindowGroups = require('./window_groups.js');
 import WindowGroupTransactionTracker from './window_group_transaction_tracker';
 import { toSafeInt } from '../common/safe_int';
-import ofEvents from './of_events';
-import route from '../common/route';
 
 const isWin32 = process.platform === 'win32';
 
@@ -442,15 +440,9 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
     var _listeners = {
         'begin-user-bounds-change': () => {
             setUserBoundsChangeActive(true);
-            const cachedBounds = getCachedBounds();
-            const payload = { uuid, name, top: cachedBounds.y, left: cachedBounds.x };
-            ofEvents.emit(route.window('begin-user-bounds-changing', uuid, name), Object.assign(payload, cachedBounds));
         },
         'end-user-bounds-change': () => {
             setUserBoundsChangeActive(false);
-            const bounds = getCurrentBounds();
-            const payload = { uuid, name, top: bounds.y, left: bounds.x };
-            ofEvents.emit(route.window('end-user-bounds-changing', uuid, name), Object.assign(payload, bounds));
             handleBoundsChange(false, true);
         },
         'bounds-changed': () => {
