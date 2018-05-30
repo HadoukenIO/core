@@ -55,7 +55,7 @@ function flushConsoleMessageQueue(): void {
     };
 
     consoleMessageQueue = [];
-    sendToRVM(obj);
+    sendToRVM(obj, true);
 }
 
 export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage): void {
