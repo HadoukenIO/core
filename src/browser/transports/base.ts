@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-import {EventEmitter} from 'events';
+import { EventEmitter } from 'events';
 
 class MyEmitter extends EventEmitter {
     constructor() {
@@ -21,8 +21,8 @@ class MyEmitter extends EventEmitter {
     }
 }
 
-class BaseTransport {
-    public eventEmitter: MyEmitter;
+abstract class BaseTransport {
+    protected eventEmitter: MyEmitter;
 
     constructor() {
         this.eventEmitter = new MyEmitter();
@@ -33,10 +33,7 @@ class BaseTransport {
     }
 
     // not implemented in base
-    public publish(data: any): boolean {
-        return false;
-    }
-
+    public abstract publish(data: any): boolean;
 }
 
 export default BaseTransport;
