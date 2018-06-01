@@ -40,35 +40,36 @@ export module Service {
     // Could be any identifier
     export function getServiceByUuid(uuid: string): ServiceIdentity {
         let serviceIdentity;
-        serviceMap.forEach((value, key) => {
-            if (value.uuid === uuid) {
-                serviceIdentity = serviceMap.get(key);
+        serviceMap.forEach(service => {
+            if (service.uuid === uuid) {
+                serviceIdentity = service;
             }
         });
         return serviceIdentity;
     }
 
-    export function registerService (identity: Identity, serviceName?: string): ServiceIdentity | false {
-        const serviceIdentity = getExternalOrOfWindowIdentity(identity);
+    export function registerService (identity: Identity, serviceName?: string): ServiceIdentity {
+        const targetApp = getExternalOrOfWindowIdentity(identity);
         // If a service is already registered from that uuid, nack
-        if (!serviceIdentity || getServiceByUuid(identity.uuid)) {
-            return false;
+        if (!targetApp || getServiceByUuid(identity.uuid)) {
+            const nackString = 'Register Failed: Please note that only one service may be registered per application.';
+            throw new Error(nackString);
         }
-        serviceIdentity.serviceName = serviceName;
-        const { uuid, isExternal, ...eventPayload } = serviceIdentity;
-        serviceIdentity.channelId = `${uuid}/${serviceId}`;
+        const { uuid, isExternal } = targetApp;
+        const channelId = `${uuid}/${serviceId}`;
+        const serviceIdentity = { ...targetApp, serviceName, channelId };
         serviceId = serviceId + 1;
 
-        serviceMap.set(serviceIdentity.channelId, serviceIdentity);
+        serviceMap.set(channelId, serviceIdentity);
 
         // When service exits, remove from serviceMap
         const eventString = isExternal ? route.externalApplication('closed', uuid) : route.application('closed', uuid);
         ofEvents.once(eventString, () => {
-            serviceMap.delete(serviceIdentity.channelId);
-            ofEvents.emit(route.service('disconnected', uuid), eventPayload);
+            serviceMap.delete(channelId);
+            ofEvents.emit(route.service('disconnected', uuid), serviceIdentity);
         });
 
-        ofEvents.emit(route.service('connected', uuid), eventPayload);
+        ofEvents.emit(route.service('connected', uuid), serviceIdentity);
 
         // execute requests to connect for service that occured before service registration. Timeout ensures registration concludes first.
         setTimeout(() => {
