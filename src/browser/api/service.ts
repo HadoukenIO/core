@@ -55,8 +55,8 @@ export module Service {
             const nackString = 'Register Failed: Please note that only one service may be registered per application.';
             throw new Error(nackString);
         }
-        const { uuid, isExternal } = targetApp;
-        const channelId = `${uuid}/${serviceId}`;
+        const { uuid, name, isExternal } = targetApp;
+        const channelId = `${uuid}/${name}/${serviceName}/${serviceId}`;
         const serviceIdentity = { ...targetApp, serviceName, channelId };
         serviceId = serviceId + 1;
 
