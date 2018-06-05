@@ -67,6 +67,7 @@ module.exports.applicationApiMap = {
     'get-application-manifest': getApplicationManifest,
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
+    'get-original-manifest': getOriginalManifest,
     'get-parent-application': getParentApplication,
     'get-shortcuts': getShortcuts,
     'get-tray-icon-info': getTrayIconInfo,
@@ -165,6 +166,14 @@ function isApplicationRunning(identity, message, ack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
     dataAck.data = Application.isRunning(appIdentity);
+    ack(dataAck);
+}
+
+function getOriginalManifest(identity, message, ack, nack) {
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+    const dataAck = _.clone(successAck);
+
+    dataAck.data = Application.getOriginalManifest(appIdentity);
     ack(dataAck);
 }
 

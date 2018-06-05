@@ -300,9 +300,13 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
     return WindowGroups.getGroups();
 };
 
+Application.getOriginalManifest = function(identity) {
+    const manifestObj = identity && coreState.getManifest(identity);
+    const manifest = manifestObj && manifestObj.manifest;
+    return manifest;
+}
 
 Application.getManifest = function(identity, manifestUrl, callback, errCallback) {
-
     // When manifest URL is not provided, get the manifest for the current application
     if (!manifestUrl) {
         const appObject = coreState.getAppObjByUuid(identity.uuid);
