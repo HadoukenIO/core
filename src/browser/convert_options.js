@@ -81,7 +81,7 @@ function five0BaseOptions() {
             },
             'disableInitialReload': false,
             'node': false,
-            'v2Api': false
+            'v2Api': true
         },
         'frame': true,
         'frameConnect': '',
