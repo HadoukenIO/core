@@ -28,6 +28,7 @@ let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
 import { Service } from '../../api/service';
+import { Accelerator } from '../../api/accelerator';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -223,6 +224,12 @@ function EventListenerApiHandler() {
                     uuid: payload.uuid
                 };
                 return ExternalApplication.addEventListener(externalAppIdentity, type, cb);
+            }
+        },
+        'accelerator': {
+            name: 'accelerator',
+            subscribe: function(identity, type, payload, cb) {
+                return Accelerator.addEventListener(identity, type, cb);
             }
         }
     };

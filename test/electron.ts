@@ -13,8 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+import { EventEmitter } from 'events';
 export let lastVlogValue = '';
 export let lastLogValue = '';
+
+const acceleratorEmitter = new EventEmitter();
 
 export const mockElectron = {
     app: {
@@ -25,5 +29,28 @@ export const mockElectron = {
         log: (level: string, val: string) => {
             lastLogValue = val;
         }
+    },
+    globalShortcut: {
+        isRegistered: (accelerator: string) => {
+            return (acceleratorEmitter.listenerCount(accelerator) > 0);
+        },
+        register: (accelerator: string, listener: any) => {
+            if (mockElectron.globalShortcut.failNextRegisterCall) {
+                mockElectron.globalShortcut.failNextRegisterCall = false;
+                return;
+            } else {
+                return acceleratorEmitter.on(accelerator, listener);
+            }
+        },
+        unregisterAll: () => {
+            acceleratorEmitter.removeAllListeners();
+        },
+        unregister: (accelerator: string) => {
+            acceleratorEmitter.removeAllListeners(accelerator);
+        },
+        mockRaiseEvent: (accelerator: string) => {
+            acceleratorEmitter.emit(accelerator);
+        },
+        failNextRegisterCall : false
     }
 };
