@@ -86,15 +86,12 @@ function genCallBackId() {
 }
 
 function publish(identity, payload) {
-    let {
-        topic
-    } = payload;
-
-    let payloadToDeliver = Object.assign({
+    const { topic } = payload;
+    const payloadToDeliver = Object.assign({}, payload, {
         sourceUuid: identity.uuid,
         sourceWindowName: identity.name,
         destinationUuid: ANY_UUID
-    }, payload);
+    });
 
     dispatchToSubscriptions(topic, identity, null, null, payloadToDeliver, true);
 }
