@@ -24,7 +24,7 @@ import {
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
 import { FrameApiHandler } from './api_handlers/frame';
 import { ServiceApiHandler } from './api_handlers/service';
-import { AcceleratorApiHandler } from './api_handlers/accelerator';
+import { GlobalHotkeyApiHandler } from './api_handlers/global_hotkey';
 
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
 const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
@@ -66,7 +66,7 @@ export function initApiHandlers() {
     const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
     const notificationApiHandler = new NotificationApiHandler();
     const systemApiHandler = new SystemApiHandler();
-    const acceleratorApiHandler = new AcceleratorApiHandler();
+    const globalHotkeyApiHandler = new GlobalHotkeyApiHandler();
     initWindowApiHandler();
 
     initApiProtocol();

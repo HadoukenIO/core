@@ -54,7 +54,8 @@ export interface Route {
     rvmMessageBus: SimpleRoute;
     'rvm-message-bus': SimpleRoute;
 
-    accelerator: SimpleRoute;
+    globalHotkey: SimpleRoute;
+    'global-hotkey': SimpleRoute;
 }
 
 interface Context { hyphenateUuidName: boolean; }
@@ -105,6 +106,6 @@ route.rvmMessageBus = route['rvm-message-bus'] = <SimpleRoute>router.bind(null, 
 route.server = <SimpleRoute>router.bind(null, 'server');
 route.connection = <SimpleRoute>router.bind(null, 'connection');
 route.runtime = <SimpleRoute>router.bind(null, 'runtime');
-route.accelerator = <SimpleRoute>router.bind(null, 'accelerator');
+route.globalHotkey = route['global-hotkey'] = <SimpleRoute>router.bind(null, 'global-hotkey');
 
 export default route;

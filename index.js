@@ -51,7 +51,7 @@ import {
     portDiscovery
 } from './src/browser/port_discovery';
 
-import { reservedAccelerators } from './src/browser/api/accelerator';
+import { reservedHotKeys } from './src/browser/api/global_hotkey';
 
 import {
     default as connectionManager,
@@ -665,7 +665,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
     return successfulLaunch;
 }
 
-//Please add any accelerator added here to the the reservedAccelerators list.
+//Please add any accelerator added here to the the reservedHotKeys list.
 function registerShortcuts() {
     app.on('browser-window-focus', (event, browserWindow) => {
         const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
@@ -704,7 +704,7 @@ function registerShortcuts() {
 
     const unhookShortcuts = (event, browserWindow) => {
         if (!globalShortcut.isDestroyed()) {
-            reservedAccelerators.forEach(a => globalShortcut.unregister(a));
+            reservedHotKeys.forEach(a => globalShortcut.unregister(a));
         }
     };
 

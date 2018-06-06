@@ -16,7 +16,7 @@ limitations under the License.
 
 import * as apiProtocolBase from './api_protocol_base';
 
-import { Accelerator } from '../../api/accelerator';
+import { GlobalHotkey } from '../../api/global_hotkey';
 import { Identity } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
 import * as log from '../../log';
@@ -25,12 +25,12 @@ const successAck = {
     success: true
 };
 
-export class AcceleratorApiHandler {
+export class GlobalHotkeyApiHandler {
     private readonly actionMap: ActionSpecMap = {
-        'global-accelerator-register': this.register,
-        'global-accelerator-unregister': this.unregister,
-        'global-accelerator-unregister-all': this.unregisterAll,
-        'global-accelerator-is-registered': this.isRegistered
+        'global-hotkey-register': this.register,
+        'global-hotkey-unregister': this.unregister,
+        'global-hotkey-unregister-all': this.unregisterAll,
+        'global-hotkey-is-registered': this.isRegistered
     };
 
     constructor() {
@@ -41,13 +41,13 @@ export class AcceleratorApiHandler {
     //this subscription claims the accelerator.
     private async register(source: Identity, message: any) {
         const { uuid, name } = source;
-        const { accelerator } = message.payload;
-            Accelerator.register(source, accelerator, () => {
+        const { hotkey } = message.payload;
+            GlobalHotkey.register(source, hotkey, () => {
                 const eventObj = {
                     action: 'process-desktop-event',
                     payload: {
-                        topic: 'accelerator',
-                        type: accelerator
+                        topic: 'global-hotkey',
+                        type: hotkey
 
                     }
                 };
@@ -59,22 +59,22 @@ export class AcceleratorApiHandler {
 
     private async unregister(source: Identity, message: any) {
         const { uuid, name } = source;
-        const { accelerator } = message.payload;
-        Accelerator.unregister(source, accelerator);
+        const { hotkey } = message.payload;
+        GlobalHotkey.unregister(source, hotkey);
 
         return successAck;
     }
 
     private async unregisterAll(source: Identity, message: any) {
-        Accelerator.unregisterAll(source);
+        GlobalHotkey.unregisterAll(source);
 
         return successAck;
     }
 
     private async isRegistered(source: Identity, message: any) {
-        const { accelerator } = message.payload;
+        const { hotkey } = message.payload;
 
-        return Accelerator.isRegistered(accelerator);
+        return GlobalHotkey.isRegistered(hotkey);
     }
 
 }

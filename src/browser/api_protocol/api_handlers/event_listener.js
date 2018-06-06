@@ -28,7 +28,7 @@ let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
 import { Service } from '../../api/service';
-import { Accelerator } from '../../api/accelerator';
+import { GlobalHotkey } from '../../api/global_hotkey';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -226,10 +226,10 @@ function EventListenerApiHandler() {
                 return ExternalApplication.addEventListener(externalAppIdentity, type, cb);
             }
         },
-        'accelerator': {
-            name: 'accelerator',
+        'global-hotkey': {
+            name: 'global-hotkey',
             subscribe: function(identity, type, payload, cb) {
-                return Accelerator.addEventListener(identity, type, cb);
+                return GlobalHotkey.addEventListener(identity, type, cb);
             }
         }
     };
