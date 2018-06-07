@@ -77,7 +77,6 @@ function applyRegistration(identity: Identity, hotkey: string, listener: Functio
     subscriptionManager.registerSubscription(constructUnregister(identity, hotkey, listener), identity, hotkey);
 }
 
-// todo: rename
 //here we will check if the subscription is a valid one.
 function validateRegistration(identity: Identity, hotkey: string): Error | undefined {
     const ownerUuid = hotkeyOwnershipMap.get(hotkey);
