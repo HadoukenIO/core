@@ -49,8 +49,8 @@ export const reservedHotKeys: Array<string> = [
 ];
 
 export class HotKeyError extends Error {
-    constructor(accelerator: string, reason: string) {
-        super(`Failed to register Hotkey: ${accelerator}, ${reason}`);
+    constructor(hotkey: string, reason: string) {
+        super(`Failed to register Hotkey: ${hotkey}, ${reason}`);
     }
 }
 

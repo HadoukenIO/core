@@ -18,7 +18,7 @@ import { EventEmitter } from 'events';
 export let lastVlogValue = '';
 export let lastLogValue = '';
 
-const acceleratorEmitter = new EventEmitter();
+const hotkeyEmitter = new EventEmitter();
 
 export const mockElectron = {
     app: {
@@ -32,24 +32,24 @@ export const mockElectron = {
     },
     globalShortcut: {
         isRegistered: (accelerator: string) => {
-            return (acceleratorEmitter.listenerCount(accelerator) > 0);
+            return (hotkeyEmitter.listenerCount(accelerator) > 0);
         },
         register: (accelerator: string, listener: any) => {
             if (mockElectron.globalShortcut.failNextRegisterCall) {
                 mockElectron.globalShortcut.failNextRegisterCall = false;
                 return;
             } else {
-                return acceleratorEmitter.on(accelerator, listener);
+                return hotkeyEmitter.on(accelerator, listener);
             }
         },
         unregisterAll: () => {
-            acceleratorEmitter.removeAllListeners();
+            hotkeyEmitter.removeAllListeners();
         },
         unregister: (accelerator: string) => {
-            acceleratorEmitter.removeAllListeners(accelerator);
+            hotkeyEmitter.removeAllListeners(accelerator);
         },
         mockRaiseEvent: (accelerator: string) => {
-            acceleratorEmitter.emit(accelerator);
+            hotkeyEmitter.emit(accelerator);
         },
         failNextRegisterCall : false
     }
