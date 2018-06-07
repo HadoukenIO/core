@@ -78,16 +78,16 @@ function applyRegistration(identity: Identity, hotkey: string, listener: Functio
 }
 
 //here we will check if the subscription is a valid one.
-function validateRegistration(identity: Identity, hotkey: string): Error | undefined {
+function validateRegistration(identity: Identity, hotkey: string): void {
     const ownerUuid = hotkeyOwnershipMap.get(hotkey);
     // already allowed this hotkey for this uuid, return early
     if (ownerUuid && ownerUuid === identity.uuid) {
         return;
     } else if (reservedHotKeys.indexOf(hotkey) > -1) {
-        return new HotKeyError(hotkey, 'is reserved');
+        throw new HotKeyError(hotkey, 'is reserved');
     } else {
         if (globalShortcut.isRegistered(hotkey)) {
-            return new HotKeyError(hotkey, 'already registered');
+            throw new HotKeyError(hotkey, 'already registered');
         }
     }
 }
@@ -95,10 +95,8 @@ function validateRegistration(identity: Identity, hotkey: string): Error | undef
 export module GlobalHotkey {
 
     export function register(identity: Identity, hotkey: string, listener: Function): void {
-        const validationError = validateRegistration(identity, hotkey);
-        if (validationError) {
-            throw validationError;
-        }
+        //Throw if registration is not valid.
+        validateRegistration(identity, hotkey);
 
         //Multiplex the subscriptions
         if (emitter.listenerCount(hotkey) > 0) {
