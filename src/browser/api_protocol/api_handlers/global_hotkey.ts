@@ -25,12 +25,15 @@ const successAck = {
     success: true
 };
 
+const PROCESS_DESKTOP_EVENT = 'process-desktop-event';
+const EVENT_TOPIC = 'global-hotkey';
+
 export class GlobalHotkeyApiHandler {
     private readonly actionMap: ActionSpecMap = {
+        'global-hotkey-is-registered': this.isRegistered,
         'global-hotkey-register': this.register,
         'global-hotkey-unregister': this.unregister,
-        'global-hotkey-unregister-all': this.unregisterAll,
-        'global-hotkey-is-registered': this.isRegistered
+        'global-hotkey-unregister-all': this.unregisterAll
     };
 
     constructor() {
@@ -44,9 +47,9 @@ export class GlobalHotkeyApiHandler {
         const { hotkey } = message.payload;
             GlobalHotkey.register(source, hotkey, () => {
                 const eventObj = {
-                    action: 'process-desktop-event',
+                    action: PROCESS_DESKTOP_EVENT,
                     payload: {
-                        topic: 'global-hotkey',
+                        topic: EVENT_TOPIC,
                         type: hotkey
 
                     }

@@ -665,7 +665,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
     return successfulLaunch;
 }
 
-//Please add any accelerator added here to the the reservedHotKeys list.
+//Please add any hotkeys added here to the the reservedHotKeys list.
 function registerShortcuts() {
     app.on('browser-window-focus', (event, browserWindow) => {
         const windowOptions = coreState.getWindowOptionsById(browserWindow.id);

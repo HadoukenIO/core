@@ -34,6 +34,7 @@ const eventNames = {
     UNREGISTERED: 'unregistered'
 };
 
+//index.js will use these on demand
 export const reservedHotKeys: Array<string> = [
     'CommandOrControl+0',
     'CommandOrControl+=',
@@ -72,11 +73,13 @@ function constructUnregister(identity: Identity, hotkey: string, listener: Funct
 
 function applyRegistration(identity: Identity, hotkey: string, listener: Function): void {
     emitter.on(hotkey, listener);
+    //make sure that if the registered context is destroyed we will unregister the hotkey
     subscriptionManager.registerSubscription(constructUnregister(identity, hotkey, listener), identity, hotkey);
 }
 
+// todo: rename
 //here we will check if the subscription is a valid one.
-function checkIfValidRegistration(identity: Identity, hotkey: string): Error | undefined {
+function validateRegistration(identity: Identity, hotkey: string): Error | undefined {
     const ownerUuid = hotkeyOwnershipMap.get(hotkey);
     // already allowed this hotkey for this uuid, return early
     if (ownerUuid && ownerUuid === identity.uuid) {
@@ -91,11 +94,14 @@ function checkIfValidRegistration(identity: Identity, hotkey: string): Error | u
 }
 
 export module GlobalHotkey {
+
     export function register(identity: Identity, hotkey: string, listener: Function): void {
-        const validationError = checkIfValidRegistration(identity, hotkey);
+        const validationError = validateRegistration(identity, hotkey);
         if (validationError) {
             throw validationError;
         }
+
+        //Multiplex the subscriptions
         if (emitter.listenerCount(hotkey) > 0) {
             applyRegistration(identity, hotkey, listener);
         } else if (!globalShortcut.register(hotkey, constructEmit(hotkey))) {
@@ -130,7 +136,7 @@ export module GlobalHotkey {
                 hotkeyOwnedById.push(key);
             }
         });
-        hotkeyOwnedById.map((acc: string) => unregister(identity, acc));
+        hotkeyOwnedById.forEach((acc: string) => unregister(identity, acc));
     }
 
     export function isRegistered(hotkey: string): boolean {
