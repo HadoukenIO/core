@@ -21,7 +21,6 @@ import route from '../../common/route';
 import { getExternalOrOfWindowIdentity } from '../core_state';
 
 const serviceMap: Map<string, ServiceIdentity> = new Map();
-let serviceId = 1;
 
 export module Service {
     export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
@@ -56,9 +55,8 @@ export module Service {
             throw new Error(nackString);
         }
         const { uuid, name, isExternal } = targetApp;
-        const channelId = `${uuid}/${name}/${serviceName}/${serviceId}`;
+        const channelId = `${uuid}/${name}/${serviceName}`;
         const serviceIdentity = { ...targetApp, serviceName, channelId };
-        serviceId = serviceId + 1;
 
         serviceMap.set(channelId, serviceIdentity);
 
