@@ -62,7 +62,7 @@ function downloadScript(identity: Identity, preloadScript: PreloadScript): Promi
 
         log(`Started downloading preload script from URL [${url}]`);
 
-        cachedFetch(uuid, url, (error, scriptPath) => {
+        cachedFetch(identity, url, (error, scriptPath) => {
             const result: DownloadResult = { url, success: !error };
 
             if (error) {
