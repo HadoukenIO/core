@@ -64,7 +64,9 @@ function setTargetIdentity(identity: Identity, payload: any): TargetIdentity {
         return { targetIdentity, serviceIdentity };
     }
     // Sender could be service or client, want service Identity sent in payload either way
-    const serviceIdentity = Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid);
+    let { serviceIdentity } = payload;
+    // Need this for backward compatibility - adapters did not send Service Identity in first iteration
+    serviceIdentity = serviceIdentity || Service.getServiceByUuid(uuid) || Service.getServiceByUuid(identity.uuid) || identity;
     const targetIdentity = getExternalOrOfWindowIdentity(payload);
     return { targetIdentity, serviceIdentity };
 }

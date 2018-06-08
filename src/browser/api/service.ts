@@ -32,40 +32,42 @@ export module Service {
         };
     }
 
-    export function getServiceByUuid(uuid: string): ServiceIdentity {
-        return serviceMap.get(uuid);
+    export function getServiceByChannelId(channelId: string): ServiceIdentity {
+        return serviceMap.get(channelId);
     }
 
     // Could be any identifier
-    export function getServiceByName(name: string): ServiceIdentity {
+    export function getServiceByUuid(uuid: string): ServiceIdentity {
         let serviceIdentity;
-        serviceMap.forEach((value, key) => {
-            if (value.serviceName === name) {
-                serviceIdentity = serviceMap.get(key);
+        serviceMap.forEach(service => {
+            if (service.uuid === uuid) {
+                serviceIdentity = service;
             }
         });
         return serviceIdentity;
     }
 
-    export function registerService (identity: Identity, serviceName?: string): ServiceIdentity | false {
-        const serviceIdentity = getExternalOrOfWindowIdentity(identity);
+    export function registerService (identity: Identity, serviceName?: string): ServiceIdentity {
+        const targetApp = getExternalOrOfWindowIdentity(identity);
         // If a service is already registered from that uuid, nack
-        if (!serviceIdentity || serviceMap.get(serviceIdentity.uuid)) {
-            return false;
+        if (!targetApp || getServiceByUuid(identity.uuid)) {
+            const nackString = 'Register Failed: Please note that only one service may be registered per application.';
+            throw new Error(nackString);
         }
-        serviceIdentity.serviceName = serviceName;
-        const { uuid, isExternal, ...eventPayload } = serviceIdentity;
+        const { uuid, name, isExternal } = targetApp;
+        const channelId = `${uuid}/${name}/${serviceName}`;
+        const serviceIdentity = { ...targetApp, serviceName, channelId };
 
-        serviceMap.set(uuid, serviceIdentity);
+        serviceMap.set(channelId, serviceIdentity);
 
         // When service exits, remove from serviceMap
         const eventString = isExternal ? route.externalApplication('closed', uuid) : route.application('closed', uuid);
         ofEvents.once(eventString, () => {
-            serviceMap.delete(uuid);
-            ofEvents.emit(route.service('disconnected', uuid), eventPayload);
+            serviceMap.delete(channelId);
+            ofEvents.emit(route.service('disconnected', uuid), serviceIdentity);
         });
 
-        ofEvents.emit(route.service('connected', uuid), eventPayload);
+        ofEvents.emit(route.service('connected', uuid), serviceIdentity);
 
         // execute requests to connect for service that occured before service registration. Timeout ensures registration concludes first.
         setTimeout(() => {

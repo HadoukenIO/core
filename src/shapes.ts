@@ -24,8 +24,9 @@ export interface Identity {
 }
 
 export interface ServiceIdentity extends Identity {
-    serviceName?: string;
+    channelId?: string;
     isExternal?: boolean;
+    serviceName?: string;
 }
 
 export interface ResourceFetchIdentity extends Identity {
