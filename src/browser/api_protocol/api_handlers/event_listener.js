@@ -28,6 +28,7 @@ let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
 import { Service } from '../../api/service';
+import { GlobalHotkey } from '../../api/global_hotkey';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -223,6 +224,12 @@ function EventListenerApiHandler() {
                     uuid: payload.uuid
                 };
                 return ExternalApplication.addEventListener(externalAppIdentity, type, cb);
+            }
+        },
+        'global-hotkey': {
+            name: 'global-hotkey',
+            subscribe: function(identity, type, payload, cb) {
+                return GlobalHotkey.addEventListener(identity, type, cb);
             }
         }
     };

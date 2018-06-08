@@ -24,6 +24,8 @@ import {
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
 import { FrameApiHandler } from './api_handlers/frame';
 import { ServiceApiHandler } from './api_handlers/service';
+import { GlobalHotkeyApiHandler } from './api_handlers/global_hotkey';
+
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
 const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
@@ -38,6 +40,7 @@ import {
     registerMiddleware as registerProcessExternalAppMiddleware,
     legacyWindowingEnabled
 } from './api_handlers/deprecated_external_windowing_middleware';
+
 
 // Middleware registration. The order is important.
 registerEntityExistenceMiddleware(getDefaultRequestHandler());
@@ -63,6 +66,7 @@ export function initApiHandlers() {
     const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
     const notificationApiHandler = new NotificationApiHandler();
     const systemApiHandler = new SystemApiHandler();
+    const globalHotkeyApiHandler = new GlobalHotkeyApiHandler();
     initWindowApiHandler();
 
     initApiProtocol();
