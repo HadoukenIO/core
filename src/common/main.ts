@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 import { parse as parseUrl } from 'url';
+import { Identity } from '../shapes';
 
 export function isFileUrl(url: string): boolean {
     const protocol = parseUrl(url).protocol || '';
@@ -31,3 +32,8 @@ export function uriToPath(uri: string): string {
         .replace(/^file:\/\/\/?/, '')
         .replace(/%20/g, ' ');
 }
+
+export const getIdentityFromObject = (obj: any): Identity => {
+    const { uuid, name } = obj;
+    return { uuid, name };
+};

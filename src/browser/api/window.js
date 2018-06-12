@@ -50,7 +50,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
-import { isFileUrl, isHttpUrl } from '../../common/main';
+import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -2350,10 +2350,9 @@ function setTaskbar(browserWindow, forceFetch = false) {
 }
 
 function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
-    let options = browserWindow._options;
-    let uuid = options.uuid;
+    const identity = getIdentityFromObject(browserWindow._options);
 
-    cachedFetch(uuid, iconUrl, (error, iconFilepath) => {
+    cachedFetch(identity, iconUrl, (error, iconFilepath) => {
         if (!error) {
             setIcon(browserWindow, iconFilepath, errorCallback);
         } else {
