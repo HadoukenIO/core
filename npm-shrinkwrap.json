@@ -6430,9 +6430,9 @@
       "dev": true
     },
     "hadouken-js-adapter": {
-      "version": "0.32.1-alpha.4",
-      "resolved": "https://registry.npmjs.org/hadouken-js-adapter/-/hadouken-js-adapter-0.32.1-alpha.4.tgz",
-      "integrity": "sha512-jI/02fNZfFJ/Kf4Zj/C3aysrv6+IhOp1vjD/6UHWlniptBJZwE0gsQNzq94Gu5P2SzmlxTmPrzVE/mCeaRR9nw==",
+      "version": "0.32.1-alpha.5",
+      "resolved": "https://registry.npmjs.org/hadouken-js-adapter/-/hadouken-js-adapter-0.32.1-alpha.5.tgz",
+      "integrity": "sha512-n5EPgV76gSQJ+ex6c+2szZgTc4XYlLm0h7ZQeA/SkstHUVVKUIzKzQ9yv0wPXTdIAvW+IELTXAUrHhVPmk4kMQ==",
       "requires": {
         "@types/node": "9.6.21",
         "ws": "1.1.1"
