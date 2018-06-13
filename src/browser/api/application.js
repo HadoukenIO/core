@@ -346,7 +346,10 @@ Application.getInfo = function(identity, callback) {
     const app = Application.wrap(identity.uuid);
     const manifestObj = coreState.getManifest(identity);
     const { url: manifestUrl, manifest } = manifestObj;
-    const parentUuid = Application.getParentApplication(identity) || null;
+
+    const parentApp = coreState.getAppAncestor(identity.uuid);
+    const parentUuid = (parentApp.uuid === identity.uuid) ? null : parentApp.uuid;
+
     const response = {
         launchMode: app.launchMode,
         manifestUrl,
