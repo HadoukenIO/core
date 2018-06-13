@@ -328,6 +328,10 @@ ProcessTracker.prototype.release = function(uuid) {
         throw new Error(`Error releasing external process, cannot release nonpersistent processes`);
     }
 
+    if (this._processes[pid].monitor) {
+        this._processMonitor.remove(this._processes[pid].process);
+    }
+
     this._processes[pid].monitor = false;
 };
 
