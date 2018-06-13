@@ -300,12 +300,6 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
     return WindowGroups.getGroups();
 };
 
-Application.getOriginalManifest = function(identity) {
-    const manifestObj = identity && coreState.getManifest(identity);
-    const manifest = manifestObj && manifestObj.manifest;
-    return manifest;
-}
-
 Application.getManifest = function(identity, manifestUrl, callback, errCallback) {
     // When manifest URL is not provided, get the manifest for the current application
     if (!manifestUrl) {
@@ -350,9 +344,14 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
 
 Application.getInfo = function(identity, callback) {
     const app = Application.wrap(identity.uuid);
-
+    const manifestObj = coreState.getManifest(identity);
+    const { url: manifestUrl, manifest } = manifestObj;
+    const parentUuid = Application.getParentApplication(identity) || null;
     const response = {
-        launchMode: app.launchMode
+        launchMode: app.launchMode,
+        manifestUrl,
+        manifest,
+        parentUuid
     };
 
     callback(response);
