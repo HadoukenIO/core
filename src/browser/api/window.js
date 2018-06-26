@@ -1130,12 +1130,14 @@ Window.embed = function(identity, parentHwnd) {
 };
 
 Window.enableFrame = function(identity) {
+    const windowKey = genWindowKey(identity);
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
     }
-
+    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
+    disabledFrameRef.set(windowKey, --dframeRefCount);
     browserWindow.setUserMovementEnabled(true);
 };
 
