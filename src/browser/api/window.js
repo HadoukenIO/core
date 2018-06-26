@@ -1082,7 +1082,7 @@ Window.close = function(identity, force, callback = () => {}) {
 };
 
 function dissabledFrameUnsubDecorator(identity) {
-    const windowKey = genWindowKey(identity)
+    const windowKey = genWindowKey(identity);
     return function() {
         let refCount = disabledFrameRef.get(windowKey) || 0;
         if (refCount > 1) {
