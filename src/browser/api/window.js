@@ -1082,7 +1082,7 @@ Window.close = function(identity, force, callback = () => {}) {
 };
 
 function dissabledFrameUnsubDecorator(identity) {
-    const windowKey = genWindowKey(identity);
+    const windowKey = genWindowKey(identity)
     return function() {
         let refCount = disabledFrameRef.get(windowKey) || 0;
         if (refCount > 1) {
@@ -1095,7 +1095,7 @@ function dissabledFrameUnsubDecorator(identity) {
 
 Window.disableFrame = function(requestorIdentity, windowIdentity) {
     let browserWindow = getElectronBrowserWindow(windowIdentity);
-    const windowKey = `${windowIdentity.uuid}-${windowIdentity.name}`;
+    const windowKey = genWindowKey(windowIdentity);
 
     if (!browserWindow) {
         return;
