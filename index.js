@@ -143,7 +143,7 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
     clientCertDialog.loadURL(path.resolve(__dirname, 'src', 'certificate', 'index.html') + params);
 });
 
-portDiscovery.on('runtime/launched', (portInfo) => {
+portDiscovery.on(route.runtime('launched'), (portInfo) => {
     //check if the ports match:
     const myPortInfo = coreState.getSocketServerState();
     const myUuid = getMeshUuid();

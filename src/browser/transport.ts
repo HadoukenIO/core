@@ -20,4 +20,4 @@ import WMCopyData from './transports/wm_copydata';
 /**
  * Conveniently exports available transports in one bundle
  */
-export {Base, ChromiumIPC, WMCopyData};
+export { Base, ChromiumIPC, WMCopyData };

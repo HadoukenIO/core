@@ -38,6 +38,14 @@ declare module 'electron' {
         export function matchesURL(url: string, patterns: [string]): boolean;
     }
 
+    export class MessageWindow {
+        constructor(classname: string, windowname: string);
+        isDestroyed(): boolean;
+        on(event: string, callback: (...args: any[]) => any): void;
+        sendbyname(classname: string, windowname: string, message: string, maskPayload?: boolean): boolean;
+        setmessagetimeout(timeout: number): void;
+    }
+
     export namespace net {
         export function request(url: string|Object): any;
     }
