@@ -300,9 +300,7 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
     return WindowGroups.getGroups();
 };
 
-
 Application.getManifest = function(identity, manifestUrl, callback, errCallback) {
-
     // When manifest URL is not provided, get the manifest for the current application
     if (!manifestUrl) {
         const appObject = coreState.getAppObjByUuid(identity.uuid);
@@ -346,9 +344,17 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
 
 Application.getInfo = function(identity, callback) {
     const app = Application.wrap(identity.uuid);
+    const manifestObj = coreState.getManifest(identity);
+    const { url: manifestUrl, manifest } = manifestObj;
+
+    const parentApp = coreState.getAppAncestor(identity.uuid);
+    const parentUuid = (parentApp.uuid === identity.uuid) ? null : parentApp.uuid;
 
     const response = {
-        launchMode: app.launchMode
+        launchMode: app.launchMode,
+        manifestUrl,
+        manifest,
+        parentUuid
     };
 
     callback(response);

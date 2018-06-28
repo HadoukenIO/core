@@ -88,7 +88,8 @@ export function setManifest(url: string, manifest: Shapes.Manifest): void {
 }
 
 export function getManifest(identity: Shapes.Identity): ManifestInfo {
-    const url = getConfigUrlByUuid(identity.uuid);
+    const uuid = identity && identity.uuid;
+    const url = getConfigUrlByUuid(uuid);
     const manifest = manifests.get(url);
     return { url, manifest };
 }
