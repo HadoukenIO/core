@@ -1081,7 +1081,7 @@ Window.close = function(identity, force, callback = () => {}) {
     handleForceActions(identity, force, 'close-requested', payload, defaultAction);
 };
 
-function dissabledFrameUnsubDecorator(identity) {
+function disabledFrameUnsubDecorator(identity) {
     const windowKey = genWindowKey(identity);
     return function() {
         let refCount = disabledFrameRef.get(windowKey) || 0;
@@ -1094,7 +1094,7 @@ function dissabledFrameUnsubDecorator(identity) {
 }
 
 Window.disableFrame = function(requestorIdentity, windowIdentity) {
-    let browserWindow = getElectronBrowserWindow(windowIdentity);
+    const browserWindow = getElectronBrowserWindow(windowIdentity);
     const windowKey = genWindowKey(windowIdentity);
 
     if (!browserWindow) {
@@ -1103,7 +1103,7 @@ Window.disableFrame = function(requestorIdentity, windowIdentity) {
 
     let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
     disabledFrameRef.set(windowKey, ++dframeRefCount);
-    subscriptionManager.registerSubscription(dissabledFrameUnsubDecorator(windowIdentity), requestorIdentity, `disable-frame-${windowKey}`);
+    subscriptionManager.registerSubscription(disabledFrameUnsubDecorator(windowIdentity), requestorIdentity, `disable-frame-${windowKey}`);
     browserWindow.setUserMovementEnabled(false);
 };
 
