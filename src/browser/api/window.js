@@ -35,7 +35,7 @@ import * as Rx from 'rx';
 let animations = require('../animations.js');
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 let BoundsChangedStateTracker = require('../bounds_changed_state_tracker.js');
-let clipBounds = require('../clip_bounds.js').default;
+import { clipBounds } from '../utils';
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
@@ -57,6 +57,7 @@ import {
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
     DEFAULT_RESIZE_SIDES
 } from '../../shapes';
+import { windowSetBoundsToVisible } from '../utils';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -1543,6 +1544,7 @@ Window.restore = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'restore');
 
     if (browserWindow.isMinimized()) {
+        windowSetBoundsToVisible(browserWindow);
         browserWindow.restore();
     } else if (browserWindow.isMaximized()) {
         browserWindow.unmaximize();

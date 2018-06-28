@@ -16,7 +16,7 @@ limitations under the License.
 import { BrowserWindow, Rectangle } from 'electron';
 import { BrowserWindow as BrowserWindowOF } from '../shapes';
 import { toSafeInt } from '../common/safe_int';
-import clipBounds from './clip_bounds';
+import { clipBounds } from './utils';
 
 export { handleMove };
 

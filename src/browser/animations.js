@@ -24,7 +24,7 @@ let BrowserWindow = require('electron').BrowserWindow;
 let NativeTimer = require('electron').nativeTimer;
 let windowTransaction = require('electron').windowTransaction;
 
-let clipBounds = require('./clip_bounds.js').default;
+import { clipBounds } from './utils';
 let Deferred = require('./deferred.js');
 let Tweens = require('./animation/tween.js');
 import {

@@ -21,7 +21,6 @@ let windowTransaction = require('electron').windowTransaction;
 
 let _ = require('underscore');
 let animations = require('./animations.js');
-import clipBounds from './clip_bounds';
 let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
 let WindowGroups = require('./window_groups.js');
@@ -29,6 +28,7 @@ import WindowGroupTransactionTracker from './window_group_transaction_tracker';
 import { toSafeInt } from '../common/safe_int';
 import ofEvents from './of_events';
 import route from '../common/route';
+import { clipBounds, windowSetBoundsToVisible } from './utils';
 
 const isWin32 = process.platform === 'win32';
 
@@ -497,6 +497,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         },
         'restore': () => {
             _deferred = false;
+            windowSetBoundsToVisible(browserWindow);
             updateCachedBounds(getCurrentBounds());
             dispatchDeferredEvents();
         },
