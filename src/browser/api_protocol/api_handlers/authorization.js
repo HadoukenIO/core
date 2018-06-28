@@ -141,7 +141,8 @@ function onRequestAuthorization(id, data) {
                     client: externalApplicationOptions.client,
                     uuid,
                     parentApp: {
-                        uuid: null
+                        uuid: null,
+                        configUrl: null
                     }
                 }
             }, externalApplicationOptions.configUrl);
@@ -216,7 +217,7 @@ module.exports.init = function() {
         externalConnection = ExternalApplication.getExternalConnectionById(id);
         if (externalConnection) {
             ExternalApplication.removeExternalConnection(externalConnection);
-            ofEvents.emit(route('externalconn', 'closed'), ExternalApplication);
+            ofEvents.emit(route('externalconn', 'closed'), externalConnection);
         }
 
         if (coreState.shouldCloseRuntime()) {

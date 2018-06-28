@@ -81,7 +81,7 @@ function five0BaseOptions() {
             },
             'disableInitialReload': false,
             'node': false,
-            'v2Api': false
+            'v2Api': true
         },
         'frame': true,
         'frameConnect': '',
@@ -273,14 +273,6 @@ module.exports = {
 
         if ('preloadScripts' in options || 'preload' in options) {
             newOptions.preloadScripts = this.normalizePreloadScripts(options);
-        }
-
-        const plugin = options['plugin'];
-        if (!plugin) {
-            // for all falsy values
-            newOptions.plugin = [];
-        } else {
-            newOptions.plugin = plugin;
         }
 
         if (options.customRequestHeaders !== undefined) {

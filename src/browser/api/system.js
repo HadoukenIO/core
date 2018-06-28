@@ -472,7 +472,8 @@ exports.System = {
         portDiscovery.getPortInfoByArgs(coreState.argo, socketServer.getPort());
         const manifestUrl = coreState.getConfigUrlByUuid(identity.uuid);
         const architecture = process.arch;
-        return { manifestUrl, port, securityRealm, version, architecture };
+        const cachePath = electronApp.getPath('userData');
+        return { manifestUrl, port, securityRealm, version, architecture, cachePath };
     },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
@@ -724,12 +725,8 @@ exports.System = {
         return downloadScripts(identity, preloadScripts);
     },
 
-    getPluginModule: function(identity, plugin) {
-        return plugins.getModule(identity, plugin);
-    },
-
-    getPluginModules: function(identity) {
-        return plugins.getModules(identity);
+    getPluginModule: function(identity, name) {
+        return plugins.getModule(identity, name);
     },
 
     getPreloadScripts: function(identity) {

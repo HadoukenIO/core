@@ -82,7 +82,6 @@ function SystemApiHandler() {
         'get-runtime-info': getRuntimeInfo,
         'get-rvm-info': getRvmInfo,
         'get-plugin-module': getPluginModule,
-        'get-plugin-modules': getPluginModules,
         'get-preload-scripts': getPreloadScripts,
         'get-version': getVersion,
         'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
@@ -561,22 +560,12 @@ function SystemApiHandler() {
     }
 
     function getPluginModule(identity, message, ack, nack) {
-        const { payload: { plugin } } = message;
+        const { payload: name } = message;
 
-        System.getPluginModule(identity, plugin)
+        System.getPluginModule(identity, name)
             .then((pluginModule) => {
                 const dataAck = _.clone(successAck);
                 dataAck.data = pluginModule;
-                ack(dataAck);
-            })
-            .catch(nack);
-    }
-
-    function getPluginModules(identity, message, ack, nack) {
-        System.getPluginModules(identity)
-            .then((pluginModules) => {
-                const dataAck = _.clone(successAck);
-                dataAck.data = pluginModules;
                 ack(dataAck);
             })
             .catch(nack);

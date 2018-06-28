@@ -14,82 +14,49 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-const Window = require('./api/window.js').Window;
-import * as path from 'path';
 import { getManifest } from './core_state';
 import { Identity, Plugin } from '../shapes';
+import { join as joinPath } from 'path';
 import { readFile } from 'fs';
 import { rvmMessageBus } from './rvm/rvm_message_bus';
 import { writeToLog } from './log';
 
-interface PluginWithContent extends Plugin {
-    _content: string;
-}
-
-/**
- * A map of already-retrieved plugin module paths.
- *
- * Examples:
- * 'pluginName: 1.0.0' -> 'path\to\plugin\injectable\script.js'
- * 'pluginName2: 0.0.1' -> '' // plugin/version doesn't exist
- */
-const pluginPaths: Map<string, string> = new Map();
-
-/**
- * Gets all plugins defined in app's manifest
- */
-export async function getModules(identity: Identity): Promise<PluginWithContent[]> {
-    const { url, manifest } = getManifest(identity);
-    const { plugins = [] } = manifest || {};
-    const promises = plugins.map((plugin: Plugin) => getModule(identity, plugin, url));
-    return await Promise.all(promises);
-}
-
 /**
  * Gets a single plugin module
  */
-export async function getModule(identity: Identity, plugin: Plugin, sourceUrl?: string): Promise<PluginWithContent> {
-    if (!sourceUrl) {
-        sourceUrl = getManifest(identity).url;
+export async function getModule(identity: Identity, name: string): Promise<string> {
+    const { url: sourceUrl, manifest: { plugins = [] } } = getManifest(identity);
+    const plugin = plugins.find((e: Plugin) => e.name === name);
+
+    if (!plugin) {
+        writeToLog('info', '[plugins] Failed to find specified plugin in the manifest');
+        throw new Error('Failed to find specified plugin in the manifest');
     }
 
-    const id = `${plugin.name}: ${plugin.version}`;
-    let pluginPath;
+    const { payload } = await rvmMessageBus.getPluginInfo(sourceUrl, plugin);
+    const { error, target, path } = payload;
 
-    if (pluginPaths.has(id)) {
-        pluginPath = pluginPaths.get(id);
-    } else {
-        const {payload} = await rvmMessageBus.getPluginInfo(sourceUrl, plugin);
-        pluginPath = !payload.error ? path.join(payload.path, payload.target) : '';
-        pluginPaths.set(id, pluginPath);
+    if (error) {
+        writeToLog('info', `[plugins] Failed to get plugin info from RVM: ${error}`);
+        throw new Error(error);
     }
 
-    return await addContent(identity, plugin, pluginPath);
+    const pluginPath = joinPath(path, target);
+
+    return await getContent(pluginPath);
 }
 
 /**
- * Reads and adds module content to plugin while updating plugin state
+ * Gets plugin content from local path
  */
-function addContent(identity: Identity, plugin: Plugin, pluginPath: string): Promise<PluginWithContent> {
-    return new Promise((resolve) => {
-        const { uuid, name } = identity;
-        const { name: pluginName, version } = plugin;
-        const log = (msg: string) => {
-            writeToLog('info', `[plugins] [${uuid}]-[${name}]: ${msg}`);
-        };
-
-        log(`Started loading plugin module [${pluginName} ${version}]`);
-        Window.setWindowPluginState(identity, {...plugin, state: 'load-started'});
-
+function getContent(pluginPath: string): Promise<string> {
+    return new Promise((resolve, reject) => {
         readFile(pluginPath, 'utf8', (error, data) => {
             if (error) {
-                log(`Failed loading plugin module [${pluginName} ${version}]: ${error}`);
-                Window.setWindowPluginState(identity, {...plugin, state: 'load-failed'});
-                resolve({...plugin, _content: ''});
+                writeToLog('info', `[plugins] failed to get plugin content from ${pluginPath}: ${error}`);
+                reject('Failed to load plugin');
             } else {
-                log(`Succeeded loading plugin module [${pluginName} ${version}]`);
-                Window.setWindowPluginState(identity, {...plugin, state: 'load-succeeded'});
-                resolve({...plugin, _content: data});
+                resolve(data);
             }
         });
     });

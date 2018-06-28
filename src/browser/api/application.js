@@ -520,6 +520,13 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
         coreState.setLicenseKey({ uuid }, licenseKey);
 
+        const parentUuid = appState.parentUuid || null;
+
+        let parentConfigUrl = null;
+        if (parentUuid) {
+            parentConfigUrl = coreState.getConfigUrlByUuid(parentUuid);
+        }
+
         return {
             licenseKey,
             uuid,
@@ -527,7 +534,8 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                 type: 'js'
             },
             parentApp: {
-                uuid: appState.parentUuid || null
+                uuid: parentUuid,
+                configUrl: parentConfigUrl
             }
         };
     };

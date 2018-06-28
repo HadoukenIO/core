@@ -61,7 +61,6 @@ import {
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-const userCache = electronApp.getPath('userCache');
 const WindowsMessages = {
     WM_KEYDOWN: 0x0100,
     WM_KEYUP: 0x0101,
@@ -877,10 +876,6 @@ Window.create = function(id, opts) {
         _window: browserWindow
     };
 
-    const { manifest } = coreState.getManifest(identity);
-    const { plugins } = manifest || {};
-    winObj.plugins = JSON.parse(JSON.stringify(plugins || []));
-
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
         const app = coreState.getAppByUuid(identity.uuid);
         if (!app) {
@@ -1222,12 +1217,11 @@ Window.getGroup = function(identity) {
 
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const { plugins, preloadScripts } = Window.wrap(identity.uuid, identity.name);
+    const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
     const webContents = browserWindow.webContents;
     const windowInfo = {
         canNavigateBack: webContents.canGoBack(),
         canNavigateForward: webContents.canGoForward(),
-        plugins,
         preloadScripts,
         title: webContents.getTitle(),
         url: webContents.getURL()
@@ -1271,30 +1265,6 @@ Window.getParentApplication = function() {
 
 
 Window.getParentWindow = function() {};
-
-/**
- * Sets/updates window's plugin state and emits relevant events
- */
-Window.setWindowPluginState = function(identity, payload) {
-    const { uuid, name } = identity;
-    const { name: pluginName, version, state, allDone } = payload;
-    const updateTopic = allDone ? 'plugins-state-changed' : 'plugins-state-changing';
-    let { plugins } = Window.wrap(uuid, name);
-
-    // Single plugin state change
-    if (!allDone) {
-        plugins = plugins.filter(e => e.name === pluginName && e.version === version);
-
-        // If plugin not found / invalid plugin specified, then exit early
-        if (!plugins.length) {
-            return;
-        }
-
-        plugins[0].state = state;
-    }
-
-    ofEvents.emit(route.window(updateTopic, uuid, name), { name, uuid, plugins });
-};
 
 /**
  * Sets/updates window's preload script state and emits relevant events
@@ -1356,7 +1326,7 @@ Window.getSnapshot = function(identity, callback = () => {}) {
     }
 
     browserWindow.capturePage(img => {
-        callback(undefined, img.toPng().toString('base64'));
+        callback(undefined, img.toPNG().toString('base64'));
     });
 };
 
@@ -1971,6 +1941,7 @@ function saveBoundsToDisk(identity, bounds, callback) {
     };
 
     try {
+        const userCache = electronApp.getPath('userCache');
         fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
             fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
                 callback(writeFileErr);
@@ -1984,6 +1955,7 @@ function saveBoundsToDisk(identity, bounds, callback) {
 //make sure the uuid/names with special characters do not break the bounds cache.
 function getBoundsCacheSafeFileName(identity) {
     let safeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+    const userCache = electronApp.getPath('userCache');
     return path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 }
 

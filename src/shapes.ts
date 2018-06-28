@@ -108,7 +108,6 @@ export interface OpenFinWindow {
     hideReason: string;
     id: number;
     name: string;
-    plugins: PluginState[];
     preloadScripts: PreloadScriptState[];
     uuid: string;
     mainFrameRoutingId: number;
@@ -292,6 +291,7 @@ export interface Manifest {
         futureVersion?: string;
         version: string;
     };
+    services?: string[];
     shortcut?: {
         company: string;
         description?: string;
@@ -318,10 +318,6 @@ export interface Plugin {
     mandatory?: boolean;
     name: string;
     version: string;
-}
-
-export interface PluginState extends Plugin {
-    state: 'load-failed'|'load-succeeded'|'failed'|'succeeded';
 }
 
 export interface PreloadScript {
