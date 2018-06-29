@@ -111,11 +111,12 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         throw new Error('Not implemented');
     }
 
-    protected onMessage(e: any, rawData: any): void {
+    protected onMessage(e: any, rawData: any, ackDelegate: any): void {
 
         try {
             const data = JSON.parse(JSON.stringify(rawData));
-            const ack = !data.isSync ? this.ackDecorator(e, data.messageId) : this.ackDecoratorSync(e, data.messageId);
+            const ack = !data.isSync ? (ackDelegate ? ackDelegate(e, data.messageId, data) : this.ackDecorator(e, data.messageId, data))
+                            : this.ackDecoratorSync(e, data.messageId);
             const nack = this.nackDecorator(ack);
             const browserWindow = e.sender.getOwnerBrowserWindow();
             const currWindow = browserWindow ? coreState.getWinById(browserWindow.id) : null;
@@ -126,7 +127,8 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                 name: subFrameName || opts.name,
                 uuid: opts.uuid,
                 parentFrame: opts.name,
-                entityType: e.sender.getEntityType(e.frameRoutingId)
+                entityType: e.sender.getEntityType(e.frameRoutingId),
+                transaction: data.action === 'api-transaction'
             };
 
             /* tslint:disable: max-line-length */
@@ -136,11 +138,20 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, replacer)}`);
             /* tslint:enable: max-line-length */
 
-
-            this.requestHandler.handle({
-                identity, data, ack, nack, e,
-                strategyName: this.constructor.name
-            });
+            if (!identity.transaction) {
+                this.requestHandler.handle({
+                    identity, data, ack, nack, e,
+                    strategyName: this.constructor.name
+                });
+            } else {
+                const deferredAck = this.ackDecoratorDeferred(e,
+                                                              data.messageId,
+                                                              data.payload.messages.length,
+                                                              data);
+                data.payload.messages.forEach((m: any) => {
+                    this.onMessage(e, m, deferredAck);
+                });
+            }
 
         } catch (err) {
             system.debugLog(1, err);
@@ -167,9 +178,71 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         };
     }
 
-    protected ackDecorator(e: any, messageId: number): AckFunc {
+    protected ackDecoratorDeferred(e: any, messageId: number, totalAcksExpected: number, originalPayload: any): any {
+       const deferredAcks: any = [];
+       const mainAck = this.ackDecorator(e, messageId, originalPayload);
+
+        originalPayload.breadcrumbs = originalPayload.breadcrumbs || [];
+
+        originalPayload.breadcrumbs.push({
+            action: originalPayload.action,
+            messageId: messageId,
+            name: 'core/ackDecoratorDeferred',
+            time: Date.now()
+        });
+
+       return (e: any, messageId: number, originalPayload: any): AckFunc => {
+           const ackObj = new AckMessage();
+           ackObj.correlationId = messageId;
+           ackObj.originalAction = originalPayload.action;
+
+            ackObj.breadcrumbs = originalPayload.breadcrumbs || [];
+
+            ackObj.breadcrumbs.push({
+                action: originalPayload.action,
+                messageId: messageId,
+                name: 'core/ackDelegate',
+                time: Date.now()
+            });
+
+           return (payload: any): void => {
+               ackObj.payload = payload;
+
+
+               ackObj.breadcrumbs.push({
+                    action: originalPayload.action,
+                    messageId: messageId,
+                    name: 'core/deferredACK',
+                    time: Date.now()
+                });
+
+               deferredAcks.push(ackObj);
+               //deferredAcks.push(JSON.stringify(ackObj));
+
+               //system.debugLog(1, 'deferred ack');
+
+               if (deferredAcks.length === totalAcksExpected) {
+                   mainAck({
+                    success: true,
+                    data: deferredAcks
+                   });
+               }
+           };
+       };
+    }
+
+    protected ackDecorator(e: any, messageId: number, originalPayload: any): AckFunc {
         const ackObj = new AckMessage();
         ackObj.correlationId = messageId;
+        ackObj.originalAction = originalPayload.action;
+        ackObj.breadcrumbs = originalPayload.breadcrumbs || [];
+
+        ackObj.breadcrumbs.push({
+            action: originalPayload.action,
+            messageId: messageId,
+            name: 'core/ackDecorator',
+            time: Date.now()
+        });
 
         return (payload: any): void => {
             ackObj.payload = payload;
@@ -183,9 +256,23 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             }
 
             if (!e.sender.isDestroyed()) {
+                ackObj.breadcrumbs.push({
+                    action: originalPayload.action,
+                    messageId: messageId,
+                    name: 'core/ACK',
+                    time: Date.now()
+                });
+
                 e.sender.sendToFrame(e.frameRoutingId, electronIpc.channels.CORE_MESSAGE, JSON.stringify(ackObj));
+
+                // ToDo track outbound statistics
+                /*ackObj.breadcrumbs.push({
+                    action: originalPayload.action,
+                    messageId: messageId,
+                    name: 'core/after-ACK',
+                    time: Date.now()
+                });*/
             }
         };
-
     }
 }

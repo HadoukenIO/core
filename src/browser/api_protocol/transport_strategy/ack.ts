@@ -20,6 +20,8 @@ export class AckMessage {
     public readonly action: string = 'ack';
     public correlationId: number;
     public payload: AckPayload | NackPayload;
+    public breadcrumbs: Array<any>;
+    public originalAction: string;
 }
 
 // ToDo following duplicated in src/shapes.ts
