@@ -94,6 +94,10 @@ export function getManifest(identity: Shapes.Identity): ManifestInfo {
     return { url, manifest };
 }
 
+export function getManifestByUrl(url: string): Shapes.Manifest {
+   return manifests.get(url);
+}
+
 export function setStartManifest(url: string, data: Shapes.Manifest): void {
     startManifest = { url, data };
     setManifestProxySettings((data && data.proxy) || undefined);
