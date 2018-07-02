@@ -344,15 +344,9 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
 
 Application.getInfo = function(identity, callback) {
     const app = coreState.appByUuid(identity.uuid);
-    let manifestUrl = app && app._configUrl;
-    let manifest;
-    if (manifestUrl) {
-        manifest = coreState.getManifestByUrl(manifestUrl);
-    } else {
-        const manifestObj = coreState.getManifest(identity);
-        manifestUrl = manifestObj && manifestObj.url;
-        manifest = manifestObj && manifestObj.manifest;
-    }
+
+    const manifestObj = coreState.getClosestManifest(identity);
+    const { url: manifestUrl, manifest } = manifestObj || {};
 
     const parentUuid = Application.getParentApplication(identity);
     const launchMode = app && app.appObj && app.appObj.launchMode;

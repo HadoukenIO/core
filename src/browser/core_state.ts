@@ -32,6 +32,7 @@ import * as Shapes from '../shapes';
 import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
+import { AppObj } from '../shapes';
 
 export interface StartManifest {
     data: Shapes.Manifest;
@@ -96,6 +97,21 @@ export function getManifest(identity: Shapes.Identity): ManifestInfo {
 
 export function getManifestByUrl(url: string): Shapes.Manifest {
    return manifests.get(url);
+}
+
+export function getClosestManifest(identity: Shapes.Identity): ManifestInfo {
+    // Gets the manifest of the aplication or the closest parent with a saved manifest
+    const uuid = identity && identity.uuid;
+    const app = appByUuid(uuid);
+    const appObj = app && app.appObj;
+    const url = app && app._configUrl || appObj && appObj._configUrl;
+    if (url) {
+        const manifest = getManifestByUrl(url);
+        return { url, manifest };
+    } else {
+        const parentApp = appByUuid(app.parentUuid);
+        return parentApp ? getClosestManifest(parentApp) : null;
+    }
 }
 
 export function setStartManifest(url: string, data: Shapes.Manifest): void {
