@@ -346,14 +346,14 @@ Application.getInfo = function(identity, callback) {
     const app = coreState.appByUuid(identity.uuid);
 
     const manifestObj = coreState.getClosestManifest(identity);
-    const { url: manifestUrl, manifest } = manifestObj || {};
+    const { url, manifest } = manifestObj || {};
 
     const parentUuid = Application.getParentApplication(identity);
     const launchMode = app && app.appObj && app.appObj.launchMode;
 
     const response = {
         launchMode,
-        manifestUrl,
+        manifestUrl: url,
         manifest,
         parentUuid
     };
