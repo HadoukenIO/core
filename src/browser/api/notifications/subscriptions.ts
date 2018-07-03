@@ -305,9 +305,13 @@ function requestNoteCreation (noteData: any, parent: any) {
     } else {
         const {ack} = noteData;
 
-        ++askedFor;
-        notesToBeCreated.push(name);
-        invokeCreateAck(ack);
+        try {
+            invokeCreateAck(ack);
+            ++askedFor;
+            notesToBeCreated.push(name);
+        } catch (error) {
+            writeToLog('error', error);
+        }
     }
 
     updateQcounterCount(parent);
@@ -367,18 +371,23 @@ function createQCounterNumPendingMessage() {
 }
 
 function positionWindowsImmediate(liveNotes: Object[]) {
-    const {bottom} = getPrimaryMonitorAvailableRect();
-    const defaultTop = bottom - 100;
-    let numNotes: any;
-    let animationFunction: any;
+    try {
+        const {bottom} = getPrimaryMonitorAvailableRect();
+        const defaultTop = bottom - 100;
+        let numNotes: any;
+        let animationFunction: any;
 
-    updateAnimationState(true);
-    liveNotes = liveNotes.filter(opts => {
-        return windowIsValid(opts);
-    });
-    numNotes = liveNotes.length;
-    animationFunction = genAnimationFunction(defaultTop, numNotes);
-    liveNotes.forEach(animationFunction);
+        updateAnimationState(true);
+        liveNotes = liveNotes.filter(opts => {
+            return windowIsValid(opts);
+        });
+        numNotes = liveNotes.length;
+        animationFunction = genAnimationFunction(defaultTop, numNotes);
+        liveNotes.forEach(animationFunction);
+
+    } catch (error) {
+        writeToLog('error', error);
+    }
 }
 
 function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: any, idx: number) => void {
@@ -740,9 +749,13 @@ function createPendingNote(): void {
     if (noteHasValidParent) {
         const {ack} = nextNote;
 
-        ++askedFor;
-        invokeCreateAck(ack);
-        pendindNotes.shift();
+        try {
+            invokeCreateAck(ack);
+            ++askedFor;
+            pendindNotes.shift();
+        } catch (error) {
+            writeToLog('error', error);
+        }
     }
 }
 
