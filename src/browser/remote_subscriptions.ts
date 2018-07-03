@@ -146,7 +146,7 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
 
 
     // Subscribe to an event on a remote runtime
-    await classEventEmitter[listenType](eventName, listener);
+    classEventEmitter[listenType](eventName, listener);
 
 
     // Store a cleanup function for the added listener in
