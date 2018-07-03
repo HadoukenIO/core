@@ -92,19 +92,19 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
             subscription.unSubscriptions = new Map();
         }
 
-        return connectionManager.resolveIdentity({
+        connectionManager.resolveIdentity({
             uuid: subscription.uuid
 
         }).then((id) => {
             // Found app/window in a remote runtime, subscribing
-            return applyRemoteSubscription(subscription, id.runtime);
+            applyRemoteSubscription(subscription, id.runtime);
 
         }).catch(() => {
             // App/window not found. We are assuming it will come up sometime in the future.
             // For now, subscribe in all current connected runtimes and add the subscription
             // to the pending list for future runtimes
             pendingRemoteSubscriptions.set(subscription._id, subscription);
-            return connectionManager.connections.forEach((runtime) => {
+            connectionManager.connections.forEach((runtime) => {
                 applyRemoteSubscription(subscription, runtime);
             });
 
