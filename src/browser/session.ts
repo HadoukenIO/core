@@ -79,12 +79,12 @@ class Session extends EventEmitter {
 
                     case 7:
                         reason = 'lock';
-                        this.dealwithLock();
+                        this.handleLock(true);
                         break;
 
                     case 8:
                         reason = 'unlock';
-                        this.dealwithUnlock();
+                        this.handleLock(false);
                         break;
 
                     default:
@@ -92,19 +92,19 @@ class Session extends EventEmitter {
                         break;
                 }
 
-                this.fireSeesionEvent(reason);
+                this.fireSessionEvent(reason);
             });
 
             bw.subscribeSessionNotifications(true);
         } else if (process.platform === 'darwin') {
             systemPreferences.subscribeNotification('com.apple.screenIsLocked', () => {
-                this.dealwithLock();
-                this.fireSeesionEvent('lock');
+                this.handleLock(true);
+                this.fireSessionEvent('lock');
             });
 
             systemPreferences.subscribeNotification('com.apple.screenIsUnlocked', () => {
-                this.dealwithUnlock();
-                this.fireSeesionEvent('unlock');
+                this.handleLock(false);
+                this.fireSessionEvent('unlock');
             });
         }
     }
@@ -126,7 +126,7 @@ class Session extends EventEmitter {
      * Send out an event that lets subscribers know that the session state
      * of the machine has been changed
      */
-    private fireSeesionEvent(reason: string): void {
+    private fireSessionEvent(reason: string): void {
         this.emit('session-changed', {
             reason,
             topic: 'system',
@@ -139,25 +139,22 @@ class Session extends EventEmitter {
      * NOTE: when the screen is locked, the machine is considered idle.
      * there is no need for the checkIdleStateTimer until the screen is unlocked
      */
-    private dealwithLock(): void {
-        this.checkIdleStateTimer.stop();
+    private handleLock(locked: boolean): void {
+        if (locked) {
+            this.checkIdleStateTimer.stop();
 
-        if (!this.idleEventTimer.isRunning()) {
-            this.idleStartTime = app.getTickCount();
-            this.fireIdleEvent(true);
-            this.idleEventTimer.reset();
+            if (!this.idleEventTimer.isRunning()) {
+                this.idleStartTime = app.getTickCount();
+                this.fireIdleEvent(true);
+                this.idleEventTimer.reset();
+            }
+        } else {
+            this.idleEventTimer.stop();
+
+            this.idleEndTime = app.getTickCount();
+            this.fireIdleEvent(false, this.idleEndTime - this.idleStartTime);
+            this.checkIdleStateTimer.reset();
         }
-    }
-
-    /**
-     * deal with unlock event
-     */
-    private dealwithUnlock(): void {
-        this.idleEventTimer.stop();
-
-        this.idleEndTime = app.getTickCount();
-        this.fireIdleEvent(false, this.idleEndTime - this.idleStartTime);
-        this.checkIdleStateTimer.reset();
     }
 }
 
