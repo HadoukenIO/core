@@ -21,11 +21,13 @@ class OFEvents extends EventEmitter {
         super();
     }
 
-    public emit(routeString: string, ...data: any[]) {
+    public emit(routeString: string, payload: any, ...extraArgs: any[]) {
         const tokenizedRoute = routeString.split('/');
-
+        const eventPropagations = new Map<string, any>();
+        const data = [payload, ...extraArgs];
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
+            const uuid = (payload && payload.uuid) || tokenizedRoute[2] || '*';
             const source = tokenizedRoute.slice(2).join('/');
             const envelope = {channel, topic, source, data};
 
@@ -40,14 +42,13 @@ class OFEvents extends EventEmitter {
                 super.emit(route(channel, '*', source), envelope);
             }
             if (channel === 'window') {
-                const [channel, topic, uuid, name] = tokenizedRoute;
                 const propTopic = `window-${topic}`;
                 const dontPropagateToSystem = [
                     'auth-requested'
                 ];
-                this.emit(route.application(propTopic, uuid), ...data);
+                eventPropagations.set(route.application(propTopic, uuid), {...payload, type: propTopic, topic: 'application'});
                 if (!dontPropagateToSystem.some( x => x === topic)) {
-                   this.emit(route.system(propTopic), ...data);
+                   eventPropagations.set(route.system(propTopic), {...payload, type: propTopic, topic: 'system'});
                 }
             } else if (channel === 'application') {
                 const propTopic = `application-${topic}`;
@@ -55,19 +56,21 @@ class OFEvents extends EventEmitter {
                     'window-alert-requested',
                     'window-created',
                     'window-end-load',
-                    'window-not-responding',
                     'window-responding',
                     'window-start-load'
                 ];
-                if (!topic.match(/$window-/)) {
-                    this.emit(route.system(`application-${topic}`), ...data);
+                if (!topic.match(/^window-/)) {
+                    eventPropagations.set(route.system(propTopic), { ...payload, type: propTopic, topic: 'system' });
                 } else if (appWindowEventsNotOnWindow.some(t => t === topic)) {
-                    this.emit(route.system(topic), ...data);
+                    eventPropagations.set(route.system(topic), {...payload, type: propTopic, topic: 'system'});
                 }
             }
         }
-
-        return super.emit(routeString, ...data);
+        const result = super.emit(routeString, ...data);
+        eventPropagations.forEach((payload, eventString) => {
+            this.emit(eventString, payload, ...extraArgs);
+        });
+        return result;
     }
 
     public subscriber: StringMap = {
