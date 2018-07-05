@@ -76,7 +76,6 @@ let browserWindowEventMap = {
     },
     'blur': {
         topic: 'blurred',
-        decorator: blurredDecorator
     },
     'synth-bounds-change': {
         topic: 'bounds-changing', // or bounds-changed
@@ -96,7 +95,6 @@ let browserWindowEventMap = {
     },
     'focus': {
         topic: 'focused',
-        decorator: focusedDecorator
     },
     'opacity-changed': {
         decorator: opacityChangedDecorator
@@ -550,12 +548,9 @@ Window.create = function(id, opts) {
         });
 
         const isMainWindow = (uuid === name);
-        const emitToAppAndWin = (type, payload) => {
+        const emitToAppIfMainWin = (type, payload) => {
             // Window crashed: inform Window "namespace"
             ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
-
-            // Window crashed: inform Application "namespace" but with "window-" event string prefix
-            ofEvents.emit(route.application(`window-${type}`, uuid), Object.assign({ topic: 'application', type, uuid, name }, payload));
 
             if (isMainWindow) {
                 // Application crashed: inform Application "namespace"
@@ -568,7 +563,7 @@ Window.create = function(id, opts) {
         });
 
         webContents.on('crashed', (event, killed, terminationStatus) => {
-            emitToAppAndWin('crashed', {
+            emitToAppIfMainWin('crashed', {
                 reason: terminationStatus
             });
 
@@ -587,11 +582,11 @@ Window.create = function(id, opts) {
         });
 
         browserWindow.on('responsive', () => {
-            emitToAppAndWin('responding');
+            emitToAppIfMainWin('responding');
         });
 
         browserWindow.on('unresponsive', () => {
-            emitToAppAndWin('not-responding');
+            emitToAppIfMainWin('not-responding');
         });
 
         let mapEvents = function(eventMap, eventEmitter) {
@@ -1832,13 +1827,6 @@ function emitCloseEvents(identity) {
         name
     });
 
-    ofEvents.emit(route.application('window-closed', uuid), {
-        topic: 'application',
-        type: 'window-closed',
-        uuid,
-        name
-    });
-
     ofEvents.emit(route.window('init-subscription-listeners'), identity);
 }
 
@@ -1849,14 +1837,6 @@ function emitReloadedEvent(identity, url) {
     } = identity;
 
     ofEvents.emit(route.window('reloaded', uuid, name), {
-        uuid,
-        name,
-        url
-    });
-
-    ofEvents.emit(route.application('window-reloaded', uuid), {
-        topic: 'application',
-        type: 'window-reloaded',
         uuid,
         name,
         url
@@ -1980,13 +1960,6 @@ function handleForceActions(identity, force, eventType, eventPayload, defaultAct
         eventPayload.topic = 'window';
 
         ofEvents.emit(winEventString, eventPayload);
-
-        if (eventType === 'show-requested') {
-            eventPayload.type = 'window-show-requested';
-            eventPayload.topic = 'application';
-
-            ofEvents.emit(appEventString, eventPayload);
-        }
     }
 }
 
@@ -2061,20 +2034,6 @@ function closeRequestedDecorator(payload) {
     payload.force = false;
 
     return propagate;
-}
-
-function blurredDecorator(payload, args) {
-    const { uuid, name } = payload;
-    ofEvents.emit(route.application('window-blurred', uuid), { topic: 'application', type: 'window-blurred', uuid, name });
-    ofEvents.emit(route.system('window-blurred'), { topic: 'system', type: 'window-blurred', uuid, name });
-    return true;
-}
-
-function focusedDecorator(payload, args) {
-    const { uuid, name } = payload;
-    ofEvents.emit(route.application('window-focused', uuid), { topic: 'application', type: 'window-focused', uuid, name });
-    ofEvents.emit(route.system('window-focused'), { topic: 'system', type: 'window-focused', uuid, name });
-    return true;
 }
 
 function boundsChangeDecorator(payload, args) {

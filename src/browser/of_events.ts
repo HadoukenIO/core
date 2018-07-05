@@ -39,6 +39,32 @@ class OFEvents extends EventEmitter {
                 // Wildcard on any channel/topic of a specified source (ex: 'window/*/myUUID-myWindow')
                 super.emit(route(channel, '*', source), envelope);
             }
+            if (channel === 'window') {
+                const [channel, topic, uuid, name] = tokenizedRoute;
+                const propTopic = `window-${topic}`;
+                const dontPropagateToSystem = [
+                    'auth-requested'
+                ];
+                this.emit(route.application(propTopic, uuid), ...data);
+                if (!dontPropagateToSystem.some( x => x === topic)) {
+                   this.emit(route.system(propTopic), ...data);
+                }
+            } else if (channel === 'application') {
+                const propTopic = `application-${topic}`;
+                const appWindowEventsNotOnWindow = [
+                    'window-alert-requested',
+                    'window-created',
+                    'window-end-load',
+                    'window-not-responding',
+                    'window-responding',
+                    'window-start-load'
+                ];
+                if (!topic.match(/$window-/)) {
+                    this.emit(route.system(`application-${topic}`), ...data);
+                } else if (appWindowEventsNotOnWindow.some(t => t === topic)) {
+                    this.emit(route.system(topic), ...data);
+                }
+            }
         }
 
         return super.emit(routeString, ...data);
