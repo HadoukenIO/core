@@ -122,11 +122,17 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
 async function applyRemoteSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
     const classEventEmitter = await getClassEventEmitter(subscription, runtime);
     const runtimeKey = keyFromPortInfo(runtime.portInfo);
-    const { uuid, name, className, eventName, listenType, unSubscriptions } = subscription;
+    const { uuid, name, className, eventName, listenType } = subscription;
+    let { unSubscriptions } = subscription;
     const fullEventName = (typeof name === 'string')
         ? route(className, eventName, uuid, name, true)
         : route(className, eventName, uuid);
 
+    //Handling the case where the identity has been found in a new runtime via applyAllSubscriptions
+    if (!(unSubscriptions instanceof Map)) {
+        unSubscriptions = new Map();
+        subscription.unSubscriptions = unSubscriptions;
+    }
     const listener = (data: any) => {
         if (!data.runtimeUuid) {
             data.runtimeUuid = getMeshUuid();
@@ -138,8 +144,10 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
         cleanUpSubscription(subscription, runtimeKey);
     };
 
+
     // Subscribe to an event on a remote runtime
     classEventEmitter[listenType](eventName, listener);
+
 
     // Store a cleanup function for the added listener in
     // un-subscription map, so that later we can remove extra subscriptions
