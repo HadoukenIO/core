@@ -24,7 +24,10 @@ import route from '../src/common/route';
 const sinon = require('sinon');
 
 mockery.registerMock('electron', mockElectron);
-mockery.enable();
+mockery.enable({
+    warnOnReplace: false,
+    warnOnUnregistered: false
+});
 import { GlobalHotkey } from '../src/browser/api/global_hotkey';
 
 describe('GlobalHotkey', () => {

@@ -36,7 +36,10 @@ const mockWMCopyData = {
 
 mockery.registerMock('electron', mockElectron);
 mockery.registerMock('../transport', mockWMCopyData);
-mockery.enable();
+mockery.enable({
+    warnOnReplace: false,
+    warnOnUnregistered: false
+});
 
 import {rvmMessageBus, RVMMessageBus} from '../src/browser/rvm/rvm_message_bus';
 
