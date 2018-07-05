@@ -169,7 +169,10 @@ module.exports = (grunt) => {
         },
         mochaTest: {
             default: {
-                src: ['staging/core/test/**.js']
+                src: ['staging/core/test/**.js'],
+                options: {
+                    reporter: 'dot'
+                }
             }
         }
     });
