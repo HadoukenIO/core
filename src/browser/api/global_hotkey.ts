@@ -11,7 +11,6 @@ const { globalShortcut } = require('electron');
 
 const subscriptionManager = new SubscriptionManager();
 const hotkeyOwnershipMap: Map<string, string> = new Map();
-const subCount: Map<string, number> = new Map();
 const emitter = new EventEmitter();
 
 const eventNames = {
@@ -36,44 +35,6 @@ export const reservedHotKeys: Array<string> = [
 export class HotKeyError extends Error {
     constructor(hotkey: string, reason: string) {
         super(`Failed to register Hotkey: ${hotkey}, ${reason}`);
-    }
-}
-
-//want to avoid closing over any variables during the register phase.
-function constructEmit(hotkey: string): () => void {
-    return () => {
-        emitter.emit(hotkey);
-    };
-}
-
-//want to avoid closing over any variables during the register phase.
-function constructUnregister(identity: Identity, hotkey: string, listener: Function): () => void {
-    return () => {
-        emitter.removeListener(hotkey, listener);
-        if (emitter.listenerCount(hotkey) < 1) {
-            GlobalHotkey.unregister(identity, hotkey);
-        }
-    };
-}
-
-function applyRegistration(identity: Identity, hotkey: string, listener: Function): void {
-    emitter.on(hotkey, listener);
-    //make sure that if the registered context is destroyed we will unregister the hotkey
-    subscriptionManager.registerSubscription(constructUnregister(identity, hotkey, listener), identity, hotkey);
-}
-
-//here we will check if the subscription is a valid one.
-function validateRegistration(identity: Identity, hotkey: string): void {
-    const ownerUuid = hotkeyOwnershipMap.get(hotkey);
-    // already allowed this hotkey for this uuid, return early
-    if (ownerUuid && ownerUuid === identity.uuid) {
-        return;
-    } else if (reservedHotKeys.indexOf(hotkey) > -1) {
-        throw new HotKeyError(hotkey, 'is reserved');
-    } else {
-        if (globalShortcut.isRegistered(hotkey)) {
-            throw new HotKeyError(hotkey, 'already registered');
-        }
     }
 }
 
@@ -132,5 +93,44 @@ export module GlobalHotkey {
         return () => {
             ofEvents.removeListener(evt, listener);
         };
+    }
+}
+
+
+//want to avoid closing over any variables during the register phase.
+function constructEmit(hotkey: string): () => void {
+    return () => {
+        emitter.emit(hotkey);
+    };
+}
+
+//want to avoid closing over any variables during the register phase.
+function constructUnregister(identity: Identity, hotkey: string, listener: Function): () => void {
+    return () => {
+        emitter.removeListener(hotkey, listener);
+        if (emitter.listenerCount(hotkey) < 1) {
+            GlobalHotkey.unregister(identity, hotkey);
+        }
+    };
+}
+
+function applyRegistration(identity: Identity, hotkey: string, listener: Function): void {
+    emitter.on(hotkey, listener);
+    //make sure that if the registered context is destroyed we will unregister the hotkey
+    subscriptionManager.registerSubscription(constructUnregister(identity, hotkey, listener), identity, hotkey);
+}
+
+//here we will check if the subscription is a valid one.
+function validateRegistration(identity: Identity, hotkey: string): void {
+    const ownerUuid = hotkeyOwnershipMap.get(hotkey);
+    // already allowed this hotkey for this uuid, return early
+    if (ownerUuid && ownerUuid === identity.uuid) {
+        return;
+    } else if (reservedHotKeys.indexOf(hotkey) > -1) {
+        throw new HotKeyError(hotkey, 'is reserved');
+    } else {
+        if (globalShortcut.isRegistered(hotkey)) {
+            throw new HotKeyError(hotkey, 'already registered');
+        }
     }
 }

@@ -1,10 +1,8 @@
 
 import RequestHandler from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
-import * as log from '../../log';
 import { sendToIdentity } from './api_protocol_base';
-import { Identity } from '../../../shapes';
-import { NackPayload, AckFunc, NackFunc } from '../transport_strategy/ack';
+import { AckFunc, NackFunc } from '../transport_strategy/ack';
 
 const coreState = require('../../core_state');
 
@@ -81,7 +79,7 @@ function handleExternalApiAction(msg: MessagePackage, next: () => void): void {
 
 //this preprocessor will check if the API call is an 'ack' action from an external connection and tie it to a ExternalApiAction.
 function handleExternalAckAction(msg: MessagePackage, next: () => void): void {
-    const { data, nack } = msg;
+    const { data } = msg;
     const action = data && data.action;
 
     if (action === EXTERNAL_ACK_ACTION) {

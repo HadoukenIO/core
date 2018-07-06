@@ -4,7 +4,6 @@
 */
 
 // built-in modules
-declare const process: any;
 import { EventEmitter } from 'events';
 
 // npm modules

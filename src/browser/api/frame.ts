@@ -3,7 +3,6 @@ import ofEvents from '../of_events';
 import { Identity, OpenFinWindow, EventPayload } from '../../shapes';
 import route from '../../common/route';
 import * as  coreState from '../core_state';
-import * as log from '../log';
 import * as Shapes from '../../shapes';
 
 export class FrameInfo implements Shapes.FrameInfo {

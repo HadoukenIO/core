@@ -20,8 +20,6 @@ import ofEvents from './of_events';
 import connectionManager, { PeerRuntime, keyFromPortInfo, getMeshUuid } from './connection_manager';
 import { Identity } from '../shapes';
 import route from '../common/route';
-import * as coreState from './core_state';
-import { PortInfo } from './port_discovery';
 import { EventEmitter } from 'events';
 
 // id count to generate IDs for subscriptions

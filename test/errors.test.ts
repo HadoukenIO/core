@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as mockery from 'mockery';
-import {mockElectron, lastLogValue, lastVlogValue} from './electron';
+import {mockElectron} from './electron';
 
 mockery.registerMock('electron', mockElectron);
 mockery.enable({

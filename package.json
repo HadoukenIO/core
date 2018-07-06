@@ -48,8 +48,8 @@
     "should": "^11.1.0",
     "should-sinon": "^0.0.5",
     "sinon": "^1.17.5",
-    "tslint": "^5.4.3",
-    "tslint-microsoft-contrib": "^5.0.0",
+    "tslint": "^5.10.0",
+    "tslint-microsoft-contrib": "^5.0.3",
     "typescript": "^2.9.2",
     "wrench": "^1.5.9"
   },
