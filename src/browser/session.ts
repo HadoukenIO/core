@@ -135,7 +135,7 @@ class Session extends EventEmitter {
     }
 
     /**
-     * deal with the lock event
+     * deal with the lock and unlock event
      * NOTE: when the screen is locked, the machine is considered idle.
      * there is no need for the checkIdleStateTimer until the screen is unlocked
      */
