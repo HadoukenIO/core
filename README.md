@@ -78,8 +78,9 @@ openfin --config app.json --launch
 
 API Docs for the OpenFin core are available here:
 
-Alpha: (http://cdn.openfin.co/jsdocs/alpha/)
-Stable: (http://cdn.openfin.co/jsdocs/stable/)
+[Alpha](http://cdn.openfin.co/jsdocs/alpha/)
+
+[Stable](http://cdn.openfin.co/jsdocs/stable/)
 
 ### File Structure Notes
 The contents of `/src/renderer/extended` folder is referenced by the `openfin.asar` (not contained in this project)

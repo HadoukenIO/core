@@ -86,12 +86,6 @@ export function navigationValidator(uuid: string, name: string, id: number) {
                 url,
                 sourceName
             });
-            ofEvents.emit(route.application('window-navigation-rejected', uuid), {
-                name,
-                uuid,
-                url,
-                sourceName
-            });
             event.preventDefault();
         }
     };

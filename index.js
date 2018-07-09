@@ -321,13 +321,6 @@ app.on('ready', function() {
                 name: identity.name,
                 authInfo: authInfo
             });
-            ofEvents.emit(appEvtName, {
-                topic: 'application',
-                type: 'window-auth-requested',
-                uuid: identity.uuid,
-                name: identity.name,
-                authInfo: authInfo
-            });
         }
 
         event.preventDefault();

@@ -110,13 +110,6 @@ electronApp.on('synth-desktop-icon-clicked', payload => {
 });
 
 const eventPropagationMap = new Map();
-eventPropagationMap.set(route.application('created', '*'), 'application-created');
-eventPropagationMap.set(route.application('started', '*'), 'application-started');
-eventPropagationMap.set(route.application('closed', '*'), 'application-closed');
-eventPropagationMap.set(route.application('crashed', '*'), 'application-crashed');
-eventPropagationMap.set(route.application('window-created', '*'), 'window-created');
-eventPropagationMap.set(route.application('window-closed', '*'), 'window-closed');
-eventPropagationMap.set(route.application('window-crashed', '*'), 'window-crashed');
 eventPropagationMap.set(route.externalApplication('connected'), 'external-application-connected');
 eventPropagationMap.set(route.externalApplication('disconnected'), 'external-application-disconnected');
 
