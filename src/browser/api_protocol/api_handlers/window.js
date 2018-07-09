@@ -467,7 +467,7 @@ function disableWindowFrame(identity, message, ack) {
     var payload = message.payload,
         windowIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
 
-    Window.disableFrame(windowIdentity);
+    Window.disableFrame(identity, windowIdentity);
     ack(successAck);
 }
 

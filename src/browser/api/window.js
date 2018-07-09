@@ -69,6 +69,7 @@ const WindowsMessages = {
 };
 
 let Window = {};
+const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
     'api-injection-failed': {
@@ -140,6 +141,10 @@ let webContentsEventMap = {
         decorator: loadFailedDecorator
     }
 };
+
+function genWindowKey(identity) {
+    return `${identity.uuid}-${identity.name}`;
+}
 
 /*
     For the bounds stuff, looks like 5.0 does not take actions until the
@@ -1047,14 +1052,29 @@ Window.close = function(identity, force, callback = () => {}) {
     handleForceActions(identity, force, 'close-requested', payload, defaultAction);
 };
 
+function disabledFrameUnsubDecorator(identity) {
+    const windowKey = genWindowKey(identity);
+    return function() {
+        let refCount = disabledFrameRef.get(windowKey) || 0;
+        if (refCount > 1) {
+            disabledFrameRef.set(windowKey, --refCount);
+        } else {
+            Window.enableFrame(identity);
+        }
+    };
+}
 
-Window.disableFrame = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
+Window.disableFrame = function(requestorIdentity, windowIdentity) {
+    const browserWindow = getElectronBrowserWindow(windowIdentity);
+    const windowKey = genWindowKey(windowIdentity);
 
     if (!browserWindow) {
         return;
     }
 
+    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
+    disabledFrameRef.set(windowKey, ++dframeRefCount);
+    subscriptionManager.registerSubscription(disabledFrameUnsubDecorator(windowIdentity), requestorIdentity, `disable-frame-${windowKey}`);
     browserWindow.setUserMovementEnabled(false);
 };
 
@@ -1081,12 +1101,14 @@ Window.embed = function(identity, parentHwnd) {
 };
 
 Window.enableFrame = function(identity) {
+    const windowKey = genWindowKey(identity);
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
     }
-
+    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
+    disabledFrameRef.set(windowKey, --dframeRefCount);
     browserWindow.setUserMovementEnabled(true);
 };
 

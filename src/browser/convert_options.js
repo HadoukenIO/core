@@ -100,6 +100,7 @@ function five0BaseOptions() {
         'name': '',
         'opacity': 1,
         'plugins': false,
+        'spellCheck': false, // app level
         'resizable': true,
         'resize': true,
         'resizeRegion': {
