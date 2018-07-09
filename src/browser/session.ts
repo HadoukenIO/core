@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 import { EventEmitter } from 'events';
-import { BrowserWindow, app, idleState, nativeTimer } from 'electron';
+import { BrowserWindow, app, idleState, nativeTimer, systemPreferences } from 'electron';
 
 class Session extends EventEmitter {
     private idleState: idleState;
@@ -79,24 +79,12 @@ class Session extends EventEmitter {
 
                     case 7:
                         reason = 'lock';
-
-                        // NOTE: when the screen is locked, the machine is considered idle.
-                        // there is no need for the checkIdleStateTimer until the screen is unlocked
-                        this.checkIdleStateTimer.stop();
-
-                        if (!this.idleEventTimer.isRunning()) {
-                            this.idleStartTime = app.getTickCount();
-                            this.fireIdleEvent(true);
-                            this.idleEventTimer.reset();
-                        }
+                        this.handleLock(true);
                         break;
 
                     case 8:
                         reason = 'unlock';
-                        this.idleEventTimer.stop();
-                        this.idleEndTime = app.getTickCount();
-                        this.fireIdleEvent(false, this.idleEndTime - this.idleStartTime);
-                        this.checkIdleStateTimer.reset();
+                        this.handleLock(false);
                         break;
 
                     default:
@@ -104,14 +92,20 @@ class Session extends EventEmitter {
                         break;
                 }
 
-                this.emit('session-changed', {
-                    reason,
-                    topic: 'system',
-                    type: 'session-changed'
-                });
+                this.fireSessionEvent(reason);
             });
 
             bw.subscribeSessionNotifications(true);
+        } else if (process.platform === 'darwin') {
+            systemPreferences.subscribeNotification('com.apple.screenIsLocked', () => {
+                this.handleLock(true);
+                this.fireSessionEvent('lock');
+            });
+
+            systemPreferences.subscribeNotification('com.apple.screenIsUnlocked', () => {
+                this.handleLock(false);
+                this.fireSessionEvent('unlock');
+            });
         }
     }
 
@@ -126,6 +120,41 @@ class Session extends EventEmitter {
             topic: 'system',
             type: 'idle-state-changed'
         });
+    }
+
+    /**
+     * Send out an event that lets subscribers know that the session state
+     * of the machine has been changed
+     */
+    private fireSessionEvent(reason: string): void {
+        this.emit('session-changed', {
+            reason,
+            topic: 'system',
+            type: 'session-changed'
+        });
+    }
+
+    /**
+     * deal with the lock and unlock event
+     * NOTE: when the screen is locked, the machine is considered idle.
+     * there is no need for the checkIdleStateTimer until the screen is unlocked
+     */
+    private handleLock(locked: boolean): void {
+        if (locked) {
+            this.checkIdleStateTimer.stop();
+
+            if (!this.idleEventTimer.isRunning()) {
+                this.idleStartTime = app.getTickCount();
+                this.fireIdleEvent(true);
+                this.idleEventTimer.reset();
+            }
+        } else {
+            this.idleEventTimer.stop();
+
+            this.idleEndTime = app.getTickCount();
+            this.fireIdleEvent(false, this.idleEndTime - this.idleStartTime);
+            this.checkIdleStateTimer.reset();
+        }
     }
 }
 

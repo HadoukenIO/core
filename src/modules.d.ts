@@ -133,6 +133,10 @@ declare module 'electron' {
 
     }
 
+    namespace systemPreferences {
+        export function subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): void;
+    }
+
     export class chromeIpcClient {
         connect(pipeName: string): void;
         on(event: string, callback: () => any): void;
