@@ -482,7 +482,7 @@ function disableWindowFrame(identity: Identity, message: APIMessage, ack: Acker)
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.disableFrame(windowIdentity);
+    Window.disableFrame(identity, windowIdentity);
     ack(successAck);
 }
 
