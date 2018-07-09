@@ -112,7 +112,6 @@ function five0BaseOptions() {
         'shadow': false,
         'showTaskbarIcon': true,
         'smallWindow': false,
-        'spellCheck': false, // app level
         'state': 'normal',
         'taskbarIcon': '',
         'taskbarIconGroup': '',
