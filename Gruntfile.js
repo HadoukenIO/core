@@ -25,7 +25,7 @@ limitations under the License.
 const fs = require('fs');
 const path = require('path');
 const asar = require('asar');
-const nativeBuilder = require('electron-rebuild');
+const electronRebuild = require('electron-rebuild');
 const wrench = require('wrench');
 
 // OpenFin signing module
@@ -177,17 +177,16 @@ module.exports = (grunt) => {
     grunt.registerTask('build-dev', [
         'license',
         'jshint',
-        'jsbeautifier:default',
+        'jsbeautifier',
         'clean',
         'babel',
         'tslint',
         'ts',
         'mochaTest',
-        'copy:lib',
-        'copy:etc',
-        'copy:login',
-        'copy:certificate',
-        'sign-files'
+        'build-deploy-modules',
+        'copy',
+        'sign-files',
+        'sign-adapter'
     ]);
 
     grunt.registerTask('test', [
@@ -202,18 +201,7 @@ module.exports = (grunt) => {
     ]);
 
     grunt.registerTask('build-pac', [
-        'license',
-        'jshint',
-        'jsbeautifier',
-        'clean',
-        'babel',
-        'tslint',
-        'ts',
-        'mochaTest',
-        'copy',
-        'build-deploy-modules',
-        'sign-files',
-        'sign-adapter',
+        'build-dev',
         'package',
         'package-adapter',
         'sign-asar'
@@ -255,31 +243,14 @@ module.exports = (grunt) => {
 
     grunt.registerTask('build-deploy-modules', 'Build native modules', function() {
         const done = this.async();
-        const nativeModVersion = grunt.option('nmv') || 'v5.10.0';
-        const nodeHeaderVersion = grunt.option('nhv') || 'v0.37.5';
-        const rebuildNativeVersion = grunt.option('rnv') || '0.37.5';
-        const outdir = './staging/core/node_modules';
-        const arch = grunt.option('arch') || 'ia32';
 
-        grunt.log.ok('Checking if rebuilding native modules is required.');
-        nativeBuilder.shouldRebuildNativeModules(undefined, nativeModVersion).then(function(shouldBuild) {
-            if (!shouldBuild) {
-                grunt.log.ok('Skipping native builds.');
-                done();
-                return true;
-            }
-
-            grunt.log.ok('Installing headers.');
-            return nativeBuilder.installNodeHeaders(nodeHeaderVersion, undefined, undefined, 'ia32')
-                .then(function() {
-                    // Ensure directory tree exists
-                    grunt.file.mkdir(outdir);
-                    grunt.log.ok('Building native modules.');
-                    nativeBuilder.rebuildNativeModules(rebuildNativeVersion, outdir, undefined, undefined, arch).then(function() {
-                        done();
-                    });
-                });
-        }).catch(function(e) {
+        electronRebuild.rebuild({
+            buildPath: __dirname,
+            electronVersion: '2.0.2'
+        }).then(() => {
+            grunt.log.writeln('Rebuild successful!');
+            done();
+        }).catch((e) => {
             grunt.log.error('Building modules didn\'t work!');
             grunt.log.error(e);
             done();
