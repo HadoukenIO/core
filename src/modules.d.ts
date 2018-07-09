@@ -59,6 +59,22 @@ declare module 'electron' {
         width: number;
         height: number;
     }
+    
+    export interface Display {
+        id: number;
+        rotation: number;
+        scaleFactor: number;
+        touchSupport: string;
+        bounds: Rectangle;
+        size: Size;
+        workArea: Rectangle;
+        workAreaSize: Size;
+    }
+    
+    export interface Size {
+        width: number;
+        height: number;
+    }
 
     export class BrowserWindow {
         constructor(props: any);
@@ -76,6 +92,7 @@ declare module 'electron' {
         isMinimized(): boolean;
         emit(routeString: string, ...args: any[]): void;
         getBounds(): Rectangle;
+        setBounds(bounds: Rectangle): void;
         setWindowPlacement(bounds: Rectangle): void;
         devToolsWebContents: null;
         webContents: webContents;
@@ -98,6 +115,10 @@ declare module 'electron' {
         hasFrame: (frameName: string) => boolean;
         mainFrameRoutingId: number;
         session: session;
+    }
+    
+    export namespace screen {
+        export function getDisplayMatching(rect: Rectangle): Display;
     }
 
     export class session {
