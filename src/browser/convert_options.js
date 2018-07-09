@@ -100,7 +100,6 @@ function five0BaseOptions() {
         'name': '',
         'opacity': 1,
         'plugins': false,
-        'spellCheck': false, // app level
         'resizable': true,
         'resize': true,
         'resizeRegion': {
@@ -112,6 +111,7 @@ function five0BaseOptions() {
         'shadow': false,
         'showTaskbarIcon': true,
         'smallWindow': false,
+        'spellCheck': false, // app level
         'state': 'normal',
         'taskbarIcon': '',
         'taskbarIconGroup': '',
