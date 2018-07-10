@@ -50,7 +50,7 @@
     "sinon": "^1.17.5",
     "tslint": "^5.4.3",
     "tslint-microsoft-contrib": "^5.0.0",
-    "typescript": "~2.2.0",
+    "typescript": "^2.9.2",
     "wrench": "^1.5.9"
   },
   "dependencies": {

@@ -101,7 +101,10 @@ module.exports = (grunt) => {
         // Transpile TypeScript to JavaScript
         ts: {
             default: {
-                tsconfig: true
+                tsconfig: true,
+                options: {
+                    fast: 'never'
+                }
             }
         },
 
