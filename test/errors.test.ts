@@ -18,7 +18,10 @@ import * as mockery from 'mockery';
 import {mockElectron, lastLogValue, lastVlogValue} from './electron';
 
 mockery.registerMock('electron', mockElectron);
-mockery.enable();
+mockery.enable({
+    warnOnReplace: false,
+    warnOnUnregistered: false
+});
 import * as errors from '../src/common/errors';
 
 describe('Errors', () => {
