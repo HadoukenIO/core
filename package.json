@@ -54,14 +54,12 @@
     "wrench": "^1.5.9"
   },
   "dependencies": {
+    "hadouken-js-adapter": "0.32.1-alpha.5",
     "minimist": "^1.2.0",
     "options": "0.0.6",
-    "q": "^1.2.0",
-    "request": "^2.67.0",
     "rx": "^4.1.0",
     "ultron": "^1.0.2",
     "underscore": "^1.8.3",
-    "ws": "1.1.1",
-    "hadouken-js-adapter": "0.32.1-alpha.5"
+    "ws": "1.1.1"
   }
 }

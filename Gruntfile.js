@@ -27,18 +27,11 @@ const path = require('path');
 const asar = require('asar');
 const nativeBuilder = require('electron-rebuild');
 const wrench = require('wrench');
-
-// OpenFin signing module
-const openfinSign = require('openfin-sign');
+const openfinSign = require('openfin-sign'); // OpenFin signing module
 
 const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
 const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
-
-//optional dependencies that we ship.
-const optionalDependencies = [
-    'hadouken-js-adapter/**',
-];
-
+const stagingNodeModulesPath = path.join('staging', 'core', 'node_modules');
 const jsAdapterPath = path.join('node_modules', 'hadouken-js-adapter', 'out');
 
 // https://github.com/beautify-web/js-beautify#options
@@ -75,8 +68,8 @@ module.exports = (grunt) => {
                 files: [{
                     cwd: './node_modules',
                     expand: true,
-                    src: [dependencies, optionalDependencies],
-                    dest: 'staging/core/node_modules'
+                    src: [dependencies],
+                    dest: stagingNodeModulesPath
                 }]
             },
             etc: { //other artifacts that need copying
@@ -187,6 +180,7 @@ module.exports = (grunt) => {
         'copy:etc',
         'copy:login',
         'copy:certificate',
+        'clean-up-dependencies',
         'sign-files'
     ]);
 
@@ -211,6 +205,7 @@ module.exports = (grunt) => {
         'ts',
         'mochaTest',
         'copy',
+        'clean-up-dependencies',
         'build-deploy-modules',
         'sign-files',
         'sign-adapter',
@@ -251,6 +246,40 @@ module.exports = (grunt) => {
     grunt.registerTask('clean', 'clean the out house', function() {
         wrench.rmdirSyncRecursive('staging', true);
         wrench.rmdirSyncRecursive('out', true);
+    });
+    
+    grunt.registerTask('clean-up-dependencies', 'Clean up dependencies', function() {
+        
+        // Clean Rx library (6.94MB -> 144KB)
+        const rxLibPath = path.join(stagingNodeModulesPath, 'rx');
+        const rxLib = fs.readFileSync(path.join(rxLibPath, 'dist', 'rx.all.min.js'), 'utf-8');
+        wrench.rmdirSyncRecursive(rxLibPath);
+        wrench.mkdirSyncRecursive(rxLibPath);
+        fs.writeFileSync(path.join(rxLibPath, 'index.js'), rxLib);
+        
+        // Underscore (128KB -> 20KB)
+        const underscoreLibPath = path.join(stagingNodeModulesPath, 'underscore');
+        const underscoreLib = fs.readFileSync(path.join(underscoreLibPath, 'underscore-min.js'), 'utf-8');
+        wrench.rmdirSyncRecursive(underscoreLibPath);
+        wrench.mkdirSyncRecursive(underscoreLibPath);
+        fs.writeFileSync(path.join(underscoreLibPath, 'index.js'), underscoreLib);
+        
+        // Minimist (64KB -> 8KB)
+        const minimistLibPath = path.join(stagingNodeModulesPath, 'minimist');
+        const minimistLib = fs.readFileSync(path.join(minimistLibPath, 'index.js'), 'utf-8');
+        wrench.rmdirSyncRecursive(minimistLibPath);
+        wrench.mkdirSyncRecursive(minimistLibPath);
+        fs.writeFileSync(path.join(minimistLibPath, 'index.js'), minimistLib);
+        
+        // JS-adapter (1.5MB -> 620KB)
+        const jsAdapterPath = path.join(stagingNodeModulesPath, 'hadouken-js-adapter');
+        if (fs.existsSync(path.join(jsAdapterPath, 'node_modules'))) {
+            wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'node_modules')); // 472KB
+        }
+        wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'out', 'repl')); // 8KB
+        wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'out', 'resources')); // 172KB
+        wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'out', 'types')); // 136KB
+        fs.unlinkSync(path.join(jsAdapterPath, 'yarn.lock')); // 124KB
     });
 
     grunt.registerTask('build-deploy-modules', 'Build native modules', function() {
