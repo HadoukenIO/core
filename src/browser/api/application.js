@@ -132,6 +132,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
 
     let appUrl = opts.url;
     const { uuid, name } = opts;
+    const initialAppOptions = Object.assign({}, opts);
 
     if (appUrl === undefined && opts.mainWindowOptions) {
         appUrl = opts.mainWindowOptions.url;
@@ -169,14 +170,15 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     }
 
     const appObj = createAppObj(uuid, opts, configUrl);
+    const app = coreState.appByUuid(opts.uuid);
 
     if (parentIdentity && parentIdentity.uuid) {
         // This is a reference to the meta `app` object that is stored in core state,
         // not the actual `application` object created above. Here we are attaching the parent
         // identity to it.
-        const app = coreState.appByUuid(opts.uuid);
         app.parentUuid = parentUuid;
     }
+    app.initialAppOptions = initialAppOptions;
 
     return appObj;
 };
@@ -343,16 +345,18 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
 };
 
 Application.getInfo = function(identity, callback) {
-    const app = Application.wrap(identity.uuid);
-    const manifestObj = coreState.getManifest(identity);
-    const { url: manifestUrl, manifest } = manifestObj;
+    const app = coreState.appByUuid(identity.uuid);
 
-    const parentApp = coreState.getAppAncestor(identity.uuid);
-    const parentUuid = (parentApp.uuid === identity.uuid) ? null : parentApp.uuid;
+    const manifestObj = coreState.getClosestManifest(identity);
+    const { url, manifest } = manifestObj || {};
+
+    const parentUuid = Application.getParentApplication(identity);
+    const launchMode = app && app.appObj && app.appObj.launchMode;
 
     const response = {
-        launchMode: app.launchMode,
-        manifestUrl,
+        initialOptions: app.initialAppOptions,
+        launchMode,
+        manifestUrl: url,
         manifest,
         parentUuid
     };

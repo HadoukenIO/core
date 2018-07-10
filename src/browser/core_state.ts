@@ -94,6 +94,24 @@ export function getManifest(identity: Shapes.Identity): ManifestInfo {
     return { url, manifest };
 }
 
+export function getManifestByUrl(url: string): Shapes.Manifest {
+   return manifests.get(url);
+}
+
+export function getClosestManifest(identity: Shapes.Identity): ManifestInfo {
+    // Gets an applications manifest or if not launched via manifest, the closest parent with a saved manifest
+    const { uuid } = identity;
+    const app = appByUuid(uuid);
+    const url = app && app._configUrl || app.appObj && app.appObj._configUrl;
+    if (url) {
+        const manifest = getManifestByUrl(url);
+        return { url, manifest };
+    } else {
+        const parentApp = appByUuid(app.parentUuid);
+        return parentApp ? getClosestManifest(parentApp) : null;
+    }
+}
+
 export function setStartManifest(url: string, data: Shapes.Manifest): void {
     startManifest = { url, data };
     setManifestProxySettings((data && data.proxy) || undefined);
