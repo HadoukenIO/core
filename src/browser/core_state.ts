@@ -32,6 +32,7 @@ import * as Shapes from '../shapes';
 import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
+import { getIdentityFromObject } from '../common/main';
 
 export interface StartManifest {
     data: Shapes.Manifest;
@@ -560,31 +561,30 @@ export function getAllAppObjects(): Shapes.AppObj[] {
 
 export function getAllWindows(): WindowMeta[] {
     const windowApi = require('./api/window.js').Window; // do not move this line!
-    return apps.map(app => {
-        const windowBounds = app.children
-            .filter(win => win.openfinWindow)
-            .map(win => {
-                const identity = {
-                    name: win.openfinWindow.name,
-                    uuid: win.openfinWindow.uuid
-                };
+
+    // Filter out apps where main window has already been destroyed
+    const aliveApps = apps.filter(({ children }) => {
+        const mainWindow = children[0];
+        return mainWindow &&
+            mainWindow.openfinWindow &&
+            mainWindow.openfinWindow.browserWindow &&
+            !mainWindow.openfinWindow.browserWindow.isDestroyed();
+    });
+
+    return aliveApps.map(({ uuid, children }) => {
+        const childWindows = children
+            .map(({ openfinWindow }) => {
+                const identity = getIdentityFromObject(openfinWindow);
                 const bounds = windowApi.getBounds(identity);
-                bounds.name = win.openfinWindow.name;
+                bounds.name = openfinWindow.name;
                 bounds.state = windowApi.getState(identity);
                 bounds.isShowing = windowApi.isShowing(identity);
                 return bounds;
             });
 
-        const mainWin = windowBounds[0] || {};
-        if (windowBounds.length > 0) {
-            windowBounds.splice(0, 1); //child windows should not contain main window
-        }
+        const mainWindow = childWindows.shift() || {};
 
-        return {
-            childWindows: windowBounds,
-            mainWindow: mainWin,
-            uuid: app.uuid
-        };
+        return { childWindows, mainWindow, uuid };
     });
 }
 
