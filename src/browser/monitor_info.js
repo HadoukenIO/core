@@ -73,19 +73,12 @@ MonitorInfo.prototype.getInfo = function(reason) {
         nonPrimaryMonitors;
 
     if (isWin32) {
-        primaryMonitor = _.findWhere(allMonitorsInfo, {
-            name: monitorDetails[primaryMonitorId].name
-        });
-        nonPrimaryMonitors = allMonitorsInfo.filter(function(monitor) {
-            return monitor.name !== monitorDetails[primaryMonitorId].name;
-        });
+        const primaryMonitorName = (monitorDetails[primaryMonitorId] || {}).name;
+        primaryMonitor = allMonitorsInfo.find(e => e.name === primaryMonitorName);
+        nonPrimaryMonitors = allMonitorsInfo.filter(e => e.name !== primaryMonitorName);
     } else {
-        primaryMonitor = _.findWhere(allMonitorsInfo, {
-            deviceId: primaryMonitorId
-        });
-        nonPrimaryMonitors = allMonitorsInfo.filter(function(monitor) {
-            return monitor.deviceId !== primaryMonitorId;
-        });
+        primaryMonitor = allMonitorsInfo.find(e => e.deviceId === primaryMonitorId);
+        nonPrimaryMonitors = allMonitorsInfo.filter(e => e.deviceId !== primaryMonitorId);
     }
 
     /*** virtual screen ***/
