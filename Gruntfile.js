@@ -147,13 +147,7 @@ module.exports = (grunt) => {
     });
 
     grunt.registerTask('build-dev', [
-        'jshint',
-        'jsbeautifier:default',
-        'clean',
-        'babel',
-        'tslint',
-        'ts',
-        'mochaTest',
+        'test',
         'copy:lib',
         'copy:etc',
         'copy:login',
@@ -167,19 +161,12 @@ module.exports = (grunt) => {
         'jsbeautifier',
         'clean',
         'babel',
-        'tslint',
-        'ts',
+        'typescript',
         'mochaTest',
     ]);
 
     grunt.registerTask('build-pac', [
-        'jshint',
-        'jsbeautifier',
-        'clean',
-        'babel',
-        'tslint',
-        'ts',
-        'mochaTest',
+        'test',
         'copy',
         'clean-up-dependencies',
         'build-deploy-modules',
