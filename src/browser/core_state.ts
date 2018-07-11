@@ -650,7 +650,9 @@ export function getAppAncestor(descendantAppUuid: string): Shapes.App {
     const app = appByUuid(descendantAppUuid);
 
     if (app && app.parentUuid) {
-        return getAppAncestor(app.parentUuid);
+        // If parentApp exists but can't be found in coreState, it is in another runtime
+        const parentApp = appByUuid(app.parentUuid);
+        return parentApp ? getAppAncestor(app.parentUuid) : app;
     } else {
         return app;
     }
