@@ -1,19 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 'use strict';
 
 /**
@@ -41,17 +25,6 @@ const beautifierOptions = {
         braceStyle: 'collapse,preserve-inline'
     }
 };
-
-
-
-// OpenFin commercial license
-const commercialLic = `/*
-Copyright 2017 OpenFin Inc.
-
-Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
-Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
-*/
-`;
 
 module.exports = (grunt) => {
 
@@ -174,7 +147,6 @@ module.exports = (grunt) => {
     });
 
     grunt.registerTask('build-dev', [
-        'license',
         'jshint',
         'jsbeautifier:default',
         'clean',
@@ -191,7 +163,6 @@ module.exports = (grunt) => {
     ]);
 
     grunt.registerTask('test', [
-        'license',
         'jshint',
         'jsbeautifier',
         'clean',
@@ -202,7 +173,6 @@ module.exports = (grunt) => {
     ]);
 
     grunt.registerTask('build-pac', [
-        'license',
         'jshint',
         'jsbeautifier',
         'clean',
@@ -365,99 +335,6 @@ module.exports = (grunt) => {
                 grunt.log.ok(`Deployed to: ${defaultAppFolder}`);
                 done();
             });
-        }
-    });
-
-    /**
-     * This task goes through the list of all files that need to have
-     * a license and validates that they have proper licenses.
-     * Usage:
-     * 1. grunt license - default
-     * 2. grunt license:add - will add open-source license to all non-commercial files
-     * 3. grunt license:remove - will remove licenses from all files
-     */
-    grunt.registerTask('license', (option) => {
-        // Open-source license
-        const openSourceLic = `/*\n${ fs.readFileSync('./LICENSE') }*/\n`;
-
-        let foundLicensingProblem = false;
-
-        // List of files that must have OpenFin commercial license
-        const ofLicensedFiles = [];
-
-        // List of files that need to have some kind of license
-        const allFilesForLicense = grunt.file.expand(
-            'src/**/*.ts',
-            'src/**/*.js',
-            'test/**/*.ts',
-            'test/**/*.js',
-            'index.ts',
-            'index.js'
-        );
-
-        // Goes through all the files and verifies licenses
-        allFilesForLicense.forEach(filePartPath => {
-            const fileFullPath = path.join(__dirname, filePartPath);
-            let fileContent = String(fs.readFileSync(fileFullPath));
-
-            // When given 'remove' option, just remove the license
-            if (option === 'remove') {
-                fileContent = fileContent.replace(openSourceLic, '');
-                fileContent = fileContent.replace(commercialLic, '');
-                fs.writeFileSync(fileFullPath, fileContent);
-                grunt.log.writeln(`Removed license from ${filePartPath}`['yellow'].bold);
-                return;
-            }
-
-            // OpenFin commercial license file
-            if (ofLicensedFiles.includes(filePartPath)) {
-
-                // Remove open-source license from a commercial file
-                if (fileContent.includes(openSourceLic)) {
-                    fileContent = fileContent.replace(openSourceLic, '');
-                    fs.writeFileSync(fileFullPath, fileContent);
-                    grunt.log.writeln(`Removed open-source license from OpenFin commercial file ${filePartPath}`['yellow'].bold);
-                }
-
-                // Add license if missing
-                if (!fileContent.includes(commercialLic)) {
-                    fileContent = commercialLic + fileContent;
-                    fs.writeFileSync(fileFullPath, fileContent);
-                    grunt.log.writeln(`Added missing OpenFin commercial license to ${filePartPath}`['yellow'].bold);
-                }
-            }
-
-            // Open-sourced files or new files that are missing a license
-            else {
-
-                // File has commercial license but is not added to the list of commercial files
-                if (fileContent.includes(commercialLic)) {
-                    grunt.log.writeln(`Found commercial license in ${filePartPath}, but file is `['yellow'].bold +
-                        `not added to Grunt's list of commercial files. Please, add it.`['yellow'].bold);
-                }
-
-                // File is missing any kind of license
-                else if (!fileContent.includes(openSourceLic)) {
-
-                    // When calling this task with an 'add' option, it will add open-source license
-                    // to all the files that are missing a license and are not specified as commercial
-                    if (option === 'add') {
-                        fileContent = openSourceLic + fileContent;
-                        fs.writeFileSync(fileFullPath, fileContent);
-                        grunt.log.writeln(`Added open-source license to ${filePartPath}`['yellow'].bold);
-                    } else {
-                        grunt.log.writeln(`File ${filePartPath} is missing a license`['red'].bold);
-                        foundLicensingProblem = true;
-                    }
-                }
-            }
-        });
-
-        if (foundLicensingProblem) {
-            // Abort Grunt if there are problems found with licensing
-            grunt.fail.fatal('Aborted due to problems with licensing'['red'].bold);
-        } else {
-            grunt.log.writeln(`Licensing task is done`['green'].bold);
         }
     });
 };
