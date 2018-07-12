@@ -534,7 +534,7 @@ function routeRequest(id: any, msg: NotificationMessage, ack: any) {
             break;
 
         case NoteAction.dismiss:
-            dispatchEvent('dismiss', msg);
+            requestNoteClose(msg);
             break;
 
         case NoteAction.show:
