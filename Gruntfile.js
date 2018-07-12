@@ -186,7 +186,7 @@ module.exports = (grunt) => {
         wrench.readdirSyncRecursive('staging/core').forEach(function(filename) {
             let filepath = path.join('staging', 'core', filename);
 
-            if (!fs.statSync(filepath).isDirectory()) {
+            if (!fs.statSync(filepath).isDirectory() && !filename.endsWith('.ofds')) {
                 openfinSign(filepath);
             }
         });
