@@ -157,7 +157,7 @@ module.exports = (grunt) => {
 
     grunt.registerTask('build-dev', [
         'test',
-        'build-deploy-modules',
+        'rebuild-native-modules',
         'copy',
         'clean-up-dependencies',
         'sign-files',
@@ -239,7 +239,7 @@ module.exports = (grunt) => {
         fs.unlinkSync(path.join(jsAdapterPath, 'yarn.lock')); // 124KB
     });
 
-    grunt.registerTask('build-deploy-modules', 'Build native modules', function() {
+    grunt.registerTask('rebuild-native-modules', 'Rebuild native modules', function() {
         const done = this.async();
 
         electronRebuild.rebuild({
