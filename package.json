@@ -29,7 +29,7 @@
     "@types/underscore": "^1.8.0",
     "asar": "^0.12.1",
     "babel-preset-es2015": "^6.1.4",
-    "electron-rebuild": "1.4.0",
+    "electron-rebuild": "1.7.3",
     "grunt": "^1.0.1",
     "grunt-babel": "^6.0.0",
     "grunt-cli": "^1.2.0",
