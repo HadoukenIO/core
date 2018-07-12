@@ -1828,26 +1828,23 @@ function emitCloseEvents(identity) {
 
     electronApp.emit('browser-window-closed', null, getElectronBrowserWindow(identity));
 
-    ofEvents.emit(route.window('closed'), {
-        name,
-        uuid
-    });
+    const hyphenate = !name.includes('-');
 
-    ofEvents.emit(route.window('closed', uuid, name, true), {
+    ofEvents.emit(route.window('closed', uuid, name, hyphenate), {
         topic: 'window',
         type: 'closed',
         uuid,
         name
     });
 
-    // Need to emit this event because notifications use dashes (-)
-    // in their window names
-    ofEvents.emit(route.window('closed', uuid, name, false), {
-        topic: 'window',
-        type: 'closed',
-        uuid,
-        name
-    });
+    // // Need to emit this event because notifications use dashes (-)
+    // // in their window names
+    // ofEvents.emit(route.window('closed', uuid, name, false), {
+    //     topic: 'window',
+    //     type: 'closed',
+    //     uuid,
+    //     name
+    // });
 
     ofEvents.emit(route.window('init-subscription-listeners'), identity);
 }

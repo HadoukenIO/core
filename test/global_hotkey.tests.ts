@@ -202,7 +202,7 @@ describe('GlobalHotkey', () => {
 
         GlobalHotkey.register(identity, hotkey, spy);
         //we simulate a window close.
-        ofEvents.emit(route.window('closed'), identity);
+        ofEvents.emit(route.window('closed', '*'), identity);
         const isRegistered = GlobalHotkey.isRegistered(hotkey);
         assert.deepStrictEqual(isRegistered, false, 'Expected hotkey to not be registered');
     });
@@ -242,7 +242,7 @@ describe('GlobalHotkey', () => {
         GlobalHotkey.register(identity2, hotkey, spy2);
 
         //we simulate a window close.
-        ofEvents.emit(route.window('closed'), identity2);
+        ofEvents.emit(route.window('closed', '*'), identity2);
 
         mockElectron.globalShortcut.mockRaiseEvent(hotkey);
         assert.ok(spy.calledOnce, 'Expected the global shortcut to be called');
