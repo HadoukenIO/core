@@ -2,6 +2,7 @@ import ofEvents from '../browser/of_events';
 import route from './route';
 import { app } from 'electron';
 import * as log from '../browser/log';
+
 /**
  * Interface of a converted JS error into a plain object
  */
@@ -22,7 +23,25 @@ export function errorToPOJO(error: Error): ErrorPlainObject {
     };
 }
 
-export function createErrorUI(err: Error) {
+/*
+    Safe errors
+*/
+let isInitSafeErrors = false;
+export function initSafeErrors(argo: any) {
+    // Safety check to make sure to process safe errors only once
+    // at first runtime instance initialization
+    if (isInitSafeErrors) {
+        return;
+    }
+
+    if (!argo['disable-safe-errors']) {
+        process.on('uncaughtException', createErrorUI);
+    }
+
+    isInitSafeErrors = true;
+}
+
+function createErrorUI(err: Error) {
     // prevent issue with circular dependencies.
     const Application = require('../browser/api/application').Application;
     const coreState = require('../browser/core_state');
