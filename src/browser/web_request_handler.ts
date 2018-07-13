@@ -31,16 +31,6 @@ interface HeadersResponse {
     requestHeaders?: any;
 }
 
-interface AppUuidFilterUrlMap {
-    [uuid: string]: Shapes.WebRequestHeaderConfig[];  // app UUID => custom header settings
-}
-const filterMap: AppUuidFilterUrlMap = {};
-
-interface UrlHeaderMap {
-    [urlPattern: string]: Shapes.WebRequestHeader[];  // URL pattern => list of headers
-}
-let headerMap: UrlHeaderMap = {};  // reset for every app started and closed
-
 function matchUrlPatterns(url: string, config: Shapes.WebRequestHeaderConfig): boolean {
     let match: boolean = false;
     if (config.urlPatterns && config.urlPatterns.length > 0) {
@@ -91,35 +81,6 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
     } else {
         callback({ cancel: false });
     }
-}
-
-interface AppCreatedEvent {
-    topic: string;
-    type: string;
-    uuid: string;
-}
-
-function updateHeaderFilter(): void {
-    let urls: string[] = [];
-    headerMap = {};
-
-    electronApp.vlog(1, `${moduleName}:updateHeaderFilter for ${JSON.stringify(filterMap)}`);
-
-    Object.keys(filterMap).forEach(uuid => {
-        const options: Shapes.WebRequestHeaderConfig[] = filterMap[uuid];
-        for (const opt of options) {
-            electronApp.vlog(1, `${moduleName}:updateHeaderFilter2 for ${JSON.stringify(opt)}`);
-            urls = urls.concat(opt.urlPatterns);
-            for (const url of opt.urlPatterns) {
-                if (!headerMap[url]) {
-                    headerMap[url] = [];
-                }
-                headerMap[url] = headerMap[url].concat(opt.headers);
-            }
-        }
-    });
-    const filers = { urls: JSON.stringify(urls) };
-    electronApp.vlog(1, `${moduleName}:updateHeaderFilter for ${JSON.stringify(filers)} headers ${JSON.stringify(headerMap)}`);
 }
 
 /**

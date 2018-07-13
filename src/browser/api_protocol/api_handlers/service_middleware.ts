@@ -1,6 +1,6 @@
 
-import { getWindowByUuidName, getExternalOrOfWindowIdentity } from '../../core_state';
-import { Identity, OpenFinWindow, ServiceIdentity } from '../../../shapes';
+import { getExternalOrOfWindowIdentity } from '../../core_state';
+import { Identity, ServiceIdentity } from '../../../shapes';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { RemoteAck } from '../transport_strategy/ack';
 import RequestHandler from '../transport_strategy/base_handler';
@@ -41,7 +41,7 @@ export function applyPendingServiceConnections(uuid: string): void {
 }
 
 function setTargetIdentity(identity: Identity, payload: any): TargetIdentity {
-    const { uuid, name } = payload;
+    const { uuid } = payload;
     if (payload.connectAction) {
         // If initial connection to a service, identity may exist but not be registered;
         const serviceIdentity = Service.getServiceByUuid(uuid);

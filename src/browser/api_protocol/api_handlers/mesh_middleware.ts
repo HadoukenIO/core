@@ -67,7 +67,7 @@ function subscriberEventMiddleware(msg: MessagePackage, next: () => void) {
 
 //on an InterAppBuss publish, forward the message to any runtime on the mesh.
 function publishMiddleware(msg: MessagePackage, next: () => void) {
-    const { data, ack, nack, identity } = msg;
+    const { data, identity } = msg;
 
     if (data.action === PUBLISH_ACTION && !identity.runtimeUuid) {
 
@@ -144,7 +144,7 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
 
 // On certain system API calls, provide aggregate results from all runtimes on the mesh
 function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: object) => void) {
-    const { identity, data, ack, nack } = msg;
+    const { identity, data, nack } = msg;
     const action = data && data.action;
     const isAggregateAction = apiMessagesToAggregate[action];
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.

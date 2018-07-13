@@ -45,7 +45,6 @@ interface ProxyAuthEvent {
 }
 
 const requestMap: { [url: string]: any } = {};  // map of URL to net.request
-const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 
 export interface CreateProxyResponse {
     success: boolean;

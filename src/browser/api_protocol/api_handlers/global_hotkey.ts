@@ -4,7 +4,6 @@ import * as apiProtocolBase from './api_protocol_base';
 import { GlobalHotkey } from '../../api/global_hotkey';
 import { Identity } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
-import * as log from '../../log';
 
 const successAck = {
     success: true

@@ -3,10 +3,6 @@ import { ActionSpecMap } from '../shapes';
 import { Frame } from '../../api/frame';
 import { Identity } from '../../../shapes';
 
-const successAck: object = {
-    success: true
-};
-
 export class FrameApiHandler {
     private readonly actionMap: ActionSpecMap = {
         'get-frame-info': this.getInfo,

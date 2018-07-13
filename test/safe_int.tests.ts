@@ -66,7 +66,7 @@ describe('safe_int', () => {
         const i: any = true;
 
         try {
-            const safeI = toSafeInt(<number>i);
+            toSafeInt(<number>i);
         } catch (err) {
             assert.ok(err.message.includes('is not a parsable number and default value not provided.'));
         }

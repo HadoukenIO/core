@@ -3,7 +3,6 @@ import { ApiTransportBase, MessagePackage } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
 import { Identity } from '../../../shapes';
-import * as log from '../../log';
 
 declare var require: any;
 

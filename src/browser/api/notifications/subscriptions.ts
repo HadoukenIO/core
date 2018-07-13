@@ -9,7 +9,6 @@ import {
 
 // required tor the ts compiler, theses should be made imports eventually
 declare var require: any;
-declare var Buffer: any;
 
 const {System} = require('../system');
 const {Window} = require('../window');
@@ -281,7 +280,7 @@ function qCounterTargetIsValid(): boolean {
 
 // TODO the creates has a shape data->options, make interface
 function requestNoteCreation (noteData: any, parent: any) {
-    const {options: {uuid, name}} = noteData;
+    const {options: {name}} = noteData;
     const noteStackLen = noteStackCount();
 
     if (noteStackLen >= MAX_NOTES) {
@@ -467,10 +466,10 @@ function handleNoteCreate(msg: NotificationMessage): void {
     const {data, id: {uuid, name}} = msg;
     let isOwnedByProxy = false;
     let parent: any;
-
-    const { options: {
-        notificationId, uuidOfProxiedApp, name: noteName}
-    }: { options: { notificationId: number, uuidOfProxiedApp: string, name: string } } = data;
+    const { options } = data;
+    const notificationId: number = options.notificationId;
+    const uuidOfProxiedApp: string = options.uuidOfProxiedApp;
+    const noteName: string = options.name;
 
     if (notificationId !== undefined && uuidOfProxiedApp !== undefined) {
         isOwnedByProxy = true;

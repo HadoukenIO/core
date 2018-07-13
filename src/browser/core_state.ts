@@ -686,9 +686,6 @@ export function getLicenseKey(identity: Shapes.Identity): string|null {
 
 export function getParentWindow(childIdentity: Shapes.Identity): Shapes.Window {
     const { uuid, name } = childIdentity;
-
-    const app = appByUuid(uuid);
-
     const childWin = getOfWindowByUuidName(uuid, name);
 
     if (!childWin) {
@@ -732,10 +729,9 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
     }
 
     for (const { openfinWindow } of app.children) {
-        const { name, parentFrameId } = openfinWindow;
+        const { name } = openfinWindow;
 
         if (name === frame) {
-            const winParent = getWinById(parentFrameId);
             const parent = getParentIdentity({uuid, name});
 
             return {
@@ -758,7 +754,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
     }
 
     for (const { openfinWindow } of app.children) {
-        const { uuid, name, parentFrameId } = openfinWindow;
+        const { uuid, name } = openfinWindow;
         let browserWindow: Shapes.BrowserWindow;
         browserWindow = openfinWindow.browserWindow;
 

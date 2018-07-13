@@ -5,8 +5,6 @@ import { Identity } from '../../../shapes';
 
 export { Identity };
 
-declare var require: any;
-
 /**
  * This represents the raw data that comes off the wire as well as the ack and
  * nack functions that get created at the strategy (elipc, ws, etc)
