@@ -110,6 +110,9 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
+    },
+    'will-close': {
+        topic: 'closing'
     }
     // 'move': {
     //     topic: 'bounds-changing'
@@ -1814,21 +1817,7 @@ function emitCloseEvents(identity) {
 
     electronApp.emit('browser-window-closed', null, getElectronBrowserWindow(identity));
 
-    ofEvents.emit(route.window('closed'), {
-        name,
-        uuid
-    });
-
     ofEvents.emit(route.window('closed', uuid, name, true), {
-        topic: 'window',
-        type: 'closed',
-        uuid,
-        name
-    });
-
-    // Need to emit this event because notifications use dashes (-)
-    // in their window names
-    ofEvents.emit(route.window('closed', uuid, name, false), {
         topic: 'window',
         type: 'closed',
         uuid,
