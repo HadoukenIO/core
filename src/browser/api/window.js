@@ -125,6 +125,9 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
+    },
+    'will-close': {
+        topic: 'closing'
     }
     // 'move': {
     //     topic: 'bounds-changing'
