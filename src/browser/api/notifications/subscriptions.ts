@@ -84,16 +84,10 @@ ofEvents.on(route.window('closed', '*'), (e: any) => {
         cleanPendingNotes();
 
         try {
-            const {source} = e;
+            const {uuid, name} = e.data[0];
 
-            // FIXME The closed event will emit twice:
-            // one is uuid/name the other uuid-name. This is a workaround
-            if (/\//.test(source)) {
-                const [uuid, name] = source.split('/');
-
-                if (Window.isNotification(name)) {
-                    seqs.removes.onNext({uuid, name});
-                }
+            if (Window.isNotification(name)) {
+                seqs.removes.onNext({uuid, name});
             }
         } catch (e) {
             writeToLog('info', e);
