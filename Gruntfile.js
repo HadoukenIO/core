@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const asar = require('asar');
-const nativeBuilder = require('electron-rebuild');
+const electronRebuild = require('electron-rebuild');
 const wrench = require('wrench');
 const openfinSign = require('openfin-sign'); // OpenFin signing module
 
@@ -146,16 +146,6 @@ module.exports = (grunt) => {
         }
     });
 
-    grunt.registerTask('build-dev', [
-        'test',
-        'copy:lib',
-        'copy:etc',
-        'copy:login',
-        'copy:certificate',
-        'clean-up-dependencies',
-        'sign-files'
-    ]);
-
     grunt.registerTask('test', [
         'jshint',
         'jsbeautifier',
@@ -165,16 +155,20 @@ module.exports = (grunt) => {
         'mochaTest',
     ]);
 
-    grunt.registerTask('build-pac', [
+    grunt.registerTask('build-dev', [
         'test',
+        'rebuild-native-modules',
         'copy',
         'clean-up-dependencies',
-        'build-deploy-modules',
         'sign-files',
-        'sign-adapter',
+        'sign-adapter'
+    ]);
+
+    grunt.registerTask('build-pac', [
+        'build-dev',
         'package',
         'package-adapter',
-        'sign-asar'
+        'sign-asars'
     ]);
 
     grunt.registerTask('typescript', [
@@ -193,7 +187,7 @@ module.exports = (grunt) => {
         grunt.log.ok('Finished signing files.');
     });
 
-    grunt.registerTask('sign-asar', function() {
+    grunt.registerTask('sign-asars', function() {
         openfinSign('out/app.asar');
         openfinSign('out/js-adapter.asar');
         grunt.log.ok('Finished signing asar.');
@@ -210,30 +204,30 @@ module.exports = (grunt) => {
         wrench.rmdirSyncRecursive('staging', true);
         wrench.rmdirSyncRecursive('out', true);
     });
-    
+
     grunt.registerTask('clean-up-dependencies', 'Clean up dependencies', function() {
-        
+
         // Clean Rx library (6.94MB -> 144KB)
         const rxLibPath = path.join(stagingNodeModulesPath, 'rx');
         const rxLib = fs.readFileSync(path.join(rxLibPath, 'dist', 'rx.all.min.js'), 'utf-8');
         wrench.rmdirSyncRecursive(rxLibPath);
         wrench.mkdirSyncRecursive(rxLibPath);
         fs.writeFileSync(path.join(rxLibPath, 'index.js'), rxLib);
-        
+
         // Underscore (128KB -> 20KB)
         const underscoreLibPath = path.join(stagingNodeModulesPath, 'underscore');
         const underscoreLib = fs.readFileSync(path.join(underscoreLibPath, 'underscore-min.js'), 'utf-8');
         wrench.rmdirSyncRecursive(underscoreLibPath);
         wrench.mkdirSyncRecursive(underscoreLibPath);
         fs.writeFileSync(path.join(underscoreLibPath, 'index.js'), underscoreLib);
-        
+
         // Minimist (64KB -> 8KB)
         const minimistLibPath = path.join(stagingNodeModulesPath, 'minimist');
         const minimistLib = fs.readFileSync(path.join(minimistLibPath, 'index.js'), 'utf-8');
         wrench.rmdirSyncRecursive(minimistLibPath);
         wrench.mkdirSyncRecursive(minimistLibPath);
         fs.writeFileSync(path.join(minimistLibPath, 'index.js'), minimistLib);
-        
+
         // JS-adapter (1.5MB -> 620KB)
         const jsAdapterPath = path.join(stagingNodeModulesPath, 'hadouken-js-adapter');
         if (fs.existsSync(path.join(jsAdapterPath, 'node_modules'))) {
@@ -245,34 +239,17 @@ module.exports = (grunt) => {
         fs.unlinkSync(path.join(jsAdapterPath, 'yarn.lock')); // 124KB
     });
 
-    grunt.registerTask('build-deploy-modules', 'Build native modules', function() {
+    grunt.registerTask('rebuild-native-modules', 'Rebuild native modules', function() {
         const done = this.async();
-        const nativeModVersion = grunt.option('nmv') || 'v5.10.0';
-        const nodeHeaderVersion = grunt.option('nhv') || 'v0.37.5';
-        const rebuildNativeVersion = grunt.option('rnv') || '0.37.5';
-        const outdir = './staging/core/node_modules';
-        const arch = grunt.option('arch') || 'ia32';
 
-        grunt.log.ok('Checking if rebuilding native modules is required.');
-        nativeBuilder.shouldRebuildNativeModules(undefined, nativeModVersion).then(function(shouldBuild) {
-            if (!shouldBuild) {
-                grunt.log.ok('Skipping native builds.');
-                done();
-                return true;
-            }
-
-            grunt.log.ok('Installing headers.');
-            return nativeBuilder.installNodeHeaders(nodeHeaderVersion, undefined, undefined, 'ia32')
-                .then(function() {
-                    // Ensure directory tree exists
-                    grunt.file.mkdir(outdir);
-                    grunt.log.ok('Building native modules.');
-                    nativeBuilder.rebuildNativeModules(rebuildNativeVersion, outdir, undefined, undefined, arch).then(function() {
-                        done();
-                    });
-                });
-        }).catch(function(e) {
-            grunt.log.error('Building modules didn\'t work!');
+        electronRebuild.rebuild({
+            buildPath: __dirname,
+            electronVersion: '2.0.2'
+        }).then(() => {
+            grunt.log.writeln('Rebuild successful!');
+            done();
+        }).catch(e => {
+            grunt.log.error('Rebuilding failed!');
             grunt.log.error(e);
             done();
         });
