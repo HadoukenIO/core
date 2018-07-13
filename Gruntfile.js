@@ -37,6 +37,12 @@ module.exports = (grunt) => {
 
     grunt.initConfig({
         copy: {
+            assets: { // assets: images, htmls, etc.
+                files: [{
+                    src: ['assets/*'],
+                    dest: 'staging/core/'
+                }]
+            },
             lib: {
                 files: [{
                     cwd: './node_modules',
@@ -54,12 +60,6 @@ module.exports = (grunt) => {
             login: { //login dialog artifacts that need copying
                 files: [{
                     src: ['src/login/*'],
-                    dest: 'staging/core/'
-                }]
-            },
-            error: { //error dialog artifacts that need copying
-                files: [{
-                    src: ['src/error/*'],
                     dest: 'staging/core/'
                 }]
             },
