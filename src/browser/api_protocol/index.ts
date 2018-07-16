@@ -1,6 +1,6 @@
 declare var require: any;
 
-const initApplicationApiHandler = require('./api_handlers/application').init;
+import { init as initApplicationApiHandler } from './api_handlers/application';
 import { ExternalApplicationApiHandler } from './api_handlers/external_application';
 import {
     init as initAuthorizationApiHandler,
@@ -14,8 +14,8 @@ import { GlobalHotkeyApiHandler } from './api_handlers/global_hotkey';
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
 const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
-const SystemApiHandler = require('./api_handlers/system').SystemApiHandler;
-const initWindowApiHandler = require('./api_handlers/window').init;
+import { init as initSystemApiHandler } from './api_handlers/system';
+import { init as initWindowApiHandler } from './api_handlers/window';
 import { init as initApiProtocol, getDefaultRequestHandler } from './api_handlers/api_protocol_base';
 import { meshEnabled } from '../connection_manager';
 import { registerMiddleware as registerEntityExistenceMiddleware } from './api_handlers/middleware_entity_existence';
@@ -50,7 +50,7 @@ export function initApiHandlers() {
     const eventListenerApiHandler = new EventListenerApiHandler();
     const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
     const notificationApiHandler = new NotificationApiHandler();
-    const systemApiHandler = new SystemApiHandler();
+    initSystemApiHandler();
     const globalHotkeyApiHandler = new GlobalHotkeyApiHandler();
     initWindowApiHandler();
 

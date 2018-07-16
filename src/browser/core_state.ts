@@ -19,11 +19,6 @@ import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
 import { getIdentityFromObject } from '../common/main';
 
-export interface StartManifest {
-    data: Shapes.Manifest;
-    url: string;
-}
-
 interface ProxySettingsArgs {
     proxyAddress?: string;
     proxyPort?: number;
@@ -103,7 +98,7 @@ export function setStartManifest(url: string, data: Shapes.Manifest): void {
     setManifestProxySettings((data && data.proxy) || undefined);
 }
 
-export function getStartManifest(): StartManifest|{} {
+export function getStartManifest(): Shapes.StartManifest|{} {
     return startManifest;
 }
 

@@ -35,6 +35,9 @@ export interface APIMessage {
     action: string;
     messageId: number;
     payload: any;
+    locals?: any; // found in processSnapshot() in our System API handler
+    options?: any; // found in getAppAssetInfo() in our System API handler
+    eventName?: string; // found in raiseEvent() in our System API handler
 }
 
 // ToDo following duplicated in ack.ts
@@ -51,6 +54,8 @@ export interface APIPayloadNack {
     reason?: string;
 }
 export type Nacker = (payload: APIPayloadNack) => void;
+export type NackerError = (payload: Error) => void;
+export type NackerErrorString = (payload: string) => void;
 
 export interface ProxySettings {
     proxyAddress: string;
@@ -326,4 +331,39 @@ export interface SavedDiskBounds {
     top: number;
     width: number;
     windowState: string;
+}
+
+export interface Cookie {
+    domain: string;
+    expirationDate: number;
+    name: string;
+    path: string;
+}
+
+export interface Entity {
+    type: 'application' | 'external-app';
+    uuid: string;
+}
+
+export interface FileStatInfo {
+    name: string;
+    size: number;
+    date: number;
+}
+
+export interface StartManifest {
+    data: Manifest;
+    url: string;
+}
+
+export type APIHandlerFunc = (identity: Identity, message: APIMessage, ack: Acker, nack?: Nacker|NackerError|NackerErrorString) => void;
+
+export interface APIHandlerMap {
+    [route: string]: APIHandlerFunc | {
+        apiFunc: APIHandlerFunc;
+        apiPath?: string;
+        apiPolicyDelegate?: {
+            checkPermissions: (args: any) => boolean;
+        }
+    };
 }
