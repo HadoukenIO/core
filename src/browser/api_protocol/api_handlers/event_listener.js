@@ -28,6 +28,7 @@ let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
 import { Service } from '../../api/service';
+import { GlobalHotkey } from '../../api/global_hotkey';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -160,15 +161,14 @@ function EventListenerApiHandler() {
         'service': {
             name: 'service',
             subscribe: function(identity, type, payload, cb) {
-                const { uuid } = payload;
-                const serviceIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
-                const targetUuid = serviceIdentity.uuid;
-                const islocalApp = !!coreState.getWindowByUuidName(targetUuid, targetUuid);
-                const localUnsub = Service.addEventListener(serviceIdentity, type, cb);
+                const targetIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+                const { uuid } = targetIdentity;
+                const islocalUuid = coreState.isLocalUuid(uuid);
+                const localUnsub = Service.addEventListener(targetIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+                const isExternalRuntime = ExternalApplication.isRuntimeClient(identity.uuid);
 
-                if (!islocalApp && !isExternalClient) {
+                if (!islocalUuid && !isExternalRuntime) {
                     const subscription = {
                         uuid,
                         listenType: 'on',
@@ -224,6 +224,12 @@ function EventListenerApiHandler() {
                     uuid: payload.uuid
                 };
                 return ExternalApplication.addEventListener(externalAppIdentity, type, cb);
+            }
+        },
+        'global-hotkey': {
+            name: 'global-hotkey',
+            subscribe: function(identity, type, payload, cb) {
+                return GlobalHotkey.addEventListener(identity, type, cb);
             }
         }
     };

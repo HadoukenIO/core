@@ -529,7 +529,8 @@ limitations under the License.
             openerSuccessCBCalled: openerSuccessCBCalled,
             emitNoteProxyReady: emitNoteProxyReady,
             initialOptions,
-            entityInfo
+            entityInfo,
+            isMainFrame
         }
     };
 

@@ -39,7 +39,7 @@ declare module 'electron' {
     }
 
     export namespace net {
-        export function request(url: string): any;
+        export function request(url: string|Object): any;
     }
     export namespace socketNet {
         export function socketRequest(url: string): any;
@@ -55,13 +55,6 @@ declare module 'electron' {
     export class BrowserWindow {
         constructor(props: any);
 
-        _options: {
-            minWidth: number;
-            minHeight: number;
-            maxWidth: number;
-            maxHeight: number;
-        };
-
         static fromId(id: string): BrowserWindow;
         static getAllWindows(): BrowserWindow[];
 
@@ -76,6 +69,35 @@ declare module 'electron' {
         emit(routeString: string, ...args: any[]): void;
         getBounds(): Rectangle;
         setWindowPlacement(bounds: Rectangle): void;
+        devToolsWebContents: null;
+        webContents: webContents;
+
+        _eventsCount: number;
+        _events: {
+            blur: (() => void)[];
+            close: (() => void)[];
+            closed: (() => void)[];
+            focus: (() => void)[];
+            maximize: (() => void)[];
+            minimize: (() => void)[];
+            restore: (() => void)[];
+            unmaximize: (() => void)[];
+            'visibility-changed': (() => void)[];
+        };
+    }
+
+    export class webContents {
+        hasFrame: (frameName: string) => boolean;
+        mainFrameRoutingId: number;
+        session: session;
+    }
+
+    export class session {
+        cookies: cookies;
+    }
+
+    export class cookies {
+        get: (filter: Object, callback: (error: Error, cookies: any[]) => any) => void;
     }
 
     export class ipcMain {

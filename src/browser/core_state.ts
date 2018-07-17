@@ -25,13 +25,14 @@ limitations under the License.
 * */
 
 import * as minimist from 'minimist';
-import { app } from 'electron';
+import { app, webContents, session } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
 import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
+import { getIdentityFromObject } from '../common/main';
 
 export interface StartManifest {
     data: Shapes.Manifest;
@@ -120,6 +121,27 @@ export function getEntityInfo(identity: Shapes.Identity) {
         // where you only know the uuid and name you gave it
         return new FrameInfo({ uuid: identity.uuid, name: identity.name, parent: null, entityType: null});
     }
+}
+
+export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes.ServiceIdentity|undefined {
+    const { uuid, name } = identity;
+    const externalConn = getExternalAppObjByUuid(uuid);
+    if (externalConn) {
+        return {...externalConn, isExternal: true };
+    }
+
+    const ofWindow = getWindowByUuidName(uuid, name);
+    const browserWindow = ofWindow && ofWindow.browserWindow;
+    if (browserWindow && !browserWindow.isDestroyed()) {
+        return { uuid, name, isExternal: false };
+    }
+}
+
+export function isLocalUuid(uuid: string): Boolean {
+    const externalConn = getExternalAppObjByUuid(uuid);
+    const app = getAppObjByUuid(uuid);
+
+    return externalConn || app ? true : false;
 }
 
 // Returns string on error
@@ -473,7 +495,37 @@ export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinW
     return win && win.openfinWindow;
 }
 
-function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|false {
+export function getBrowserWindow(identity: Shapes.Identity): Shapes.BrowserWindow|undefined {
+    const { uuid, name } = identity;
+    const wnd: Shapes.Window = getOfWindowByUuidName(uuid, name);
+
+    if (
+        wnd &&
+        wnd.openfinWindow &&
+        wnd.openfinWindow.browserWindow &&
+        !wnd.openfinWindow.browserWindow.isDestroyed()
+    ) {
+        return wnd.openfinWindow.browserWindow;
+    }
+}
+
+export function getWebContents(identity: Shapes.Identity): webContents|undefined {
+    const browserWindow = getBrowserWindow(identity);
+
+    if (browserWindow) {
+        return browserWindow.webContents;
+    }
+}
+
+export function getSession(identity: Shapes.Identity): session|undefined {
+    const webContents = getWebContents(identity);
+
+    if (webContents) {
+        return webContents.session;
+    }
+}
+
+function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|undefined {
     return getWinList().find(win => win.openfinWindow &&
         win.openfinWindow.uuid === uuid &&
         win.openfinWindow.name === name
@@ -508,29 +560,31 @@ export function getAllAppObjects(): Shapes.AppObj[] {
 }
 
 export function getAllWindows(): WindowMeta[] {
-    const getBounds = require('./api/window.js').Window.getBounds; // do not move this line!
-    return apps.map(app => {
-        const windowBounds = app.children
-            .filter(win => win.openfinWindow)
-            .map(win => {
-                const bounds = getBounds({
-                    name: win.openfinWindow.name,
-                    uuid: win.openfinWindow.uuid
-                });
-                bounds.name = win.openfinWindow.name;
+    const windowApi = require('./api/window.js').Window; // do not move this line!
+
+    // Filter out apps where main window has already been destroyed
+    const aliveApps = apps.filter(({ children }) => {
+        const mainWindow = children[0];
+        return mainWindow &&
+            mainWindow.openfinWindow &&
+            mainWindow.openfinWindow.browserWindow &&
+            !mainWindow.openfinWindow.browserWindow.isDestroyed();
+    });
+
+    return aliveApps.map(({ uuid, children }) => {
+        const childWindows = children
+            .map(({ openfinWindow }) => {
+                const identity = getIdentityFromObject(openfinWindow);
+                const bounds = windowApi.getBounds(identity);
+                bounds.name = openfinWindow.name;
+                bounds.state = windowApi.getState(identity);
+                bounds.isShowing = windowApi.isShowing(identity);
                 return bounds;
             });
 
-        const mainWin = windowBounds[0] || {};
-        if (windowBounds.length > 0) {
-            windowBounds.splice(0, 1); //child windows should not contain main window
-        }
+        const mainWindow = childWindows.shift() || {};
 
-        return {
-            childWindows: windowBounds,
-            mainWindow: mainWin,
-            uuid: app.uuid
-        };
+        return { childWindows, mainWindow, uuid };
     });
 }
 

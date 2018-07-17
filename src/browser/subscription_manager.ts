@@ -28,7 +28,7 @@ export default class SubscriptionManager {
     constructor() {
         this.subscriptionList = new Map();
 
-        ofEvents.on(route.window('closed'), (identity: Identity) => {
+        ofEvents.on(route.window('closed', '*'), (identity: Identity) => {
             this.removeAllSubscriptions(identity);
         });
 

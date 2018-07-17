@@ -50,7 +50,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
-import { isFileUrl, isHttpUrl } from '../../common/main';
+import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -69,6 +69,7 @@ const WindowsMessages = {
 };
 
 let Window = {};
+const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
     'api-injection-failed': {
@@ -76,7 +77,6 @@ let browserWindowEventMap = {
     },
     'blur': {
         topic: 'blurred',
-        decorator: blurredDecorator
     },
     'synth-bounds-change': {
         topic: 'bounds-changing', // or bounds-changed
@@ -96,7 +96,6 @@ let browserWindowEventMap = {
     },
     'focus': {
         topic: 'focused',
-        decorator: focusedDecorator
     },
     'opacity-changed': {
         decorator: opacityChangedDecorator
@@ -126,6 +125,9 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
+    },
+    'will-close': {
+        topic: 'closing'
     }
     // 'move': {
     //     topic: 'bounds-changing'
@@ -142,6 +144,10 @@ let webContentsEventMap = {
         decorator: loadFailedDecorator
     }
 };
+
+function genWindowKey(identity) {
+    return `${identity.uuid}-${identity.name}`;
+}
 
 /*
     For the bounds stuff, looks like 5.0 does not take actions until the
@@ -382,7 +388,6 @@ Window.create = function(id, opts) {
     };
     let baseOpts;
     let browserWindow;
-    let _openListeners;
     let webContents;
     let _options;
     let _boundsChangedHandler;
@@ -449,12 +454,6 @@ Window.create = function(id, opts) {
             ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
         };
 
-        // this is a first pass at teardown. for now, push the unsubscribe
-        // function for each subscription you make, on closed, remove them all
-        // if you listen on 'closed' it will crash as your resources are
-        // already gone at that point
-        _openListeners = [];
-
         webContents = browserWindow.webContents;
 
         //Legacy 5.0 feature, if customWindowAlert flag is found all alerts will be suppresed,
@@ -505,16 +504,6 @@ Window.create = function(id, opts) {
             _externalWindowEventAdapter = new ExternalWindowEventAdapter(browserWindow);
         }
 
-        let teardownListeners = () => {
-            // tear down any listeners...
-            _openListeners.forEach(unhook => {
-                unhook();
-            });
-
-            //tear down any listeners on external event emitters.
-            webContents.removeListener(OF_WINDOW_UNLOADED, ofUnloadedHandler);
-        };
-
         let windowTeardown = createWindowTearDown(identity, id);
 
         // once the window is closed, be sure to close all the children
@@ -557,22 +546,19 @@ Window.create = function(id, opts) {
                     windowTeardown();
                     // These were causing an exception on close if the window was reloaded
                     _boundsChangedHandler.teardown();
-                    teardownListeners();
+                    browserWindow.removeAllListeners();
                 });
             } else {
                 windowTeardown();
                 _boundsChangedHandler.teardown();
-                teardownListeners();
+                browserWindow.removeAllListeners();
             }
         });
 
         const isMainWindow = (uuid === name);
-        const emitToAppAndWin = (type, payload) => {
+        const emitToAppIfMainWin = (type, payload) => {
             // Window crashed: inform Window "namespace"
             ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
-
-            // Window crashed: inform Application "namespace" but with "window-" event string prefix
-            ofEvents.emit(route.application(`window-${type}`, uuid), Object.assign({ topic: 'application', type, uuid, name }, payload));
 
             if (isMainWindow) {
                 // Application crashed: inform Application "namespace"
@@ -580,8 +566,12 @@ Window.create = function(id, opts) {
             }
         };
 
+        webContents.once('close', () => {
+            webContents.removeAllListeners();
+        });
+
         webContents.on('crashed', (event, killed, terminationStatus) => {
-            emitToAppAndWin('crashed', {
+            emitToAppIfMainWin('crashed', {
                 reason: terminationStatus
             });
 
@@ -600,11 +590,11 @@ Window.create = function(id, opts) {
         });
 
         browserWindow.on('responsive', () => {
-            emitToAppAndWin('responding');
+            emitToAppIfMainWin('responding');
         });
 
         browserWindow.on('unresponsive', () => {
-            emitToAppAndWin('not-responding');
+            emitToAppIfMainWin('not-responding');
         });
 
         let mapEvents = function(eventMap, eventEmitter) {
@@ -642,11 +632,6 @@ Window.create = function(id, opts) {
                 };
 
                 eventEmitter.on(evnt, electronEventListener);
-
-                // push the unhooking functions in to the queue
-                _openListeners.push(() => {
-                    eventEmitter.removeListener(evnt, electronEventListener);
-                });
             });
         };
 
@@ -853,7 +838,6 @@ Window.create = function(id, opts) {
         name,
         uuid,
         _options,
-        _openListeners,
         id,
         browserWindow,
         groupUuid,
@@ -1071,14 +1055,29 @@ Window.close = function(identity, force, callback = () => {}) {
     handleForceActions(identity, force, 'close-requested', payload, defaultAction);
 };
 
+function disabledFrameUnsubDecorator(identity) {
+    const windowKey = genWindowKey(identity);
+    return function() {
+        let refCount = disabledFrameRef.get(windowKey) || 0;
+        if (refCount > 1) {
+            disabledFrameRef.set(windowKey, --refCount);
+        } else {
+            Window.enableFrame(identity);
+        }
+    };
+}
 
-Window.disableFrame = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
+Window.disableFrame = function(requestorIdentity, windowIdentity) {
+    const browserWindow = getElectronBrowserWindow(windowIdentity);
+    const windowKey = genWindowKey(windowIdentity);
 
     if (!browserWindow) {
         return;
     }
 
+    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
+    disabledFrameRef.set(windowKey, ++dframeRefCount);
+    subscriptionManager.registerSubscription(disabledFrameUnsubDecorator(windowIdentity), requestorIdentity, `disable-frame-${windowKey}`);
     browserWindow.setUserMovementEnabled(false);
 };
 
@@ -1105,12 +1104,14 @@ Window.embed = function(identity, parentHwnd) {
 };
 
 Window.enableFrame = function(identity) {
+    const windowKey = genWindowKey(identity);
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
     }
-
+    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
+    disabledFrameRef.set(windowKey, --dframeRefCount);
     browserWindow.setUserMovementEnabled(true);
 };
 
@@ -1609,11 +1610,12 @@ Window.show = function(identity, force = false) {
     let payload = {};
     let defaultAction = () => {
         const dontShow = (
-            browserWindow.isMinimized() ||
-
             // RUN-2905: To match v5 behavior, for maximized window, avoid showInactive() because it does an
             // erroneous restore(), an apparent Electron oversight (a restore _is_ needed in all other cases).
-            browserWindow.isMaximized() && browserWindow.isVisible()
+            // RUN-4122: For minimized window we should allow to show it when
+            // it is hidden.
+            browserWindow.isVisible() &&
+            (browserWindow.isMinimized() || browserWindow.isMaximized())
         );
 
         if (!dontShow) {
@@ -1829,30 +1831,9 @@ function emitCloseEvents(identity) {
 
     electronApp.emit('browser-window-closed', null, getElectronBrowserWindow(identity));
 
-    ofEvents.emit(route.window('closed'), {
-        name,
-        uuid
-    });
-
     ofEvents.emit(route.window('closed', uuid, name, true), {
         topic: 'window',
         type: 'closed',
-        uuid,
-        name
-    });
-
-    // Need to emit this event because notifications use dashes (-)
-    // in their window names
-    ofEvents.emit(route.window('closed', uuid, name, false), {
-        topic: 'window',
-        type: 'closed',
-        uuid,
-        name
-    });
-
-    ofEvents.emit(route.application('window-closed', uuid), {
-        topic: 'application',
-        type: 'window-closed',
         uuid,
         name
     });
@@ -1867,14 +1848,6 @@ function emitReloadedEvent(identity, url) {
     } = identity;
 
     ofEvents.emit(route.window('reloaded', uuid, name), {
-        uuid,
-        name,
-        url
-    });
-
-    ofEvents.emit(route.application('window-reloaded', uuid), {
-        topic: 'application',
-        type: 'window-reloaded',
         uuid,
         name,
         url
@@ -1998,13 +1971,6 @@ function handleForceActions(identity, force, eventType, eventPayload, defaultAct
         eventPayload.topic = 'window';
 
         ofEvents.emit(winEventString, eventPayload);
-
-        if (eventType === 'show-requested') {
-            eventPayload.type = 'window-show-requested';
-            eventPayload.topic = 'application';
-
-            ofEvents.emit(appEventString, eventPayload);
-        }
     }
 }
 
@@ -2079,20 +2045,6 @@ function closeRequestedDecorator(payload) {
     payload.force = false;
 
     return propagate;
-}
-
-function blurredDecorator(payload, args) {
-    const { uuid, name } = payload;
-    ofEvents.emit(route.application('window-blurred', uuid), { topic: 'application', type: 'window-blurred', uuid, name });
-    ofEvents.emit(route.system('window-blurred'), { topic: 'system', type: 'window-blurred', uuid, name });
-    return true;
-}
-
-function focusedDecorator(payload, args) {
-    const { uuid, name } = payload;
-    ofEvents.emit(route.application('window-focused', uuid), { topic: 'application', type: 'window-focused', uuid, name });
-    ofEvents.emit(route.system('window-focused'), { topic: 'system', type: 'window-focused', uuid, name });
-    return true;
 }
 
 function boundsChangeDecorator(payload, args) {
@@ -2322,10 +2274,9 @@ function setTaskbar(browserWindow, forceFetch = false) {
 }
 
 function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
-    let options = browserWindow._options;
-    let uuid = options.uuid;
+    const identity = getIdentityFromObject(browserWindow._options);
 
-    cachedFetch(uuid, iconUrl, (error, iconFilepath) => {
+    cachedFetch(identity, iconUrl, (error, iconFilepath) => {
         if (!error) {
             setIcon(browserWindow, iconFilepath, errorCallback);
         } else {

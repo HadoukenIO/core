@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 import { PortInfo } from './browser/port_discovery';
+import { BrowserWindow as BrowserWindowElectron, webContents } from 'electron';
 
 export interface Identity {
     uuid: string;
@@ -22,10 +23,10 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
-export interface ServiceIdentity {
-    uuid: string;
-    name?: string;
-    serviceName: string;
+export interface ServiceIdentity extends Identity {
+    channelId?: string;
+    isExternal?: boolean;
+    serviceName?: string;
 }
 
 export interface ResourceFetchIdentity extends Identity {
@@ -96,7 +97,6 @@ export interface Window {
 export interface OpenFinWindow {
     isIframe?: boolean;
     parentFrameId?: number;
-    _openListeners: (() => void)[];
     _options: WindowOptions;
     _window: BrowserWindow;
     app_uuid: string;
@@ -113,26 +113,8 @@ export interface OpenFinWindow {
     mainFrameRoutingId: number;
 }
 
-export interface BrowserWindow {
-    _events: {
-        blur: (() => void)[];
-        close: (() => void)[];
-        closed: (() => void)[];
-        focus: (() => void)[];
-        maximize: (() => void)[];
-        minimize: (() => void)[];
-        restore: (() => void)[];
-        unmaximize: (() => void)[];
-        'visibility-changed': (() => void)[];
-    };
-    _eventsCount: number;
+export interface BrowserWindow extends BrowserWindowElectron {
     _options: WindowOptions;
-    devToolsWebContents: null;
-    webContents: {
-        hasFrame: (frameName: string) => boolean;
-        mainFrameRoutingId: number;
-    };
-    isDestroyed(): boolean;
 }
 
 export interface AppObj {

@@ -51,6 +51,8 @@ import {
     portDiscovery
 } from './src/browser/port_discovery';
 
+import { reservedHotKeys } from './src/browser/api/global_hotkey';
+
 import {
     default as connectionManager,
     meshEnabled,
@@ -73,6 +75,10 @@ let appIsReady = false;
 let handlingErrors = false;
 const deferredLaunches = [];
 const USER_DATA = app.getPath('userData');
+let resolveServerReady;
+const serverReadyPromise = new Promise((resolve) => {
+    resolveServerReady = () => resolve();
+});
 
 app.on('child-window-created', function(parentId, childId, childOptions) {
 
@@ -196,8 +202,6 @@ function handleSafeErrors(argo) {
 
 const handleDelegatedLaunch = function(commandLine) {
     let otherInstanceArgo = minimist(commandLine);
-    const socketServerState = coreState.getSocketServerState();
-    const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
 
     initializeCrashReporter(otherInstanceArgo);
     handleSafeErrors(otherInstanceArgo);
@@ -206,7 +210,11 @@ const handleDelegatedLaunch = function(commandLine) {
     launchApp(otherInstanceArgo, false);
 
     // Will queue if server is not ready.
-    portDiscovery.broadcast(portInfo);
+    serverReadyPromise.then(() => {
+        const socketServerState = coreState.getSocketServerState();
+        const portInfo = portDiscovery.getPortInfoByArgs(otherInstanceArgo, socketServerState.port);
+        portDiscovery.broadcast(portInfo);
+    });
 
     // command line flag --delete-cache-on-exit
     rvmCleanup(otherInstanceArgo);
@@ -214,9 +222,18 @@ const handleDelegatedLaunch = function(commandLine) {
     return true;
 };
 
+function handleDeferredLaunches() {
+    deferredLaunches.forEach((commandLine) => {
+        handleDelegatedLaunch(commandLine);
+    });
+
+    deferredLaunches.length = 0;
+}
+
 app.on('chrome-browser-process-created', function() {
     otherInstanceRunning = app.makeSingleInstance((commandLine) => {
-        if (appIsReady) {
+        const socketServerState = coreState.getSocketServerState();
+        if (appIsReady && socketServerState && socketServerState.port) {
             return handleDelegatedLaunch(commandLine);
         } else {
             deferredLaunches.push(commandLine);
@@ -304,13 +321,6 @@ app.on('ready', function() {
                 name: identity.name,
                 authInfo: authInfo
             });
-            ofEvents.emit(appEvtName, {
-                topic: 'application',
-                type: 'window-auth-requested',
-                uuid: identity.uuid,
-                name: identity.name,
-                authInfo: authInfo
-            });
         }
 
         event.preventDefault();
@@ -375,13 +385,7 @@ app.on('ready', function() {
         }
     });
 
-    // handle deferred launches
-    deferredLaunches.forEach((commandLine) => {
-        handleDelegatedLaunch(commandLine);
-    });
-
-    deferredLaunches.length = 0;
-
+    handleDeferredLaunches();
 }); // end app.ready
 
 function staggerPortBroadcast(myPortInfo) {
@@ -521,6 +525,8 @@ function initServer() {
     socketServer.on('server/open', function(port) {
         console.log('Opened on', port);
         portDiscovery.broadcast(portDiscovery.getPortInfoByArgs(coreState.argo, port));
+        resolveServerReady();
+        handleDeferredLaunches();
     });
 
     socketServer.on('connection/message', function(id, message) {
@@ -652,6 +658,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
     return successfulLaunch;
 }
 
+//Please add any hotkeys added here to the the reservedHotKeys list.
 function registerShortcuts() {
     app.on('browser-window-focus', (event, browserWindow) => {
         const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
@@ -690,7 +697,7 @@ function registerShortcuts() {
 
     const unhookShortcuts = (event, browserWindow) => {
         if (!globalShortcut.isDestroyed()) {
-            globalShortcut.unregisterAll();
+            reservedHotKeys.forEach(a => globalShortcut.unregister(a));
         }
     };
 
