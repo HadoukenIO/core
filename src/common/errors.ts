@@ -50,16 +50,17 @@ function createErrorUI(err: Error) {
 
     try {
         const errorAppOptions = {
-            url: `file:///${__dirname}/../error/index.html`,
+            url: `file:///${__dirname}/../../assets/error.html`,
             uuid: appUuid,
             name: appUuid,
             mainWindowOptions: {
-                defaultHeight: 250,
+                icon: `file:///${__dirname}/../../assets/error-icon.png`,
+                defaultHeight: 200, // size increased later to fully fit error message
                 defaultWidth: 570,
                 defaultCentered: true,
                 saveWindowState: false,
                 showTaskbarIcon: false,
-                autoShow: true,
+                autoShow: false, // shown later after resizing is done
                 alwaysOnTop: true,
                 resizable: false,
                 contextMenu: false,
