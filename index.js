@@ -167,8 +167,12 @@ if (coreState.argo['local-startup-url']) {
         let localConfig = JSON.parse(fs.readFileSync(coreState.argo['local-startup-url']));
 
         if (typeof localConfig['devtools_port'] === 'number') {
-            console.log('remote-debugging-port:', localConfig['devtools_port']);
-            app.commandLine.appendSwitch('remote-debugging-port', localConfig['devtools_port'].toString());
+            if (!coreState.argo['remote-debugging-port']) {
+                console.log('remote-debugging-port:', localConfig['devtools_port']);
+                app.commandLine.appendSwitch('remote-debugging-port', localConfig['devtools_port'].toString());
+            } else {
+                console.log('Ignoring devtools_port from manifest');
+            }
         }
     } catch (err) {
         console.error(err);
