@@ -235,7 +235,8 @@ module.exports = {
             plugins: newOptions.plugins,
             preload: (!useNodeInRenderer ? noNodePreload : ''),
             sandbox: !useNodeInRenderer,
-            spellCheck: newOptions.spellCheck
+            spellCheck: newOptions.spellCheck,
+            backgroundThrottling: newOptions.backgroundThrottling
         };
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
