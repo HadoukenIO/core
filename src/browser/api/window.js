@@ -1100,6 +1100,16 @@ Window.enableFrame = function(identity) {
     browserWindow.setUserMovementEnabled(true);
 };
 
+Window.setAspectRatio = function(identity, ratio, extraWidth, extraHeight) {
+    let browserWindow = getElectronBrowserWindow(identity);
+
+    if (!browserWindow) {
+        return;
+    }
+
+    browserWindow.setAspectRatio(ratio, { width: extraWidth, height: extraHeight });
+};
+
 Window.executeJavascript = function(identity, code, callback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
 
