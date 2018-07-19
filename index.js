@@ -703,9 +703,9 @@ function handleMacSingleTenant() {
         if (coreState.argo['security-realm']) {
             pathPost = pathPost.concat(coreState.argo['security-realm']);
         }
-        const USER_DATA = app.getPath('userData');
-        app.setPath('userData', path.join(USER_DATA, pathPost));
-        app.setPath('userCache', path.join(USER_DATA, pathPost));
+        const userData = app.getPath('userData');
+        app.setPath('userData', path.join(userData, pathPost));
+        app.setPath('userCache', path.join(userData, pathPost));
     }
 }
 
