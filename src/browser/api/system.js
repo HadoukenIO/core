@@ -289,7 +289,7 @@ exports.System = {
         if (pathSafeName === name) {
             var pattern = /^debug.*\.log$/;
             if (pattern.test(pathSafeName)) {
-                fs.readFile(electronApp.getPath('userCache') + '/' + pathSafeName, {
+                fs.readFile(electronApp.getPath('userData') + '/' + pathSafeName, {
                     encoding: 'utf8'
                 }, (err, data) => {
                     if (!err) {
@@ -306,7 +306,7 @@ exports.System = {
         }
     },
     getLogList: function(callback, options) {
-        fs.readdir(electronApp.getPath('userCache'), function(err, files) {
+        fs.readdir(electronApp.getPath('userData'), function(err, files) {
             let opts = options || {};
 
             if (!err) {
@@ -323,7 +323,7 @@ exports.System = {
                     var processFileStats = function() {
                         var name = logFiles[index++];
 
-                        fs.stat(electronApp.getPath('userCache') + '/' + name, (err, stats) => {
+                        fs.stat(electronApp.getPath('userData') + '/' + name, (err, stats) => {
                             if (!err) {
                                 fileStats.push({
                                     name: name,
