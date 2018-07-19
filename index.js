@@ -21,7 +21,7 @@ let minimist = require('minimist');
 // local modules
 let Application = require('./src/browser/api/application.js').Application;
 let System = require('./src/browser/api/system.js').System;
-let Window = require('./src/browser/api/window.js').Window;
+import { Window } from './src/browser/api/window';
 
 let apiProtocol = require('./src/browser/api_protocol');
 let socketServer = require('./src/browser/transports/socket_server').server;

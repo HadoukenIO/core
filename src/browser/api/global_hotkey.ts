@@ -1,5 +1,5 @@
 
-import { Identity } from '../../shapes';
+import { Identity, Listener } from '../../shapes';
 import SubscriptionManager from '../subscription_manager';
 import { EventEmitter } from 'events';
 import ofEvents from '../of_events';
@@ -40,7 +40,7 @@ export class HotKeyError extends Error {
 
 export module GlobalHotkey {
 
-    export function register(identity: Identity, hotkey: string, listener: Function): void {
+    export function register(identity: Identity, hotkey: string, listener: Listener): void {
         //Throw if registration is not valid.
         validateRegistration(identity, hotkey);
 
@@ -86,7 +86,7 @@ export module GlobalHotkey {
         return globalShortcut.isRegistered(hotkey);
     }
 
-    export function addEventListener(identity: Identity, type: string, listener: Function) {
+    export function addEventListener(identity: Identity, type: string, listener: Listener) {
         const evt = route.globalHotkey(type, identity.uuid);
         ofEvents.on(evt, listener);
 
@@ -105,7 +105,7 @@ function constructEmit(hotkey: string): () => void {
 }
 
 //want to avoid closing over any variables during the register phase.
-function constructUnregister(identity: Identity, hotkey: string, listener: Function): () => void {
+function constructUnregister(identity: Identity, hotkey: string, listener: Listener): () => void {
     return () => {
         emitter.removeListener(hotkey, listener);
         if (emitter.listenerCount(hotkey) < 1) {
@@ -114,7 +114,7 @@ function constructUnregister(identity: Identity, hotkey: string, listener: Funct
     };
 }
 
-function applyRegistration(identity: Identity, hotkey: string, listener: Function): void {
+function applyRegistration(identity: Identity, hotkey: string, listener: Listener): void {
     emitter.on(hotkey, listener);
     //make sure that if the registered context is destroyed we will unregister the hotkey
     subscriptionManager.registerSubscription(constructUnregister(identity, hotkey, listener), identity, hotkey);

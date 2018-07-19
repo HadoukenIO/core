@@ -19,7 +19,7 @@ let _ = require('underscore');
 
 // local modules
 let System = require('./system.js').System;
-let Window = require('./window.js').Window;
+import { Window } from './window';
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');

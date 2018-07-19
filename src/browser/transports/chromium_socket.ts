@@ -197,7 +197,7 @@ function startProxyConnection(proxyCallback: (event: ProxyEvent) => void): nodeN
     server.maxConnections = 1;  //only one connection for each proxy
     server.on('listening', () => {
         log.writeToLog(1, `proxy server info ${JSON.stringify(server.address())}`, true);
-        proxyCallback({eventType: ProxyEventType.Listening, port: server.address().port});
+        proxyCallback({eventType: ProxyEventType.Listening, port: (<any>server.address()).port});
     });
     server.on('close', () => {
         log.writeToLog(1, 'proxy server closed', true);
