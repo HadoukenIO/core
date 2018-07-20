@@ -32,11 +32,12 @@ class UnixDomainSocket extends BaseTransport {
         this.server = unixDgram.createSocket('unix_dgram', (buffer: Buffer) => {
             this.eventEmitter.emit('message', null, buffer);
         });
-        log.writeToLog(1, `Opening and binding to unix domain socket: ${this.serverName}`, true);
+        this.server.on('listening', () => {
+            log.writeToLog(1, `Now listening on the unix domain socket: ${this.serverName}`, true);
+        });
         this.server.bind(this.serverName);
 
-        app.on('will-quit', this.cleanUpServer);
-        process.on('SIGINT', this.cleanUpServer);
+        app.on('window-all-closed', this.cleanUpServer);
     }
 
     public publish(data: any): boolean {
@@ -56,6 +57,7 @@ class UnixDomainSocket extends BaseTransport {
 
     private cleanUpServer(): void {
         log.writeToLog(1, 'Cleaning up unix domain socket transport', true);
+        log.writeToLog(1, this.server, true);
         this.server.close();
         unlink(this.serverName);
     }
