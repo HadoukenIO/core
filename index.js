@@ -58,7 +58,6 @@ let rvmBus;
 let otherInstanceRunning = false;
 let appIsReady = false;
 const deferredLaunches = [];
-const USER_DATA = app.getPath('userData');
 let resolveServerReady;
 const serverReadyPromise = new Promise((resolve) => {
     resolveServerReady = () => resolve();
@@ -424,7 +423,7 @@ function rotateLogs(argo) {
             }).sort((a, b) => {
                 return (b.date - a.date);
             }).slice(6).forEach(file => {
-                let filepath = path.join(USER_DATA, file.name);
+                let filepath = path.join(app.getPath('userData'), file.name);
                 fs.unlink(filepath, err => {
                     if (err) {
                         System.log('error', `cannot delete logfile: ${filepath}`);
@@ -453,7 +452,7 @@ function deleteProcessLogfile(closeLogfile) {
         return;
     }
 
-    let filepath = path.join(USER_DATA, filename);
+    let filepath = path.join(app.getPath('userData'), filename);
 
     if (closeLogfile) {
         app.closeLogfile();
@@ -704,8 +703,9 @@ function handleMacSingleTenant() {
         if (coreState.argo['security-realm']) {
             pathPost = pathPost.concat(coreState.argo['security-realm']);
         }
-        app.setPath('userData', path.join(USER_DATA, pathPost));
-        app.setPath('userCache', path.join(USER_DATA, pathPost));
+        const userData = app.getPath('userData');
+        app.setPath('userData', path.join(userData, pathPost));
+        app.setPath('userCache', path.join(userData, pathPost));
     }
 }
 
