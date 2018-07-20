@@ -8,6 +8,7 @@ import { exec } from 'child_process';
 const unixDgram = process.platform === 'win32' ? {} : require('unix-dgram');
 
 import BaseTransport from './base';
+import * as log from '../log';
 
 type FileDescriptor = string;
 
@@ -31,10 +32,10 @@ class UnixDomainSocket extends BaseTransport {
         this.server = unixDgram.createSocket('unix_dgram', (buffer: Buffer) => {
             this.eventEmitter.emit('message', null, buffer);
         });
+        log.writeToLog(1, `Opening and binding to unix domain socket: ${this.serverName}`, true);
         this.server.bind(this.serverName);
 
         app.on('will-quit', this.cleanUpServer);
-
         process.on('SIGINT', this.cleanUpServer);
     }
 
@@ -44,6 +45,7 @@ class UnixDomainSocket extends BaseTransport {
             fds
                 .filter((fd: FileDescriptor) => fd !== this.serverName)
                 .forEach((fd: FileDescriptor) => {
+                    log.writeToLog(1, `Sending a unix domain socket transport message to ${fd}`, true);
                     const client: Socket = unixDgram.createSocket('unix_dgram');
                     client.send(message, 0, message.length, fd);
                     client.close();
@@ -53,6 +55,7 @@ class UnixDomainSocket extends BaseTransport {
     }
 
     private cleanUpServer(): void {
+        log.writeToLog(1, 'Cleaning up unix domain socket transport', true);
         this.server.close();
         unlink(this.serverName);
     }
@@ -61,7 +64,9 @@ class UnixDomainSocket extends BaseTransport {
         return new Promise<FileDescriptor[]>((resolve) => {
             exec(`lsof -U | grep ${this.filenamePrefix}`, (error, stdout) => {
                 if (error) {
-                    console.error(`exec error: ${error}`);
+                    log.writeToLog(1, '[unix domain socket] begin exec error', true);
+                    log.writeToLog(1, error, true);
+                    log.writeToLog(1, '[unix domain socket] end exec error', true);
                     return resolve([]);
                 }
                 resolve(this.parseOutput(stdout));

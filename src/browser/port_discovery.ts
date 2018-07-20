@@ -37,6 +37,7 @@ export class PortDiscovery extends EventEmitter {
                 log.writeToLog('info', 'Constructing the copyDataTransport window.');
                 this._transport = new WMCopyData(WINDOW_CLASS_NAME, WINDOW_CLASS_NAME);
             } else {
+                log.writeToLog('info', 'Opening and binding to a unix domain socket for port discovery.');
                 this._transport = new UnixDomainSocket(UNIX_FILENAME_PREFIX);
             }
 
