@@ -240,8 +240,7 @@ limitations under the License.
 
         // main window
         if (uuid === name) {
-            const winUuid = { uuid: winIdentity.uuid };
-            eventMap.push([`application/initialized/${uuid}`, winUuid]);
+            eventMap.push([`application/initialized/${uuid}`, { uuid }]);
         }
 
         eventMap.push([`window/dom-content-loaded/${uuid}-${name}`, winIdentity]);
