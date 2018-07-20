@@ -168,10 +168,10 @@ if (coreState.argo['local-startup-url']) {
 
         if (typeof localConfig['devtools_port'] === 'number') {
             if (!coreState.argo['remote-debugging-port']) {
-                console.log('remote-debugging-port:', localConfig['devtools_port']);
+                log.writeToLog(1, `remote-debugging-port: ${localConfig['devtools_port']}`, true);
                 app.commandLine.appendSwitch('remote-debugging-port', localConfig['devtools_port'].toString());
             } else {
-                console.log('Ignoring devtools_port from manifest');
+                log.writeToLog(1, 'Ignoring devtools_port from manifest', true);
             }
         }
     } catch (err) {
