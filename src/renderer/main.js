@@ -48,8 +48,8 @@ const jsAdapterV2 = readAdapterFromSearchPaths(searchPathsV2Api, 'js-adapter.js'
 let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
 me = me.slice(13);
 
-module.exports.api = (windowId) => {
-    const windowOptionSet = coreState.getWindowInitialOptionSet(windowId);
+const api = (windowId, initialOptions) => {
+    const windowOptionSet = initialOptions || coreState.getWindowInitialOptionSet(windowId);
     const mainWindowOptions = windowOptionSet.options || {};
     const enableV2Api = (mainWindowOptions.experimental || {}).v2Api;
     const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
@@ -63,4 +63,16 @@ module.exports.api = (windowId) => {
         v2AdapterShim,
         `fin.__internal_.ipc = null`
     ].join(';');
+};
+
+module.exports.api = api;
+
+module.exports.apiWithOptions = (windowId) => {
+    const initialOptions = coreState.getWindowInitialOptionSet(windowId);
+    return {
+        apiString: api(windowId, initialOptions),
+
+        // break the remote link 
+        initialOptions: JSON.stringify(initialOptions)
+    };
 };

@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/* global routingId, isMainFrame */
-
+/* global routingId, isMainFrame, isSameOriginIframe, isCrossOriginIframe, isChildMainFrame */
 const electron = require('electron');
 const resolvePromise = Promise.resolve.bind(Promise);
 
@@ -43,7 +42,7 @@ process.versions.mainFrameRoutingId = electron.ipcRenderer.getFrameRoutingID();
 process.versions.cachePath = electron.remote.app.getPath('userData');
 
 const mainWindowId = electron.remote.getCurrentWindow(process.versions.mainFrameRoutingId).id;
-const apiDecoratorAsString = electron.remote.require('./src/renderer/main').api(mainWindowId);
+const { apiString, initialOptions } = electron.remote.require('./src/renderer/main').apiWithOptions(mainWindowId);
 
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');
 
@@ -81,7 +80,8 @@ const hookWebFrame = (webFrame, renderFrameId) => {
 
 
 // Handle spin-up and tear-down
-const registerAPI = (w, routingId, isMainFrame) => {
+const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOriginIframe, isChildMainFrame) => {
+
     const teardownHandlers = [];
     teardownHandlers.push(hookWebFrame(defaultWebFrame.createForRenderFrame(routingId), routingId));
 
@@ -90,42 +90,33 @@ const registerAPI = (w, routingId, isMainFrame) => {
             return;
         }
 
-        // w.debugMessages = w.debugMessages || [];
-        // w.debugMessages.push(`id is ${routingId}`);
-
         // Mock as a Node/Electron environment
         // ===================================
-        // let global = w;
         w.getFrameData = process.getFrameData;
-
         w.require = require;
-        // w.debugMessages.push('w.require = require;');
-        // w.module = module;
-        // w.debugMessages.push('w.module = module;');
         w.global = global;
-        // w.debugMessages.push('w.global = global;');
         w.process = process;
-        // w.debugMessages.push('w.process = process;');
         w.routingId = routingId || electron.ipcRenderer.getFrameRoutingID();
-        // w.debugMessages.push('w.routingId = routingId || electron.ipcRenderer.getFrameRoutingID();');
         w.isMainFrame = isMainFrame;
-
-        // v8Util.setHiddenValue(w, 'routingId', routingId)
-        // v8Util.setHiddenValue(w.global, 'ipc', electron.ipcRenderer)
-
-        // teardownHandlers.push(override(w, routingId, chromiumWindowAlertEnabled))
         // ===================================
 
-        w.process.eval(apiDecoratorAsString);
-
+        const { options: { iframe: { sameOriginInjection, crossOriginInjection } } } = JSON.parse(initialOptions);
         let inboundMessageTopic = '';
 
-        if (w.fin) {
-            inboundMessageTopic = `${w.fin.__internal_.ipcconfig.channels.CORE_MESSAGE}-${w.fin.__internal_.routingId}`;
-        }
+        const apiInjectionAllowed = isMainFrame || isChildMainFrame ||
+            (isSameOriginIframe && sameOriginInjection) ||
+            (isCrossOriginIframe && crossOriginInjection);
 
-        // w.debugMessages.push(`nodeIntegration ${nodeIntegration}`);
-        // w.debugMessages.push(`inboundMessageTopic ${inboundMessageTopic}`);
+        if (apiInjectionAllowed) {
+            w.process.eval(apiString);
+
+            if (w.fin) {
+                inboundMessageTopic = `${w.fin.__internal_.ipcconfig.channels.CORE_MESSAGE}-${w.fin.__internal_.routingId}`;
+
+            } else {
+                console.warn('failed to load OpenFin api');
+            }
+        }
 
         delete w.require;
         delete w.process;
@@ -174,4 +165,4 @@ const registerAPI = (w, routingId, isMainFrame) => {
     susbcribeForTeardown(routingId, teardownHandlers);
 };
 
-registerAPI(window, routingId, isMainFrame);
+registerAPI(window, routingId, isMainFrame, isSameOriginIframe, isCrossOriginIframe, isChildMainFrame, initialOptions);
