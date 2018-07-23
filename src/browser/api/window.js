@@ -535,7 +535,12 @@ Window.create = function(id, opts) {
 
         browserWindow.once('will-close', () => {
             const type = 'closing';
-            windowTeardown();
+            windowTeardown()
+                .then(() => log.writeToLog('info', `Window tear down complete ${uuid} ${name}`))
+                .catch(err => {
+                    log.writeToLog('info', `Error while tearing down ${uuid} ${name}`);
+                    log.writeToLog('info', err);
+                });
             ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type: type, uuid, name }, void 0));
         });
 
@@ -1926,9 +1931,6 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
         return Promise.all(promises).then(() => {
             emitCloseEvents(identity);
             browserWindow.removeAllListeners();
-            if (childWindows.length > 0) {
-                coreState.removeChildById(id);
-            }
         });
     };
 }
