@@ -125,9 +125,6 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
-    },
-    'will-close': {
-        topic: 'closing'
     }
     // 'move': {
     //     topic: 'bounds-changing'
@@ -504,7 +501,7 @@ Window.create = function(id, opts) {
             _externalWindowEventAdapter = new ExternalWindowEventAdapter(browserWindow);
         }
 
-        let windowTeardown = createWindowTearDown(identity, id);
+        let windowTeardown = createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler);
 
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
@@ -536,23 +533,19 @@ Window.create = function(id, opts) {
             ofEvents.removeAllListeners(closeEventString);
         });
 
-        browserWindow.on('closed', () => {
-            if (browserWindow._options.saveWindowState) {
-                let cachedBounds = _boundsChangedHandler.getCachedBounds();
-                saveBoundsToDisk(identity, cachedBounds, err => {
-                    if (err) {
-                        log.writeToLog('info', err);
-                    }
-                    windowTeardown();
-                    // These were causing an exception on close if the window was reloaded
-                    _boundsChangedHandler.teardown();
-                    browserWindow.removeAllListeners();
+        browserWindow.once('will-close', () => {
+            const type = 'closing';
+            windowTeardown()
+                .then(() => log.writeToLog('info', `Window tear down complete ${uuid} ${name}`))
+                .catch(err => {
+                    log.writeToLog('info', `Error while tearing down ${uuid} ${name}`);
+                    log.writeToLog('info', err);
                 });
-            } else {
-                windowTeardown();
-                _boundsChangedHandler.teardown();
-                browserWindow.removeAllListeners();
-            }
+            ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type: type, uuid, name });
+        });
+
+        webContents.once('close', () => {
+            webContents.removeAllListeners();
         });
 
         const isMainWindow = (uuid === name);
@@ -565,10 +558,6 @@ Window.create = function(id, opts) {
                 ofEvents.emit(route.application(type, uuid), Object.assign({ topic: 'application', type, uuid }, payload));
             }
         };
-
-        webContents.once('close', () => {
-            webContents.removeAllListeners();
-        });
 
         webContents.on('crashed', (event, killed, terminationStatus) => {
             emitToAppIfMainWin('crashed', {
@@ -1854,56 +1843,87 @@ function emitReloadedEvent(identity, url) {
     });
 }
 
-function createWindowTearDown(identity, id) {
+function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler) {
+    const promises = [];
+
+    //we want to treat the close events as a step in the teardown, wrapping it in a promise.
+    promises.push(new Promise(resolve => {
+        browserWindow.once('closed', resolve);
+    }));
+
+    //wrap the operation of closing a child window in a promise.
+    function closeChildWin(childId) {
+        return new Promise((resolve, reject) => {
+            const child = coreState.getWinObjById(childId);
+
+            // TODO right now this is forceable to handle the event that there was a close
+            //      requested on a child window and the main window closes. This needs
+            //      looking into
+            if (child) {
+                let childIdentity = {
+                    name: child.name,
+                    uuid: child.uuid
+                };
+
+                Window.close(childIdentity, true, () => {
+                    resolve();
+                });
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    //Even if disk operations fail we need to resolve this promise to avoid zombie processes.
+    function handleSaveStateAlwaysResolve() {
+        return new Promise((resolve, reject) => {
+            if (browserWindow._options.saveWindowState) {
+                const cachedBounds = _boundsChangedHandler.getCachedBounds();
+                saveBoundsToDisk(identity, cachedBounds, err => {
+                    if (err) {
+                        log.writeToLog('info', err);
+                    }
+                    // These were causing an exception on close if the window was reloaded
+                    _boundsChangedHandler.teardown();
+                    resolve();
+                });
+            } else {
+                _boundsChangedHandler.teardown();
+                resolve();
+            }
+        });
+    }
+
+    //Window tear down will:
+    //    Update core state by removing the window.
+    //    Save the window state to disk
+    //    Close all child windows
+    //    Wait for the close event.
     return function() {
         let ofWindow = Window.wrap(identity.uuid, identity.name);
-        let childWindows = coreState.getChildrenByWinId(id);
-
+        let childWindows = coreState.getChildrenByWinId(id) || [];
         // remove from core state earlier rather than later
         coreState.removeChildById(id);
 
         // remove window from any groups it belongs to
         WindowGroups.leaveGroup(ofWindow);
 
-        if (childWindows && childWindows.length > 0) {
-            let closedChildren = 0;
+        promises.push(handleSaveStateAlwaysResolve());
 
-            childWindows.forEach(childId => {
-                let child = coreState.getWinObjById(childId);
+        childWindows.forEach(childId => {
+            promises.push(closeChildWin(childId));
+        });
 
-                // TODO right now this is forceable to handle the event that there was a close
-                //      requested on a child window and the main window closes. This needs
-                //      looking into
-                if (child) {
-                    let childIdentity = {
-                        name: child.name,
-                        uuid: child.uuid
-                    };
-
-                    Window.close(childIdentity, true, () => {
-                        closedChildren++;
-                        if (closedChildren === childWindows.length) {
-                            emitCloseEvents(identity);
-                            coreState.removeChildById(id);
-                        }
-                    });
-                } else {
-                    closedChildren++;
-                    if (closedChildren === childWindows.length) {
-                        emitCloseEvents(identity);
-                        coreState.removeChildById(id);
-                    }
-                }
-            });
-        } else {
+        return Promise.all(promises).then(() => {
             emitCloseEvents(identity);
-        }
+            browserWindow.removeAllListeners();
+        });
     };
 }
 
 function saveBoundsToDisk(identity, bounds, callback) {
-    let cacheFile = getBoundsCacheSafeFileName(identity);
-    let data = {
+    const cacheFile = getBoundsCacheSafeFileName(identity);
+    const data = {
         'active': 'true',
         'height': bounds.height,
         'width': bounds.width,
