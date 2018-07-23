@@ -348,6 +348,7 @@ Application.getInfo = function(identity, callback) {
     const app = Application.wrap(identity.uuid);
 
     const response = {
+        runtime: { version: System.getRuntimeInfo(identity).version },
         launchMode: app.launchMode
     };
 
