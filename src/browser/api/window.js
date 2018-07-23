@@ -541,7 +541,7 @@ Window.create = function(id, opts) {
                     log.writeToLog('info', `Error while tearing down ${uuid} ${name}`);
                     log.writeToLog('info', err);
                 });
-            ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type: type, uuid, name }, void 0));
+            ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type: type, uuid, name });
         });
 
         webContents.once('close', () => {
