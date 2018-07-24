@@ -37,7 +37,7 @@ module.exports = (grunt) => {
 
     grunt.initConfig({
         copy: {
-            assets: { // assets: images, htmls, etc.
+            assets: { // assets: images, htmls, icons
                 files: [{
                     src: ['assets/*'],
                     dest: 'staging/core/'
@@ -51,21 +51,9 @@ module.exports = (grunt) => {
                     dest: stagingNodeModulesPath
                 }]
             },
-            etc: { //other artifacts that need copying
+            etc: { // other artifacts that need copying
                 files: [{
-                    src: ['package.json', 'blank.ico'],
-                    dest: 'staging/core/'
-                }]
-            },
-            login: { //login dialog artifacts that need copying
-                files: [{
-                    src: ['src/login/*'],
-                    dest: 'staging/core/'
-                }]
-            },
-            certificate: { //certificate dialog artifacts that need copying
-                files: [{
-                    src: ['src/certificate/*'],
+                    src: ['package.json'],
                     dest: 'staging/core/'
                 }]
             }

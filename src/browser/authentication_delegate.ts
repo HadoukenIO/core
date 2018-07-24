@@ -38,7 +38,7 @@ export function createAuthUI(identity: ResourceFetchIdentity): void {
     const resourceFetch = identity.resourceFetch || false;
 
     Application.create({
-        url: `file:///${__dirname}/../login/index.html?uuid=${uriUuid}&name=${uriName}&resourceFetch=${resourceFetch}`,
+        url: `file:///${__dirname}/../../assets/login.html?uuid=${uriUuid}&name=${uriName}&resourceFetch=${resourceFetch}`,
         uuid: appId,
         name: appId,
         mainWindowOptions: {

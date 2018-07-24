@@ -2283,8 +2283,7 @@ function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
 }
 
 function setBlankTaskbarIcon(browserWindow) {
-    // the file is located at ..\runtime-core\blank.ico
-    setIcon(browserWindow, path.resolve(`${__dirname}/../../../blank.ico`));
+    setIcon(browserWindow, path.resolve(`${__dirname}/../../../assets/blank.ico`));
 }
 
 function getMainWinIconUrl(id) {

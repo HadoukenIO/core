@@ -123,7 +123,7 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
     clientCertDialog.on('closed', onClosed);
 
     let params = '?url=' + encodeURIComponent(url) + '&uuid=' + encodeURIComponent(ipcUuid) + '&certs=' + encodeURIComponent(_.pluck(list, 'issuerName'));
-    clientCertDialog.loadURL(path.resolve(__dirname, 'src', 'certificate', 'index.html') + params);
+    clientCertDialog.loadURL(path.resolve(__dirname, 'assets', 'certificate.html') + params);
 });
 
 portDiscovery.on(route.runtime('launched'), (portInfo) => {
