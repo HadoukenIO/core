@@ -63,6 +63,7 @@ class UnixDomainSocket extends BaseTransport {
                 log.writeToLog(1, '[unix domain socket] begin unlink error', true);
                 log.writeToLog(1, err, true);
                 log.writeToLog(1, '[unix domain socket] end unlink error', true);
+                return;
             }
             log.writeToLog(1, `${this.serverName} was deleted`, true);
         });
