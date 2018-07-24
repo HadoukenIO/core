@@ -61,7 +61,14 @@ class UnixDomainSocket extends BaseTransport {
     private cleanUpServer(server: Socket): void {
         log.writeToLog(1, 'Cleaning up unix domain socket transport', true);
         server.close();
-        unlink(this.serverName);
+        unlink(this.serverName, (err) => {
+            if (err) {
+                log.writeToLog(1, '[unix domain socket] begin unlink error', true);
+                log.writeToLog(1, err, true);
+                log.writeToLog(1, '[unix domain socket] end unlink error', true);
+            }
+            log.writeToLog(1, `${this.serverName} was deleted`, true);
+        });
     }
 
     private getFileDescriptors(): Promise<FileDescriptor[]> {
