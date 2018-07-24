@@ -12,8 +12,33 @@ const asar = require('asar');
 const electronRebuild = require('electron-rebuild');
 const wrench = require('wrench');
 const openfinSign = require('openfin-sign'); // OpenFin signing module
+const childProcess = require('child_process');
 
-const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
+// Use NPM to query immediate and nested production dependencies
+const npmDeps = JSON.parse(childProcess.execSync('npm ls --json --prod').toString('utf8'));
+const fullDependencies = Object.entries(npmDeps.dependencies);
+
+// Flatten all production dependencies, including nested ones, into an array.
+// Prevents duplicates.
+function flattenDeep(arr1, usedModules) {
+    return arr1.reduce((acc, val) => {
+        // Add top level dependencies without duplicates
+        if(!usedModules[val[0]]) {
+            usedModules[val[0]] = true;
+            acc.push(`${val[0]}/**`); 
+        }
+
+        // Handle nested dependencies
+        const subDep = val[1].dependencies;
+        if(typeof subDep === 'object') {
+            acc = acc.concat(flattenDeep(Object.entries(subDep), usedModules));
+        } 
+
+        return acc;
+    }, []);
+}
+
+const dependencies = flattenDeep(fullDependencies, {});
 const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
 const stagingNodeModulesPath = path.join('staging', 'core', 'node_modules');
 const jsAdapterPath = path.join('node_modules', 'hadouken-js-adapter', 'out');
