@@ -37,10 +37,7 @@ class UnixDomainSocket extends BaseTransport {
         });
         this.server.bind(this.serverName);
 
-        // Not 100% sure why I need to use bind() here, but when I try to call
-        // this.server.close() in this.cleanUpServer(), it throws an error
-        // saying that this.server is undefined.
-        app.on('window-all-closed', this.cleanUpServer.bind(this, this.server));
+        app.on('window-all-closed', this.cleanUpServer);
     }
 
     public publish(data: any): boolean {
@@ -58,9 +55,9 @@ class UnixDomainSocket extends BaseTransport {
         return true;
     }
 
-    private cleanUpServer(server: Socket): void {
+    private cleanUpServer = () => {
         log.writeToLog(1, 'Cleaning up unix domain socket transport', true);
-        server.close();
+        this.server.close();
         unlink(this.serverName, (err) => {
             if (err) {
                 log.writeToLog(1, '[unix domain socket] begin unlink error', true);
