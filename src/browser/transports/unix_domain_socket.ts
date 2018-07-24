@@ -8,6 +8,7 @@ import { exec } from 'child_process';
 const unixDgram = process.platform === 'win32' ? {} : require('unix-dgram');
 
 import BaseTransport from './base';
+import * as coreState from '../core_state';
 import * as log from '../log';
 
 type FileDescriptor = string;
@@ -27,8 +28,11 @@ class UnixDomainSocket extends BaseTransport {
     constructor(filenamePrefix: string) {
         super();
 
+        const version: string = coreState.argo['version-keyword'];
+        const securityRealm: string = coreState.argo['security-realm'] || '';
         this.filenamePrefix = filenamePrefix;
-        this.serverName = filenamePrefix + Date.now();
+        // e.g. /some/prefix/string.<version>.<optional security realm>.<unix timestamp>
+        this.serverName = `${filenamePrefix}.${version}.${securityRealm ? securityRealm + '.' : ''}${Date.now()}`;
         this.server = unixDgram.createSocket('unix_dgram', (buffer: Buffer) => {
             this.eventEmitter.emit('message', null, buffer);
         });

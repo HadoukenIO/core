@@ -5,7 +5,7 @@ import route from '../common/route';
 import { isMeshEnabled } from './connection_manager';
 import * as coreState from './core_state';
 
-const UNIX_FILENAME_PREFIX: string = '/tmp/of.pd.';
+const UNIX_FILENAME_PREFIX: string = '/tmp/of.pd';
 const WINDOW_CLASS_NAME = 'OPENFIN_ADAPTER_WINDOW';
 
 export interface ArgMap {
