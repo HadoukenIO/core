@@ -31,7 +31,7 @@ export interface Route {
     'external-window': WindowRoute;
 
     system: SimpleRoute;
-    service: SimpleRoute;
+    channel: SimpleRoute;
     server: SimpleRoute;
     connection: SimpleRoute;
     runtime: SimpleRoute;
@@ -85,7 +85,7 @@ route.frame = <WindowRoute>router.bind(HYPHEN, 'frame');
 route.window = <WindowRoute>router.bind(HYPHEN, 'window');
 route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
 
-route.service = <SimpleRoute>router.bind(null, 'service');
+route.channel = <SimpleRoute>router.bind(null, 'channel');
 route.system = <SimpleRoute>router.bind(null, 'system');
 route.rvmMessageBus = route['rvm-message-bus'] = <SimpleRoute>router.bind(null, 'rvm-message-bus');
 route.server = <SimpleRoute>router.bind(null, 'server');

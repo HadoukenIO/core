@@ -69,6 +69,9 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         const browserWindowExists = !browserWindow.isDestroyed();
         const validRoutingId = typeof frameRoutingId === 'number';
         const canTrySend = browserWindowLocated && browserWindowExists && validRoutingId;
+        // tslint:disable-next-line
+        debugger;
+        system.debugLog(1, `************** send payload: ${JSON.stringify(payload, undefined, 4)}`);
 
         if (!canTrySend) {
             system.debugLog(1, `uuid:${uuid} name:${name} frameRoutingId:${frameRoutingId} not reachable, payload:${payload}`);
@@ -99,6 +102,9 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
         try {
             const data = JSON.parse(JSON.stringify(rawData));
+            // tslint:disable-next-line
+            debugger;
+            system.debugLog(1, `************** onMessage rawData: ${JSON.stringify(data, undefined, 4)}`);
             const ack = !data.isSync ? this.ackDecorator(e, data.messageId) : this.ackDecoratorSync(e, data.messageId);
             const nack = this.nackDecorator(ack);
             const browserWindow = e.sender.getOwnerBrowserWindow();
