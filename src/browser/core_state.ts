@@ -729,19 +729,23 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
     }
 
     for (const { openfinWindow } of app.children) {
-        const { name } = openfinWindow;
+        if (openfinWindow) {
+            const { name } = openfinWindow;
 
-        if (name === frame) {
-            const parent = getParentIdentity({uuid, name});
+            if (name === frame) {
+                const parent = getParentIdentity({uuid, name});
 
-            return {
-                name,
-                uuid,
-                parent,
-                entityType: 'window'
-            };
-        } else if (openfinWindow.frames.get(frame)) {
-            return openfinWindow.frames.get(frame);
+                return {
+                    name,
+                    uuid,
+                    parent,
+                    entityType: 'window'
+                };
+            } else if (openfinWindow.frames.get(frame)) {
+                return openfinWindow.frames.get(frame);
+            }
+        } else {
+            writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
     }
 }
@@ -754,38 +758,42 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
     }
 
     for (const { openfinWindow } of app.children) {
-        const { uuid, name } = openfinWindow;
-        let browserWindow: Shapes.BrowserWindow;
-        browserWindow = openfinWindow.browserWindow;
+        if (openfinWindow) {
+            const { uuid, name } = openfinWindow;
+            let browserWindow: Shapes.BrowserWindow;
+            browserWindow = openfinWindow.browserWindow;
 
-        if (!openfinWindow.mainFrameRoutingId) {
-            // save bit time here by not calling webContents.mainFrameRoutingId every time
-            // mainFrameRoutingId is wrong during setWindowObj
-            if (!browserWindow.isDestroyed()) {
-                openfinWindow.mainFrameRoutingId = browserWindow.webContents.mainFrameRoutingId;
-                writeToLog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId}`, true);
-            } else {
-                writeToLog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`, true);
+            if (!openfinWindow.mainFrameRoutingId) {
+                // save bit time here by not calling webContents.mainFrameRoutingId every time
+                // mainFrameRoutingId is wrong during setWindowObj
+                if (!browserWindow.isDestroyed()) {
+                    openfinWindow.mainFrameRoutingId = browserWindow.webContents.mainFrameRoutingId;
+                    writeToLog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId}`, true);
+                } else {
+                    writeToLog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`, true);
+                }
             }
-        }
 
-        if (name === frame) {
-            return {
-                name,
-                browserWindow,
-                frameRoutingId: openfinWindow.mainFrameRoutingId,
-                mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
-                frameName: name
-            };
-        } else if (openfinWindow.frames.get(frame)) {
-            const {name, frameRoutingId} = openfinWindow.frames.get(frame);
-            return {
-                name,
-                browserWindow,
-                frameRoutingId,
-                mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
-                frameName: name
-            };
+            if (name === frame) {
+                return {
+                    name,
+                    browserWindow,
+                    frameRoutingId: openfinWindow.mainFrameRoutingId,
+                    mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
+                    frameName: name
+                };
+            } else if (openfinWindow.frames.get(frame)) {
+                const {name, frameRoutingId} = openfinWindow.frames.get(frame);
+                return {
+                    name,
+                    browserWindow,
+                    frameRoutingId,
+                    mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
+                    frameName: name
+                };
+            }
+        } else {
+            writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
     }
 }

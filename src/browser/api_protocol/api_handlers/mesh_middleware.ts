@@ -4,6 +4,7 @@ import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
 import { isLocalUuid } from '../../core_state';
+import { IdentityAddress } from '../../runtime_p2p/peer_connection_manager';
 
 const SUBSCRIBE_ACTION = 'subscribe';
 const PUBLISH_ACTION = 'publish-message';
@@ -122,8 +123,19 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction) {
         try {
             connectionManager.resolveIdentity({uuid})
-            .then((id: any) => {
+            .then((id: IdentityAddress) => {
                 id.runtime.fin.System.executeOnRemote(identity, data)
+                .then(res => {
+                    switch (action) {
+                        case 'get-info':
+                            if (res && res.data && !res.data.runtime) {
+                               Object.assign(res.data, {runtime: {version: id.runtime.portInfo.version}});
+                            }
+                            return res;
+                        default:
+                            return res;
+                    }
+                })
                 .then(ack)
                 .catch(nack);
             }).catch((e: Error) => {
