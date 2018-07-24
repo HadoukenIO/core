@@ -32,7 +32,7 @@ export module Channel {
         return providerIdentity;
     }
 
-    export function registerChannel (identity: Identity, channelName?: string): ProviderIdentity {
+    export function createChannel(identity: Identity, channelName?: string): ProviderIdentity {
         const targetApp = getExternalOrOfWindowIdentity(identity);
         // If a channel is already registered from that uuid, nack
         if (!targetApp || getChannelByUuid(identity.uuid)) {
