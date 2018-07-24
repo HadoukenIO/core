@@ -343,7 +343,10 @@ Application.getInfo = function(identity, callback) {
         launchMode,
         manifestUrl: url,
         manifest,
-        parentUuid
+        parentUuid,
+        runtime: {
+            version: System.getRuntimeInfo(identity).version
+        }
     };
 
     callback(response);
