@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 import * as mockery from 'mockery';
 import { mockElectron } from './electron';
@@ -24,7 +9,10 @@ import route from '../src/common/route';
 const sinon = require('sinon');
 
 mockery.registerMock('electron', mockElectron);
-mockery.enable();
+mockery.enable({
+    warnOnReplace: false,
+    warnOnUnregistered: false
+});
 import { GlobalHotkey } from '../src/browser/api/global_hotkey';
 
 describe('GlobalHotkey', () => {
@@ -202,7 +190,7 @@ describe('GlobalHotkey', () => {
 
         GlobalHotkey.register(identity, hotkey, spy);
         //we simulate a window close.
-        ofEvents.emit(route.window('closed'), identity);
+        ofEvents.emit(route.window('closed', identity.uuid, identity.name), identity);
         const isRegistered = GlobalHotkey.isRegistered(hotkey);
         assert.deepStrictEqual(isRegistered, false, 'Expected hotkey to not be registered');
     });
@@ -242,7 +230,7 @@ describe('GlobalHotkey', () => {
         GlobalHotkey.register(identity2, hotkey, spy2);
 
         //we simulate a window close.
-        ofEvents.emit(route.window('closed'), identity2);
+        ofEvents.emit(route.window('closed', identity2.uuid, identity2.name), identity2);
 
         mockElectron.globalShortcut.mockRaiseEvent(hotkey);
         assert.ok(spy.calledOnce, 'Expected the global shortcut to be called');
