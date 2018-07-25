@@ -36,12 +36,16 @@ import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
 import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
-// constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
     DEFAULT_RESIZE_SIDES
 } from '../../shapes';
+import {
+    ERROR_TITLE_RENDERER_CRASH,
+    ERROR_TYPE_RENDERER_CRASH,
+    showErrorBox
+} from '../../common/errors';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -560,6 +564,15 @@ Window.create = function(id, opts) {
 
             if (isMainWindow) {
                 coreState.setAppRunningState(uuid, false);
+
+                // Show error box notifying the user of the crash
+                const message =
+                    `A crash occured in the renderer process of the ` +
+                    `application with the UUID "${uuid}"`;
+                const title = ERROR_TITLE_RENDERER_CRASH;
+                const type = ERROR_TYPE_RENDERER_CRASH;
+                const args = { message, title, type };
+                showErrorBox(args);
             }
         });
 

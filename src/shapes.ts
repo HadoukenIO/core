@@ -220,6 +220,7 @@ export interface WindowOptions {
     title?: string;
     toShowOnRun?: boolean;
     transparent?: boolean;
+    _type?: 'OF_error_box:app_initialization'|'OF_error_box:main_process'|'OF_error_box:renderer_crash';
     url: string;
     uuid: string;
     waitForPageLoad?: boolean;

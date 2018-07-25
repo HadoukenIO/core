@@ -9,7 +9,6 @@ let electron = require('electron');
 let app = electron.app; // Module to control application life.
 let BrowserWindow = electron.BrowserWindow;
 let crashReporter = electron.crashReporter;
-let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
 let ipc = electron.ipcMain;
 let Menu = electron.Menu;
@@ -571,14 +570,13 @@ function launchApp(argo, startExternalAdapterServer) {
             tickCount: app.getTickCount(),
             uuid
         });
-    }, error => {
-        log.writeToLog(1, error, true);
-
-        if (!coreState.argo['noerrdialogs']) {
-            dialog.showErrorBox('Fatal Error', `${error}`);
-        }
-
-        app.quit();
+    }, (error) => {
+        const title = errors.ERROR_TITLE_APP_INITIALIZATION;
+        const type = errors.ERROR_TYPE_APP_INITIALIZATION;
+        const args = { error, title, type };
+        errors.showErrorBox(args)
+            .catch((error) => log.writeToLog('info', error))
+            .then(app.quit);
     });
 }
 
@@ -608,7 +606,6 @@ function initFirstApp(configObject, configUrl, licenseKey) {
         successfulLaunch = true;
 
     } catch (error) {
-        log.writeToLog(1, error, true);
 
         if (rvmBus) {
             rvmBus.publish({
@@ -618,18 +615,17 @@ function initFirstApp(configObject, configUrl, licenseKey) {
             });
         }
 
-        if (!coreState.argo['noerrdialogs']) {
-            const srcMsg = error ? error.message : '';
-            const errorMessage = startupAppOptions.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
-
-            dialog.showErrorBox('Fatal Error', errorMessage);
-        }
-
-        if (coreState.shouldCloseRuntime()) {
-            _.defer(() => {
-                app.quit();
+        const message = startupAppOptions.loadErrorMessage;
+        const title = errors.ERROR_TITLE_APP_INITIALIZATION;
+        const type = errors.ERROR_TYPE_APP_INITIALIZATION;
+        const args = { error, message, title, type };
+        errors.showErrorBox(args)
+            .catch((error) => log.writeToLog('info', error))
+            .then(() => {
+                if (coreState.shouldCloseRuntime()) {
+                    app.quit();
+                }
             });
-        }
     }
 
     return successfulLaunch;
