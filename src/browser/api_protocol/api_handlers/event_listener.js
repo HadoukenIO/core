@@ -6,7 +6,7 @@ let _ = require('underscore');
 
 // local modules
 let apiProtocolBase = require('./api_protocol_base.js');
-let Window = require('../../api/window.js').Window;
+import { Window } from '../../api/window';
 let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';

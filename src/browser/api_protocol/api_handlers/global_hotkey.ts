@@ -27,7 +27,6 @@ export class GlobalHotkeyApiHandler {
     //we will leverage the process-desktop-event pipeline without leveraging existing subscribe/unsubscribe logic
     //this subscription claims the accelerator.
     private register(source: Identity, message: any) {
-        const { uuid, name } = source;
         const { hotkey } = message.payload;
             GlobalHotkey.register(source, hotkey, () => {
                 const eventObj = {
@@ -45,7 +44,6 @@ export class GlobalHotkeyApiHandler {
     }
 
     private unregister(source: Identity, message: any) {
-        const { uuid, name } = source;
         const { hotkey } = message.payload;
         GlobalHotkey.unregister(source, hotkey);
 

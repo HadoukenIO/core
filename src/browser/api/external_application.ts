@@ -1,6 +1,6 @@
 
 import ofEvents from '../of_events';
-import { Identity } from '../../shapes';
+import { Identity, Listener } from '../../shapes';
 import * as ProcessTracker from '../process_tracker.js';
 import route from '../../common/route';
 
@@ -27,7 +27,7 @@ interface ExternalProcessInfo {
 }
 
 export module ExternalApplication {
-    export function addEventListener(identity: Identity, type: string, listener: Function) {
+    export function addEventListener(identity: Identity, type: string, listener: Listener) {
         const evt = route.externalApplication(type, identity.uuid);
         ofEvents.on(evt, listener);
 
@@ -36,7 +36,7 @@ export module ExternalApplication {
         };
     }
 
-    export function removeEventListener(identity: Identity, type: string, listener: Function) {
+    export function removeEventListener(identity: Identity, type: string, listener: Listener) {
         ofEvents.removeListener(route.externalApplication(type, identity.uuid), listener);
     }
 
