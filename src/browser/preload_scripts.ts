@@ -1,5 +1,5 @@
 
-const Window = require('./api/window.js').Window;
+import { Window } from './api/window';
 import { cachedFetch } from './cached_resource_fetcher';
 import { normalizePreloadScripts } from './convert_options';
 import { Identity, PreloadScript } from '../shapes';

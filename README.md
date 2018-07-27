@@ -5,10 +5,9 @@ _The following setup is known to be working well. You can try other versions at 
 own risk of losing a lot of time._
 * [Visual Studio 2015 Build Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools) *
 * [OpenFin runtime executables](https://developer.openfin.co/versions/?product=Runtime&version=stabe) 
-* [Node](https://nodejs.org/download/release/v6.14.2/) 6.14.2
+* [Node](https://nodejs.org/download/release/v8.2.1/) 8.2.1
 * Grunt (`grunt-cli` 1.2.0)
 * [Python 2.7.12](https://www.python.org/downloads/release/python-2712/)
-* _Optional:_ `node-inspector` 0.12.3 _(problems with 0.12.4 - 0.12.8)_
 
 \_______________
 
@@ -68,11 +67,6 @@ npm run deploy -- --target=C:\Users\[username]\AppData\Local\OpenFin\runtime\[re
 ```bash
 openfin --config app.json --launch 
 ```
-
-### Using node-inspector
-
-
-* Set breakpoints and debug using Chrome (check node-inspector's documentation on how do it)
 
 ### API Documentation
 
