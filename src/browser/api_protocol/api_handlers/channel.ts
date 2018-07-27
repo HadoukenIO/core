@@ -43,7 +43,7 @@ export class ChannelApiHandler {
     private getAllChannels(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): ProviderIdentity[] {
         const { locals } = message;
 
-        let allChannels = Channel.getAllChannels(identity);
+        let allChannels = Channel.getAllChannels();
 
         if (locals && locals.aggregate) {
             const { aggregate } = locals;
