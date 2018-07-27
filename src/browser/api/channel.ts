@@ -50,6 +50,14 @@ export module Channel {
         return channelMap.get(channelId);
     }
 
+    export function getAllChannels(): ProviderIdentity[] {
+        const allChannels: ProviderIdentity[] = [];
+        channelMap.forEach(channel => {
+            allChannels.push(channel);
+        });
+        return allChannels;
+    }
+
     // Could be any identifier
     export function getChannelByUuid(uuid: string): ProviderIdentity|undefined {
         let providerIdentity;
@@ -125,24 +133,20 @@ export module Channel {
         const ackKey = getAckKey(messageId, identity);
         const targetIdentity = { uuid, name };
 
-        if (!!Channel.getChannelByUuid(providerIdentity.uuid)) {
-            remoteAckMap.set(ackKey, { ack, nack });
+        remoteAckMap.set(ackKey, { ack, nack });
 
-            const ackToSender = createAckToSender(identity, messageId, providerIdentity);
+        const ackToSender = createAckToSender(identity, messageId, providerIdentity);
 
-            sendToIdentity(targetIdentity, {
-                action: CHANNEL_APP_ACTION,
-                payload: {
-                    ackToSender,
-                    providerIdentity,
-                    action: channelAction,
-                    senderIdentity: identity,
-                    payload: messagePayload
-                }
-            });
-        } else {
-            nack('Channel connection not found.');
-        }
+        sendToIdentity(targetIdentity, {
+            action: CHANNEL_APP_ACTION,
+            payload: {
+                ackToSender,
+                providerIdentity,
+                action: channelAction,
+                senderIdentity: identity,
+                payload: messagePayload
+            }
+        });
     }
 
     // This preprocessor will check if the API call is an 'ack' action from a channel and match it to the original request.
