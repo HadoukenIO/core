@@ -255,7 +255,6 @@ export interface Manifest {
     };
     licenseKey: string;
     offlineAccess?: boolean;
-    plugins?: Plugin[];
     proxy?: ProxySettings;
     runtime: {
         arguments?: string;
@@ -284,13 +283,6 @@ export interface Manifest {
         forwardErrorReports?: boolean;
         enableErrorReporting?: boolean;
     };
-}
-
-export interface Plugin {
-    link?: string;
-    mandatory?: boolean;
-    name: string;
-    version: string;
 }
 
 export interface PreloadScript {
