@@ -1,11 +1,40 @@
 
-import { applyPendingChannelConnections } from '../api_protocol/api_handlers/channel_middleware';
 import { Identity, ProviderIdentity, EventPayload } from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
+import { RemoteAck, AckFunc, NackFunc } from '../api_protocol/transport_strategy/ack';
+import { sendToIdentity } from '../api_protocol/api_handlers/api_protocol_base';
 import { getExternalOrOfWindowIdentity } from '../core_state';
 
 const channelMap: Map<string, ProviderIdentity> = new Map();
+const remoteAckMap: Map<string, RemoteAck> = new Map();
+const pendingChannelConnections: Map<string, any[]> = new Map();
+
+const CHANNEL_APP_ACTION = 'process-channel-message';
+const CHANNEL_ACK_ACTION = 'send-channel-result';
+const CHANNEL_CONNECT_ACTION = 'process-channel-connection';
+
+interface AckToSender {
+    action: string;
+    payload: {
+        correlationId: number;
+        destinationToken: Identity;
+        payload: ProviderIdentity&any;
+        success: boolean
+    };
+}
+
+const createAckToSender = (identity: Identity, messageId: number, providerIdentity: ProviderIdentity): AckToSender => {
+    return {
+        action: CHANNEL_ACK_ACTION,
+        payload: {
+            correlationId: messageId,
+            destinationToken: identity,
+            payload: providerIdentity,
+            success: true
+        }
+    };
+};
 
 export module Channel {
     export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
@@ -22,7 +51,7 @@ export module Channel {
     }
 
     // Could be any identifier
-    export function getChannelByUuid(uuid: string): ProviderIdentity {
+    export function getChannelByUuid(uuid: string): ProviderIdentity|undefined {
         let providerIdentity;
         channelMap.forEach(channel => {
             if (channel.uuid === uuid) {
@@ -60,5 +89,98 @@ export module Channel {
         }, 1);
 
         return providerIdentity;
+    }
+
+    export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): ProviderIdentity {
+        const { wait, uuid, payload: connectionPayload } = payload;
+        const ackKey = getAckKey(messageId, identity);
+        const providerIdentity = Channel.getChannelByUuid(uuid);
+        if (providerIdentity) {
+            remoteAckMap.set(ackKey, { ack, nack });
+
+            const ackToSender = createAckToSender(identity, messageId, providerIdentity);
+
+            // Forward the API call to the channel provider.
+            sendToIdentity(providerIdentity, {
+                action: CHANNEL_CONNECT_ACTION,
+                payload: {
+                    ackToSender,
+                    providerIdentity,
+                    clientIdentity: identity,
+                    payload: connectionPayload
+                }
+            });
+        } else if (wait) {
+            // Channel not yet registered, hold connection request
+            const message = { identity, payload, messageId, ack, nack };
+            waitForChannelRegistration(payload.uuid, message);
+        } else {
+            nack('Channel connection not found.');
+        }
+        return providerIdentity;
+    }
+
+    export function sendChannelMessage(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
+        const { uuid, name, payload: messagePayload, action: channelAction, providerIdentity } = payload;
+        const ackKey = getAckKey(messageId, identity);
+        const targetIdentity = { uuid, name };
+
+        remoteAckMap.set(ackKey, { ack, nack });
+
+        const ackToSender = createAckToSender(identity, messageId, providerIdentity);
+
+        sendToIdentity(targetIdentity, {
+            action: CHANNEL_APP_ACTION,
+            payload: {
+                ackToSender,
+                providerIdentity,
+                action: channelAction,
+                senderIdentity: identity,
+                payload: messagePayload
+            }
+        });
+    }
+
+    // This preprocessor will check if the API call is an 'ack' action from a channel and match it to the original request.
+    export function sendChannelResult(identity: Identity, payload: any, ack: AckFunc, nack: NackFunc): void {
+        const { reason, success, destinationToken, correlationId, payload: ackPayload } = payload;
+        const ackKey = getAckKey(correlationId, destinationToken);
+        const remoteAck = remoteAckMap.get(ackKey);
+
+        if (remoteAck) {
+            if (success) {
+                remoteAck.ack({
+                    success: true,
+                    ...(ackPayload ? { data: ackPayload } : {})
+                });
+            } else {
+                remoteAck.nack(new Error(reason || 'Channel provider error'));
+            }
+            remoteAckMap.delete(ackKey);
+        } else {
+            nack('Ack failed, initial channel message not found.');
+        }
+    }
+}
+
+function getAckKey (id: number, identity: Identity): string {
+    return `${ id }-${ identity.uuid }-${ identity.name }`;
+}
+
+function waitForChannelRegistration(uuid: string, message: any): void {
+    if (!Array.isArray(pendingChannelConnections.get(uuid))) {
+        pendingChannelConnections.set(uuid, []);
+    }
+    pendingChannelConnections.get(uuid).push(message);
+}
+
+function applyPendingChannelConnections(uuid: string): void {
+    const pendingConnections = pendingChannelConnections.get(uuid);
+    if (pendingConnections) {
+        pendingConnections.forEach(connectionMsg => {
+            const { identity, payload, messageId, ack, nack } = connectionMsg;
+            Channel.connectToChannel(identity, payload, messageId, ack, nack);
+        });
+        pendingChannelConnections.delete(uuid);
     }
 }

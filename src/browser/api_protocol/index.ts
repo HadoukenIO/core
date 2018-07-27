@@ -20,7 +20,6 @@ import { init as initApiProtocol, getDefaultRequestHandler } from './api_handler
 import { meshEnabled } from '../connection_manager';
 import { registerMiddleware as registerEntityExistenceMiddleware } from './api_handlers/middleware_entity_existence';
 import { registerMiddleware as registerMeshMiddleware } from './api_handlers/mesh_middleware';
-import { registerMiddleware as registerChannelMiddleware } from './api_handlers/channel_middleware';
 import {
     registerMiddleware as registerProcessExternalAppMiddleware,
     legacyWindowingEnabled
@@ -33,7 +32,6 @@ registerEntityExistenceMiddleware(getDefaultRequestHandler());
 if (legacyWindowingEnabled()) {
     registerProcessExternalAppMiddleware(getDefaultRequestHandler());
 }
-registerChannelMiddleware(getDefaultRequestHandler());
 if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
 }
