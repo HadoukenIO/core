@@ -11,7 +11,7 @@ let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
-import { Service } from '../../api/service';
+import { Channel } from '../../api/channel';
 import { GlobalHotkey } from '../../api/global_hotkey';
 
 const coreState = require('../../core_state');
@@ -142,13 +142,13 @@ function EventListenerApiHandler() {
                 };
             }
         },
-        'service': {
-            name: 'service',
+        'channel': {
+            name: 'channel',
             subscribe: function(identity, type, payload, cb) {
                 const targetIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
                 const { uuid } = targetIdentity;
                 const islocalUuid = coreState.isLocalUuid(uuid);
-                const localUnsub = Service.addEventListener(targetIdentity, type, cb);
+                const localUnsub = Channel.addEventListener(targetIdentity, type, cb);
                 let remoteUnSub;
                 const isExternalRuntime = ExternalApplication.isRuntimeClient(identity.uuid);
 
@@ -156,7 +156,7 @@ function EventListenerApiHandler() {
                     const subscription = {
                         uuid,
                         listenType: 'on',
-                        className: 'service',
+                        className: 'channel',
                         eventName: type
                     };
 

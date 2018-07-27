@@ -122,7 +122,7 @@ export function getEntityInfo(identity: Shapes.Identity) {
     }
 }
 
-export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes.ServiceIdentity|undefined {
+export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes.ProviderIdentity|undefined {
     const { uuid, name } = identity;
     const externalConn = getExternalAppObjByUuid(uuid);
     if (externalConn) {

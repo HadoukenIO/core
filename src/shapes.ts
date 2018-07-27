@@ -8,10 +8,10 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
-export interface ServiceIdentity extends Identity {
+export interface ProviderIdentity extends Identity {
     channelId?: string;
     isExternal?: boolean;
-    serviceName?: string;
+    channelName?: string;
 }
 
 export interface ResourceFetchIdentity extends Identity {
