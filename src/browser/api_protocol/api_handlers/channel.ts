@@ -3,7 +3,7 @@
 import * as apiProtocolBase from './api_protocol_base';
 import { ActionSpecMap } from '../shapes';
 import { Channel } from '../../api/channel';
-import { Identity, APIMessage } from '../../../shapes';
+import { Identity, APIMessage, ProviderIdentity } from '../../../shapes';
 import { AckFunc, NackFunc } from '../transport_strategy/ack';
 
 const successAck = {
@@ -12,14 +12,23 @@ const successAck = {
 
 export class ChannelApiHandler {
     private readonly actionMap: ActionSpecMap = {
-        'create-channel': this.createChannel,
         'connect-to-channel': this.connectToChannel,
+        'create-channel': this.createChannel,
+        'get-all-channels': this.getAllChannels,
         'send-channel-message': this.sendChannelMessage,
         'send-channel-result': this.sendChannelResult
     };
 
     constructor() {
         apiProtocolBase.registerActionMap(this.actionMap);
+    }
+
+    private connectToChannel(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): void {
+        const { payload, messageId } = message;
+
+        Channel.connectToChannel(identity, payload, messageId, ack, nack);
+        //return undefined so that El-IPC does not automatically ack
+        return undefined;
     }
 
     private createChannel(identity: Identity, message: APIMessage, ack: AckFunc): void {
@@ -31,12 +40,17 @@ export class ChannelApiHandler {
         ack(dataAck);
     }
 
-    private connectToChannel(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): void {
-        const { payload, messageId } = message;
+    private getAllChannels(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): ProviderIdentity[] {
+        const { locals } = message;
 
-        Channel.connectToChannel(identity, payload, messageId, ack, nack);
-        //return undefined so that El-IPC does not automatically ack
-        return undefined;
+        let allChannels = Channel.getAllChannels();
+
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            allChannels = [...allChannels, ...aggregate];
+        }
+
+        return allChannels;
     }
 
     private sendChannelMessage(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): void {

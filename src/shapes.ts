@@ -10,8 +10,9 @@ export interface Identity {
 
 export interface ProviderIdentity extends Identity {
     channelId?: string;
-    isExternal?: boolean;
     channelName?: string;
+    isExternal?: boolean;
+    runtimeUuid?: string;
 }
 
 export interface ResourceFetchIdentity extends Identity {

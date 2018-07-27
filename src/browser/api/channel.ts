@@ -50,6 +50,14 @@ export module Channel {
         return channelMap.get(channelId);
     }
 
+    export function getAllChannels(): ProviderIdentity[] {
+        const allChannels: ProviderIdentity[] = [];
+        channelMap.forEach(channel => {
+            allChannels.push(channel);
+        });
+        return allChannels;
+    }
+
     // Could be any identifier
     export function getChannelByUuid(uuid: string): ProviderIdentity|undefined {
         let providerIdentity;
