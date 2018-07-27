@@ -39,9 +39,11 @@ export class PortDiscovery extends EventEmitter {
                 // TODO: provide a unix implementation
             }
 
-            this._transport.on('message', (s: any, data: string) => {
-                this.emit(route.runtime('launched'), JSON.parse(data));
-            });
+            if (this._transport) {
+                this._transport.on('message', (s: any, data: string) => {
+                    this.emit(route.runtime('launched'), JSON.parse(data));
+                });
+            }
         }
 
         return this._transport;
@@ -75,7 +77,9 @@ export class PortDiscovery extends EventEmitter {
         const transport = this.constructTransport();
 
         coreState.setSocketServerState(portDiscoveryPayload);
-        transport.publish(portDiscoveryPayload);
+        if (transport) {
+            transport.publish(portDiscoveryPayload);
+        }
 
         if (portDiscoveryPayload.runtimeInformationChannel) {
             const namedPipeTransport = new ChromiumIPC(portDiscoveryPayload.runtimeInformationChannel);
