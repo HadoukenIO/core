@@ -20,6 +20,7 @@ export interface ResourceFetchIdentity extends Identity {
 
 export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
 export type AuthCallback = (username: string, password: string) => void;
+export type Listener = (...args: any[]) => void;
 
 export interface FrameInfo extends Identity {
     name?: string;

@@ -53,7 +53,7 @@ const WindowsMessages = {
     WM_SYSKEYUP: 0x0105,
 };
 
-let Window = {};
+let Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {

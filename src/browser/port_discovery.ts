@@ -1,10 +1,11 @@
 import { EventEmitter } from 'events';
-import { Base, ChromiumIPC, WMCopyData } from './transport';
+import { Base, ChromiumIPC, UnixDomainSocket, WMCopyData } from './transport';
 import * as log from './log';
 import route from '../common/route';
 import { isMeshEnabled } from './connection_manager';
 import * as coreState from './core_state';
 
+const UNIX_FILENAME_PREFIX: string = '/tmp/of.pd';
 const WINDOW_CLASS_NAME = 'OPENFIN_ADAPTER_WINDOW';
 
 export interface ArgMap {
@@ -36,7 +37,8 @@ export class PortDiscovery extends EventEmitter {
                 log.writeToLog('info', 'Constructing the copyDataTransport window.');
                 this._transport = new WMCopyData(WINDOW_CLASS_NAME, WINDOW_CLASS_NAME);
             } else {
-                // TODO: provide a unix implementation
+                log.writeToLog('info', 'Opening and binding to a unix domain socket for port discovery.');
+                this._transport = new UnixDomainSocket(UNIX_FILENAME_PREFIX);
             }
 
             this._transport.on('message', (s: any, data: string) => {
