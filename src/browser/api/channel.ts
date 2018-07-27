@@ -51,11 +51,7 @@ export module Channel {
     }
 
     // Could be any identifier
-<<<<<<< HEAD
     export function getChannelByUuid(uuid: string): ProviderIdentity|undefined {
-=======
-    export function getChannelByUuid(uuid: string): ProviderIdentity {
->>>>>>> 01d53002ece04dcb1e0c583a000c1283d348cce4
         let providerIdentity;
         channelMap.forEach(channel => {
             if (channel.uuid === uuid) {
@@ -94,7 +90,6 @@ export module Channel {
 
         return providerIdentity;
     }
-<<<<<<< HEAD
 
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): ProviderIdentity {
         const { wait, uuid, payload: connectionPayload } = payload;
@@ -188,6 +183,4 @@ function applyPendingChannelConnections(uuid: string): void {
         });
         pendingChannelConnections.delete(uuid);
     }
-=======
->>>>>>> 01d53002ece04dcb1e0c583a000c1283d348cce4
 }
