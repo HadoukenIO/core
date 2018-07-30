@@ -685,11 +685,6 @@ Window.create = function(id, opts) {
                 isMain,
                 documentName
             });
-
-            ofEvents.emit(route.application('window-end-load'), {
-                name,
-                uuid
-            });
         };
         let documentLoadedString = 'document-loaded';
         webContents.on(documentLoadedString, documentLoadedSubscribe);
