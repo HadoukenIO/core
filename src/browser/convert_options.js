@@ -45,6 +45,9 @@ function five0BaseOptions() {
         },
         'alwaysOnBottom': false,
         'alwaysOnTop': false,
+        'api': {
+            'iframe': iframeBaseSettings
+        },
         'applicationIcon': '',
         'autoShow': false,
         'backgroundThrottling': false,
@@ -76,7 +79,6 @@ function five0BaseOptions() {
         'hideOnClose': false,
         'hideWhileChildrenVisible': false,
         'icon': '',
-        'iframe': iframeBaseSettings,
         'launchExternal': '',
         'loadErrorMessage': '',
         'maxHeight': -1,
@@ -187,7 +189,7 @@ module.exports = {
 
     convertToElectron: function(options, returnAsString) {
 
-        const usingIframe = !!options.iframe;
+        const usingIframe = !!(options.api && options.iframe);
 
         // build on top of the 5.0 base
         let newOptions = validateOptions(options);
@@ -233,9 +235,9 @@ module.exports = {
         // Because we have communicated the experimental option, this allows us to
         // respect that if its set but defaults to the proper passed in `iframe` key
         if (usingIframe) {
-            Object.assign(newOptions.experimental.api.iframe, newOptions.iframe);
+            Object.assign(newOptions.experimental.api.iframe, newOptions.api.iframe);
         } else {
-            newOptions.iframe = newOptions.experimental.api.iframe;
+            newOptions.api.iframe = newOptions.experimental.api.iframe;
         }
 
         // Electron BrowserWindow options

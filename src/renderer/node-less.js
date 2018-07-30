@@ -86,7 +86,7 @@ const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOrigi
         w.isMainFrame = isMainFrame;
         // ===================================
 
-        const { options: { iframe: { sameOriginInjection, crossOriginInjection } } } = JSON.parse(initialOptions);
+        const { options: { api: { iframe: { sameOriginInjection, crossOriginInjection } } } } = JSON.parse(initialOptions);
         let inboundMessageTopic = '';
 
         const apiInjectionAllowed = isMainFrame || isChildMainFrame ||
