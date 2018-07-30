@@ -36,9 +36,25 @@ const createAckToSender = (identity: Identity, messageId: number, providerIdenti
     };
 };
 
+
+const createChannelTeardown = (providerIdentity: ProviderIdentity): void => {
+    // When channel exits, remove from channelMap
+    const { uuid, name, isExternal, channelId } = providerIdentity;
+    const closedEvent = isExternal ? route.externalApplication('closed', uuid) : route.window('closed', uuid, name);
+    const disconnectedEvent = isExternal ? route.channel('disconnected', uuid) : route.channel('disconnected', uuid, name);
+    ofEvents.once(closedEvent, () => {
+        channelMap.delete(channelId);
+        ofEvents.emit(disconnectedEvent, providerIdentity);
+    });
+
+    // For some reason this is captured sometimes when window closed is not
+    ofEvents.once(route.application('closed', uuid), () => channelMap.delete(channelId));
+};
+
 export module Channel {
     export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
-        const eventString = route.channel(type, targetIdentity.uuid);
+        const { uuid, name } = targetIdentity;
+        const eventString = name ? route.channel(type, uuid, name) : route.channel(type, uuid);
         ofEvents.on(eventString, listener);
 
         return () => {
@@ -58,11 +74,25 @@ export module Channel {
         return allChannels;
     }
 
-    // Could be any identifier
-    export function getChannelByUuid(uuid: string): ProviderIdentity|undefined {
-        let providerIdentity;
+    export function getChannelByIdentity(identity: Identity): ProviderIdentity[] {
+        const { uuid, name } = identity;
+        const providerIdentity: ProviderIdentity[] = [];
         channelMap.forEach(channel => {
             if (channel.uuid === uuid) {
+                if (!name) {
+                    providerIdentity.push(channel);
+                } else if (channel.name === name) {
+                    providerIdentity.push(channel);
+                }
+            }
+        });
+        return providerIdentity;
+    }
+
+    export function getChannelByChannelName(channelName: string): ProviderIdentity|undefined {
+        let providerIdentity;
+        channelMap.forEach(channel => {
+            if (channel.channelName === channelName) {
                 providerIdentity = channel;
             }
         });
@@ -70,40 +100,53 @@ export module Channel {
     }
 
     export function createChannel(identity: Identity, channelName?: string): ProviderIdentity {
-        const targetApp = getExternalOrOfWindowIdentity(identity);
+        const { uuid, name } = identity;
+        const providerApp = getExternalOrOfWindowIdentity(identity);
+
+        const channelId = getChannelId(uuid, name, channelName);
+
         // If a channel is already registered from that uuid, nack
-        if (!targetApp || getChannelByUuid(identity.uuid)) {
-            const nackString = 'Register Failed: Please note that only one channel may be registered per application.';
+        if (!providerApp || getChannelByChannelId(channelId)) {
+            const nackString = 'Register Failed: Please note that only one channel may be registered per identity per channelName.';
             throw new Error(nackString);
         }
-        const { uuid, name, isExternal } = targetApp;
-        const channelId = `${uuid}/${name}/${channelName}`;
-        const providerIdentity = { ...targetApp, channelName, channelId };
 
+        const providerIdentity = { ...providerApp, channelName, channelId };
+        const isExternal = providerIdentity;
         channelMap.set(channelId, providerIdentity);
 
-        // When channel exits, remove from channelMap
-        const eventString = isExternal ? route.externalApplication('closed', uuid) : route.application('closed', uuid);
-        ofEvents.once(eventString, () => {
-            channelMap.delete(channelId);
-            ofEvents.emit(route.channel('disconnected', uuid), providerIdentity);
-        });
+        createChannelTeardown(providerIdentity);
 
-        ofEvents.emit(route.channel('connected', uuid), providerIdentity);
+        const connectedEvent = isExternal ? route.channel('connected', uuid) : route.channel('connected', uuid, name);
+        ofEvents.emit(connectedEvent, providerIdentity);
 
         // execute requests to connect for channel that occured before channel registration. Timeout ensures registration concludes first.
         setTimeout(() => {
-            applyPendingChannelConnections(uuid);
+            applyPendingChannelConnections(uuid, name, channelName);
         }, 1);
 
         return providerIdentity;
     }
 
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): ProviderIdentity {
-        const { wait, uuid, payload: connectionPayload } = payload;
-        const ackKey = getAckKey(messageId, identity);
-        const providerIdentity = Channel.getChannelByUuid(uuid);
+        const { wait, uuid, name, channelName, payload: connectionPayload } = payload;
+        let providerIdentity: ProviderIdentity;
+        if (channelName) {
+            providerIdentity = Channel.getChannelByChannelName(channelName);
+        }
+        // No channel found by channel name, use identity
+        if (!providerIdentity && uuid) {
+            const providerIdentityArray = Channel.getChannelByIdentity({uuid, name});
+            if (providerIdentityArray.length > 1) {
+                const nackId = name ? `${uuid}/${name}` : uuid;
+                nack(`More than one channel found for provider with identity: ${nackId}, please include a channelName`);
+            } else {
+                [ providerIdentity ] = providerIdentityArray;
+            }
+        }
+
         if (providerIdentity) {
+            const ackKey = getAckKey(messageId, identity);
             remoteAckMap.set(ackKey, { ack, nack });
 
             const ackToSender = createAckToSender(identity, messageId, providerIdentity);
@@ -121,7 +164,8 @@ export module Channel {
         } else if (wait) {
             // Channel not yet registered, hold connection request
             const message = { identity, payload, messageId, ack, nack };
-            waitForChannelRegistration(payload.uuid, message);
+            const channelId = getChannelId(uuid, name, channelName);
+            waitForChannelRegistration(channelId, message);
         } else {
             nack('Channel connection not found.');
         }
@@ -175,20 +219,43 @@ function getAckKey (id: number, identity: Identity): string {
     return `${ id }-${ identity.uuid }-${ identity.name }`;
 }
 
-function waitForChannelRegistration(uuid: string, message: any): void {
-    if (!Array.isArray(pendingChannelConnections.get(uuid))) {
-        pendingChannelConnections.set(uuid, []);
+function getAllPendingConnections (uuid: string, name: string, channelName: string): any[] {
+    // may have just sent channelName OR just identity OR just uuid
+    const uuidOnly = pendingChannelConnections.get(getChannelId(uuid, undefined, undefined)) || [];
+    const identityOnly = pendingChannelConnections.get(getChannelId(uuid, name, undefined)) || [];
+
+    let channelNameOnly = [];
+    let allThree = [];
+    if (channelName) {
+        channelNameOnly = pendingChannelConnections.get(getChannelId(undefined, undefined, channelName)) || [];
+        allThree = pendingChannelConnections.get(getChannelId(uuid, name, channelName)) || [];
     }
-    pendingChannelConnections.get(uuid).push(message);
+
+    pendingChannelConnections.delete(getChannelId(uuid, undefined, undefined));
+    pendingChannelConnections.delete(getChannelId(uuid, name, undefined));
+    pendingChannelConnections.delete(getChannelId(undefined, undefined, channelName));
+    pendingChannelConnections.delete(getChannelId(uuid, name, channelName));
+
+    return [...uuidOnly, ...identityOnly, ...channelNameOnly, ...allThree];
 }
 
-function applyPendingChannelConnections(uuid: string): void {
-    const pendingConnections = pendingChannelConnections.get(uuid);
+function getChannelId (uuid: string, name: string, channelName: string): string {
+    return `${uuid}/${name}/${channelName}`;
+}
+
+function waitForChannelRegistration(channelId: string, message: any): void {
+    if (!Array.isArray(pendingChannelConnections.get(channelId))) {
+        pendingChannelConnections.set(channelId, []);
+    }
+    pendingChannelConnections.get(channelId).push(message);
+}
+
+function applyPendingChannelConnections(uuid: string, name: string, channelName: string): void {
+    const pendingConnections = getAllPendingConnections(uuid, name, channelName);
     if (pendingConnections) {
         pendingConnections.forEach(connectionMsg => {
             const { identity, payload, messageId, ack, nack } = connectionMsg;
             Channel.connectToChannel(identity, payload, messageId, ack, nack);
         });
-        pendingChannelConnections.delete(uuid);
     }
 }

@@ -145,12 +145,12 @@ function EventListenerApiHandler() {
         'channel': {
             name: 'channel',
             subscribe: function(identity, type, payload, cb) {
-                const targetIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+                const targetIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
                 const { uuid } = targetIdentity;
                 const islocalUuid = coreState.isLocalUuid(uuid);
                 const localUnsub = Channel.addEventListener(targetIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalRuntime = ExternalApplication.isRuntimeClient(identity.uuid);
+                const isExternalRuntime = ExternalApplication.isRuntimeClient(uuid);
 
                 if (!islocalUuid && !isExternalRuntime) {
                     const subscription = {
