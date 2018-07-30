@@ -24,6 +24,11 @@ import {
 } from '../shapes';
 const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 
+const iframeBaseSettings = {
+    'crossOriginInjection': false,
+    'sameOriginInjection': true
+};
+
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
     return {
@@ -59,10 +64,7 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'api': {
-                'iframe': {
-                    'crossOriginInjection': false,
-                    'sameOriginInjection': true
-                }
+                'iframe': iframeBaseSettings
             },
             'disableInitialReload': false,
             'node': false,
@@ -74,6 +76,7 @@ function five0BaseOptions() {
         'hideOnClose': false,
         'hideWhileChildrenVisible': false,
         'icon': '',
+        'iframe': iframeBaseSettings,
         'launchExternal': '',
         'loadErrorMessage': '',
         'maxHeight': -1,
@@ -184,6 +187,8 @@ module.exports = {
 
     convertToElectron: function(options, returnAsString) {
 
+        const usingIframe = !!options.iframe;
+
         // build on top of the 5.0 base
         let newOptions = validateOptions(options);
 
@@ -224,6 +229,14 @@ module.exports = {
 
         const useNodeInRenderer = newOptions.experimental.node;
         const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
+
+        // Because we have communicated the experimental option, this allows us to
+        // respect that if its set but defaults to the proper passed in `iframe` key
+        if (usingIframe) {
+            Object.assign(newOptions.experimental.api.iframe, newOptions.iframe);
+        } else {
+            newOptions.iframe = newOptions.experimental.api.iframe;
+        }
 
         // Electron BrowserWindow options
         newOptions.enableLargerThanScreen = true;
