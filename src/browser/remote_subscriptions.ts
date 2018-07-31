@@ -219,7 +219,7 @@ export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
         if (!subscription.isSystemEvent) {
             applyRemoteSubscription(subscription, runtime);
         } else {
-            applySystemSubscription(subscription, runtime);
+            applySubscriptionToAllRuntimes(subscription, runtime);
         }
     });
 }
@@ -244,7 +244,7 @@ export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProp
 
         // Subscribe in all connected runtimes
         if (connectionManager.connections.length) {
-            connectionManager.connections.forEach(runtime => applySystemSubscription(subscription, runtime));
+            connectionManager.connections.forEach(runtime => applySubscriptionToAllRuntimes(subscription, runtime));
         }
 
         // Add the subscription to pending to cover any runtimes launched in the future
@@ -271,7 +271,7 @@ function systemUnsubscribe(subscription: any) {
 /**
  * Subscribe to a system event in a remote runtime
  */
-function applySystemSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
+function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtime: PeerRuntime) {
     const { className, eventName, listenType } = subscription;
     const fullEventName = route(className, eventName);
     const runtimeKey = keyFromPortInfo(runtime.portInfo);
