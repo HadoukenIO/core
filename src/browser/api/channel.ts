@@ -119,6 +119,7 @@ export module Channel {
 
         const connectedEvent = isExternal ? route.channel('connected', uuid) : route.channel('connected', uuid, name);
         ofEvents.emit(connectedEvent, providerIdentity);
+        ofEvents.emit(route.channel('internal-connected'), providerIdentity);
 
         // execute requests to connect for channel that occured before channel registration. Timeout ensures registration concludes first.
         setTimeout(() => {
@@ -161,13 +162,10 @@ export module Channel {
                     payload: connectionPayload
                 }
             });
-        } else if (wait) {
-            // Channel not yet registered, hold connection request
-            const message = { identity, payload, messageId, ack, nack };
-            const channelId = getChannelId(uuid, name, channelName);
-            waitForChannelRegistration(channelId, message);
         } else {
-            nack('Channel connection not found.');
+            // Do not change this, checking for this in adapter
+            const interimNackMessage = 'internal-nack';
+            nack(interimNackMessage);
         }
         return providerIdentity;
     }

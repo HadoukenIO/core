@@ -31,7 +31,7 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
  * Shape of remote subscription props
  */
 interface RemoteSubscriptionProps extends Identity {
-    className: 'application'|'window'|'system'; // names of the class event emitters, used for subscriptions
+    className: 'application'|'window'|'system'|'channel'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
 }
@@ -282,8 +282,16 @@ function applySystemSubscription(subscription: RemoteSubscription, runtime: Peer
             ofEvents.emit(fullEventName, data);
         }
     };
+
+    let removeListener: Function;
     // Subscribe to an event on a remote runtime
-    runtime.fin.System[listenType](eventName, listener);
+    if (className === 'system') {
+        runtime.fin.System[listenType](eventName, listener);
+        removeListener = runtime.fin.System.removeListener;
+    } else if (className === 'channel') {
+        runtime.fin.InterApplicationBus.Channel[listenType](eventName, listener);
+        removeListener = runtime.fin.InterApplicationBus.Channel.removeListener;
+    }
 
 
     // When runtime disconnects, remove the subscription for that runtime
@@ -300,10 +308,12 @@ function applySystemSubscription(subscription: RemoteSubscription, runtime: Peer
         subscription.unSubscriptions.set(runtimeKey, []);
     }
 
-    subscription.unSubscriptions.get(runtimeKey).push(() => {
-        runtime.fin.System.removeListener(eventName, listener);
-        runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
-    });
+    // Subscribe to an event on a remote runtime
+        subscription.unSubscriptions.get(runtimeKey).push(() => {
+            removeListener(eventName, listener);
+            runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
+        });
+
 }
 
 /**
