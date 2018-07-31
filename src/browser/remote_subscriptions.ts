@@ -293,7 +293,6 @@ function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtim
         removeListener = runtime.fin.InterApplicationBus.Channel.removeListener;
     }
 
-
     // When runtime disconnects, remove the subscription for that runtime
     // It will be re-added from pending subscriptions if the runtime connects again
     const disconnectEventName = 'disconnected';
@@ -309,10 +308,10 @@ function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtim
     }
 
     // Subscribe to an event on a remote runtime
-        subscription.unSubscriptions.get(runtimeKey).push(() => {
-            removeListener(eventName, listener);
-            runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
-        });
+    subscription.unSubscriptions.get(runtimeKey).push(() => {
+        removeListener(eventName, listener);
+        // runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
+    });
 
 }
 
