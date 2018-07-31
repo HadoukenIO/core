@@ -24,6 +24,14 @@ interface AckToSender {
     };
 }
 
+const getAckKey = (id: number, identity: Identity): string => {
+    return `${ id }-${ identity.uuid }-${ identity.name }`;
+};
+
+const getChannelId = (uuid: string, name: string, channelName: string): string => {
+    return `${uuid}/${name}/${channelName}`;
+};
+
 const createAckToSender = (identity: Identity, messageId: number, providerIdentity: ProviderIdentity): AckToSender => {
     return {
         action: CHANNEL_ACK_ACTION,
@@ -35,7 +43,6 @@ const createAckToSender = (identity: Identity, messageId: number, providerIdenti
         }
     };
 };
-
 
 const createChannelTeardown = (providerIdentity: ProviderIdentity): void => {
     // When channel exits, remove from channelMap
@@ -119,12 +126,8 @@ export module Channel {
 
         const connectedEvent = isExternal ? route.channel('connected', uuid) : route.channel('connected', uuid, name);
         ofEvents.emit(connectedEvent, providerIdentity);
+        // Used internally by adapters for pending connections and onChannelConnect
         ofEvents.emit(route.channel('internal-connected'), providerIdentity);
-
-        // execute requests to connect for channel that occured before channel registration. Timeout ensures registration concludes first.
-        setTimeout(() => {
-            applyPendingChannelConnections(uuid, name, channelName);
-        }, 1);
 
         return providerIdentity;
     }
@@ -213,47 +216,3 @@ export module Channel {
     }
 }
 
-function getAckKey (id: number, identity: Identity): string {
-    return `${ id }-${ identity.uuid }-${ identity.name }`;
-}
-
-function getAllPendingConnections (uuid: string, name: string, channelName: string): any[] {
-    // may have just sent channelName OR just identity OR just uuid
-    const uuidOnly = pendingChannelConnections.get(getChannelId(uuid, undefined, undefined)) || [];
-    const identityOnly = pendingChannelConnections.get(getChannelId(uuid, name, undefined)) || [];
-
-    let channelNameOnly = [];
-    let allThree = [];
-    if (channelName) {
-        channelNameOnly = pendingChannelConnections.get(getChannelId(undefined, undefined, channelName)) || [];
-        allThree = pendingChannelConnections.get(getChannelId(uuid, name, channelName)) || [];
-    }
-
-    pendingChannelConnections.delete(getChannelId(uuid, undefined, undefined));
-    pendingChannelConnections.delete(getChannelId(uuid, name, undefined));
-    pendingChannelConnections.delete(getChannelId(undefined, undefined, channelName));
-    pendingChannelConnections.delete(getChannelId(uuid, name, channelName));
-
-    return [...uuidOnly, ...identityOnly, ...channelNameOnly, ...allThree];
-}
-
-function getChannelId (uuid: string, name: string, channelName: string): string {
-    return `${uuid}/${name}/${channelName}`;
-}
-
-function waitForChannelRegistration(channelId: string, message: any): void {
-    if (!Array.isArray(pendingChannelConnections.get(channelId))) {
-        pendingChannelConnections.set(channelId, []);
-    }
-    pendingChannelConnections.get(channelId).push(message);
-}
-
-function applyPendingChannelConnections(uuid: string, name: string, channelName: string): void {
-    const pendingConnections = getAllPendingConnections(uuid, name, channelName);
-    if (pendingConnections) {
-        pendingConnections.forEach(connectionMsg => {
-            const { identity, payload, messageId, ack, nack } = connectionMsg;
-            Channel.connectToChannel(identity, payload, messageId, ack, nack);
-        });
-    }
-}
