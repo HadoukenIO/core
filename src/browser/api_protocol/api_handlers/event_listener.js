@@ -164,7 +164,7 @@ function EventListenerApiHandler() {
                         addRemoteSubscription(subscription).then(unSubscribe => {
                             remoteUnSub = unSubscribe;
                         });
-                    } else if (type === 'internal-connected') {
+                    } else if (type === 'connected' || type === 'disconnected') {
                         const subscription = {
                             listenType: 'on',
                             className: 'channel',

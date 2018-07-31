@@ -48,10 +48,9 @@ const createChannelTeardown = (providerIdentity: ProviderIdentity): void => {
     // When channel exits, remove from channelMap
     const { uuid, name, isExternal, channelId } = providerIdentity;
     const closedEvent = isExternal ? route.externalApplication('closed', uuid) : route.window('closed', uuid, name);
-    const disconnectedEvent = isExternal ? route.channel('disconnected', uuid) : route.channel('disconnected', uuid, name);
     ofEvents.once(closedEvent, () => {
         channelMap.delete(channelId);
-        ofEvents.emit(disconnectedEvent, providerIdentity);
+        ofEvents.emit(route.channel('disconnected'), providerIdentity);
     });
 
     // For some reason this is captured sometimes when window closed is not
@@ -127,7 +126,7 @@ export module Channel {
         const connectedEvent = isExternal ? route.channel('connected', uuid) : route.channel('connected', uuid, name);
         ofEvents.emit(connectedEvent, providerIdentity);
         // Used internally by adapters for pending connections and onChannelConnect
-        ofEvents.emit(route.channel('internal-connected'), providerIdentity);
+        ofEvents.emit(route.channel('connected'), providerIdentity);
 
         return providerIdentity;
     }
