@@ -283,14 +283,11 @@ function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtim
         }
     };
 
-    let removeListener: Function;
     // Subscribe to an event on a remote runtime
     if (className === 'system') {
         runtime.fin.System[listenType](eventName, listener);
-        removeListener = runtime.fin.System.removeListener;
     } else if (className === 'channel') {
         runtime.fin.InterApplicationBus.Channel[listenType](eventName, listener);
-        removeListener = runtime.fin.InterApplicationBus.Channel.removeListener;
     }
 
     // When runtime disconnects, remove the subscription for that runtime
@@ -308,11 +305,17 @@ function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtim
     }
 
     // Subscribe to an event on a remote runtime
-    subscription.unSubscriptions.get(runtimeKey).push(() => {
-        removeListener(eventName, listener);
-        // runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
-    });
-
+    if (className === 'system') {
+        subscription.unSubscriptions.get(runtimeKey).push(() => {
+            runtime.fin.System.removeListener(eventName, listener);
+            runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
+        });
+    } else if (className === 'channel') {
+        subscription.unSubscriptions.get(runtimeKey).push(() => {
+            runtime.fin.InterApplicationBus.Channel.removeListener(eventName, listener);
+            runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
+        });
+    }
 }
 
 /**

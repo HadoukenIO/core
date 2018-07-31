@@ -152,29 +152,15 @@ function EventListenerApiHandler() {
                 let remoteUnSub;
                 const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
-                if (!islocalUuid && !isExternalClient) {
-                    if (uuid) {
-                        const subscription = {
-                            uuid,
-                            listenType: 'on',
-                            className: 'channel',
-                            eventName: type
-                        };
-
-                        addRemoteSubscription(subscription).then(unSubscribe => {
-                            remoteUnSub = unSubscribe;
-                        });
-                    } else if (type === 'channel-connected' || type === 'channel-disconnected') {
-                        const subscription = {
-                            listenType: 'on',
-                            className: 'channel',
-                            eventName: type
-                        };
-                        subscribeToAllRuntimes(subscription).then(unSubscribe => {
-                            remoteUnSub = unSubscribe;
-                        });
-                    }
-
+                if (!islocalUuid && !isExternalClient && (type === 'channel-connected' || type === 'channel-disconnected')) {
+                    const subscription = {
+                        listenType: 'on',
+                        className: 'channel',
+                        eventName: type
+                    };
+                    subscribeToAllRuntimes(subscription).then(unSubscribe => {
+                        remoteUnSub = unSubscribe;
+                    });
                 }
 
                 return () => {
