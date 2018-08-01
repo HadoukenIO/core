@@ -351,6 +351,13 @@ let optionSetters = {
             setOptOnBrowserWin('resizeRegion', newVal, browserWin);
         }
     },
+    aspectRatio: function(newVal, browserWin) {
+        if (typeof(newVal) !== 'number') {
+            return;
+        }
+        browserWin.setAspectRatio(newVal);
+        setOptOnBrowserWin('aspectRatio', newVal, browserWin);
+    },
     hasLoaded: function(newVal, browserWin) {
         if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
@@ -1098,16 +1105,6 @@ Window.enableFrame = function(identity) {
     let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
     disabledFrameRef.set(windowKey, --dframeRefCount);
     browserWindow.setUserMovementEnabled(true);
-};
-
-Window.setAspectRatio = function(identity, ratio, extraWidth, extraHeight) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
-    if (!browserWindow) {
-        return;
-    }
-
-    browserWindow.setAspectRatio(ratio, { width: extraWidth, height: extraHeight });
 };
 
 Window.executeJavascript = function(identity, code, callback = () => {}) {
@@ -1993,6 +1990,11 @@ function applyAdditionalOptionsToWindow(browserWindow) {
                 browserWindow.setAlphaMask(options.alphaMask.red, options.alphaMask.green, options.alphaMask.blue);
             } else if (options.opacity < 1) {
                 browserWindow.setOpacity(options.opacity);
+            }
+
+            // set aspect ratio if present
+            if (options.aspectRatio > 0) {
+                browserWindow.setAspectRatio(options.aspectRatio);
             }
 
             // set minimized or maximized

@@ -51,7 +51,6 @@ export const windowApiMap = {
     'navigate-window': navigateWindow,
     'navigate-window-back': navigateWindowBack,
     'navigate-window-forward': navigateWindowForward,
-    'set-aspect-ratio': setAspectRatio,
     'stop-window-navigation': stopWindowNavigation,
     'register-window-name': registerWindowName,
     'reload-window': reloadWindow,
@@ -469,15 +468,6 @@ function disableWindowFrame(identity: Identity, message: APIMessage, ack: Acker)
     const windowIdentity = getTargetWindowIdentity(payload);
 
     Window.disableFrame(identity, windowIdentity);
-    ack(successAck);
-}
-
-function setAspectRatio(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const { ratio, extraWidth, extraHeight } = payload;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.setAspectRatio(windowIdentity, ratio, extraWidth, extraHeight);
     ack(successAck);
 }
 
