@@ -41,6 +41,7 @@ function five0BaseOptions() {
         'alwaysOnBottom': false,
         'alwaysOnTop': false,
         'applicationIcon': '',
+        'aspectRatio': 0,
         'autoShow': false,
         'backgroundThrottling': false,
         'contextMenu': true,
