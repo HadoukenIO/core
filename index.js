@@ -3,6 +3,7 @@
 */
 
 // built\-in modules
+let crypto = require('crypto');
 let fs = require('fs');
 let path = require('path');
 let electron = require('electron');
@@ -702,14 +703,17 @@ function registerMacMenu() {
 // Set usrData & userCache path specifically for each application for MAC_OS
 function handleMacSingleTenant() {
     if (process.platform === 'darwin') {
+        const hash = crypto.createHash('md4');
         const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
-        let pathPost = encodeURIComponent(configUrl);
+        hash.update(configUrl);
+        let cachePath = hash.digest('hex');
         if (coreState.argo['security-realm']) {
-            pathPost = pathPost.concat(coreState.argo['security-realm']);
+            cachePath = path.join(cachePath, coreState.argo['security-realm']);
         }
         const userData = app.getPath('userData');
-        app.setPath('userData', path.join(userData, pathPost));
-        app.setPath('userCache', path.join(userData, pathPost));
+        cachePath = path.join(userData, 'cache', cachePath, process.versions['openfin']);
+        app.setPath('userData', cachePath);
+        app.setPath('userCache', cachePath);
     }
 }
 
