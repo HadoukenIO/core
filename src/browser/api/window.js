@@ -43,7 +43,7 @@ import {
 } from '../../shapes';
 import {
     ERROR_TITLE_RENDERER_CRASH,
-    ERROR_TYPE_RENDERER_CRASH,
+    ERROR_BOX_TYPES,
     showErrorBox
 } from '../../common/errors';
 
@@ -570,7 +570,8 @@ Window.create = function(id, opts) {
                     `A crash occured in the renderer process of the ` +
                     `application with the UUID "${uuid}"`;
                 const title = ERROR_TITLE_RENDERER_CRASH;
-                const type = ERROR_TYPE_RENDERER_CRASH;
+                const type = ERROR_BOX_TYPES.RENDERER_CRASH;
+                log.writeToLog('info', '==========> ' + type);
                 const args = { message, title, type };
                 showErrorBox(args);
             }

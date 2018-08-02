@@ -9,10 +9,12 @@ export const ERROR_TITLE_APP_INITIALIZATION = 'A JavaScript error occured during
 export const ERROR_TITLE_MAIN_PROCESS = 'A JavaScript error occurred in the main process';
 export const ERROR_TITLE_RENDERER_CRASH = 'Renderer Crash';
 
-// Window types
-export const ERROR_TYPE_APP_INITIALIZATION = 'OF_error_box:app_initialization';
-export const ERROR_TYPE_MAIN_PROCESS = 'OF_error_box:main_process';
-export const ERROR_TYPE_RENDERER_CRASH = 'OF_error_box:renderer_crash';
+// Error types
+export enum ERROR_BOX_TYPES {
+    APP_INITIALIZATION = 'OF_error_box:app_initialization',
+    MAIN_PROCESS = 'OF_error_box:main_process',
+    RENDERER_CRASH = 'OF_error_box:renderer_crash'
+}
 
 /**
  * Interface of a converted JS error into a plain object
@@ -55,7 +57,7 @@ export function initSafeErrors(argo: any): void {
     if (!argo['disable-safe-errors']) {
         process.on('uncaughtException', (error: Error) => {
             const title = ERROR_TITLE_MAIN_PROCESS;
-            const type = ERROR_TYPE_MAIN_PROCESS;
+            const type = ERROR_BOX_TYPES.MAIN_PROCESS;
             showErrorBox({ error, title, type });
         });
     }

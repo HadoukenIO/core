@@ -572,7 +572,7 @@ function launchApp(argo, startExternalAdapterServer) {
         });
     }, (error) => {
         const title = errors.ERROR_TITLE_APP_INITIALIZATION;
-        const type = errors.ERROR_TYPE_APP_INITIALIZATION;
+        const type = errors.ERROR_BOX_TYPES.APP_INITIALIZATION;
         const args = { error, title, type };
         errors.showErrorBox(args)
             .catch((error) => log.writeToLog('info', error))
@@ -617,7 +617,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
 
         const message = startupAppOptions.loadErrorMessage;
         const title = errors.ERROR_TITLE_APP_INITIALIZATION;
-        const type = errors.ERROR_TYPE_APP_INITIALIZATION;
+        const type = errors.ERROR_BOX_TYPES.APP_INITIALIZATION;
         const args = { error, message, title, type };
         errors.showErrorBox(args)
             .catch((error) => log.writeToLog('info', error))
