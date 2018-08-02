@@ -1,32 +1,10 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 import RequestHandler from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
-import * as log from '../../log';
 import { sendToIdentity } from './api_protocol_base';
-import { Identity } from '../../../shapes';
-import { NackPayload, AckFunc, NackFunc } from '../transport_strategy/ack';
+import { RemoteAck } from '../transport_strategy/ack';
 
 const coreState = require('../../core_state');
-
-interface RemoteAck {
-    ack: AckFunc;
-    nack: NackFunc;
-}
 
 const validExternalAPIActions: any = {
    'blur-window': true,
@@ -96,7 +74,7 @@ function handleExternalApiAction(msg: MessagePackage, next: () => void): void {
 
 //this preprocessor will check if the API call is an 'ack' action from an external connection and tie it to a ExternalApiAction.
 function handleExternalAckAction(msg: MessagePackage, next: () => void): void {
-    const { data, nack } = msg;
+    const { data } = msg;
     const action = data && data.action;
 
     if (action === EXTERNAL_ACK_ACTION) {

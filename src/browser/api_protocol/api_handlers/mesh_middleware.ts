@@ -1,24 +1,10 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
 import { isLocalUuid } from '../../core_state';
+import { IdentityAddress } from '../../runtime_p2p/peer_connection_manager';
 
 const SUBSCRIBE_ACTION = 'subscribe';
 const PUBLISH_ACTION = 'publish-message';
@@ -37,9 +23,10 @@ const apiMessagesToIgnore: any = {
 };
 
 const apiMessagesToAggregate: any = {
-    'get-all-windows': true,
     'get-all-applications': true,
+    'get-all-channels': true,
     'get-all-external-applications': true,
+    'get-all-windows': true,
     'process-snapshot': true
 };
 
@@ -82,7 +69,7 @@ function subscriberEventMiddleware(msg: MessagePackage, next: () => void) {
 
 //on an InterAppBuss publish, forward the message to any runtime on the mesh.
 function publishMiddleware(msg: MessagePackage, next: () => void) {
-    const { data, ack, nack, identity } = msg;
+    const { data, identity } = msg;
 
     if (data.action === PUBLISH_ACTION && !identity.runtimeUuid) {
 
@@ -137,8 +124,19 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction) {
         try {
             connectionManager.resolveIdentity({uuid})
-            .then((id: any) => {
+            .then((id: IdentityAddress) => {
                 id.runtime.fin.System.executeOnRemote(identity, data)
+                .then(res => {
+                    switch (action) {
+                        case 'get-info':
+                            if (res && res.data && !res.data.runtime) {
+                               Object.assign(res.data, {runtime: {version: id.runtime.portInfo.version}});
+                            }
+                            return res;
+                        default:
+                            return res;
+                    }
+                })
                 .then(ack)
                 .catch(nack);
             }).catch((e: Error) => {
@@ -159,7 +157,7 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
 
 // On certain system API calls, provide aggregate results from all runtimes on the mesh
 function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: object) => void) {
-    const { identity, data, ack, nack } = msg;
+    const { identity, data, nack } = msg;
     const action = data && data.action;
     const isAggregateAction = apiMessagesToAggregate[action];
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.

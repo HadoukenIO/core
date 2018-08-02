@@ -1,19 +1,4 @@
 /*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
     src/browser/convert_options.js
  */
 
@@ -39,6 +24,11 @@ import {
 } from '../shapes';
 const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 
+const iframeBaseSettings = {
+    'crossOriginInjection': false,
+    'sameOriginInjection': true
+};
+
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
     return {
@@ -55,6 +45,9 @@ function five0BaseOptions() {
         },
         'alwaysOnBottom': false,
         'alwaysOnTop': false,
+        'api': {
+            'iframe': iframeBaseSettings
+        },
         'applicationIcon': '',
         'autoShow': false,
         'backgroundThrottling': false,
@@ -74,10 +67,7 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'api': {
-                'iframe': {
-                    'crossOriginInjection': false,
-                    'sameOriginInjection': true
-                }
+                'iframe': iframeBaseSettings
             },
             'disableInitialReload': false,
             'node': false,
@@ -199,6 +189,8 @@ module.exports = {
 
     convertToElectron: function(options, returnAsString) {
 
+        const usingIframe = !!(options.api && options.api.iframe);
+
         // build on top of the 5.0 base
         let newOptions = validateOptions(options);
 
@@ -240,6 +232,14 @@ module.exports = {
         const useNodeInRenderer = newOptions.experimental.node;
         const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
 
+        // Because we have communicated the experimental option, this allows us to
+        // respect that if its set but defaults to the proper passed in `iframe` key
+        if (usingIframe) {
+            Object.assign(newOptions.experimental.api.iframe, newOptions.api.iframe);
+        } else {
+            newOptions.api.iframe = newOptions.experimental.api.iframe;
+        }
+
         // Electron BrowserWindow options
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
@@ -250,7 +250,8 @@ module.exports = {
             plugins: newOptions.plugins,
             preload: (!useNodeInRenderer ? noNodePreload : ''),
             sandbox: !useNodeInRenderer,
-            spellCheck: newOptions.spellCheck
+            spellCheck: newOptions.spellCheck,
+            backgroundThrottling: newOptions.backgroundThrottling
         };
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {

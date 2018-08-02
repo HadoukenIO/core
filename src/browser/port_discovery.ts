@@ -1,29 +1,12 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-import { WMCopyData, ChromiumIPC } from './transport';
 import { EventEmitter } from 'events';
+import { Base, ChromiumIPC, UnixDomainSocket, WMCopyData } from './transport';
 import * as log from './log';
 import route from '../common/route';
 import { isMeshEnabled } from './connection_manager';
+import * as coreState from './core_state';
 
-const coreState = require('./core_state');
-
-
-const windowClassName = 'OPENFIN_ADAPTER_WINDOW';
+const UNIX_FILENAME_PREFIX: string = '/tmp/of.pd';
+const WINDOW_CLASS_NAME = 'OPENFIN_ADAPTER_WINDOW';
 
 export interface ArgMap {
     [key: string]: string;
@@ -41,27 +24,31 @@ export interface PortInfo {
 }
 
 export class PortDiscovery extends EventEmitter {
+    private _transport: Base;
 
     constructor() {
         super();
     }
 
-    private _copyDataTransport: WMCopyData;
+    private constructTransport(): Base {
+        if (!this._transport) {
+            if (process.platform === 'win32') {
+                // Send and receive messages on the same Window's classname
+                log.writeToLog('info', 'Constructing the copyDataTransport window.');
+                this._transport = new WMCopyData(WINDOW_CLASS_NAME, WINDOW_CLASS_NAME);
+            } else {
+                log.writeToLog('info', 'Opening and binding to a unix domain socket for port discovery.');
+                this._transport = new UnixDomainSocket(UNIX_FILENAME_PREFIX);
+            }
 
-    private constructCopyDataTransport(): WMCopyData {
-
-        // Send and receive messages on the same Window's classname
-        if (!this._copyDataTransport) {
-
-            log.writeToLog('info', 'Constructing the copyDataTransport window.');
-
-            this._copyDataTransport = new WMCopyData(windowClassName, windowClassName);
-            this._copyDataTransport.on('message', (s: any, data: string) => {
-                this.emit(route.runtime('launched'), JSON.parse(data));
-            });
+            if (this._transport) {
+                this._transport.on('message', (s: any, data: string) => {
+                    this.emit(route.runtime('launched'), JSON.parse(data));
+                });
+            }
         }
 
-        return this._copyDataTransport;
+        return this._transport;
     }
 
     public getPortInfoByArgs(args: ArgMap, port: number): PortInfo {
@@ -88,11 +75,13 @@ export class PortDiscovery extends EventEmitter {
     }
 
     public broadcast = (portDiscoveryPayload: PortInfo): void => {
-    //we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
-        const _copyDataTransport = this.constructCopyDataTransport();
+        //we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
+        const transport = this.constructTransport();
 
         coreState.setSocketServerState(portDiscoveryPayload);
-        _copyDataTransport.publish(portDiscoveryPayload);
+        if (transport) {
+            transport.publish(portDiscoveryPayload);
+        }
 
         if (portDiscoveryPayload.runtimeInformationChannel) {
             const namedPipeTransport = new ChromiumIPC(portDiscoveryPayload.runtimeInformationChannel);

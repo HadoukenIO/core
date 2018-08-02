@@ -1,19 +1,4 @@
 /*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
   index.js
 */
 
@@ -36,7 +21,7 @@ let minimist = require('minimist');
 // local modules
 let Application = require('./src/browser/api/application.js').Application;
 let System = require('./src/browser/api/system.js').System;
-let Window = require('./src/browser/api/window.js').Window;
+import { Window } from './src/browser/api/window';
 
 let apiProtocol = require('./src/browser/api_protocol');
 let socketServer = require('./src/browser/transports/socket_server').server;
@@ -50,6 +35,8 @@ import ofEvents from './src/browser/of_events';
 import {
     portDiscovery
 } from './src/browser/port_discovery';
+
+import { reservedHotKeys } from './src/browser/api/global_hotkey';
 
 import {
     default as connectionManager,
@@ -70,9 +57,7 @@ let firstApp = null;
 let rvmBus;
 let otherInstanceRunning = false;
 let appIsReady = false;
-let handlingErrors = false;
 const deferredLaunches = [];
-const USER_DATA = app.getPath('userData');
 let resolveServerReady;
 const serverReadyPromise = new Promise((resolve) => {
     resolveServerReady = () => resolve();
@@ -138,10 +123,10 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
     clientCertDialog.on('closed', onClosed);
 
     let params = '?url=' + encodeURIComponent(url) + '&uuid=' + encodeURIComponent(ipcUuid) + '&certs=' + encodeURIComponent(_.pluck(list, 'issuerName'));
-    clientCertDialog.loadURL(path.resolve(__dirname, 'src', 'certificate', 'index.html') + params);
+    clientCertDialog.loadURL(path.resolve(__dirname, 'assets', 'certificate.html') + params);
 });
 
-portDiscovery.on('runtime/launched', (portInfo) => {
+portDiscovery.on(route.runtime('launched'), (portInfo) => {
     //check if the ports match:
     const myPortInfo = coreState.getSocketServerState();
     const myUuid = getMeshUuid();
@@ -172,8 +157,8 @@ handleMacSingleTenant();
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
 
-// Opt in to display non-blocking errors
-handleSafeErrors(coreState.argo);
+// Safe errors initialization
+errors.initSafeErrors(coreState.argo);
 
 // Has a local copy of an app config
 if (coreState.argo['local-startup-url']) {
@@ -181,20 +166,15 @@ if (coreState.argo['local-startup-url']) {
         let localConfig = JSON.parse(fs.readFileSync(coreState.argo['local-startup-url']));
 
         if (typeof localConfig['devtools_port'] === 'number') {
-            console.log('remote-debugging-port:', localConfig['devtools_port']);
-            app.commandLine.appendSwitch('remote-debugging-port', localConfig['devtools_port'].toString());
+            if (!coreState.argo['remote-debugging-port']) {
+                log.writeToLog(1, `remote-debugging-port: ${localConfig['devtools_port']}`, true);
+                app.commandLine.appendSwitch('remote-debugging-port', localConfig['devtools_port'].toString());
+            } else {
+                log.writeToLog(1, 'Ignoring devtools_port from manifest', true);
+            }
         }
     } catch (err) {
         console.error(err);
-    }
-}
-
-function handleSafeErrors(argo) {
-    if (!handlingErrors && argo['safe-errors']) {
-        process.on('uncaughtException', (err) => {
-            errors.createErrorUI(err);
-        });
-        handlingErrors = true;
     }
 }
 
@@ -202,7 +182,6 @@ const handleDelegatedLaunch = function(commandLine) {
     let otherInstanceArgo = minimist(commandLine);
 
     initializeCrashReporter(otherInstanceArgo);
-    handleSafeErrors(otherInstanceArgo);
 
     // delegated args from a second instance
     launchApp(otherInstanceArgo, false);
@@ -315,13 +294,6 @@ app.on('ready', function() {
             ofEvents.emit(windowEvtName, {
                 topic: 'window',
                 type: 'auth-requested',
-                uuid: identity.uuid,
-                name: identity.name,
-                authInfo: authInfo
-            });
-            ofEvents.emit(appEvtName, {
-                topic: 'application',
-                type: 'window-auth-requested',
                 uuid: identity.uuid,
                 name: identity.name,
                 authInfo: authInfo
@@ -455,7 +427,7 @@ function rotateLogs(argo) {
             }).sort((a, b) => {
                 return (b.date - a.date);
             }).slice(6).forEach(file => {
-                let filepath = path.join(USER_DATA, file.name);
+                let filepath = path.join(app.getPath('userData'), file.name);
                 fs.unlink(filepath, err => {
                     if (err) {
                         System.log('error', `cannot delete logfile: ${filepath}`);
@@ -484,7 +456,7 @@ function deleteProcessLogfile(closeLogfile) {
         return;
     }
 
-    let filepath = path.join(USER_DATA, filename);
+    let filepath = path.join(app.getPath('userData'), filename);
 
     if (closeLogfile) {
         app.closeLogfile();
@@ -663,6 +635,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
     return successfulLaunch;
 }
 
+//Please add any hotkeys added here to the the reservedHotKeys list.
 function registerShortcuts() {
     app.on('browser-window-focus', (event, browserWindow) => {
         const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
@@ -701,7 +674,7 @@ function registerShortcuts() {
 
     const unhookShortcuts = (event, browserWindow) => {
         if (!globalShortcut.isDestroyed()) {
-            globalShortcut.unregisterAll();
+            reservedHotKeys.forEach(a => globalShortcut.unregister(a));
         }
     };
 
@@ -734,8 +707,9 @@ function handleMacSingleTenant() {
         if (coreState.argo['security-realm']) {
             pathPost = pathPost.concat(coreState.argo['security-realm']);
         }
-        app.setPath('userData', path.join(USER_DATA, pathPost));
-        app.setPath('userCache', path.join(USER_DATA, pathPost));
+        const userData = app.getPath('userData');
+        app.setPath('userData', path.join(userData, pathPost));
+        app.setPath('userCache', path.join(userData, pathPost));
     }
 }
 

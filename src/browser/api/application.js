@@ -1,19 +1,4 @@
 /*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
     src/browser/api/application.js
  */
 
@@ -34,7 +19,7 @@ let _ = require('underscore');
 
 // local modules
 let System = require('./system.js').System;
-let Window = require('./window.js').Window;
+import { Window } from './window';
 let convertOpts = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
@@ -46,7 +31,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { isFileUrl, isHttpUrl } from '../../common/main';
+import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -132,6 +117,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
 
     let appUrl = opts.url;
     const { uuid, name } = opts;
+    const initialAppOptions = Object.assign({}, opts);
 
     if (appUrl === undefined && opts.mainWindowOptions) {
         appUrl = opts.mainWindowOptions.url;
@@ -169,14 +155,15 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     }
 
     const appObj = createAppObj(uuid, opts, configUrl);
+    const app = coreState.appByUuid(opts.uuid);
 
     if (parentIdentity && parentIdentity.uuid) {
         // This is a reference to the meta `app` object that is stored in core state,
         // not the actual `application` object created above. Here we are attaching the parent
         // identity to it.
-        const app = coreState.appByUuid(opts.uuid);
         app.parentUuid = parentUuid;
     }
+    app.initialAppOptions = initialAppOptions;
 
     return appObj;
 };
@@ -300,9 +287,7 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
     return WindowGroups.getGroups();
 };
 
-
 Application.getManifest = function(identity, manifestUrl, callback, errCallback) {
-
     // When manifest URL is not provided, get the manifest for the current application
     if (!manifestUrl) {
         const appObject = coreState.getAppObjByUuid(identity.uuid);
@@ -345,10 +330,23 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
 };
 
 Application.getInfo = function(identity, callback) {
-    const app = Application.wrap(identity.uuid);
+    const app = coreState.appByUuid(identity.uuid);
+
+    const manifestObj = coreState.getClosestManifest(identity);
+    const { url, manifest } = manifestObj || {};
+
+    const parentUuid = Application.getParentApplication(identity);
+    const launchMode = app && app.appObj && app.appObj.launchMode;
 
     const response = {
-        launchMode: app.launchMode
+        initialOptions: app.initialAppOptions,
+        launchMode,
+        manifestUrl: url,
+        manifest,
+        parentUuid,
+        runtime: {
+            version: System.getRuntimeInfo(identity).version
+        }
     };
 
     callback(response);
@@ -473,23 +471,13 @@ Application.run = function(identity, configUrl = '', userAppConfigArgs = undefin
     const app = createAppObj(identity.uuid, null, configUrl);
     const mainWindowOpts = convertOpts.convertToElectron(app._options);
 
-    const proceed = () => run(identity, mainWindowOpts, userAppConfigArgs);
-    const { uuid, name } = mainWindowOpts;
-    const windowIdentity = { uuid, name };
-
-    if (coreState.getAppRunningState(uuid)) {
-        proceed();
-    } else {
-        // Flow through preload script logic (eg. re-download of failed preload scripts)
-        // only if app is not already running.
-        System.downloadPreloadScripts(windowIdentity, mainWindowOpts.preloadScripts)
-            .then(proceed)
-            .catch(proceed);
-    }
+    run(identity, mainWindowOpts, userAppConfigArgs);
 };
 
 function run(identity, mainWindowOpts, userAppConfigArgs) {
+    const windowIdentity = getIdentityFromObject(mainWindowOpts);
     const uuid = identity.uuid;
+    const appWasAlreadyRunning = coreState.getAppRunningState(uuid);
     const app = Application.wrap(uuid);
     const appState = coreState.appByUuid(uuid);
     let sourceUrl = appState.appObj._configUrl;
@@ -580,7 +568,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         sourceUrl = argo['startup-url'] || argo['config'];
     }
 
-    if (coreState.getAppRunningState(uuid)) {
+    if (appWasAlreadyRunning) {
         if (coreState.sentFirstHideSplashScreen(uuid)) {
             // only resend if we've sent once before(meaning 1 window has shown)
             Application.emitHideSplashScreen(identity);
@@ -633,10 +621,6 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     // function finish() {
     // turn on plugins for the main window
     hasPlugins = convertOpts.convertToElectron(mainWindowOpts).webPreferences.plugins;
-
-    // loadUrl will synchronously cause an event to be fired from the native side 'use-plugins-requested'
-    // to determine whether plugins should be enabled. The event is handled at the top of the file
-    app.mainWindow.loadURL(app._options.url);
 
     // give other windows a chance to not have plugins enabled
     hasPlugins = false;
@@ -704,9 +688,24 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         }
     });
 
-    coreState.setAppRunningState(uuid, true);
+    const { preloadScripts } = mainWindowOpts;
+    const loadUrl = () => {
+        app.mainWindow.loadURL(app._options.url);
+        coreState.setAppRunningState(uuid, true);
+        ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+    };
 
-    ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
+    if (appWasAlreadyRunning) {
+        loadUrl();
+    } else {
+        System.downloadPreloadScripts(windowIdentity, preloadScripts)
+            .catch((error) => {
+                log.writeToLog(1, 'Error while downloading preload scripts for identity ' +
+                    `${uuid}-${name} on app run. Will proceed running the app. ` +
+                    `Error received: ${error}`, true);
+            })
+            .then(loadUrl);
+    }
 }
 
 /**
@@ -764,11 +763,11 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     // cleanup the old one so it can be replaced
     removeTrayIcon(app);
 
-    let mainWindowIdentity = app.identity;
+    const mainWindowIdentity = app.identity;
 
     iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
 
-    cachedFetch(app.uuid, iconUrl, (error, iconFilepath) => {
+    cachedFetch(mainWindowIdentity, iconUrl, (error, iconFilepath) => {
         if (!error) {
             if (app) {
                 const iconImage = nativeImage.createFromPath(iconFilepath);

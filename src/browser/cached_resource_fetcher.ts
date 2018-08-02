@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 import {app, net} from 'electron'; // Electron app
 import {stat, mkdir, createWriteStream, readFile as fsReadFile} from 'fs';
 import {join, parse} from 'path';
@@ -21,7 +6,8 @@ import {createHash} from 'crypto';
 import * as log from './log';
 import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
 import { addPendingAuthRequests, createAuthUI } from './authentication_delegate';
-import { AuthCallback } from '../shapes';
+import { AuthCallback, Identity } from '../shapes';
+import { getSession } from './core_state';
 
 let appQuiting: Boolean = false;
 
@@ -34,7 +20,7 @@ app.on('quit', () => { appQuiting = true; });
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
-export async function cachedFetch(appUuid: string, url: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
+export async function cachedFetch(identity: Identity, url: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
     if (typeof url !== 'string') {
         callback(new Error(`Bad file url: '${url}'`));
         return;
@@ -61,7 +47,8 @@ export async function cachedFetch(appUuid: string, url: string, callback: (error
         return;
     }
 
-    const appCacheDir = getAppCacheDir(appUuid);
+    const { uuid } = identity;
+    const appCacheDir = getAppCacheDir(uuid);
     const filePath = getFilePath(appCacheDir, url);
     let err: Error;
 
@@ -72,12 +59,12 @@ export async function cachedFetch(appUuid: string, url: string, callback: (error
         const p = new Promise( async (resolve, reject) => {
             try {
                 await prepDownloadLocation(appCacheDir);
-                await download(url, filePath);
+                await download(identity, url, filePath);
                 callback(null, filePath);
                 resolve(filePath);
             } catch (e) {
                 err = e;
-                app.vlog(1, `cachedFetch uuid ${appUuid} url ${url} file ${filePath} err ${e.message}`);
+                app.vlog(1, `cachedFetch uuid ${uuid} url ${url} file ${filePath} err ${e.message}`);
                 callback(err, filePath);
                 reject(err);
             } finally {
@@ -191,16 +178,17 @@ function authRequest(url: string, authInfo: any, authCallback: AuthCallback): vo
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(fileUrl: string, filePath: string): Promise<any> {
+function download(identity: Identity, url: string, saveToPath: string): Promise<any> {
     return new Promise((resolve, reject) => {
-        const request = net.request(fileUrl);
-        const binaryWriteStream = createWriteStream(filePath, {
+        const session = getSession(identity);
+        const request = net.request(url);
+        const binaryWriteStream = createWriteStream(saveToPath, {
             encoding: 'binary'
         });
 
         request.once('response', (response: any) => {
             const { statusCode } = response;
-            app.vlog(1, `cachedFetch download status ${filePath} ${statusCode} `);
+            app.vlog(1, `cachedFetch download status ${saveToPath} ${statusCode} `);
 
             response.setEncoding('binary');
             response.on('data', (chunk: any) => {
@@ -226,14 +214,29 @@ function download(fileUrl: string, filePath: string): Promise<any> {
         });
 
         request.on('login', (authInfo: any, callback: AuthCallback) => {
-            authRequest(filePath, authInfo, callback);
+            authRequest(saveToPath, authInfo, callback);
         });
 
         request.once('error', (err: Error) => {
             reject(err);
         });
 
-        request.end();
+        if (session) {
+            session.cookies.get({}, (error, cookies) => {
+                if (error) {
+                    log.writeToLog(1, 'Error getting session cookies for identity '
+                        + `${identity.uuid}-${identity.name} while trying to fetch a `
+                        + `resource from URL ${url}. Will attempt to fetch the resource `
+                        + `without cookies. Error received: ${error}`, true);
+                } else {
+                    const cookiesNameValue = cookies.map((e) => `${e.name}=${e.value}`);
+                    request.setHeader('cookie', cookiesNameValue);
+                }
+                request.end();
+            });
+        } else {
+            request.end();
+        }
     });
 }
 

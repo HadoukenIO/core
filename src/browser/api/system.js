@@ -1,19 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 // built-in modules
 const fs = require('fs');
 const os = require('os');
@@ -109,51 +93,15 @@ electronApp.on('synth-desktop-icon-clicked', payload => {
     ofEvents.emit(route.system('desktop-icon-clicked'), payload);
 });
 
-ofEvents.on(route.application('created', '*'), payload => {
-    ofEvents.emit(route.system('application-created'), {
-        topic: 'system',
-        type: 'application-created',
-        uuid: payload.source
-    });
-});
+const eventPropagationMap = new Map();
+eventPropagationMap.set(route.externalApplication('connected'), 'external-application-connected');
+eventPropagationMap.set(route.externalApplication('disconnected'), 'external-application-disconnected');
 
-ofEvents.on(route.application('started', '*'), payload => {
-    ofEvents.emit(route.system('application-started'), {
-        topic: 'system',
-        type: 'application-started',
-        uuid: payload.source
-    });
-});
-
-ofEvents.on(route.application('closed', '*'), payload => {
-    ofEvents.emit(route.system('application-closed'), {
-        topic: 'system',
-        type: 'application-closed',
-        uuid: payload.source
-    });
-});
-
-ofEvents.on(route.application('crashed', '*'), payload => {
-    ofEvents.emit(route.system('application-crashed'), {
-        topic: 'system',
-        type: 'application-crashed',
-        uuid: payload.source
-    });
-});
-
-ofEvents.on(route.externalApplication('connected'), payload => {
-    ofEvents.emit(route.system('external-application-connected'), {
-        topic: 'system',
-        type: 'external-application-connected',
-        uuid: payload.uuid
-    });
-});
-
-ofEvents.on(route.externalApplication('disconnected'), payload => {
-    ofEvents.emit(route.system('external-application-disconnected'), {
-        topic: 'system',
-        type: 'external-application-disconnected',
-        uuid: payload.uuid
+eventPropagationMap.forEach((systemEvent, eventString) => {
+    ofEvents.on(eventString, payload => {
+        const systemEventProps = { topic: 'system', type: systemEvent };
+        const initialPayload = Array.isArray(payload.data) ? payload.data : [payload];
+        ofEvents.emit(route.system(systemEvent), Object.assign({}, ...initialPayload, systemEventProps));
     });
 });
 

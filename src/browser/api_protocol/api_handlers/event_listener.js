@@ -1,19 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 // built-in modules
 // (none)
 
@@ -22,12 +6,13 @@ let _ = require('underscore');
 
 // local modules
 let apiProtocolBase = require('./api_protocol_base.js');
-let Window = require('../../api/window.js').Window;
+import { Window } from '../../api/window';
 let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
-import { Service } from '../../api/service';
+import { Channel } from '../../api/channel';
+import { GlobalHotkey } from '../../api/global_hotkey';
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -157,13 +142,13 @@ function EventListenerApiHandler() {
                 };
             }
         },
-        'service': {
-            name: 'service',
+        'channel': {
+            name: 'channel',
             subscribe: function(identity, type, payload, cb) {
                 const targetIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
                 const { uuid } = targetIdentity;
                 const islocalUuid = coreState.isLocalUuid(uuid);
-                const localUnsub = Service.addEventListener(targetIdentity, type, cb);
+                const localUnsub = Channel.addEventListener(targetIdentity, type, cb);
                 let remoteUnSub;
                 const isExternalRuntime = ExternalApplication.isRuntimeClient(identity.uuid);
 
@@ -171,7 +156,7 @@ function EventListenerApiHandler() {
                     const subscription = {
                         uuid,
                         listenType: 'on',
-                        className: 'service',
+                        className: 'channel',
                         eventName: type
                     };
 
@@ -223,6 +208,12 @@ function EventListenerApiHandler() {
                     uuid: payload.uuid
                 };
                 return ExternalApplication.addEventListener(externalAppIdentity, type, cb);
+            }
+        },
+        'global-hotkey': {
+            name: 'global-hotkey',
+            subscribe: function(identity, type, payload, cb) {
+                return GlobalHotkey.addEventListener(identity, type, cb);
             }
         }
     };

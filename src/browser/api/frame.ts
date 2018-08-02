@@ -1,24 +1,8 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 import ofEvents from '../of_events';
 import { Identity, OpenFinWindow, EventPayload } from '../../shapes';
 import route from '../../common/route';
 import * as  coreState from '../core_state';
-import * as log from '../log';
 import * as Shapes from '../../shapes';
 
 export class FrameInfo implements Shapes.FrameInfo {
@@ -63,7 +47,7 @@ export module Frame {
         return unsubscribe;
     }
 
-    export function removeEventListener (identity: Identity, type: string, listener: Function) {
+    export function removeEventListener(identity: Identity, type: string, listener: Shapes.Listener) {
         const browserFrame = <OpenFinWindow>coreState.getWindowByUuidName(identity.uuid, identity.name);
         if (browserFrame) {
             const id = String(browserFrame.id);

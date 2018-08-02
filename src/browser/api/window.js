@@ -1,19 +1,4 @@
 /*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
     src/browser/api/window.js
  */
 
@@ -35,7 +20,7 @@ import * as Rx from 'rx';
 let animations = require('../animations.js');
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 let BoundsChangedStateTracker = require('../bounds_changed_state_tracker.js');
-let clipBounds = require('../clip_bounds.js').default;
+import { clipBounds, windowSetBoundsToVisible } from '../utils';
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
@@ -50,7 +35,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
-import { isFileUrl, isHttpUrl } from '../../common/main';
+import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
 // constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -68,7 +53,8 @@ const WindowsMessages = {
     WM_SYSKEYUP: 0x0105,
 };
 
-let Window = {};
+let Window = {}; // jshint ignore:line
+const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
     'api-injection-failed': {
@@ -76,7 +62,6 @@ let browserWindowEventMap = {
     },
     'blur': {
         topic: 'blurred',
-        decorator: blurredDecorator
     },
     'synth-bounds-change': {
         topic: 'bounds-changing', // or bounds-changed
@@ -96,7 +81,6 @@ let browserWindowEventMap = {
     },
     'focus': {
         topic: 'focused',
-        decorator: focusedDecorator
     },
     'opacity-changed': {
         decorator: opacityChangedDecorator
@@ -142,6 +126,10 @@ let webContentsEventMap = {
         decorator: loadFailedDecorator
     }
 };
+
+function genWindowKey(identity) {
+    return `${identity.uuid}-${identity.name}`;
+}
 
 /*
     For the bounds stuff, looks like 5.0 does not take actions until the
@@ -498,7 +486,7 @@ Window.create = function(id, opts) {
             _externalWindowEventAdapter = new ExternalWindowEventAdapter(browserWindow);
         }
 
-        let windowTeardown = createWindowTearDown(identity, id);
+        let windowTeardown = createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler);
 
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
@@ -530,32 +518,25 @@ Window.create = function(id, opts) {
             ofEvents.removeAllListeners(closeEventString);
         });
 
-        browserWindow.on('closed', () => {
-            if (browserWindow._options.saveWindowState) {
-                let cachedBounds = _boundsChangedHandler.getCachedBounds();
-                saveBoundsToDisk(identity, cachedBounds, err => {
-                    if (err) {
-                        log.writeToLog('info', err);
-                    }
-                    windowTeardown();
-                    // These were causing an exception on close if the window was reloaded
-                    _boundsChangedHandler.teardown();
-                    browserWindow.removeAllListeners();
+        browserWindow.once('will-close', () => {
+            const type = 'closing';
+            windowTeardown()
+                .then(() => log.writeToLog('info', `Window tear down complete ${uuid} ${name}`))
+                .catch(err => {
+                    log.writeToLog('info', `Error while tearing down ${uuid} ${name}`);
+                    log.writeToLog('info', err);
                 });
-            } else {
-                windowTeardown();
-                _boundsChangedHandler.teardown();
-                browserWindow.removeAllListeners();
-            }
+            ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type: type, uuid, name });
+        });
+
+        webContents.once('close', () => {
+            webContents.removeAllListeners();
         });
 
         const isMainWindow = (uuid === name);
-        const emitToAppAndWin = (type, payload) => {
+        const emitToAppIfMainWin = (type, payload) => {
             // Window crashed: inform Window "namespace"
             ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
-
-            // Window crashed: inform Application "namespace" but with "window-" event string prefix
-            ofEvents.emit(route.application(`window-${type}`, uuid), Object.assign({ topic: 'application', type, uuid, name }, payload));
 
             if (isMainWindow) {
                 // Application crashed: inform Application "namespace"
@@ -563,12 +544,8 @@ Window.create = function(id, opts) {
             }
         };
 
-        webContents.once('close', () => {
-            webContents.removeAllListeners();
-        });
-
         webContents.on('crashed', (event, killed, terminationStatus) => {
-            emitToAppAndWin('crashed', {
+            emitToAppIfMainWin('crashed', {
                 reason: terminationStatus
             });
 
@@ -587,11 +564,11 @@ Window.create = function(id, opts) {
         });
 
         browserWindow.on('responsive', () => {
-            emitToAppAndWin('responding');
+            emitToAppIfMainWin('responding');
         });
 
         browserWindow.on('unresponsive', () => {
-            emitToAppAndWin('not-responding');
+            emitToAppIfMainWin('not-responding');
         });
 
         let mapEvents = function(eventMap, eventEmitter) {
@@ -707,11 +684,6 @@ Window.create = function(id, opts) {
                 uuid,
                 isMain,
                 documentName
-            });
-
-            ofEvents.emit(route.application('window-end-load'), {
-                name,
-                uuid
             });
         };
         let documentLoadedString = 'document-loaded';
@@ -1052,14 +1024,29 @@ Window.close = function(identity, force, callback = () => {}) {
     handleForceActions(identity, force, 'close-requested', payload, defaultAction);
 };
 
+function disabledFrameUnsubDecorator(identity) {
+    const windowKey = genWindowKey(identity);
+    return function() {
+        let refCount = disabledFrameRef.get(windowKey) || 0;
+        if (refCount > 1) {
+            disabledFrameRef.set(windowKey, --refCount);
+        } else {
+            Window.enableFrame(identity);
+        }
+    };
+}
 
-Window.disableFrame = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
+Window.disableFrame = function(requestorIdentity, windowIdentity) {
+    const browserWindow = getElectronBrowserWindow(windowIdentity);
+    const windowKey = genWindowKey(windowIdentity);
 
     if (!browserWindow) {
         return;
     }
 
+    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
+    disabledFrameRef.set(windowKey, ++dframeRefCount);
+    subscriptionManager.registerSubscription(disabledFrameUnsubDecorator(windowIdentity), requestorIdentity, `disable-frame-${windowKey}`);
     browserWindow.setUserMovementEnabled(false);
 };
 
@@ -1086,12 +1073,14 @@ Window.embed = function(identity, parentHwnd) {
 };
 
 Window.enableFrame = function(identity) {
+    const windowKey = genWindowKey(identity);
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
     }
-
+    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
+    disabledFrameRef.set(windowKey, --dframeRefCount);
     browserWindow.setUserMovementEnabled(true);
 };
 
@@ -1543,6 +1532,7 @@ Window.restore = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'restore');
 
     if (browserWindow.isMinimized()) {
+        windowSetBoundsToVisible(browserWindow);
         browserWindow.restore();
     } else if (browserWindow.isMaximized()) {
         browserWindow.unmaximize();
@@ -1811,30 +1801,9 @@ function emitCloseEvents(identity) {
 
     electronApp.emit('browser-window-closed', null, getElectronBrowserWindow(identity));
 
-    ofEvents.emit(route.window('closed'), {
-        name,
-        uuid
-    });
-
     ofEvents.emit(route.window('closed', uuid, name, true), {
         topic: 'window',
         type: 'closed',
-        uuid,
-        name
-    });
-
-    // Need to emit this event because notifications use dashes (-)
-    // in their window names
-    ofEvents.emit(route.window('closed', uuid, name, false), {
-        topic: 'window',
-        type: 'closed',
-        uuid,
-        name
-    });
-
-    ofEvents.emit(route.application('window-closed', uuid), {
-        topic: 'application',
-        type: 'window-closed',
         uuid,
         name
     });
@@ -1853,66 +1822,89 @@ function emitReloadedEvent(identity, url) {
         name,
         url
     });
-
-    ofEvents.emit(route.application('window-reloaded', uuid), {
-        topic: 'application',
-        type: 'window-reloaded',
-        uuid,
-        name,
-        url
-    });
 }
 
-function createWindowTearDown(identity, id) {
+function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler) {
+    const promises = [];
+
+    //we want to treat the close events as a step in the teardown, wrapping it in a promise.
+    promises.push(new Promise(resolve => {
+        browserWindow.once('closed', resolve);
+    }));
+
+    //wrap the operation of closing a child window in a promise.
+    function closeChildWin(childId) {
+        return new Promise((resolve, reject) => {
+            const child = coreState.getWinObjById(childId);
+
+            // TODO right now this is forceable to handle the event that there was a close
+            //      requested on a child window and the main window closes. This needs
+            //      looking into
+            if (child) {
+                let childIdentity = {
+                    name: child.name,
+                    uuid: child.uuid
+                };
+
+                Window.close(childIdentity, true, () => {
+                    resolve();
+                });
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    //Even if disk operations fail we need to resolve this promise to avoid zombie processes.
+    function handleSaveStateAlwaysResolve() {
+        return new Promise((resolve, reject) => {
+            if (browserWindow._options.saveWindowState) {
+                const cachedBounds = _boundsChangedHandler.getCachedBounds();
+                saveBoundsToDisk(identity, cachedBounds, err => {
+                    if (err) {
+                        log.writeToLog('info', err);
+                    }
+                    // These were causing an exception on close if the window was reloaded
+                    _boundsChangedHandler.teardown();
+                    resolve();
+                });
+            } else {
+                _boundsChangedHandler.teardown();
+                resolve();
+            }
+        });
+    }
+
+    //Window tear down will:
+    //    Update core state by removing the window.
+    //    Save the window state to disk
+    //    Close all child windows
+    //    Wait for the close event.
     return function() {
         let ofWindow = Window.wrap(identity.uuid, identity.name);
-        let childWindows = coreState.getChildrenByWinId(id);
-
+        let childWindows = coreState.getChildrenByWinId(id) || [];
         // remove from core state earlier rather than later
         coreState.removeChildById(id);
 
         // remove window from any groups it belongs to
         WindowGroups.leaveGroup(ofWindow);
 
-        if (childWindows && childWindows.length > 0) {
-            let closedChildren = 0;
+        promises.push(handleSaveStateAlwaysResolve());
 
-            childWindows.forEach(childId => {
-                let child = coreState.getWinObjById(childId);
+        childWindows.forEach(childId => {
+            promises.push(closeChildWin(childId));
+        });
 
-                // TODO right now this is forceable to handle the event that there was a close
-                //      requested on a child window and the main window closes. This needs
-                //      looking into
-                if (child) {
-                    let childIdentity = {
-                        name: child.name,
-                        uuid: child.uuid
-                    };
-
-                    Window.close(childIdentity, true, () => {
-                        closedChildren++;
-                        if (closedChildren === childWindows.length) {
-                            emitCloseEvents(identity);
-                            coreState.removeChildById(id);
-                        }
-                    });
-                } else {
-                    closedChildren++;
-                    if (closedChildren === childWindows.length) {
-                        emitCloseEvents(identity);
-                        coreState.removeChildById(id);
-                    }
-                }
-            });
-        } else {
+        return Promise.all(promises).then(() => {
             emitCloseEvents(identity);
-        }
+            browserWindow.removeAllListeners();
+        });
     };
 }
 
 function saveBoundsToDisk(identity, bounds, callback) {
-    let cacheFile = getBoundsCacheSafeFileName(identity);
-    let data = {
+    const cacheFile = getBoundsCacheSafeFileName(identity);
+    const data = {
         'active': 'true',
         'height': bounds.height,
         'width': bounds.width,
@@ -1980,13 +1972,6 @@ function handleForceActions(identity, force, eventType, eventPayload, defaultAct
         eventPayload.topic = 'window';
 
         ofEvents.emit(winEventString, eventPayload);
-
-        if (eventType === 'show-requested') {
-            eventPayload.type = 'window-show-requested';
-            eventPayload.topic = 'application';
-
-            ofEvents.emit(appEventString, eventPayload);
-        }
     }
 }
 
@@ -2061,20 +2046,6 @@ function closeRequestedDecorator(payload) {
     payload.force = false;
 
     return propagate;
-}
-
-function blurredDecorator(payload, args) {
-    const { uuid, name } = payload;
-    ofEvents.emit(route.application('window-blurred', uuid), { topic: 'application', type: 'window-blurred', uuid, name });
-    ofEvents.emit(route.system('window-blurred'), { topic: 'system', type: 'window-blurred', uuid, name });
-    return true;
-}
-
-function focusedDecorator(payload, args) {
-    const { uuid, name } = payload;
-    ofEvents.emit(route.application('window-focused', uuid), { topic: 'application', type: 'window-focused', uuid, name });
-    ofEvents.emit(route.system('window-focused'), { topic: 'system', type: 'window-focused', uuid, name });
-    return true;
 }
 
 function boundsChangeDecorator(payload, args) {
@@ -2304,10 +2275,9 @@ function setTaskbar(browserWindow, forceFetch = false) {
 }
 
 function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
-    let options = browserWindow._options;
-    let uuid = options.uuid;
+    const identity = getIdentityFromObject(browserWindow._options);
 
-    cachedFetch(uuid, iconUrl, (error, iconFilepath) => {
+    cachedFetch(identity, iconUrl, (error, iconFilepath) => {
         if (!error) {
             setIcon(browserWindow, iconFilepath, errorCallback);
         } else {
@@ -2328,8 +2298,7 @@ function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
 }
 
 function setBlankTaskbarIcon(browserWindow) {
-    // the file is located at ..\runtime-core\blank.ico
-    setIcon(browserWindow, path.resolve(`${__dirname}/../../../blank.ico`));
+    setIcon(browserWindow, path.resolve(`${__dirname}/../../../assets/blank.ico`));
 }
 
 function getMainWinIconUrl(id) {
