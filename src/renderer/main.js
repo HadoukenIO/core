@@ -54,10 +54,10 @@ module.exports.api = api;
 
 module.exports.apiWithOptions = (windowId) => {
     const initialOptions = coreState.getWindowInitialOptionSet(windowId);
-    return {
-        apiString: api(windowId, initialOptions),
 
-        // break the remote link
-        initialOptions: JSON.stringify(initialOptions)
-    };
+    // break the remote link
+    return JSON.stringify({
+        apiString: api(windowId, initialOptions),
+        initialOptions: initialOptions
+    });
 };
