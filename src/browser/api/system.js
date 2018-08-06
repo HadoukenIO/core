@@ -25,7 +25,6 @@ const portDiscovery = require('../port_discovery').portDiscovery;
 
 import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
-import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch } from '../cached_resource_fetcher';
@@ -671,10 +670,6 @@ exports.System = {
 
     downloadPreloadScripts: function(identity, preloadScripts) {
         return downloadScripts(identity, preloadScripts);
-    },
-
-    getPluginModule: function(identity, name) {
-        return plugins.getModule(identity, name);
     },
 
     getPreloadScripts: function(identity) {
