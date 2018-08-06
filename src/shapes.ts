@@ -1,6 +1,7 @@
 
 import { PortInfo } from './browser/port_discovery';
 import { BrowserWindow as BrowserWindowElectron } from 'electron';
+import { ERROR_BOX_TYPES } from './common/errors';
 
 export interface Identity {
     uuid: string;
@@ -221,6 +222,7 @@ export interface WindowOptions {
     title?: string;
     toShowOnRun?: boolean;
     transparent?: boolean;
+    _type?: ERROR_BOX_TYPES;
     url: string;
     uuid: string;
     waitForPageLoad?: boolean;

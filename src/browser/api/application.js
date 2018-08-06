@@ -32,6 +32,7 @@ import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
 import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
+import { ERROR_BOX_TYPES } from '../../common/errors';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -657,7 +658,13 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
         coreState.removeApp(app.id);
 
-        if (!app._options._runtimeAuthDialog && !runtimeIsClosing && coreState.shouldCloseRuntime()) {
+        const shouldCloseRuntime =
+            app._options._type !== ERROR_BOX_TYPES.RENDERER_CRASH &&
+            !app._options._runtimeAuthDialog &&
+            !runtimeIsClosing &&
+            coreState.shouldCloseRuntime();
+
+        if (shouldCloseRuntime) {
             try {
                 runtimeIsClosing = true;
                 let appsToClose = coreState.getAllAppObjects();
