@@ -145,6 +145,7 @@ export interface WindowOptions {
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
     applicationIcon?: string;
+    aspectRatio?: number;
     autoShow?: boolean;
     backgroundColor?: string;
     backgroundThrottling?: boolean;

@@ -348,6 +348,13 @@ let optionSetters = {
             setOptOnBrowserWin('resizeRegion', newVal, browserWin);
         }
     },
+    aspectRatio: function(newVal, browserWin) {
+        if (typeof(newVal) !== 'number') {
+            return;
+        }
+        browserWin.setAspectRatio(newVal);
+        setOptOnBrowserWin('aspectRatio', newVal, browserWin);
+    },
     hasLoaded: function(newVal, browserWin) {
         if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
@@ -1998,6 +2005,11 @@ function applyAdditionalOptionsToWindow(browserWindow) {
                 browserWindow.setAlphaMask(options.alphaMask.red, options.alphaMask.green, options.alphaMask.blue);
             } else if (options.opacity < 1) {
                 browserWindow.setOpacity(options.opacity);
+            }
+
+            // set aspect ratio if present
+            if (options.aspectRatio > 0) {
+                browserWindow.setAspectRatio(options.aspectRatio);
             }
 
             // set minimized or maximized
