@@ -1880,14 +1880,16 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     function handleSaveStateAlwaysResolve() {
         return new Promise((resolve, reject) => {
             if (browserWindow._options.saveWindowState) {
-                const cachedBounds = _boundsChangedHandler.getCachedBounds();
-                saveBoundsToDisk(identity, cachedBounds, err => {
-                    if (err) {
-                        log.writeToLog('info', err);
-                    }
-                    // These were causing an exception on close if the window was reloaded
-                    _boundsChangedHandler.teardown();
-                    resolve();
+                browserWindow.webContents.getZoomLevel(zoomLevel => {
+                    const cachedBounds = _boundsChangedHandler.getCachedBounds();
+                    saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
+                        if (err) {
+                            log.writeToLog('info', err);
+                        }
+                        // These were causing an exception on close if the window was reloaded
+                        _boundsChangedHandler.teardown();
+                        resolve();
+                    });
                 });
             } else {
                 _boundsChangedHandler.teardown();
@@ -1923,7 +1925,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     };
 }
 
-function saveBoundsToDisk(identity, bounds, callback) {
+function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
     const cacheFile = getBoundsCacheSafeFileName(identity);
     const data = {
         'active': 'true',
@@ -1932,7 +1934,8 @@ function saveBoundsToDisk(identity, bounds, callback) {
         'left': bounds.x,
         'top': bounds.y,
         'name': identity.name,
-        'windowState': bounds.windowState
+        'windowState': bounds.windowState,
+        'zoomLevel': zoomLevel
     };
 
     try {
@@ -2407,6 +2410,11 @@ function restoreWindowPosition(identity, cb) {
             case 'minimized':
                 Window.minimize(identity);
                 break;
+        }
+
+        // set zoom level
+        if (savedBounds.zoomLevel) {
+            Window.setZoomLevel(identity, savedBounds.zoomLevel);
         }
 
         cb();
