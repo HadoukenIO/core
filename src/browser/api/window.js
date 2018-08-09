@@ -2415,7 +2415,6 @@ function restoreWindowPosition(identity, cb) {
         // set zoom level
         let level = savedBounds.zoomLevel;
         if (level) {
-            //Window.setZoomLevel(identity, savedBounds.zoomLevel);  //not working with child window
             let browserWindow = getElectronBrowserWindow(identity);
             browserWindow.webContents.setZoomLevel(level);
         }
