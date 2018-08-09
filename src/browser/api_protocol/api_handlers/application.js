@@ -49,6 +49,7 @@ module.exports.applicationApiMap = {
     'external-window-action': externalWindowAction,
     'get-application-groups': getApplicationGroups,
     'get-application-manifest': getApplicationManifest,
+    'get-application-zoom-level': getApplicationZoomLevel,
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
@@ -190,6 +191,15 @@ function getApplicationGroups(identity, message, ack) {
         });
     });
     ack(dataAck);
+}
+
+function getApplicationZoomLevel(identity, message, ack) {
+    const dataAck = _.clone(successAck);
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+    Application.getZoomLevel(appIdentity, level => {
+        dataAck.data = level;
+        ack(dataAck);
+    });
 }
 
 function getChildWindows(identity, message, ack) {

@@ -313,6 +313,11 @@ Application.getParentApplication = function(identity) {
     return parentUuid;
 };
 
+Application.getZoomLevel = function(identity, callback) {
+    const app = coreState.appByUuid(identity.uuid);
+    app.mainWin.getZoomLevel(app.identity, callback);
+};
+
 Application.getShortcuts = function(identity, callback, errorCallback) {
     let app = Application.wrap(identity.uuid);
     let manifestUrl = app && app._configUrl;
