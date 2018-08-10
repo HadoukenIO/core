@@ -315,7 +315,7 @@ Application.getParentApplication = function(identity) {
 
 Application.getZoomLevel = function(identity, callback) {
     const app = coreState.appByUuid(identity.uuid);
-    app.mainWin.getZoomLevel(app.identity, callback);
+    Window.getZoomLevel(app.appObj.identity, callback);
 };
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
