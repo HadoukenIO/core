@@ -67,6 +67,7 @@ module.exports.applicationApiMap = {
     'run-application': runApplication,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
     'set-tray-icon': setTrayIcon,
+    'set-application-zoom-level': setApplicationZoomLevel,
     'terminate-application': terminateApplication,
     'wait-for-hung-application': waitForHungApplication
 };
@@ -84,6 +85,17 @@ function setTrayIcon(identity, rawMessage, ack, nack) {
         ack(successAck);
     }, nack);
 }
+
+function setApplicationZoomLevel(identity, rawMessage, ack, nack) {
+    let message = JSON.parse(JSON.stringify(rawMessage));
+    let payload = message.payload;
+    let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+
+    Application.setZoomLevel(appIdentity, payload.level, () => {
+        ack(successAck);
+    }, nack);
+}
+
 
 function getTrayIconInfo(identity, message, ack, nack) {
     const dataAck = _.clone(successAck);

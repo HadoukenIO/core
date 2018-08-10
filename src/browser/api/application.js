@@ -837,6 +837,20 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     });
 };
 
+Application.setZoomLevel = function(identity, level, callback, errorCallback) {
+    const app = coreState.appByUuid(identity.uuid);
+
+    // todo: need to set zoom level for each child window
+    app.children.forEach(function(childWindow) {
+        const childWindowIdentity = {
+            name: childWindow.openfinWindow.name,
+            uuid: childWindow.openfinWindow.uuid
+        };
+        Window.setZoomLevel(childWindowIdentity, level);
+    });
+
+};
+
 
 Application.getTrayIconInfo = function(identity, callback, errorCallback) {
     const app = Application.wrap(identity.uuid);
