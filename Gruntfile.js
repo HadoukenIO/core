@@ -24,7 +24,7 @@ if (!Object.entries) {
     while (i--) {
       resArray[i] = [ownProps[i], obj[ownProps[i]]];
     }
-    
+
     return resArray;
   };
 }
@@ -40,14 +40,14 @@ function flattenDeep(arr1, usedModules) {
         // Add top level dependencies without duplicates
         if(!usedModules[val[0]]) {
             usedModules[val[0]] = true;
-            acc.push(`${val[0]}/**`); 
+            acc.push(`${val[0]}/**`);
         }
 
         // Handle nested dependencies
         const subDep = val[1].dependencies;
         if(typeof subDep === 'object') {
             acc = acc.concat(flattenDeep(Object.entries(subDep), usedModules));
-        } 
+        }
 
         return acc;
     }, []);
@@ -293,6 +293,9 @@ module.exports = (grunt) => {
     grunt.registerTask('package', 'Package in an asar', function() {
         const done = this.async();
 
+        //delete build/test related files before packaging.
+        grunt.file.delete('staging/core/Gruntfile.js');
+        wrench.rmdirSyncRecursive('staging/core/test', true);
         asar.createPackage('staging/core', 'out/app.asar', function() {
             grunt.log.ok('Finished packaging as asar.');
             wrench.rmdirSyncRecursive('staging', true);
