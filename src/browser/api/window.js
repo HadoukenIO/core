@@ -2078,10 +2078,10 @@ function closeRequestedDecorator(payload) {
 function movingDecorator(payload, args) {
     let positionToBounds = (position) => {
         return {
-            left: position.x + 7,
+            left: position.x,
             top: position.y,
-            right: position.x + position.width - 7,
-            bottom: position.y + position.height - 7,
+            right: position.x + position.width,
+            bottom: position.y + position.height,
             height: position.height,
             width: position.width
         };
