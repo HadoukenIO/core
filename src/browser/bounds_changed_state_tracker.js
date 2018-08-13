@@ -8,7 +8,7 @@ let _ = require('underscore');
 let animations = require('./animations.js');
 let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
-let WindowGroups = require('./window_groups.js');
+let WindowGroups = require('./window_groups');
 import WindowGroupTransactionTracker from './window_group_transaction_tracker';
 import { toSafeInt } from '../common/safe_int';
 import ofEvents from './of_events';
