@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 import * as Rx from 'rx';
 import * as seqs from './observable_sequences';
 import NoteAction from './note_action';
@@ -24,7 +9,6 @@ import {
 
 // required tor the ts compiler, theses should be made imports eventually
 declare var require: any;
-declare var Buffer: any;
 
 const {System} = require('../system');
 const {Window} = require('../window');
@@ -290,7 +274,7 @@ function qCounterTargetIsValid(): boolean {
 
 // TODO the creates has a shape data->options, make interface
 function requestNoteCreation (noteData: any, parent: any) {
-    const {options: {uuid, name}} = noteData;
+    const {options: {name}} = noteData;
     const noteStackLen = noteStackCount();
 
     if (noteStackLen >= MAX_NOTES) {
@@ -299,9 +283,13 @@ function requestNoteCreation (noteData: any, parent: any) {
     } else {
         const {ack} = noteData;
 
-        ++askedFor;
-        notesToBeCreated.push(name);
-        invokeCreateAck(ack);
+        try {
+            invokeCreateAck(ack);
+            ++askedFor;
+            notesToBeCreated.push(name);
+        } catch (error) {
+            writeToLog('error', error);
+        }
     }
 
     updateQcounterCount(parent);
@@ -361,18 +349,23 @@ function createQCounterNumPendingMessage() {
 }
 
 function positionWindowsImmediate(liveNotes: Object[]) {
-    const {bottom} = getPrimaryMonitorAvailableRect();
-    const defaultTop = bottom - 100;
-    let numNotes: any;
-    let animationFunction: any;
+    try {
+        const {bottom} = getPrimaryMonitorAvailableRect();
+        const defaultTop = bottom - 100;
+        let numNotes: any;
+        let animationFunction: any;
 
-    updateAnimationState(true);
-    liveNotes = liveNotes.filter(opts => {
-        return windowIsValid(opts);
-    });
-    numNotes = liveNotes.length;
-    animationFunction = genAnimationFunction(defaultTop, numNotes);
-    liveNotes.forEach(animationFunction);
+        updateAnimationState(true);
+        liveNotes = liveNotes.filter(opts => {
+            return windowIsValid(opts);
+        });
+        numNotes = liveNotes.length;
+        animationFunction = genAnimationFunction(defaultTop, numNotes);
+        liveNotes.forEach(animationFunction);
+
+    } catch (error) {
+        writeToLog('error', error);
+    }
 }
 
 function genAnimationFunction(defaultTop: number, numNotes: number): (noteWin: any, idx: number) => void {
@@ -467,10 +460,10 @@ function handleNoteCreate(msg: NotificationMessage): void {
     const {data, id: {uuid, name}} = msg;
     let isOwnedByProxy = false;
     let parent: any;
-
-    const { options: {
-        notificationId, uuidOfProxiedApp, name: noteName}
-    }: { options: { notificationId: number, uuidOfProxiedApp: string, name: string } } = data;
+    const { options } = data;
+    const notificationId: number = options.notificationId;
+    const uuidOfProxiedApp: string = options.uuidOfProxiedApp;
+    const noteName: string = options.name;
 
     if (notificationId !== undefined && uuidOfProxiedApp !== undefined) {
         isOwnedByProxy = true;
@@ -534,7 +527,7 @@ function routeRequest(id: any, msg: NotificationMessage, ack: any) {
             break;
 
         case NoteAction.dismiss:
-            dispatchEvent('dismiss', msg);
+            requestNoteClose(msg);
             break;
 
         case NoteAction.show:
@@ -734,9 +727,13 @@ function createPendingNote(): void {
     if (noteHasValidParent) {
         const {ack} = nextNote;
 
-        ++askedFor;
-        invokeCreateAck(ack);
-        pendindNotes.shift();
+        try {
+            invokeCreateAck(ack);
+            ++askedFor;
+            pendindNotes.shift();
+        } catch (error) {
+            writeToLog('error', error);
+        }
     }
 }
 

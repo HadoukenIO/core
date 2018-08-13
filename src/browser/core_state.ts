@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 /*
 * TODO: Remove these after Dependency Injection refactor:
@@ -89,9 +74,28 @@ export function setManifest(url: string, manifest: Shapes.Manifest): void {
 }
 
 export function getManifest(identity: Shapes.Identity): ManifestInfo {
-    const url = getConfigUrlByUuid(identity.uuid);
+    const uuid = identity && identity.uuid;
+    const url = getConfigUrlByUuid(uuid);
     const manifest = manifests.get(url);
     return { url, manifest };
+}
+
+export function getManifestByUrl(url: string): Shapes.Manifest {
+   return manifests.get(url);
+}
+
+export function getClosestManifest(identity: Shapes.Identity): ManifestInfo {
+    // Gets an applications manifest or if not launched via manifest, the closest parent with a saved manifest
+    const { uuid } = identity;
+    const app = appByUuid(uuid);
+    const url = app && app._configUrl || app.appObj && app.appObj._configUrl;
+    if (url) {
+        const manifest = getManifestByUrl(url);
+        return { url, manifest };
+    } else {
+        const parentApp = appByUuid(app.parentUuid);
+        return parentApp ? getClosestManifest(parentApp) : null;
+    }
 }
 
 export function setStartManifest(url: string, data: Shapes.Manifest): void {
@@ -631,7 +635,9 @@ export function getAppAncestor(descendantAppUuid: string): Shapes.App {
     const app = appByUuid(descendantAppUuid);
 
     if (app && app.parentUuid) {
-        return getAppAncestor(app.parentUuid);
+        // If parentApp exists but can't be found in coreState, it is in another runtime
+        const parentApp = appByUuid(app.parentUuid);
+        return parentApp ? getAppAncestor(app.parentUuid) : app;
     } else {
         return app;
     }
@@ -680,9 +686,6 @@ export function getLicenseKey(identity: Shapes.Identity): string|null {
 
 export function getParentWindow(childIdentity: Shapes.Identity): Shapes.Window {
     const { uuid, name } = childIdentity;
-
-    const app = appByUuid(uuid);
-
     const childWin = getOfWindowByUuidName(uuid, name);
 
     if (!childWin) {

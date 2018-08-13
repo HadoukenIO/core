@@ -1,19 +1,4 @@
 /*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
   index.js
 */
 
@@ -72,7 +57,6 @@ let firstApp = null;
 let rvmBus;
 let otherInstanceRunning = false;
 let appIsReady = false;
-let handlingErrors = false;
 const deferredLaunches = [];
 const USER_DATA = app.getPath('userData');
 let resolveServerReady;
@@ -143,7 +127,7 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
     clientCertDialog.loadURL(path.resolve(__dirname, 'src', 'certificate', 'index.html') + params);
 });
 
-portDiscovery.on('runtime/launched', (portInfo) => {
+portDiscovery.on(route.runtime('launched'), (portInfo) => {
     //check if the ports match:
     const myPortInfo = coreState.getSocketServerState();
     const myUuid = getMeshUuid();
@@ -174,8 +158,8 @@ handleMacSingleTenant();
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
 
-// Opt in to display non-blocking errors
-handleSafeErrors(coreState.argo);
+// Safe errors initialization
+errors.initSafeErrors(coreState.argo);
 
 // Has a local copy of an app config
 if (coreState.argo['local-startup-url']) {
@@ -191,20 +175,10 @@ if (coreState.argo['local-startup-url']) {
     }
 }
 
-function handleSafeErrors(argo) {
-    if (!handlingErrors && argo['safe-errors']) {
-        process.on('uncaughtException', (err) => {
-            errors.createErrorUI(err);
-        });
-        handlingErrors = true;
-    }
-}
-
 const handleDelegatedLaunch = function(commandLine) {
     let otherInstanceArgo = minimist(commandLine);
 
     initializeCrashReporter(otherInstanceArgo);
-    handleSafeErrors(otherInstanceArgo);
 
     // delegated args from a second instance
     launchApp(otherInstanceArgo, false);

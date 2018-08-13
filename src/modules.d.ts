@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 /**
  * All declared modules in this file don't correctly represent all of
@@ -38,6 +23,14 @@ declare module 'electron' {
         export function matchesURL(url: string, patterns: [string]): boolean;
     }
 
+    export class MessageWindow {
+        constructor(classname: string, windowname: string);
+        isDestroyed(): boolean;
+        on(event: string, callback: (...args: any[]) => any): void;
+        sendbyname(classname: string, windowname: string, message: string, maskPayload?: boolean): boolean;
+        setmessagetimeout(timeout: number): void;
+    }
+
     export namespace net {
         export function request(url: string|Object): any;
     }
@@ -48,6 +41,22 @@ declare module 'electron' {
     export interface Rectangle {
         x: number;
         y: number;
+        width: number;
+        height: number;
+    }
+    
+    export interface Display {
+        id: number;
+        rotation: number;
+        scaleFactor: number;
+        touchSupport: string;
+        bounds: Rectangle;
+        size: Size;
+        workArea: Rectangle;
+        workAreaSize: Size;
+    }
+    
+    export interface Size {
         width: number;
         height: number;
     }
@@ -68,6 +77,7 @@ declare module 'electron' {
         isMinimized(): boolean;
         emit(routeString: string, ...args: any[]): void;
         getBounds(): Rectangle;
+        setBounds(bounds: Rectangle): void;
         setWindowPlacement(bounds: Rectangle): void;
         devToolsWebContents: null;
         webContents: webContents;
@@ -91,6 +101,10 @@ declare module 'electron' {
         mainFrameRoutingId: number;
         session: session;
     }
+    
+    export namespace screen {
+        export function getDisplayMatching(rect: Rectangle): Display;
+    }
 
     export class session {
         cookies: cookies;
@@ -102,6 +116,10 @@ declare module 'electron' {
 
     export class ipcMain {
 
+    }
+
+    namespace systemPreferences {
+        export function subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): void;
     }
 
     export class chromeIpcClient {

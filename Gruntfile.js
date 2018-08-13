@@ -1,19 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 'use strict';
 
 /**
@@ -25,20 +9,13 @@ limitations under the License.
 const fs = require('fs');
 const path = require('path');
 const asar = require('asar');
-const nativeBuilder = require('electron-rebuild');
+const electronRebuild = require('electron-rebuild');
 const wrench = require('wrench');
-
-// OpenFin signing module
-const openfinSign = require('openfin-sign');
+const openfinSign = require('openfin-sign'); // OpenFin signing module
 
 const dependencies = Object.keys(require('./package.json').dependencies).map(dep => `${dep}/**`);
 const srcFiles = ['src/**/*.js', 'index.js', 'Gruntfile.js'];
-
-//optional dependencies that we ship.
-const optionalDependencies = [
-    'hadouken-js-adapter/**',
-];
-
+const stagingNodeModulesPath = path.join('staging', 'core', 'node_modules');
 const jsAdapterPath = path.join('node_modules', 'hadouken-js-adapter', 'out');
 
 // https://github.com/beautify-web/js-beautify#options
@@ -48,17 +25,6 @@ const beautifierOptions = {
         braceStyle: 'collapse,preserve-inline'
     }
 };
-
-
-
-// OpenFin commercial license
-const commercialLic = `/*
-Copyright 2017 OpenFin Inc.
-
-Licensed under OpenFin Commercial License you may not use this file except in compliance with your Commercial License.
-Please contact OpenFin Inc. at sales@openfin.co to obtain a Commercial License.
-*/
-`;
 
 module.exports = (grunt) => {
 
@@ -75,8 +41,8 @@ module.exports = (grunt) => {
                 files: [{
                     cwd: './node_modules',
                     expand: true,
-                    src: [dependencies, optionalDependencies],
-                    dest: 'staging/core/node_modules'
+                    src: [dependencies],
+                    dest: stagingNodeModulesPath
                 }]
             },
             etc: { //other artifacts that need copying
@@ -108,7 +74,10 @@ module.exports = (grunt) => {
         // Transpile TypeScript to JavaScript
         ts: {
             default: {
-                tsconfig: true
+                tsconfig: true,
+                options: {
+                    fast: 'never'
+                }
             }
         },
 
@@ -118,6 +87,7 @@ module.exports = (grunt) => {
                 // todo: use 'node_modules/tslint-microsoft-contrib/tslint.json'
                 // when transition to TypeScript is fully done
                 configuration: grunt.file.readJSON('tslint.json'),
+                project: 'tslint.json',
                 rulesDirectory: 'node_modules/tslint-microsoft-contrib',
                 force: false
             },
@@ -169,54 +139,37 @@ module.exports = (grunt) => {
         },
         mochaTest: {
             default: {
-                src: ['staging/core/test/**.js']
+                src: ['staging/core/test/**.js'],
+                options: {
+                    reporter: 'dot'
+                }
             }
         }
     });
 
-    grunt.registerTask('build-dev', [
-        'license',
-        'jshint',
-        'jsbeautifier:default',
-        'clean',
-        'babel',
-        'tslint',
-        'ts',
-        'mochaTest',
-        'copy:lib',
-        'copy:etc',
-        'copy:login',
-        'copy:certificate',
-        'sign-files'
-    ]);
-
     grunt.registerTask('test', [
-        'license',
         'jshint',
         'jsbeautifier',
         'clean',
         'babel',
-        'tslint',
-        'ts',
+        'typescript',
         'mochaTest',
+    ]);
+
+    grunt.registerTask('build-dev', [
+        'test',
+        'rebuild-native-modules',
+        'copy',
+        'clean-up-dependencies',
+        'sign-files',
+        'sign-adapter'
     ]);
 
     grunt.registerTask('build-pac', [
-        'license',
-        'jshint',
-        'jsbeautifier',
-        'clean',
-        'babel',
-        'tslint',
-        'ts',
-        'mochaTest',
-        'copy',
-        'build-deploy-modules',
-        'sign-files',
-        'sign-adapter',
+        'build-dev',
         'package',
         'package-adapter',
-        'sign-asar'
+        'sign-asars'
     ]);
 
     grunt.registerTask('typescript', [
@@ -228,14 +181,14 @@ module.exports = (grunt) => {
         wrench.readdirSyncRecursive('staging/core').forEach(function(filename) {
             let filepath = path.join('staging', 'core', filename);
 
-            if (!fs.statSync(filepath).isDirectory()) {
+            if (!fs.statSync(filepath).isDirectory() && !filename.endsWith('.ofds')) {
                 openfinSign(filepath);
             }
         });
         grunt.log.ok('Finished signing files.');
     });
 
-    grunt.registerTask('sign-asar', function() {
+    grunt.registerTask('sign-asars', function() {
         openfinSign('out/app.asar');
         openfinSign('out/js-adapter.asar');
         grunt.log.ok('Finished signing asar.');
@@ -253,34 +206,51 @@ module.exports = (grunt) => {
         wrench.rmdirSyncRecursive('out', true);
     });
 
-    grunt.registerTask('build-deploy-modules', 'Build native modules', function() {
+    grunt.registerTask('clean-up-dependencies', 'Clean up dependencies', function() {
+
+        // Clean Rx library (6.94MB -> 144KB)
+        const rxLibPath = path.join(stagingNodeModulesPath, 'rx');
+        const rxLib = fs.readFileSync(path.join(rxLibPath, 'dist', 'rx.all.min.js'), 'utf-8');
+        wrench.rmdirSyncRecursive(rxLibPath);
+        wrench.mkdirSyncRecursive(rxLibPath);
+        fs.writeFileSync(path.join(rxLibPath, 'index.js'), rxLib);
+
+        // Underscore (128KB -> 20KB)
+        const underscoreLibPath = path.join(stagingNodeModulesPath, 'underscore');
+        const underscoreLib = fs.readFileSync(path.join(underscoreLibPath, 'underscore-min.js'), 'utf-8');
+        wrench.rmdirSyncRecursive(underscoreLibPath);
+        wrench.mkdirSyncRecursive(underscoreLibPath);
+        fs.writeFileSync(path.join(underscoreLibPath, 'index.js'), underscoreLib);
+
+        // Minimist (64KB -> 8KB)
+        const minimistLibPath = path.join(stagingNodeModulesPath, 'minimist');
+        const minimistLib = fs.readFileSync(path.join(minimistLibPath, 'index.js'), 'utf-8');
+        wrench.rmdirSyncRecursive(minimistLibPath);
+        wrench.mkdirSyncRecursive(minimistLibPath);
+        fs.writeFileSync(path.join(minimistLibPath, 'index.js'), minimistLib);
+
+        // JS-adapter (1.5MB -> 620KB)
+        const jsAdapterPath = path.join(stagingNodeModulesPath, 'hadouken-js-adapter');
+        if (fs.existsSync(path.join(jsAdapterPath, 'node_modules'))) {
+            wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'node_modules')); // 472KB
+        }
+        wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'out', 'repl')); // 8KB
+        wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'out', 'resources')); // 172KB
+        wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'out', 'types')); // 136KB
+        fs.unlinkSync(path.join(jsAdapterPath, 'yarn.lock')); // 124KB
+    });
+
+    grunt.registerTask('rebuild-native-modules', 'Rebuild native modules', function() {
         const done = this.async();
-        const nativeModVersion = grunt.option('nmv') || 'v5.10.0';
-        const nodeHeaderVersion = grunt.option('nhv') || 'v0.37.5';
-        const rebuildNativeVersion = grunt.option('rnv') || '0.37.5';
-        const outdir = './staging/core/node_modules';
-        const arch = grunt.option('arch') || 'ia32';
 
-        grunt.log.ok('Checking if rebuilding native modules is required.');
-        nativeBuilder.shouldRebuildNativeModules(undefined, nativeModVersion).then(function(shouldBuild) {
-            if (!shouldBuild) {
-                grunt.log.ok('Skipping native builds.');
-                done();
-                return true;
-            }
-
-            grunt.log.ok('Installing headers.');
-            return nativeBuilder.installNodeHeaders(nodeHeaderVersion, undefined, undefined, 'ia32')
-                .then(function() {
-                    // Ensure directory tree exists
-                    grunt.file.mkdir(outdir);
-                    grunt.log.ok('Building native modules.');
-                    nativeBuilder.rebuildNativeModules(rebuildNativeVersion, outdir, undefined, undefined, arch).then(function() {
-                        done();
-                    });
-                });
-        }).catch(function(e) {
-            grunt.log.error('Building modules didn\'t work!');
+        electronRebuild.rebuild({
+            buildPath: __dirname,
+            electronVersion: '2.0.2'
+        }).then(() => {
+            grunt.log.writeln('Rebuild successful!');
+            done();
+        }).catch(e => {
+            grunt.log.error('Rebuilding failed!');
             grunt.log.error(e);
             done();
         });
@@ -330,99 +300,6 @@ module.exports = (grunt) => {
                 grunt.log.ok(`Deployed to: ${defaultAppFolder}`);
                 done();
             });
-        }
-    });
-
-    /**
-     * This task goes through the list of all files that need to have
-     * a license and validates that they have proper licenses.
-     * Usage:
-     * 1. grunt license - default
-     * 2. grunt license:add - will add open-source license to all non-commercial files
-     * 3. grunt license:remove - will remove licenses from all files
-     */
-    grunt.registerTask('license', (option) => {
-        // Open-source license
-        const openSourceLic = `/*\n${ fs.readFileSync('./LICENSE') }*/\n`;
-
-        let foundLicensingProblem = false;
-
-        // List of files that must have OpenFin commercial license
-        const ofLicensedFiles = [];
-
-        // List of files that need to have some kind of license
-        const allFilesForLicense = grunt.file.expand(
-            'src/**/*.ts',
-            'src/**/*.js',
-            'test/**/*.ts',
-            'test/**/*.js',
-            'index.ts',
-            'index.js'
-        );
-
-        // Goes through all the files and verifies licenses
-        allFilesForLicense.forEach(filePartPath => {
-            const fileFullPath = path.join(__dirname, filePartPath);
-            let fileContent = String(fs.readFileSync(fileFullPath));
-
-            // When given 'remove' option, just remove the license
-            if (option === 'remove') {
-                fileContent = fileContent.replace(openSourceLic, '');
-                fileContent = fileContent.replace(commercialLic, '');
-                fs.writeFileSync(fileFullPath, fileContent);
-                grunt.log.writeln(`Removed license from ${filePartPath}`['yellow'].bold);
-                return;
-            }
-
-            // OpenFin commercial license file
-            if (ofLicensedFiles.includes(filePartPath)) {
-
-                // Remove open-source license from a commercial file
-                if (fileContent.includes(openSourceLic)) {
-                    fileContent = fileContent.replace(openSourceLic, '');
-                    fs.writeFileSync(fileFullPath, fileContent);
-                    grunt.log.writeln(`Removed open-source license from OpenFin commercial file ${filePartPath}`['yellow'].bold);
-                }
-
-                // Add license if missing
-                if (!fileContent.includes(commercialLic)) {
-                    fileContent = commercialLic + fileContent;
-                    fs.writeFileSync(fileFullPath, fileContent);
-                    grunt.log.writeln(`Added missing OpenFin commercial license to ${filePartPath}`['yellow'].bold);
-                }
-            }
-
-            // Open-sourced files or new files that are missing a license
-            else {
-
-                // File has commercial license but is not added to the list of commercial files
-                if (fileContent.includes(commercialLic)) {
-                    grunt.log.writeln(`Found commercial license in ${filePartPath}, but file is `['yellow'].bold +
-                        `not added to Grunt's list of commercial files. Please, add it.`['yellow'].bold);
-                }
-
-                // File is missing any kind of license
-                else if (!fileContent.includes(openSourceLic)) {
-
-                    // When calling this task with an 'add' option, it will add open-source license
-                    // to all the files that are missing a license and are not specified as commercial
-                    if (option === 'add') {
-                        fileContent = openSourceLic + fileContent;
-                        fs.writeFileSync(fileFullPath, fileContent);
-                        grunt.log.writeln(`Added open-source license to ${filePartPath}`['yellow'].bold);
-                    } else {
-                        grunt.log.writeln(`File ${filePartPath} is missing a license`['red'].bold);
-                        foundLicensingProblem = true;
-                    }
-                }
-            }
-        });
-
-        if (foundLicensingProblem) {
-            // Abort Grunt if there are problems found with licensing
-            grunt.fail.fatal('Aborted due to problems with licensing'['red'].bold);
-        } else {
-            grunt.log.writeln(`Licensing task is done`['green'].bold);
         }
     });
 };

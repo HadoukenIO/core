@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 import { Identity } from '../../shapes';
 import SubscriptionManager from '../subscription_manager';
@@ -26,7 +11,6 @@ const { globalShortcut } = require('electron');
 
 const subscriptionManager = new SubscriptionManager();
 const hotkeyOwnershipMap: Map<string, string> = new Map();
-const subCount: Map<string, number> = new Map();
 const emitter = new EventEmitter();
 
 const eventNames = {
@@ -51,44 +35,6 @@ export const reservedHotKeys: Array<string> = [
 export class HotKeyError extends Error {
     constructor(hotkey: string, reason: string) {
         super(`Failed to register Hotkey: ${hotkey}, ${reason}`);
-    }
-}
-
-//want to avoid closing over any variables during the register phase.
-function constructEmit(hotkey: string): () => void {
-    return () => {
-        emitter.emit(hotkey);
-    };
-}
-
-//want to avoid closing over any variables during the register phase.
-function constructUnregister(identity: Identity, hotkey: string, listener: Function): () => void {
-    return () => {
-        emitter.removeListener(hotkey, listener);
-        if (emitter.listenerCount(hotkey) < 1) {
-            GlobalHotkey.unregister(identity, hotkey);
-        }
-    };
-}
-
-function applyRegistration(identity: Identity, hotkey: string, listener: Function): void {
-    emitter.on(hotkey, listener);
-    //make sure that if the registered context is destroyed we will unregister the hotkey
-    subscriptionManager.registerSubscription(constructUnregister(identity, hotkey, listener), identity, hotkey);
-}
-
-//here we will check if the subscription is a valid one.
-function validateRegistration(identity: Identity, hotkey: string): void {
-    const ownerUuid = hotkeyOwnershipMap.get(hotkey);
-    // already allowed this hotkey for this uuid, return early
-    if (ownerUuid && ownerUuid === identity.uuid) {
-        return;
-    } else if (reservedHotKeys.indexOf(hotkey) > -1) {
-        throw new HotKeyError(hotkey, 'is reserved');
-    } else {
-        if (globalShortcut.isRegistered(hotkey)) {
-            throw new HotKeyError(hotkey, 'already registered');
-        }
     }
 }
 
@@ -147,5 +93,44 @@ export module GlobalHotkey {
         return () => {
             ofEvents.removeListener(evt, listener);
         };
+    }
+}
+
+
+//want to avoid closing over any variables during the register phase.
+function constructEmit(hotkey: string): () => void {
+    return () => {
+        emitter.emit(hotkey);
+    };
+}
+
+//want to avoid closing over any variables during the register phase.
+function constructUnregister(identity: Identity, hotkey: string, listener: Function): () => void {
+    return () => {
+        emitter.removeListener(hotkey, listener);
+        if (emitter.listenerCount(hotkey) < 1) {
+            GlobalHotkey.unregister(identity, hotkey);
+        }
+    };
+}
+
+function applyRegistration(identity: Identity, hotkey: string, listener: Function): void {
+    emitter.on(hotkey, listener);
+    //make sure that if the registered context is destroyed we will unregister the hotkey
+    subscriptionManager.registerSubscription(constructUnregister(identity, hotkey, listener), identity, hotkey);
+}
+
+//here we will check if the subscription is a valid one.
+function validateRegistration(identity: Identity, hotkey: string): void {
+    const ownerUuid = hotkeyOwnershipMap.get(hotkey);
+    // already allowed this hotkey for this uuid, return early
+    if (ownerUuid && ownerUuid === identity.uuid) {
+        return;
+    } else if (reservedHotKeys.indexOf(hotkey) > -1) {
+        throw new HotKeyError(hotkey, 'is reserved');
+    } else {
+        if (globalShortcut.isRegistered(hotkey)) {
+            throw new HotKeyError(hotkey, 'already registered');
+        }
     }
 }

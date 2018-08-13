@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
@@ -83,7 +68,7 @@ function subscriberEventMiddleware(msg: MessagePackage, next: () => void) {
 
 //on an InterAppBuss publish, forward the message to any runtime on the mesh.
 function publishMiddleware(msg: MessagePackage, next: () => void) {
-    const { data, ack, nack, identity } = msg;
+    const { data, identity } = msg;
 
     if (data.action === PUBLISH_ACTION && !identity.runtimeUuid) {
 
@@ -171,7 +156,7 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
 
 // On certain system API calls, provide aggregate results from all runtimes on the mesh
 function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: object) => void) {
-    const { identity, data, ack, nack } = msg;
+    const { identity, data, nack } = msg;
     const action = data && data.action;
     const isAggregateAction = apiMessagesToAggregate[action];
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.

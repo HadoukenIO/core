@@ -1,19 +1,4 @@
 /*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
     src/browser/api/application.js
  */
 
@@ -132,6 +117,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
 
     let appUrl = opts.url;
     const { uuid, name } = opts;
+    const initialAppOptions = Object.assign({}, opts);
 
     if (appUrl === undefined && opts.mainWindowOptions) {
         appUrl = opts.mainWindowOptions.url;
@@ -169,14 +155,15 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     }
 
     const appObj = createAppObj(uuid, opts, configUrl);
+    const app = coreState.appByUuid(opts.uuid);
 
     if (parentIdentity && parentIdentity.uuid) {
         // This is a reference to the meta `app` object that is stored in core state,
         // not the actual `application` object created above. Here we are attaching the parent
         // identity to it.
-        const app = coreState.appByUuid(opts.uuid);
         app.parentUuid = parentUuid;
     }
+    app.initialAppOptions = initialAppOptions;
 
     return appObj;
 };
@@ -300,9 +287,7 @@ Application.getGroups = function( /* callback, errorCallback*/ ) {
     return WindowGroups.getGroups();
 };
 
-
 Application.getManifest = function(identity, manifestUrl, callback, errCallback) {
-
     // When manifest URL is not provided, get the manifest for the current application
     if (!manifestUrl) {
         const appObject = coreState.getAppObjByUuid(identity.uuid);
@@ -345,11 +330,23 @@ Application.getShortcuts = function(identity, callback, errorCallback) {
 };
 
 Application.getInfo = function(identity, callback) {
-    const app = Application.wrap(identity.uuid);
+    const app = coreState.appByUuid(identity.uuid);
+
+    const manifestObj = coreState.getClosestManifest(identity);
+    const { url, manifest } = manifestObj || {};
+
+    const parentUuid = Application.getParentApplication(identity);
+    const launchMode = app && app.appObj && app.appObj.launchMode;
 
     const response = {
-        runtime: { version: System.getRuntimeInfo(identity).version },
-        launchMode: app.launchMode
+        initialOptions: app.initialAppOptions,
+        launchMode,
+        manifestUrl: url,
+        manifest,
+        parentUuid,
+        runtime: {
+            version: System.getRuntimeInfo(identity).version
+        }
     };
 
     callback(response);
