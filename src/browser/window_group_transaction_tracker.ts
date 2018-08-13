@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events';
 
-interface ITransaction {
+export interface ITransaction {
     name: string;
     uuid: string;
     type: string;
@@ -16,7 +16,7 @@ class WindowGroupTransactionTracker extends EventEmitter {
         this.transactions = {};
     }
 
-    public getGroupLeader(groupUuid: string): ITransaction {
+    public getGroupLeader(groupUuid: string): ITransaction | void {
         return this.transactions[groupUuid];
     }
 

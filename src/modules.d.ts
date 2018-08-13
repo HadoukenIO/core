@@ -68,6 +68,7 @@ declare module 'electron' {
         static getAllWindows(): BrowserWindow[];
 
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
+        removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         getWindowsByClassName(className: string): any;
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
         hookWindowMessage(n: number, listener: (message: any) => void): void;
