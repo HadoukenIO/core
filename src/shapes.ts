@@ -328,6 +328,7 @@ export interface SavedDiskBounds {
     top: number;
     width: number;
     windowState: string;
+    zoomLevel: number;
 }
 
 export interface Cookie {
