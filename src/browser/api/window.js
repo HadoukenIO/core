@@ -2413,10 +2413,10 @@ function restoreWindowPosition(identity, cb) {
         }
 
         // set zoom level
-        let level = savedBounds.zoomLevel;
-        if (level) {
-            let browserWindow = getElectronBrowserWindow(identity);
-            browserWindow.webContents.setZoomLevel(level);
+        const { zoomLevel } = savedBounds;
+        if (zoomLevel) {
+            const browserWindow = getElectronBrowserWindow(identity);
+            browserWindow.webContents.setZoomLevel(zoomLevel);
         }
 
         cb();
