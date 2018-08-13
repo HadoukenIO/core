@@ -6,6 +6,9 @@ import { OpenFinWindow } from '../shapes';
 let uuidSeed = 0;
 
 class WindowGroups extends EventEmitter {
+    constructor () {
+        super();
+    }
     private _windowGroups: {[groupName: string]: {[windowName: string]: OpenFinWindow; }} = {};
     public getGroup = (uuid: string)  => {
         return _.values(this._windowGroups[uuid]);
