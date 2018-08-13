@@ -114,10 +114,11 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
+    },
+    'move': {
+        topic: 'moving',
+        decorator: movingDecorator
     }
-    // 'move': {
-    //     topic: 'bounds-changing'
-    // }
 };
 
 let webContentsEventMap = {
@@ -2075,6 +2076,29 @@ function closeRequestedDecorator(payload) {
     payload.force = false;
 
     return propagate;
+}
+
+function movingDecorator(payload, args) {
+    let positionToBounds = (position) => {
+        return {
+            left: position.x,
+            top: position.y,
+            right: position.x + position.width,
+            bottom: position.y + position.height,
+            height: position.height,
+            width: position.width
+        };
+    };
+    // stringify and parse to get rid of invalid values
+    let bounds = JSON.parse(JSON.stringify(args[0].sender.getBounds()));
+    if (Object.keys(bounds).length >= 4) {
+        let processedBounds = positionToBounds(bounds);
+        Object.keys(processedBounds).forEach((key) => {
+            payload[key] = processedBounds[key];
+        });
+        return true;
+    }
+    return false;
 }
 
 function boundsChangeDecorator(payload, args) {
