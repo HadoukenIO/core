@@ -86,14 +86,13 @@ function setTrayIcon(identity, rawMessage, ack, nack) {
     }, nack);
 }
 
-function setApplicationZoomLevel(identity, rawMessage, ack, nack) {
-    let message = JSON.parse(JSON.stringify(rawMessage));
-    let payload = message.payload;
-    let appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+function setApplicationZoomLevel(identity, rawMessage, ack) {
+    const message = JSON.parse(JSON.stringify(rawMessage));
+    const payload = message.payload;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-    Application.setZoomLevel(appIdentity, payload.level, () => {
-        ack(successAck);
-    }, nack);
+    Application.setZoomLevel(appIdentity, payload.level);
+    ack(successAck);
 }
 
 
