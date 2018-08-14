@@ -21,7 +21,7 @@ let isFlushScheduled: boolean = false;
 let totalBytes: number = 0;
 let timer: NodeJS.Timer = null;
 
-function flushConsoleMessageQueue(): void {
+export function flushConsoleMessageQueue(): void {
     totalBytes = 0;
     isFlushScheduled = false;
 

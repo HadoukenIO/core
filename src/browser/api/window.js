@@ -29,7 +29,7 @@ let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
 let WindowGroups = require('../window_groups.js');
-import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
+import { addConsoleMessageToRVMMessageQueue, flushConsoleMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
@@ -505,6 +505,9 @@ Window.create = function(id, opts) {
             let ofWindow = Window.wrap(uuid, name);
             let closeEventString = route.window('close-requested', uuid, name);
             let listenerCount = ofEvents.listenerCount(closeEventString);
+
+            // Ensure that any queued app logs are sent to the RVM.
+            flushConsoleMessageQueue();
 
             // here we can only prevent electron windows, not external windows, from closing when the 'x' button is clicked.
             // external windows will need to be handled on the adapter side
