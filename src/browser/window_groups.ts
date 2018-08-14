@@ -6,21 +6,21 @@ import { OpenFinWindow } from '../shapes';
 let uuidSeed = 0;
 
 class WindowGroups extends EventEmitter {
-    constructor () {
+    constructor() {
         super();
     }
-    private _windowGroups: {[groupName: string]: {[windowName: string]: OpenFinWindow; }} = {};
-    public getGroup = (uuid: string)  => {
+    private _windowGroups: { [groupName: string]: { [windowName: string]: OpenFinWindow; } } = {};
+    public getGroup = (uuid: string) => {
         return _.values(this._windowGroups[uuid]);
     };
 
-    public getGroups = ()  => {
+    public getGroups = (): OpenFinWindow[][] => {
         return _.map(_.keys(this._windowGroups), (uuid) => {
             return this.getGroup(uuid);
         });
     };
 
-    public joinGroup = (source: any, target: any)  => {
+    public joinGroup = (source: OpenFinWindow, target: OpenFinWindow): void => {
         const sourceGroupUuid = source.groupUuid;
         let targetGroupUuid = target.groupUuid;
 
@@ -68,7 +68,7 @@ class WindowGroups extends EventEmitter {
         }
     };
 
-    public leaveGroup = (win: OpenFinWindow)  => {
+    public leaveGroup = (win: OpenFinWindow): void => {
         const groupUuid = win && win.groupUuid;
 
         // cannot leave a group if you don't belong to one
@@ -91,7 +91,7 @@ class WindowGroups extends EventEmitter {
         }
     };
 
-    public mergeGroups = (source: OpenFinWindow, target: OpenFinWindow)  => {
+    public mergeGroups = (source: OpenFinWindow, target: OpenFinWindow): void => {
         let sourceGroupUuid = source.groupUuid;
         let targetGroupUuid = target.groupUuid;
 
@@ -140,18 +140,18 @@ class WindowGroups extends EventEmitter {
         delete this._windowGroups[sourceGroupUuid];
     };
 
-    public _addWindowToGroup = (uuid: string, win: OpenFinWindow)  => {
+    public _addWindowToGroup = (uuid: string, win: OpenFinWindow): string => {
         const _uuid = uuid || generateUuid();
         this._windowGroups[_uuid] = this._windowGroups[_uuid] || {};
         this._windowGroups[_uuid][win.name] = win;
         return _uuid;
     };
 
-    public _removeWindowFromGroup = (uuid: string, win: OpenFinWindow)  => {
+    public _removeWindowFromGroup = (uuid: string, win: OpenFinWindow): void => {
         delete this._windowGroups[uuid][win.name];
     };
 
-    public _handleDisbandingGroup = (groupUuid: string)  => {
+    public _handleDisbandingGroup = (groupUuid: string): void => {
         if (this.getGroup(groupUuid).length < 2) {
             const lastWindow = this.getGroup(groupUuid)[0];
             this._removeWindowFromGroup(groupUuid, lastWindow);
@@ -168,11 +168,32 @@ class WindowGroups extends EventEmitter {
 
 // Helpers
 
-function generateUuid() {
+function generateUuid(): string {
     return 'group' + (uuidSeed++);
 }
 
-function generatePayload(reason: string, sourceWindow: any, targetWindow: any, sourceGroup: OpenFinWindow[], targetGroup: OpenFinWindow[]) {
+export interface WindowIdentifier {
+    appUuid: string;
+    windowName: string;
+}
+export interface GroupChangedPayload {
+    reason: string;
+    sourceGroup: WindowIdentifier[];
+    sourceWindowAppUuid: string;
+    sourceWindowName: string;
+    targetGroup: WindowIdentifier[];
+    targetWindowAppUuid: string;
+    targetWindowName: string;
+    topic: 'window';
+    type: 'group-changed';
+}
+
+function generatePayload(reason: string,
+    sourceWindow: OpenFinWindow,
+    targetWindow: OpenFinWindow,
+    sourceGroup: OpenFinWindow[],
+    targetGroup: OpenFinWindow[]
+): GroupChangedPayload {
     return {
         reason,
         sourceGroup: mapEventWindowGroups(sourceGroup),
@@ -186,13 +207,13 @@ function generatePayload(reason: string, sourceWindow: any, targetWindow: any, s
     };
 }
 
-function mapEventWindowGroups(group: OpenFinWindow[]) {
+function mapEventWindowGroups(group: OpenFinWindow[]): WindowIdentifier[] {
     return _.map(group, (win) => {
         return {
-                appUuid: win.app_uuid,
-                windowName: win.name
+            appUuid: win.app_uuid,
+            windowName: win.name
         };
     });
 }
-const windowGroups = new WindowGroups();
-export default windowGroups;
+
+export default new WindowGroups();
