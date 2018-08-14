@@ -9,6 +9,8 @@ import {
     Subscriber
 } from '../../../shapes';
 
+type IABSubscriptionArgs = [string, string, string, string, number];
+
 enum SubScriptionTypes {
     MESSAGE = 1,
     SUB_ADDED,
@@ -37,7 +39,7 @@ function unsubscribe(identity: Identity, message: APIMessage, ack: Acker): void 
     const { topic } = payload;
     const sourceUuid = '*';
     const sourceWindowName = '*';
-    const subscriptionArgs = [
+    const subscriptionArgs: IABSubscriptionArgs = [
         topic,
         identity.uuid,
         sourceUuid,
@@ -74,7 +76,7 @@ function subscribe(identity: Identity, message: APIMessage, ack: Acker): void {
         apiProtocolBase.sendToIdentity(identity, command);
     };
 
-    const subscriptionArgs = [
+    const subscriptionArgs: IABSubscriptionArgs = [
         topic,
         uuid,
         sourceUuid,
