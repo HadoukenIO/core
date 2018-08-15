@@ -173,7 +173,7 @@ function getDeviceUserId(identity: Identity, message: APIMessage, ack: Acker): v
 }
 
 function raiseEvent(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { eventName, payload: { eventArgs } } = message;
+    const { payload: { eventName, eventArgs } } = message;
 
     System.raiseEvent(eventName, eventArgs);
     ack(successAck);
