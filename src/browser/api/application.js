@@ -313,6 +313,11 @@ Application.getParentApplication = function(identity) {
     return parentUuid;
 };
 
+Application.getZoomLevel = function(identity, callback) {
+    const app = coreState.appByUuid(identity.uuid);
+    Window.getZoomLevel(app.appObj.identity, callback);
+};
+
 Application.getShortcuts = function(identity, callback, errorCallback) {
     let app = Application.wrap(identity.uuid);
     let manifestUrl = app && app._configUrl;
@@ -830,6 +835,20 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
         fetchingIcon[uuid] = false;
     });
+};
+
+Application.setZoomLevel = function(identity, level) {
+    const app = coreState.appByUuid(identity.uuid);
+
+    // set zoom level for each child window
+    app.children.forEach(function(childWindow) {
+        const childWindowIdentity = {
+            name: childWindow.openfinWindow.name,
+            uuid: childWindow.openfinWindow.uuid
+        };
+        Window.setZoomLevel(childWindowIdentity, level);
+    });
+
 };
 
 
