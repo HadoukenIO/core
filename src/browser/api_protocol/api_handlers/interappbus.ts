@@ -11,7 +11,7 @@ import {
 
 type IABSubscriptionArgs = [string, string, string, string, number];
 
-enum SubScriptionTypes {
+enum SubscriptionTypes {
     MESSAGE = 1,
     SUB_ADDED,
     SUB_REMOVED
@@ -44,7 +44,7 @@ function unsubscribe(identity: Identity, message: APIMessage, ack: Acker): void 
         identity.uuid,
         sourceUuid,
         sourceWindowName,
-        SubScriptionTypes.MESSAGE
+        SubscriptionTypes.MESSAGE
     ];
 
     apiProtocolBase.removeSubscription(identity, ...subscriptionArgs);
@@ -81,7 +81,7 @@ function subscribe(identity: Identity, message: APIMessage, ack: Acker): void {
         uuid,
         sourceUuid,
         sourceWindowName,
-        SubScriptionTypes.MESSAGE
+        SubscriptionTypes.MESSAGE
     ];
 
     if (apiProtocolBase.subscriptionExists(identity, ...subscriptionArgs)) {
@@ -140,7 +140,7 @@ function subscriberRemoved(identity: Identity, message: APIMessage, ack: Acker):
 }
 
 function initSubscriptionListeners(connectionIdentity: Identity): void {
-    const { SUB_ADDED, SUB_REMOVED } = SubScriptionTypes;
+    const { SUB_ADDED, SUB_REMOVED } = SubscriptionTypes;
     const { uuid, name } = connectionIdentity;
     const iabIdentity = { uuid, name: uuid };
 
