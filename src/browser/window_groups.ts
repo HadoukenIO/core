@@ -10,7 +10,7 @@ class WindowGroups extends EventEmitter {
         super();
     }
     private _windowGroups: { [groupName: string]: { [windowName: string]: OpenFinWindow; } } = {};
-    public getGroup = (uuid: string) => {
+    public getGroup = (uuid: string): OpenFinWindow[] => {
         return _.values(this._windowGroups[uuid]);
     };
 
@@ -140,18 +140,18 @@ class WindowGroups extends EventEmitter {
         delete this._windowGroups[sourceGroupUuid];
     };
 
-    public _addWindowToGroup = (uuid: string, win: OpenFinWindow): string => {
+    private _addWindowToGroup = (uuid: string, win: OpenFinWindow): string => {
         const _uuid = uuid || generateUuid();
         this._windowGroups[_uuid] = this._windowGroups[_uuid] || {};
         this._windowGroups[_uuid][win.name] = win;
         return _uuid;
     };
 
-    public _removeWindowFromGroup = (uuid: string, win: OpenFinWindow): void => {
+    private _removeWindowFromGroup = (uuid: string, win: OpenFinWindow): void => {
         delete this._windowGroups[uuid][win.name];
     };
 
-    public _handleDisbandingGroup = (groupUuid: string): void => {
+    private _handleDisbandingGroup = (groupUuid: string): void => {
         if (this.getGroup(groupUuid).length < 2) {
             const lastWindow = this.getGroup(groupUuid)[0];
             this._removeWindowFromGroup(groupUuid, lastWindow);
@@ -169,7 +169,7 @@ class WindowGroups extends EventEmitter {
 // Helpers
 
 function generateUuid(): string {
-    return 'group' + (uuidSeed++);
+    return `group${uuidSeed++}`;
 }
 
 export interface WindowIdentifier {
