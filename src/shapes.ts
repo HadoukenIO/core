@@ -365,3 +365,12 @@ export interface APIHandlerMap {
         }
     };
 }
+
+export interface Subscriber {
+    directMsg: string;
+    name: string;
+    senderName: string;
+    senderUuid: string;
+    topic: string;
+    uuid: string;
+}
