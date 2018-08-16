@@ -50,7 +50,7 @@ const createChannelTeardown = (providerIdentity: ProviderIdentity): void => {
     const closedEvent = isExternal ? route.externalApplication('closed', uuid) : route.window('closed', uuid, name);
     ofEvents.once(closedEvent, () => {
         channelMap.delete(channelId);
-        ofEvents.emit(route.channel('channel-disconnected'), providerIdentity);
+        ofEvents.emit(route.channel('disconnected'), providerIdentity);
     });
 
     // For some reason this is captured sometimes when window closed is not
@@ -95,9 +95,9 @@ export module Channel {
         return providerIdentity;
     }
 
-    export function getChannelByChannelName(channelName: string): ProviderIdentity|undefined {
+    export function getChannelByChannelName(channelName: string, channelArray: ProviderIdentity[]): ProviderIdentity|undefined {
         let providerIdentity;
-        channelMap.forEach(channel => {
+        channelArray.forEach(channel => {
             if (channel.channelName === channelName) {
                 providerIdentity = channel;
             }
@@ -110,10 +110,14 @@ export module Channel {
         const providerApp = getExternalOrOfWindowIdentity(identity);
 
         const channelId = getChannelId(uuid, name, channelName);
+        const existingChannel = getChannelByIdentity(identity);
 
         // If a channel is already registered from that uuid, nack
         if (!providerApp || getChannelByChannelId(channelId)) {
-            const nackString = 'Register Failed: Please note that only one channel may be registered per identity per channelName.';
+            const nackString = 'Channel creation failed: Please note that only one channel may be registered per identity per channelName.';
+            throw new Error(nackString);
+        } else if (existingChannel[0] && !existingChannel[0].channelName) {
+            const nackString = 'Channel creation failed: a channel has been registered for this identity without a channelName.';
             throw new Error(nackString);
         }
 
@@ -123,26 +127,25 @@ export module Channel {
 
         createChannelTeardown(providerIdentity);
         // Used internally by adapters for pending connections and onChannelConnect
-        ofEvents.emit(route.channel('channel-connected'), providerIdentity);
+        ofEvents.emit(route.channel('connected'), providerIdentity);
 
         return providerIdentity;
     }
 
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): ProviderIdentity {
         const { wait, uuid, name, channelName, payload: connectionPayload } = payload;
+
         let providerIdentity: ProviderIdentity;
-        if (channelName) {
-            providerIdentity = Channel.getChannelByChannelName(channelName);
-        }
-        // No channel found by channel name, use identity
-        if (!providerIdentity && uuid) {
-            const providerIdentityArray = Channel.getChannelByIdentity({uuid, name});
-            if (providerIdentityArray.length > 1) {
+        const providerIdentityArray = Channel.getChannelByIdentity({uuid, name});
+        if (providerIdentityArray.length > 1) {
+            if (channelName) {
+                providerIdentity = Channel.getChannelByChannelName(channelName, providerIdentityArray);
+            } else {
                 const nackId = name ? `${uuid}/${name}` : uuid;
                 nack(`More than one channel found for provider with identity: ${nackId}, please include a channelName`);
-            } else {
-                [ providerIdentity ] = providerIdentityArray;
             }
+        } else {
+            [ providerIdentity ] = providerIdentityArray;
         }
 
         if (providerIdentity) {
