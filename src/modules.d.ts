@@ -22,6 +22,29 @@ declare module 'electron' {
 
         export function matchesURL(url: string, patterns: [string]): boolean;
     }
+    namespace windowTransaction {
+        export class Transaction {
+            on(arg0: string, arg1: (event: any, payload: any) => void): any;
+            setWindowPos(hwnd: number, pos: { x: any; y: any; w: any; h: any; flags: number; }): any;
+            private count: number
+            constructor(count: number);
+            commit(): any;
+        }
+        export interface flag {
+            noMove: 2;
+            noSize: 1;
+            noZorder: 4;
+            noActivate: 16;
+            show: 64;
+            hide: 128;
+        }
+        export interface zOrder {
+            hwndBottom: 1;
+            hwndTop: 0;
+            hwndTopMost: -1;
+            hwndNoTopMost: -2;
+        }
+    }
 
     export class MessageWindow {
         constructor(classname: string, windowname: string);
@@ -32,7 +55,7 @@ declare module 'electron' {
     }
 
     export namespace net {
-        export function request(url: string|Object): any;
+        export function request(url: string | Object): any;
     }
     export namespace socketNet {
         export function socketRequest(url: string): any;
@@ -44,7 +67,7 @@ declare module 'electron' {
         width: number;
         height: number;
     }
-    
+
     export interface Display {
         id: number;
         rotation: number;
@@ -55,7 +78,7 @@ declare module 'electron' {
         workArea: Rectangle;
         workAreaSize: Size;
     }
-    
+
     export interface Size {
         width: number;
         height: number;
@@ -63,8 +86,9 @@ declare module 'electron' {
 
     export class BrowserWindow {
         constructor(props: any);
-
-        static fromId(id: string): BrowserWindow;
+        public id: number;
+        public nativeId: string;
+        static fromId(id: number): BrowserWindow;
         static getAllWindows(): BrowserWindow[];
 
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
@@ -73,9 +97,11 @@ declare module 'electron' {
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
         hookWindowMessage(n: number, listener: (message: any) => void): void;
         subscribeSessionNotifications(b: boolean): void;
+        bringToFront(): any;
         isDestroyed(): boolean;
         isMaximized(): boolean;
         isMinimized(): boolean;
+        unmaximize(): any;
         emit(routeString: string, ...args: any[]): void;
         getBounds(): Rectangle;
         setBounds(bounds: Rectangle): void;
@@ -102,7 +128,7 @@ declare module 'electron' {
         mainFrameRoutingId: number;
         session: session;
     }
-    
+
     export namespace screen {
         export function getDisplayMatching(rect: Rectangle): Display;
     }
@@ -144,7 +170,7 @@ declare module 'electron' {
     }
 
     namespace clipboard {
-        export function write(data: {text?: string; html?: string; rtf?: string;}, type?: string): void;
+        export function write(data: { text?: string; html?: string; rtf?: string; }, type?: string): void;
         export function writeRTF(data: string, type?: string): void;
         export function writeHTML(data: string, type?: string): void;
         export function writeText(data: string, type?: string): void;

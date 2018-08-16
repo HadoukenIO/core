@@ -2,7 +2,7 @@
     src/browser/bounds_changed_state_tracker.js
  */
 
-const windowTransaction = require('electron').windowTransaction;
+const WindowTransaction = require('electron').windowTransaction;
 
 import * as _ from 'underscore';
 import * as animations from './animations.js';
@@ -16,12 +16,10 @@ import ofEvents from './of_events';
 import route from '../common/route';
 import { clipBounds, windowSetBoundsToVisible } from './utils';
 import { OpenFinWindow, BrowserWindow } from '../shapes';
-import { Rectangle } from 'electron';
-import Bounds from '../../node_modules/hadouken-js-adapter/out/types/src/api/window/bounds';
-import { WindowOptions } from '../shapes';
+import { Rectangle, windowTransaction } from 'electron';
+
 
 const isWin32 = process.platform === 'win32';
-const isWin10 = isWin32 && os.release().startsWith('10');
 
 const DisableWindowGroupTracking = 'disable-window-group-tracking';
 // Added Runtime argument: --disable-group-window-tracking=resize,api
@@ -30,7 +28,7 @@ const DisableWindowGroupTracking = 'disable-window-group-tracking';
 // so with disable-group-window-tracking="resize,api", docking framework can customize resize behaviors
 // for grouped windows
 
-const shouldTrack = (action: string) => {
+const shouldTrack = (action: string): boolean => {
     // track everything by default
     return !coreState.argo[DisableWindowGroupTracking] ||
         !coreState.argo[DisableWindowGroupTracking].split(',').includes(action);
@@ -44,11 +42,19 @@ interface DecoratedBounds extends Rectangle {
 }
 interface BoundChanged {
     x: boolean;
-    x2: boolean;
     y: boolean;
-    y2: boolean;
+    state: boolean;
     width: boolean;
     height: boolean;
+    changed: boolean;
+}
+interface Delta {
+    x: number;
+    x2: number;
+    y: number;
+    y2: number;
+    width: number;
+    height: number;
 }
 
 enum WindowState {
@@ -69,24 +75,24 @@ interface DefferedEvent {
     width: number;
 }
 
-export class BoundsChangedStateTracker {
+export default class BoundsChangedStateTracker {
     private _listeners: any;
     constructor(private uuid: string, private name: string, private browserWindow: BrowserWindow) {
         this._listeners = {
-            'begin-user-bounds-change': () => {
+            'begin-user-bounds-change': (): void => {
                 this.setUserBoundsChangeActive(true);
                 const cachedBounds = this.getCachedBounds();
                 const payload = { uuid, name, top: cachedBounds.y, left: cachedBounds.x };
                 ofEvents.emit(route.window('begin-user-bounds-changing', uuid, name), Object.assign(payload, cachedBounds));
             },
-            'end-user-bounds-change': () => {
+            'end-user-bounds-change': (): void => {
                 this.setUserBoundsChangeActive(false);
                 const bounds = this.getCurrentBounds();
                 const payload = { uuid, name, top: bounds.y, left: bounds.x };
                 ofEvents.emit(route.window('end-user-bounds-changing', uuid, name), Object.assign(payload, bounds));
                 this.handleBoundsChange(false, true);
             },
-            'bounds-changed': () => {
+            'bounds-changed': (): void => {
                 const ofWindow = coreState.getWindowByUuidName(uuid, name);
                 const groupUuid = ofWindow ? ofWindow.groupUuid : null;
 
@@ -105,13 +111,13 @@ export class BoundsChangedStateTracker {
                     }
                 }
             },
-            'synth-animate-end': (meta: any) => {
+            'synth-animate-end': (meta: any): void => {
                 if (meta.bounds) {
                     // COMMENT THIS OUT FOR TESTING FLICKERING
                     this.handleBoundsChange(false, true);
                 }
             },
-            'visibility-changed': (event: any, isVisible: boolean) => {
+            'visibility-changed': (event: any, isVisible: boolean): void => {
                 if (!isVisible || this.browserWindow.isMinimized() || this.browserWindow.isMaximized()) {
                     this._deferred = true;
                 } else {
@@ -119,26 +125,26 @@ export class BoundsChangedStateTracker {
                     this.dispatchDeferredEvents();
                 }
             },
-            'minimize': () => {
+            'minimize': (): void => {
                 this._deferred = true;
                 this.updateCachedBounds(this.getCurrentBounds());
             },
-            'maximize': () => {
+            'maximize': (): void => {
                 this._deferred = true;
                 this.updateCachedBounds(this.getCurrentBounds());
             },
-            'restore': () => {
+            'restore': (): void => {
                 this._deferred = false;
                 windowSetBoundsToVisible(this.browserWindow);
                 this.updateCachedBounds(this.getCurrentBounds());
                 this.dispatchDeferredEvents();
             },
-            'unmaximize': () => {
+            'unmaximize': (): void => {
                 this._deferred = false;
                 this.updateCachedBounds(this.getCurrentBounds());
                 this.dispatchDeferredEvents();
             },
-            'deferred-set-bounds': (event: any, payload: any) => {
+            'deferred-set-bounds': (event: any, payload: any): void => {
                 Deferred.handleMove(this.browserWindow.id, payload);
             }
         };
@@ -161,19 +167,19 @@ export class BoundsChangedStateTracker {
     private _deferred = false;
     private _deferredEvents: DefferedEvent[] = [];
 
-    private setUserBoundsChangeActive = (enabled: boolean) => {
+    private setUserBoundsChangeActive = (enabled: boolean): void => {
         this._userBoundsChangeActive = enabled;
     };
 
-    private isUserBoundsChangeActive = () => {
+    private isUserBoundsChangeActive = (): boolean => {
         return this._userBoundsChangeActive;
     };
 
-    private updateCachedBounds = (bounds: DecoratedBounds) => {
+    private updateCachedBounds = (bounds: DecoratedBounds): void => {
         this._cachedBounds = bounds;
     };
 
-    public getCachedBounds = () => {
+    public getCachedBounds = (): DecoratedBounds => {
         return this._cachedBounds;
     };
 
@@ -191,7 +197,7 @@ export class BoundsChangedStateTracker {
         return { ...bounds, frame, windowState };
     };
 
-    private compareBoundsResult = (boundsOne: DecoratedBounds, boundsTwo: DecoratedBounds) => {
+    private compareBoundsResult = (boundsOne: DecoratedBounds, boundsTwo: DecoratedBounds): BoundChanged => {
         let xDiff = boundsOne.x !== boundsTwo.x;
         let yDiff = boundsOne.y !== boundsTwo.y;
         const widthDiff = boundsOne.width !== boundsTwo.width;
@@ -218,7 +224,7 @@ export class BoundsChangedStateTracker {
         };
     };
 
-    private getBoundsDelta = (current: Rectangle, cached: Rectangle) => {
+    private getBoundsDelta = (current: Rectangle, cached: Rectangle): Delta => {
         return {
             x: current.x - cached.x,
             x2: (current.x + current.width) - (cached.x + cached.width),
@@ -229,7 +235,7 @@ export class BoundsChangedStateTracker {
         };
     };
 
-    private boundsChangeReason = (name: string, groupUuid?: string) => {
+    private boundsChangeReason = (name: string, groupUuid?: string): 'animation' | 'group-animation' | 'self' | 'group' => {
         if (groupUuid) {
             const groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid);
 
@@ -246,12 +252,13 @@ export class BoundsChangedStateTracker {
         return animations.getAnimationHandler().hasWindow(this.browserWindow.id) ? 'animation' : 'self';
     };
 
-    private sharedBoundPixelDiff = 15;
-    private sharedBound = (boundOne: number, boundTwo: number) => {
+    private sharedBoundPixelDiff = 5;
+    private sharedBound = (boundOne: number, boundTwo: number): boolean => {
         return Math.abs(boundOne - boundTwo) < this.sharedBoundPixelDiff;
     };
 
-    private handleGroupedResize = (resizeChangeType: any, delta: Rectangle, originalWindowCachedBounds: DecoratedBounds, windowToUpdate: OpenFinWindow) => {
+    // tslint:disable-next-line:max-line-length
+    private handleGroupedResize = (resizeChangeType: BoundChanged, delta: any, originalWindowCachedBounds: DecoratedBounds, windowToUpdate: OpenFinWindow): Rectangle => {
         if (!trackingResize) {
             return windowToUpdate.browserWindow.getBounds();
         }
@@ -306,20 +313,22 @@ export class BoundsChangedStateTracker {
             }
         }
         const newWindowBounds = { x, y, width, height };
-        const newClippedBounds = clipBounds(newWindowBounds, windowToUpdate.browserWindow);
-        return newClippedBounds;
+        return clipBounds(newWindowBounds, windowToUpdate.browserWindow);
     };
 
-    private checkTrackingApi = (groupLeader: ITransaction) => groupLeader.type === 'api' ? trackingAPI : true;
+    private checkTrackingApi = (groupLeader: ITransaction): boolean => groupLeader.type === 'api'
+        ? !!trackingAPI
+        : true;
 
-    private handleBoundsChange = (isAdditionalChangeExpected: boolean, force = false) => {
+    //tslint:disable-next-line
+    private handleBoundsChange = (isAdditionalChangeExpected: boolean, force = false): boolean => {
 
         let dispatchedChange = false;
 
         const currentBounds = this.getCurrentBounds();
         const cachedBounds = this.getCachedBounds();
         const boundsCompare = this.compareBoundsResult(currentBounds, cachedBounds);
-        const stateMin = boundsCompare.state && currentBounds.state === 'minimized';
+        const stateMin = boundsCompare.state && currentBounds.windowState === 'minimized';
 
         const eventType = isAdditionalChangeExpected ? 'bounds-changing' :
             'bounds-changed';
@@ -346,11 +355,11 @@ export class BoundsChangedStateTracker {
         if (boundsCompare.changed && !stateMin || force) {
 
             // returns true if any of the criteria are true
-            const sizeChange = _.some(sizeChangedCriteria, (criteria) => {
+            const sizeChange = _.some(sizeChangedCriteria, (criteria): boolean => {
                 return criteria;
             });
 
-            const posChange = _.some(positionChangedCriteria, (criteria) => {
+            const posChange = _.some(positionChangedCriteria, (criteria): boolean => {
                 return criteria;
             });
 
@@ -395,11 +404,11 @@ export class BoundsChangedStateTracker {
                 groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid);
                 if (groupLeader && groupLeader.name === this.name && this.checkTrackingApi(groupLeader)) {
                     const delta = this.getBoundsDelta(currentBounds, cachedBounds);
-                    let wt: { on: (arg0: string, arg1: (event: any, payload: any) => void) => void; setWindowPos: (arg0: number, arg1: { x: any; y: any; w: any; h: any; flags: any; }) => void; commit: () => void; }; // window-transaction
-                    const hwndToId: { [hwnd: number]: string } = {};
+                    let wt: windowTransaction.Transaction; // window-transaction
+                    const hwndToId: { [hwnd: number]: number } = {};
 
-                    const { flag: { noZorder, noSize, noActivate } } = windowTransaction;
-                    let flags;
+                    const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
+                    let flags: number;
                     if (changeType === 1) {
                         // this may need to change to 1 or 2 if we fix functionality for changeType 2
                         flags = noZorder + noActivate;
@@ -407,16 +416,16 @@ export class BoundsChangedStateTracker {
                         flags = noZorder + noSize + noActivate;
                     }
 
-                    WindowGroups.getGroup(groupUuid).filter((win) => {
+                    WindowGroups.getGroup(groupUuid).filter((win): boolean => {
                         win.browserWindow.bringToFront();
                         return win.name !== this.name;
-                    }).forEach((win) => {
+                    }).forEach((win): void => {
                         const winBounds = win.browserWindow.getBounds();
                         const bounds = (changeType === 1)
                             ? this.handleGroupedResize(boundsCompare, delta, cachedBounds, win)
                             : winBounds;
-                        let {x, y} = bounds;
-                        const {width, height} = bounds;
+                        let { x, y } = bounds;
+                        const { width, height } = bounds;
                         // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
                         if (changeType === 0 || changeType === 2) {
                             x = toSafeInt(x + delta.x, x);
@@ -427,10 +436,10 @@ export class BoundsChangedStateTracker {
                             const hwnd = parseInt(win.browserWindow.nativeId, 16);
 
                             if (!wt) {
-                                wt = new windowTransaction.Transaction(0);
+                                wt = new WindowTransaction.Transaction(0);
 
-                                wt.on('deferred-set-window-pos', (event, payload) => {
-                                    payload.forEach((winPos) => {
+                                wt.on('deferred-set-window-pos', (event, payload: any): void => {
+                                    payload.forEach((winPos: any): void => {
                                         const bwId = hwndToId[parseInt(winPos.hwnd)];
                                         Deferred.handleMove(bwId, winPos);
                                     });
@@ -490,10 +499,10 @@ export class BoundsChangedStateTracker {
         return dispatchedChange;
     };
 
-    private collapseEventReasonTypes = (eventsList: DefferedEvent[]) => {
+    private collapseEventReasonTypes = (eventsList: DefferedEvent[]): DefferedEvent[] => {
         const eventGroups: DefferedEvent[][] = [];
 
-        eventsList.forEach((event, index) => {
+        eventsList.forEach((event, index): void => {
             if (index === 0 || event.reason !== eventsList[index - 1].reason) {
                 const list = [];
                 list.push(event);
@@ -503,11 +512,11 @@ export class BoundsChangedStateTracker {
             }
         });
 
-        return eventGroups.map((group) => {
+        return eventGroups.map((group): DefferedEvent => {
             let sizeChange = false;
             let posChange = false;
 
-            group.forEach((event) => {
+            group.forEach((event): void => {
                 if (event.changeType === 0) {
                     posChange = true;
                 } else if (event.changeType === 1) {
@@ -525,14 +534,14 @@ export class BoundsChangedStateTracker {
         });
     };
 
-    private dispatchDeferredEvents = () => {
-        const boundsChangedEvents = this._deferredEvents.filter((event) => {
+    private dispatchDeferredEvents = (): void => {
+        const boundsChangedEvents = this._deferredEvents.filter((event): boolean => {
             return event.type === 'bounds-changed';
         });
 
         const reasonGroupedEvents = this.collapseEventReasonTypes(boundsChangedEvents);
 
-        reasonGroupedEvents.forEach((event) => {
+        reasonGroupedEvents.forEach((event): void => {
             event.type = 'bounds-changing';
             this.browserWindow.emit('synth-bounds-change', event);
             event.type = 'bounds-changed';
@@ -543,7 +552,7 @@ export class BoundsChangedStateTracker {
     };
 
 
-    private endWindowGroupTransactionListener = (groupUuid: string) => {
+    private endWindowGroupTransactionListener = (groupUuid: string): void => {
         const ofWindow = coreState.getWindowByUuidName(this.uuid, this.name);
         const _groupUuid = ofWindow ? ofWindow.groupUuid : null;
 
@@ -556,26 +565,26 @@ export class BoundsChangedStateTracker {
         }
     };
 
-    private updateEvents = (register: boolean) => {
+    private updateEvents = (register: boolean): void => {
         const listenerFn = register ? 'on' : 'removeListener';
 
-        Object.keys(this._listeners).forEach((key) => {
+        Object.keys(this._listeners).forEach((key): void => {
             this.browserWindow[listenerFn](key, this._listeners[key]);
         });
 
         WindowGroupTransactionTracker[listenerFn]('end-window-group-transaction', this.endWindowGroupTransactionListener);
     };
 
-    private hookListeners = () => {
+    private hookListeners = (): void => {
         this.updateEvents(true);
     };
 
-    private unHookListeners = () => {
+    private unHookListeners = (): void => {
         this.updateEvents(false);
     };
 
     // Remove all event listeners this instance subscribed on
-    private teardown = () => {
+    public teardown = (): void => {
         this.unHookListeners();
     };
 
