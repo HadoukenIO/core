@@ -21,7 +21,7 @@ let isFlushScheduled: boolean = false;
 let totalBytes: number = 0;
 let timer: NodeJS.Timer = null;
 
-export function flushConsoleMessageQueue(): void {
+function flushConsoleMessageQueue(): Promise<any> {
     totalBytes = 0;
     isFlushScheduled = false;
 
@@ -40,7 +40,11 @@ export function flushConsoleMessageQueue(): void {
     };
 
     consoleMessageQueue = [];
-    sendToRVM(obj, true);
+    return sendToRVM(obj, true);
+}
+
+export async function flushConsoleMessageQueueBlocking() : Promise<any> {
+    return await flushConsoleMessageQueue();
 }
 
 export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage): void {

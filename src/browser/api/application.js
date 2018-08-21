@@ -26,7 +26,7 @@ let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 import WindowGroups from '../window_groups';
-import { sendToRVM } from '../rvm/utils';
+import { sendToRVM, flushConsoleMessageQueueBlocking } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
@@ -560,6 +560,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             }
 
             rvmPayload.isClosing = coreState.shouldCloseRuntime([uuid]);
+
+            // Ensure that any queued app logs are sent to the RVM.
+            flushConsoleMessageQueueBlocking();
         }
 
         if (rvmBus) {
