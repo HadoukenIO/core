@@ -2,6 +2,11 @@
 import { parse as parseUrl } from 'url';
 import { Identity } from '../shapes';
 
+export function isChromePageUrl(url: string): boolean {
+    const protocol = parseUrl(url).protocol || '';
+    return protocol.startsWith('chrome');
+}
+
 export function isFileUrl(url: string): boolean {
     const protocol = parseUrl(url).protocol || '';
     return protocol.startsWith('file');
