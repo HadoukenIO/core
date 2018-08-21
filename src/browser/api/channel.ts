@@ -51,6 +51,8 @@ const createChannelTeardown = (providerIdentity: ProviderIdentity): void => {
     ofEvents.once(closedEvent, () => {
         channelMap.delete(channelId);
         ofEvents.emit(route.channel('disconnected'), providerIdentity);
+        // Need channel-disconnected for compatibility with 9.61.34.*
+        ofEvents.emit(route.channel('channel-disconnected'), providerIdentity);
     });
 
     // For some reason this is captured sometimes when window closed is not
@@ -128,6 +130,8 @@ export module Channel {
         createChannelTeardown(providerIdentity);
         // Used internally by adapters for pending connections and onChannelConnect
         ofEvents.emit(route.channel('connected'), providerIdentity);
+        // Need channel-connected for compatibility with 9.61.34.*
+        ofEvents.emit(route.channel('channel-connected'), providerIdentity);
 
         return providerIdentity;
     }
