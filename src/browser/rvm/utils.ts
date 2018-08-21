@@ -21,7 +21,10 @@ let isFlushScheduled: boolean = false;
 let totalBytes: number = 0;
 let timer: NodeJS.Timer = null;
 
-function flushConsoleMessageQueue(): Promise<any> {
+// When this function returns, application logs are guaranteed to have been sent
+// to the RVM.
+// The Promise is fulfilled when the RVM responds.
+export function flushConsoleMessageQueue(): Promise<any> {
     totalBytes = 0;
     isFlushScheduled = false;
 
@@ -41,10 +44,6 @@ function flushConsoleMessageQueue(): Promise<any> {
 
     consoleMessageQueue = [];
     return sendToRVM(obj, true);
-}
-
-export async function flushConsoleMessageQueueBlocking() : Promise<any> {
-    return await flushConsoleMessageQueue();
 }
 
 export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage): void {
