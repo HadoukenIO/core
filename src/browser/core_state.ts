@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 /*
 * TODO: Remove these after Dependency Injection refactor:
@@ -25,18 +10,14 @@ limitations under the License.
 * */
 
 import * as minimist from 'minimist';
-import { app } from 'electron';
+import { app, webContents, session } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
 import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
-
-export interface StartManifest {
-    data: Shapes.Manifest;
-    url: string;
-}
+import { getIdentityFromObject } from '../common/main';
 
 interface ProxySettingsArgs {
     proxyAddress?: string;
@@ -88,9 +69,28 @@ export function setManifest(url: string, manifest: Shapes.Manifest): void {
 }
 
 export function getManifest(identity: Shapes.Identity): ManifestInfo {
-    const url = getConfigUrlByUuid(identity.uuid);
+    const uuid = identity && identity.uuid;
+    const url = getConfigUrlByUuid(uuid);
     const manifest = manifests.get(url);
     return { url, manifest };
+}
+
+export function getManifestByUrl(url: string): Shapes.Manifest {
+   return manifests.get(url);
+}
+
+export function getClosestManifest(identity: Shapes.Identity): ManifestInfo {
+    // Gets an applications manifest or if not launched via manifest, the closest parent with a saved manifest
+    const { uuid } = identity;
+    const app = appByUuid(uuid);
+    const url = app && app._configUrl || app.appObj && app.appObj._configUrl;
+    if (url) {
+        const manifest = getManifestByUrl(url);
+        return { url, manifest };
+    } else {
+        const parentApp = appByUuid(app.parentUuid);
+        return parentApp ? getClosestManifest(parentApp) : null;
+    }
 }
 
 export function setStartManifest(url: string, data: Shapes.Manifest): void {
@@ -98,7 +98,7 @@ export function setStartManifest(url: string, data: Shapes.Manifest): void {
     setManifestProxySettings((data && data.proxy) || undefined);
 }
 
-export function getStartManifest(): StartManifest|{} {
+export function getStartManifest(): Shapes.StartManifest|{} {
     return startManifest;
 }
 
@@ -122,7 +122,7 @@ export function getEntityInfo(identity: Shapes.Identity) {
     }
 }
 
-export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes.ServiceIdentity|undefined {
+export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes.ProviderIdentity|undefined {
     const { uuid, name } = identity;
     const externalConn = getExternalAppObjByUuid(uuid);
     if (externalConn) {
@@ -494,7 +494,37 @@ export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinW
     return win && win.openfinWindow;
 }
 
-function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|false {
+export function getBrowserWindow(identity: Shapes.Identity): Shapes.BrowserWindow|undefined {
+    const { uuid, name } = identity;
+    const wnd: Shapes.Window = getOfWindowByUuidName(uuid, name);
+
+    if (
+        wnd &&
+        wnd.openfinWindow &&
+        wnd.openfinWindow.browserWindow &&
+        !wnd.openfinWindow.browserWindow.isDestroyed()
+    ) {
+        return wnd.openfinWindow.browserWindow;
+    }
+}
+
+export function getWebContents(identity: Shapes.Identity): webContents|undefined {
+    const browserWindow = getBrowserWindow(identity);
+
+    if (browserWindow) {
+        return browserWindow.webContents;
+    }
+}
+
+export function getSession(identity: Shapes.Identity): session|undefined {
+    const webContents = getWebContents(identity);
+
+    if (webContents) {
+        return webContents.session;
+    }
+}
+
+function getOfWindowByUuidName(uuid: string, name: string): Shapes.Window|undefined {
     return getWinList().find(win => win.openfinWindow &&
         win.openfinWindow.uuid === uuid &&
         win.openfinWindow.name === name
@@ -530,31 +560,30 @@ export function getAllAppObjects(): Shapes.AppObj[] {
 
 export function getAllWindows(): WindowMeta[] {
     const windowApi = require('./api/window.js').Window; // do not move this line!
-    return apps.map(app => {
-        const windowBounds = app.children
-            .filter(win => win.openfinWindow)
-            .map(win => {
-                const identity = {
-                    name: win.openfinWindow.name,
-                    uuid: win.openfinWindow.uuid
-                };
+
+    // Filter out apps where main window has already been destroyed
+    const aliveApps = apps.filter(({ children }) => {
+        const mainWindow = children[0];
+        return mainWindow &&
+            mainWindow.openfinWindow &&
+            mainWindow.openfinWindow.browserWindow &&
+            !mainWindow.openfinWindow.browserWindow.isDestroyed();
+    });
+
+    return aliveApps.map(({ uuid, children }) => {
+        const childWindows = children
+            .map(({ openfinWindow }) => {
+                const identity = getIdentityFromObject(openfinWindow);
                 const bounds = windowApi.getBounds(identity);
-                bounds.name = win.openfinWindow.name;
+                bounds.name = openfinWindow.name;
                 bounds.state = windowApi.getState(identity);
                 bounds.isShowing = windowApi.isShowing(identity);
                 return bounds;
             });
 
-        const mainWin = windowBounds[0] || {};
-        if (windowBounds.length > 0) {
-            windowBounds.splice(0, 1); //child windows should not contain main window
-        }
+        const mainWindow = childWindows.shift() || {};
 
-        return {
-            childWindows: windowBounds,
-            mainWindow: mainWin,
-            uuid: app.uuid
-        };
+        return { childWindows, mainWindow, uuid };
     });
 }
 
@@ -601,7 +630,9 @@ export function getAppAncestor(descendantAppUuid: string): Shapes.App {
     const app = appByUuid(descendantAppUuid);
 
     if (app && app.parentUuid) {
-        return getAppAncestor(app.parentUuid);
+        // If parentApp exists but can't be found in coreState, it is in another runtime
+        const parentApp = appByUuid(app.parentUuid);
+        return parentApp ? getAppAncestor(app.parentUuid) : app;
     } else {
         return app;
     }
@@ -650,9 +681,6 @@ export function getLicenseKey(identity: Shapes.Identity): string|null {
 
 export function getParentWindow(childIdentity: Shapes.Identity): Shapes.Window {
     const { uuid, name } = childIdentity;
-
-    const app = appByUuid(uuid);
-
     const childWin = getOfWindowByUuidName(uuid, name);
 
     if (!childWin) {
@@ -696,20 +724,23 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
     }
 
     for (const { openfinWindow } of app.children) {
-        const { name, parentFrameId } = openfinWindow;
+        if (openfinWindow) {
+            const { name } = openfinWindow;
 
-        if (name === frame) {
-            const winParent = getWinById(parentFrameId);
-            const parent = getParentIdentity({uuid, name});
+            if (name === frame) {
+                const parent = getParentIdentity({uuid, name});
 
-            return {
-                name,
-                uuid,
-                parent,
-                entityType: 'window'
-            };
-        } else if (openfinWindow.frames.get(frame)) {
-            return openfinWindow.frames.get(frame);
+                return {
+                    name,
+                    uuid,
+                    parent,
+                    entityType: 'window'
+                };
+            } else if (openfinWindow.frames.get(frame)) {
+                return openfinWindow.frames.get(frame);
+            }
+        } else {
+            writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
     }
 }
@@ -722,38 +753,42 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
     }
 
     for (const { openfinWindow } of app.children) {
-        const { uuid, name, parentFrameId } = openfinWindow;
-        let browserWindow: Shapes.BrowserWindow;
-        browserWindow = openfinWindow.browserWindow;
+        if (openfinWindow) {
+            const { uuid, name } = openfinWindow;
+            let browserWindow: Shapes.BrowserWindow;
+            browserWindow = openfinWindow.browserWindow;
 
-        if (!openfinWindow.mainFrameRoutingId) {
-            // save bit time here by not calling webContents.mainFrameRoutingId every time
-            // mainFrameRoutingId is wrong during setWindowObj
-            if (!browserWindow.isDestroyed()) {
-                openfinWindow.mainFrameRoutingId = browserWindow.webContents.mainFrameRoutingId;
-                writeToLog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId}`, true);
-            } else {
-                writeToLog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`, true);
+            if (!openfinWindow.mainFrameRoutingId) {
+                // save bit time here by not calling webContents.mainFrameRoutingId every time
+                // mainFrameRoutingId is wrong during setWindowObj
+                if (!browserWindow.isDestroyed()) {
+                    openfinWindow.mainFrameRoutingId = browserWindow.webContents.mainFrameRoutingId;
+                    writeToLog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId}`, true);
+                } else {
+                    writeToLog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`, true);
+                }
             }
-        }
 
-        if (name === frame) {
-            return {
-                name,
-                browserWindow,
-                frameRoutingId: openfinWindow.mainFrameRoutingId,
-                mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
-                frameName: name
-            };
-        } else if (openfinWindow.frames.get(frame)) {
-            const {name, frameRoutingId} = openfinWindow.frames.get(frame);
-            return {
-                name,
-                browserWindow,
-                frameRoutingId,
-                mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
-                frameName: name
-            };
+            if (name === frame) {
+                return {
+                    name,
+                    browserWindow,
+                    frameRoutingId: openfinWindow.mainFrameRoutingId,
+                    mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
+                    frameName: name
+                };
+            } else if (openfinWindow.frames.get(frame)) {
+                const {name, frameRoutingId} = openfinWindow.frames.get(frame);
+                return {
+                    name,
+                    browserWindow,
+                    frameRoutingId,
+                    mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
+                    frameName: name
+                };
+            }
+        } else {
+            writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
     }
 }

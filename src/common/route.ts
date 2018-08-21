@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 export type WindowRoute = (
     type: string,
@@ -46,13 +31,16 @@ export interface Route {
     'external-window': WindowRoute;
 
     system: SimpleRoute;
-    service: SimpleRoute;
+    channel: SimpleRoute;
     server: SimpleRoute;
     connection: SimpleRoute;
     runtime: SimpleRoute;
 
     rvmMessageBus: SimpleRoute;
     'rvm-message-bus': SimpleRoute;
+
+    globalHotkey: SimpleRoute;
+    'global-hotkey': SimpleRoute;
 }
 
 interface Context { hyphenateUuidName: boolean; }
@@ -97,11 +85,12 @@ route.frame = <WindowRoute>router.bind(HYPHEN, 'frame');
 route.window = <WindowRoute>router.bind(HYPHEN, 'window');
 route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
 
-route.service = <SimpleRoute>router.bind(null, 'service');
+route.channel = <WindowRoute>router.bind(HYPHEN, 'channel');
 route.system = <SimpleRoute>router.bind(null, 'system');
 route.rvmMessageBus = route['rvm-message-bus'] = <SimpleRoute>router.bind(null, 'rvm-message-bus');
 route.server = <SimpleRoute>router.bind(null, 'server');
 route.connection = <SimpleRoute>router.bind(null, 'connection');
 route.runtime = <SimpleRoute>router.bind(null, 'runtime');
+route.globalHotkey = route['global-hotkey'] = <SimpleRoute>router.bind(null, 'global-hotkey');
 
 export default route;

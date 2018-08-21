@@ -1,19 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 // built-in modules
 let BrowserWindow = require('electron').BrowserWindow;
 let electronApp = require('electron').app;
@@ -65,6 +49,7 @@ module.exports.applicationApiMap = {
     'external-window-action': externalWindowAction,
     'get-application-groups': getApplicationGroups,
     'get-application-manifest': getApplicationManifest,
+    'get-application-zoom-level': getApplicationZoomLevel,
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
@@ -82,6 +67,7 @@ module.exports.applicationApiMap = {
     'run-application': runApplication,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
     'set-tray-icon': setTrayIcon,
+    'set-application-zoom-level': setApplicationZoomLevel,
     'terminate-application': terminateApplication,
     'wait-for-hung-application': waitForHungApplication
 };
@@ -99,6 +85,16 @@ function setTrayIcon(identity, rawMessage, ack, nack) {
         ack(successAck);
     }, nack);
 }
+
+function setApplicationZoomLevel(identity, rawMessage, ack) {
+    const message = JSON.parse(JSON.stringify(rawMessage));
+    const payload = message.payload;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+
+    Application.setZoomLevel(appIdentity, payload.level);
+    ack(successAck);
+}
+
 
 function getTrayIconInfo(identity, message, ack, nack) {
     const dataAck = _.clone(successAck);
@@ -199,15 +195,22 @@ function getApplicationGroups(identity, message, ack) {
     dataAck.data = _.map(groups, groupOfWindows => {
         return _.map(groupOfWindows, window => {
             if (payload.crossApp === true) {
-                var _window = _.clone(window);
-                _window.windowName = window.name;
-                return _window;
+                return { uuid: window.uuid, name: window.name, windowName: window.name };
             } else {
                 return window.name; // backward compatible
             }
         });
     });
     ack(dataAck);
+}
+
+function getApplicationZoomLevel(identity, message, ack) {
+    const dataAck = _.clone(successAck);
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+    Application.getZoomLevel(appIdentity, level => {
+        dataAck.data = level;
+        ack(dataAck);
+    });
 }
 
 function getChildWindows(identity, message, ack) {

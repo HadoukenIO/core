@@ -1,23 +1,7 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 import { WMCopyData } from '../transport';
 import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
-import { Plugin } from '../../shapes';
 
 import { app } from 'electron';
 const _ = require('underscore');
@@ -115,7 +99,6 @@ type getShortcutStateAction = 'get-shortcut-state';
 type setShortcutStateAction = 'set-shortcut-state';
 type launchedFromAction = 'launched-from';
 type launchAppAction = 'launch-app';
-type pluginQueryAction = 'query-plugin';
 
 export interface LaunchApp extends RvmMsgBase {
     topic: applicationTopic;
@@ -164,19 +147,6 @@ export interface AppAssetsDownloadAsset extends RvmMsgBase {
     showRvmProgressDialog: boolean;
     asset: any;
     downloadId: string;
-}
-
-export interface PluginQuery extends RvmMsgBase {
-    topic: applicationTopic;
-    action: pluginQueryAction;
-    name: string;
-    version: string;
-    optional?: boolean;
-    sourceUrl: string;
-}
-
-export interface PluginQueryResponse extends RvmMsgBase {
-    payload: any;
 }
 
 // topic: cleanup -----
@@ -389,25 +359,6 @@ export class RVMMessageBus extends EventEmitter  {
                 }, timeToLiveInMS);
             }
         }
-    }
-
-    /**
-     * Retrieves information about a plugin
-     */
-    public getPluginInfo(manifestUrl: string, opts: Plugin): Promise<PluginQueryResponse> {
-        return new Promise((resolve) => {
-            const {name, version} = opts;
-
-            const rvmMsg: PluginQuery = {
-                topic: 'application',
-                action: 'query-plugin',
-                name,
-                version,
-                sourceUrl: manifestUrl
-            };
-
-            this.publish(rvmMsg, resolve);
-        });
     }
 
     /**

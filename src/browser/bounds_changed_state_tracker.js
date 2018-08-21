@@ -1,19 +1,4 @@
 /*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-/*
     src/browser/bounds_changed_state_tracker.js
  */
 
@@ -21,14 +6,14 @@ let windowTransaction = require('electron').windowTransaction;
 
 let _ = require('underscore');
 let animations = require('./animations.js');
-import clipBounds from './clip_bounds';
 let coreState = require('./core_state.js');
 import * as Deferred from './deferred';
-let WindowGroups = require('./window_groups.js');
+import WindowGroups from './window_groups';
 import WindowGroupTransactionTracker from './window_group_transaction_tracker';
 import { toSafeInt } from '../common/safe_int';
 import ofEvents from './of_events';
 import route from '../common/route';
+import { clipBounds, windowSetBoundsToVisible } from './utils';
 
 const isWin32 = process.platform === 'win32';
 
@@ -497,6 +482,7 @@ function BoundsChangedStateTracker(uuid, name, browserWindow) {
         },
         'restore': () => {
             _deferred = false;
+            windowSetBoundsToVisible(browserWindow);
             updateCachedBounds(getCurrentBounds());
             dispatchDeferredEvents();
         },

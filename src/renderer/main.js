@@ -1,18 +1,3 @@
-/*
-Copyright 2018 OpenFin Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 'use strict';
 
 let fs = require('fs');
@@ -48,8 +33,8 @@ const jsAdapterV2 = readAdapterFromSearchPaths(searchPathsV2Api, 'js-adapter.js'
 let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
 me = me.slice(13);
 
-module.exports.api = (windowId) => {
-    const windowOptionSet = coreState.getWindowInitialOptionSet(windowId);
+const api = (windowId, initialOptions) => {
+    const windowOptionSet = initialOptions || coreState.getWindowInitialOptionSet(windowId);
     const mainWindowOptions = windowOptionSet.options || {};
     const enableV2Api = (mainWindowOptions.experimental || {}).v2Api;
     const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
@@ -63,4 +48,16 @@ module.exports.api = (windowId) => {
         v2AdapterShim,
         `fin.__internal_.ipc = null`
     ].join(';');
+};
+
+module.exports.api = api;
+
+module.exports.apiWithOptions = (windowId) => {
+    const initialOptions = coreState.getWindowInitialOptionSet(windowId);
+
+    // break the remote link
+    return JSON.stringify({
+        apiString: api(windowId, initialOptions),
+        initialOptions: initialOptions
+    });
 };

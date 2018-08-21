@@ -1,11 +1,11 @@
 {
     "compilerOptions": {
+        "target": "es2017",
         "module": "commonjs",
         "noImplicitAny": true,
         "removeComments": true,
         "preserveConstEnums": true,
         "sourceMap": false,
-        "target": "es6",
         "outDir": "./staging/core/",
         "moduleResolution": "node",
         "allowJs": true
