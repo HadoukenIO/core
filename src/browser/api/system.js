@@ -251,16 +251,19 @@ exports.System = {
         if (process.platform === 'win32') {
             return electronApp.getHostToken();
         } else {
-            const hash = crypto.createHash('sha256');
+            try {
+                const hash = crypto.createHash('sha256');
 
-            let macAddress = os.networkInterfaces().en0[0].mac;
+                let macAddress = os.networkInterfaces().en0[0].mac;
+                if (!macAddress) {
+                    throw new Error(`MAC address (${macAddress}) not defined`);
+                }
 
-            if (!macAddress) {
-                throw new Error(`MAC address (${macAddress}) not defined`);
+                hash.update(macAddress);
+                return hash.digest('hex');
+            } catch (e) {
+                return e;
             }
-
-            hash.update(macAddress);
-            return hash.digest('hex');
         }
     },
     getEntityInfo: function(identity) {
