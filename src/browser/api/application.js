@@ -25,7 +25,7 @@ let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
-let WindowGroups = require('../window_groups.js');
+import WindowGroups from '../window_groups';
 import { sendToRVM } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
@@ -311,6 +311,11 @@ Application.getParentApplication = function(identity) {
     } = app || {};
 
     return parentUuid;
+};
+
+Application.getZoomLevel = function(identity, callback) {
+    const app = coreState.appByUuid(identity.uuid);
+    Window.getZoomLevel(app.appObj.identity, callback);
 };
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
@@ -830,6 +835,20 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
         fetchingIcon[uuid] = false;
     });
+};
+
+Application.setZoomLevel = function(identity, level) {
+    const app = coreState.appByUuid(identity.uuid);
+
+    // set zoom level for each child window
+    app.children.forEach(function(childWindow) {
+        const childWindowIdentity = {
+            name: childWindow.openfinWindow.name,
+            uuid: childWindow.openfinWindow.uuid
+        };
+        Window.setZoomLevel(childWindowIdentity, level);
+    });
+
 };
 
 

@@ -328,6 +328,7 @@ export interface SavedDiskBounds {
     top: number;
     width: number;
     windowState: string;
+    zoomLevel: number;
 }
 
 export interface Cookie {
@@ -363,4 +364,13 @@ export interface APIHandlerMap {
             checkPermissions: (args: any) => boolean;
         }
     };
+}
+
+export interface Subscriber {
+    directMsg: string;
+    name: string;
+    senderName: string;
+    senderUuid: string;
+    topic: string;
+    uuid: string;
 }

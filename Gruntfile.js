@@ -291,6 +291,9 @@ module.exports = (grunt) => {
     grunt.registerTask('package', 'Package in an asar', function() {
         const done = this.async();
 
+        //delete build/test related files before packaging.
+        grunt.file.delete('staging/core/Gruntfile.js');
+        wrench.rmdirSyncRecursive('staging/core/test', true);
         asar.createPackage('staging/core', 'out/app.asar', function() {
             grunt.log.ok('Finished packaging as asar.');
             wrench.rmdirSyncRecursive('staging', true);
