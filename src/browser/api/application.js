@@ -278,10 +278,13 @@ Application.close = function(identity, force, callback) {
     }
 };
 
-Application.getChildWindows = function(identity /*, callback, errorCallback*/ ) {
-    var app = Application.wrap(identity.uuid);
-
-    return coreState.getChildrenByApp(app.id);
+Application.getChildWindows = function(identity, callback, errorCallback) {
+    const app = Application.wrap(identity.uuid);
+    if (!app) {
+        errorCallback(new Error(`application with uuid '${identity.uuid}' does not exist`));
+    } else {
+        callback(coreState.getChildrenByApp(app.id));
+    }
 };
 
 Application.getGroups = function( /* callback, errorCallback*/ ) {

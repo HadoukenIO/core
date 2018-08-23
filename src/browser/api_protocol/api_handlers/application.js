@@ -214,15 +214,22 @@ function getApplicationZoomLevel(identity, message, ack) {
     });
 }
 
-function getChildWindows(identity, message, ack) {
+function getChildWindows(identity, message, ack, nack) {
     const dataAck = _.clone(successAck);
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
-
-    dataAck.data = _.chain(Application.getChildWindows(appIdentity))
-        .filter(function(c) { return c.name !== c.uuid; })
-        .map(function(c) { return c.name; })
-        .value();
-    ack(dataAck);
+    /*
+        dataAck.data = _.chain(Application.getChildWindows(appIdentity))
+            .filter(function(c) { return c.name !== c.uuid; })
+            .map(function(c) { return c.name; })
+            .value();
+        ack(dataAck);
+    */
+    Application.getChildWindows(appIdentity, response => {
+        dataAck.data = _.chain(response)
+            .filter(function(c) { return c.name !== c.uuid; })
+            .map(function(c) { return c.name; })
+            .value();
+    }, nack);
 }
 
 function getInfo(identity, message, ack, nack) {
