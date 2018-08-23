@@ -14,6 +14,7 @@ let nativeImage = electron.nativeImage;
 
 // npm modules
 let _ = require('underscore');
+const crypto = require('crypto');
 import * as Rx from 'rx';
 
 // local modules
@@ -1952,7 +1953,10 @@ function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
 }
 //make sure the uuid/names with special characters do not break the bounds cache.
 function getBoundsCacheSafeFileName(identity) {
-    let safeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+    const hash = crypto.createHash('sha256');
+    hash.update(identity.uuid);
+    hash.update(identity.name);
+    const safeName = hash.digest('hex');
     const userCache = electronApp.getPath('userCache');
     return path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 }
