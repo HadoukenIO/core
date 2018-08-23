@@ -438,10 +438,13 @@ Application.removeTrayIcon = function(identity) {
     removeTrayIcon(app);
 };
 
-Application.restart = function(identity) {
-    let uuid = identity.uuid;
+Application.restart = function(identity, callback, errorCallback) {
+    const uuid = identity.uuid;
+    const app = Application.wrap(uuid);
+    if (!app) {
+        errorCallback(new Error(`application with uuid '${identity.uuid}' does not exist`));
+    }
     const appObj = coreState.getAppObjByUuid(uuid);
-
     coreState.setAppRestartingState(uuid, true);
 
     try {

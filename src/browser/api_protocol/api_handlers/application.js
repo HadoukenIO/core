@@ -129,11 +129,12 @@ function terminateApplication(identity, message, ack) {
 
 }
 
-function restartApplication(identity, message, ack) {
+function restartApplication(identity, message, ack, nack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
-    Application.restart(appIdentity);
-    ack(successAck);
+    Application.restart(appIdentity, () => {
+        ack(successAck);
+    }, nack);
 }
 
 function createChildWindow(identity, message, ack) {
