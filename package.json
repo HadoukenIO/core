@@ -47,7 +47,7 @@
     "load-grunt-tasks": "^4.0.0",
     "mocha": "^5.2.0",
     "mockery": "^2.1.0",
-    "openfin-sign": "openfin/openfin-sign.git#v1.0.0",
+    "openfin-sign": "github:openfin/openfin-sign#v1.0.0",
     "rewire": "^4.0.1",
     "should": "^13.2.1",
     "should-sinon": "0.0.6",
@@ -58,7 +58,7 @@
     "wrench": "^1.5.9"
   },
   "dependencies": {
-    "hadouken-js-adapter": "0.34.3",
+    "hadouken-js-adapter": "file:hadouken-js-adapter-0.34.3.tgz",
     "minimist": "^1.2.0",
     "options": "0.0.6",
     "rx": "^4.1.0",

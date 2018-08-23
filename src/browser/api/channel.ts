@@ -133,7 +133,7 @@ export module Channel {
     }
 
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
-        const { wait, channelName, payload: connectionPayload } = payload;
+        const { channelName, payload: connectionPayload } = payload;
 
         const providerIdentity = Channel.getChannelByChannelName(channelName);
 
