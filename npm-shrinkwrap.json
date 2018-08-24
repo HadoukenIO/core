@@ -2694,16 +2694,16 @@
     },
     "hadouken-js-adapter": {
       "version": "file:hadouken-js-adapter-0.34.3.tgz",
-      "integrity": "sha512-kS3gfHgkcsidysW6WBths4l/OVQW0nPahdUZiu3hMY/+7usUduU/anwQk+R3aqB6BAG4kDMkRL3mOEa+SLWtcg==",
+      "integrity": "sha512-AZKNHGO2mx0XYCt7nLb31szAHh3HwgTjZ97yLspSspP6kkwd5DGTEXaPSm0msmcBa4nxMRM7U9uVtIO8AYtTig==",
       "requires": {
         "@types/node": "^9.4.6",
         "ws": "~1.1.1"
       },
       "dependencies": {
         "@types/node": {
-          "version": "9.6.28",
-          "resolved": "https://registry.npmjs.org/@types/node/-/node-9.6.28.tgz",
-          "integrity": "sha512-LMSOxMKNJ8tGqUVs8lSIT8RGo1XGWYada/ZU2QZcbcD6AW9futXDE99tfQA0K6DK60GXcwplsGGK5KABRmI5GA=="
+          "version": "9.6.29",
+          "resolved": "https://registry.npmjs.org/@types/node/-/node-9.6.29.tgz",
+          "integrity": "sha512-KtYsg4/OzMV8CIgwT0kGwHn2J5DNd3w7hY6/AYwIfxRhrN0isNFlT5nN+pgvcMUkiba2+A3D6Ig0onBGgSj18A=="
         }
       }
     },

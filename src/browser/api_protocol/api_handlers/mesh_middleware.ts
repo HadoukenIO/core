@@ -181,6 +181,7 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
                             return [...result, runtime.data];
                         }
                     }
+                    return result;
                 }, []);
                 const locals = { aggregate: externalRuntimeData };
                 next(locals);

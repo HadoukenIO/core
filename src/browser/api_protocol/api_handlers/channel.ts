@@ -30,10 +30,11 @@ export class ChannelApiHandler {
         if (locals && locals.aggregate) {
             const { aggregate } = locals;
             if (Array.isArray(aggregate) && aggregate.length) {
-                if (aggregate.length > 1) {
+                const channel = aggregate.filter(c => !!c);
+                if (channel.length > 1) {
                     nack(`Runtime Error: More than one channel for channelName ${payload.channelName}`);
                 } else {
-                    const dataAck = Object.assign({}, successAck, { data: aggregate[0] });
+                    const dataAck = Object.assign({}, successAck, { data: channel[0] });
                     ack(dataAck);
                     return;
                 }

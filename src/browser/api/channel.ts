@@ -153,6 +153,8 @@ export module Channel {
                     payload: connectionPayload
                 }
             });
+        } else if (identity.runtimeUuid) {
+            ack({ success: true });
         } else {
             // Do not change this, checking for this in adapter
             const interimNackMessage = 'internal-nack';
