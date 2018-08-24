@@ -775,7 +775,10 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     fetchingIcon[uuid] = true;
 
-    let app = Application.wrap(identity.uuid);
+    const app = Application.wrap(uuid);
+    if (!app) {
+        errorCallback(new Error(`application with uuid '${identity.uuid}' does not exist`));
+    }
 
     // only one tray icon per app
     // cleanup the old one so it can be replaced
