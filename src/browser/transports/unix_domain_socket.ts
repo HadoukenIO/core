@@ -75,7 +75,7 @@ class UnixDomainSocket extends BaseTransport {
 
     private getFileDescriptors(): Promise<FileDescriptor[]> {
         return new Promise<FileDescriptor[]>((resolve) => {
-            exec(`lsof -U | grep ${this.filenamePrefix}`, (error, stdout) => {
+            exec(`/usr/sbin/lsof -U | /usr/bin/grep ${this.filenamePrefix}`, (error, stdout) => {
                 if (error) {
                     log.writeToLog(1, '[unix domain socket] begin exec error', true);
                     log.writeToLog(1, error, true);
