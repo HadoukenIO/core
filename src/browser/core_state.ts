@@ -45,6 +45,7 @@ interface ManifestInfo {
 export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
+export const fileDownloadLocationMap = new Map();
 
 let apps: Shapes.App[] = [];
 

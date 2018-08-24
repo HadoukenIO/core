@@ -7,6 +7,8 @@ let ProcessMonitor = require('electron').processMonitor;
 
 import ofEvents from './of_events';
 import route from '../common/route';
+import { fileDownloadLocationMap } from './core_state';
+import * as log from './log';
 
 const isWin32 = (process.platform === 'win32');
 
@@ -226,6 +228,18 @@ ProcessTracker.prototype.launch = function(identity, options, errDataCallback) {
         let args = options.arguments || '';
         let filePath = options.target || options.path || '';
         let certificateOptions = withDefaultCertOptions(options.certificate);
+        let fileUuid = options.fileUuid;
+
+        log.writeToLog('info', 'fileUuid');
+        log.writeToLog('info', fileUuid);
+        //if we are given a fileUuid we will overwrite the filePath
+        if (fileUuid) {
+            const downloadPath = fileDownloadLocationMap.get(fileUuid);
+            log.writeToLog('info', downloadPath);
+            if (downloadPath) {
+                filePath = downloadPath;
+            }
+        }
 
         if (filePath) {
             if (path.isAbsolute(filePath)) {

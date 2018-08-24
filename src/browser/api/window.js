@@ -544,6 +544,40 @@ Window.create = function(id, opts) {
             webContents.removeAllListeners();
         });
 
+        log.writeToLog('info', 'Ok, will sub to the will-download events');
+        webContents.session.on('will-download', (event, item, webContents) => {
+            log.writeToLog('info', 'Ok, I am getting these events');
+            const fileUuid = electronApp.generateGUID();
+            const type = 'file-downloaded';
+
+            item.once('done', (event, state) => {
+                const savePath = item.getSavePath();
+                coreState.fileDownloadLocationMap.set(fileUuid, savePath);
+
+                log.writeToLog('info', 'the item is done');
+                log.writeToLog('info', savePath);
+                //Only raise events for successfull downloads.
+                if (state !== 'completed') {
+                    return;
+                }
+
+                const fileEvent = {
+                    fileUuid,
+                    URL: item.getURL(),
+                    MimeType: item.getMimeType(),
+                    fileName: item.getFilename(),
+                    topic: 'window',
+                    type,
+                    uuid,
+                    name,
+                    state
+                };
+
+                ofEvents.emit(route.window(type, uuid, name), fileEvent);
+            });
+
+        });
+
         const isMainWindow = (uuid === name);
         const emitToAppIfMainWin = (type, payload) => {
             // Window crashed: inform Window "namespace"
