@@ -365,6 +365,14 @@ exports.System = {
             }
         });
     },
+    getMachineId: function() {
+        if (process.platform === 'win32') {
+            const registryInfo = this.readRegistryValue('HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Cryptography', 'MachineGuid');
+            return registryInfo.data;
+        } else {
+            return '';
+        }
+    },
     getMinLogLevel: function() {
         try {
             const logLevel = electronApp.getMinLogLevel();
