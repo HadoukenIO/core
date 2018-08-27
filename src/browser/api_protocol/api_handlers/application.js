@@ -86,13 +86,14 @@ function setTrayIcon(identity, rawMessage, ack, nack) {
     }, nack);
 }
 
-function setApplicationZoomLevel(identity, rawMessage, ack) {
+function setApplicationZoomLevel(identity, rawMessage, ack, nack) {
     const message = JSON.parse(JSON.stringify(rawMessage));
     const payload = message.payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-    Application.setZoomLevel(appIdentity, payload.level);
-    ack(successAck);
+    Application.setZoomLevel(appIdentity, payload.level, () => {
+        ack(successAck);
+    }, nack);
 }
 
 
@@ -205,13 +206,13 @@ function getApplicationGroups(identity, message, ack) {
     ack(dataAck);
 }
 
-function getApplicationZoomLevel(identity, message, ack) {
+function getApplicationZoomLevel(identity, message, ack, nack) {
     const dataAck = _.clone(successAck);
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
     Application.getZoomLevel(appIdentity, level => {
         dataAck.data = level;
         ack(dataAck);
-    });
+    }, nack);
 }
 
 function getChildWindows(identity, message, ack, nack) {
