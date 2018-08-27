@@ -2,12 +2,11 @@
 import { Identity, ProviderIdentity, EventPayload } from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
-import { RemoteAck, AckFunc, NackFunc } from '../api_protocol/transport_strategy/ack';
+import { RemoteAck, AckFunc, NackFunc, AckMessage, AckPayload, NackPayload } from '../api_protocol/transport_strategy/ack';
 import { sendToIdentity } from '../api_protocol/api_handlers/api_protocol_base';
 import { getExternalOrOfWindowIdentity } from '../core_state';
 
 const channelMap: Map<string, ProviderIdentity> = new Map();
-const remoteAckMap: Map<string, RemoteAck> = new Map();
 const pendingChannelConnections: Map<string, any[]> = new Map();
 
 const CHANNEL_APP_ACTION = 'process-channel-message';
@@ -23,10 +22,6 @@ interface AckToSender {
         success: boolean
     };
 }
-
-const getAckKey = (id: number, identity: Identity): string => {
-    return `${ id }-${ identity.uuid }-${ identity.name }`;
-};
 
 const getChannelId = (uuid: string, name: string, channelName: string): string => {
     return `${uuid}/${name}/${channelName}`;
@@ -138,9 +133,6 @@ export module Channel {
         const providerIdentity = Channel.getChannelByChannelName(channelName);
 
         if (providerIdentity) {
-            const ackKey = getAckKey(messageId, identity);
-            remoteAckMap.set(ackKey, { ack, nack });
-
             const ackToSender = createAckToSender(identity, messageId, providerIdentity);
 
             // Forward the API call to the channel provider.
@@ -164,10 +156,7 @@ export module Channel {
 
     export function sendChannelMessage(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { uuid, name, payload: messagePayload, action: channelAction, providerIdentity } = payload;
-        const ackKey = getAckKey(messageId, identity);
         const targetIdentity = { uuid, name };
-
-        remoteAckMap.set(ackKey, { ack, nack });
 
         const ackToSender = createAckToSender(identity, messageId, providerIdentity);
 
@@ -186,21 +175,19 @@ export module Channel {
     // This preprocessor will check if the API call is an 'ack' action from a channel and match it to the original request.
     export function sendChannelResult(identity: Identity, payload: any, ack: AckFunc, nack: NackFunc): void {
         const { reason, success, destinationToken, correlationId, payload: ackPayload } = payload;
-        const ackKey = getAckKey(correlationId, destinationToken);
-        const remoteAck = remoteAckMap.get(ackKey);
+        const ackObj = new AckMessage();
+        ackObj.correlationId = correlationId;
 
-        if (remoteAck) {
+        if (destinationToken) {
             if (success) {
-                remoteAck.ack({
-                    success: true,
-                    ...(ackPayload ? { data: ackPayload } : {})
-                });
+                ackObj.payload = new AckPayload(ackPayload);
+                sendToIdentity(destinationToken, ackObj);
             } else {
-                remoteAck.nack(new Error(reason || 'Channel provider error'));
+                ackObj.payload = new NackPayload(reason);
+                sendToIdentity(destinationToken, ackObj);
             }
-            remoteAckMap.delete(ackKey);
         } else {
-            nack('Ack failed, initial channel message not found.');
+            nack('Ack failed, initial channel destinationToken not found.');
         }
     }
 }
