@@ -27,6 +27,10 @@ const successAck = {
     success: true
 };
 
+const privateEvents = {
+    'file-downloaded': true
+};
+
 function EventListenerApiHandler() {
     const eventListenerActionMap = {
         'subscribe-to-desktop-event': subToDesktopEvent,
@@ -220,13 +224,18 @@ function EventListenerApiHandler() {
         }
     };
 
-    function subToDesktopEvent(identity, message, ack) {
+    function subToDesktopEvent(identity, message, ack, nack) {
         let topic = message.payload.topic;
         let uuid = message.payload.uuid;
         let type = message.payload.type;
         let name = message.payload.name;
         let subTopicProvider = subscriptionProvider[topic];
         let unsubscribe;
+
+        if (isPrivateEventAndUnauthorizedUuid(type, identity.uuid, uuid)) {
+            nack(`Cannot listen to a ${type} event from a different Uuid.`);
+            return;
+        }
 
         if (apiProtocolBase.subscriptionExists(identity, topic, uuid, type, name)) {
             apiProtocolBase.uppSubscriptionRefCount(identity, topic, uuid, type, name);
@@ -269,7 +278,10 @@ function EventListenerApiHandler() {
         apiProtocolBase.removeSubscription(identity, topic, uuid, type, name);
         ack(successAck);
     }
-}
 
+    function isPrivateEventAndUnauthorizedUuid(type, requesterUuid, targetUuid) {
+        return (privateEvents[type] && requesterUuid !== targetUuid) ? true : false;
+    }
+}
 
 module.exports.EventListenerApiHandler = EventListenerApiHandler;
