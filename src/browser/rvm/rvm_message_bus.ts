@@ -2,7 +2,6 @@ import { WMCopyData } from '../transport';
 import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
-import { Plugin } from '../../shapes';
 
 import { app } from 'electron';
 const _ = require('underscore');
@@ -100,7 +99,6 @@ type getShortcutStateAction = 'get-shortcut-state';
 type setShortcutStateAction = 'set-shortcut-state';
 type launchedFromAction = 'launched-from';
 type launchAppAction = 'launch-app';
-type pluginQueryAction = 'query-plugin';
 
 export interface LaunchApp extends RvmMsgBase {
     topic: applicationTopic;
@@ -149,19 +147,6 @@ export interface AppAssetsDownloadAsset extends RvmMsgBase {
     showRvmProgressDialog: boolean;
     asset: any;
     downloadId: string;
-}
-
-export interface PluginQuery extends RvmMsgBase {
-    topic: applicationTopic;
-    action: pluginQueryAction;
-    name: string;
-    version: string;
-    optional?: boolean;
-    sourceUrl: string;
-}
-
-export interface PluginQueryResponse extends RvmMsgBase {
-    payload: any;
 }
 
 // topic: cleanup -----
@@ -374,25 +359,6 @@ export class RVMMessageBus extends EventEmitter  {
                 }, timeToLiveInMS);
             }
         }
-    }
-
-    /**
-     * Retrieves information about a plugin
-     */
-    public getPluginInfo(manifestUrl: string, opts: Plugin): Promise<PluginQueryResponse> {
-        return new Promise((resolve) => {
-            const {name, version} = opts;
-
-            const rvmMsg: PluginQuery = {
-                topic: 'application',
-                action: 'query-plugin',
-                name,
-                version,
-                sourceUrl: manifestUrl
-            };
-
-            this.publish(rvmMsg, resolve);
-        });
     }
 
     /**

@@ -85,7 +85,7 @@ route.frame = <WindowRoute>router.bind(HYPHEN, 'frame');
 route.window = <WindowRoute>router.bind(HYPHEN, 'window');
 route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
 
-route.channel = <SimpleRoute>router.bind(null, 'channel');
+route.channel = <WindowRoute>router.bind(HYPHEN, 'channel');
 route.system = <SimpleRoute>router.bind(null, 'system');
 route.rvmMessageBus = route['rvm-message-bus'] = <SimpleRoute>router.bind(null, 'rvm-message-bus');
 route.server = <SimpleRoute>router.bind(null, 'server');

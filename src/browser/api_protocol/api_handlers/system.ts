@@ -75,7 +75,6 @@ export const SystemApiMap: APIHandlerMap = {
     'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
     'get-runtime-info': getRuntimeInfo,
     'get-rvm-info': getRvmInfo,
-    'get-plugin-module': getPluginModule,
     'get-preload-scripts': getPreloadScripts,
     'get-version': getVersion,
     'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
@@ -174,7 +173,7 @@ function getDeviceUserId(identity: Identity, message: APIMessage, ack: Acker): v
 }
 
 function raiseEvent(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { eventName, payload: { eventArgs } } = message;
+    const { payload: { eventName, eventArgs } } = message;
 
     System.raiseEvent(eventName, eventArgs);
     ack(successAck);
@@ -553,18 +552,6 @@ function getPreloadScripts(identity: Identity, message: APIMessage, ack: Acker, 
         .then((preloadScripts) => {
             const dataAck = Object.assign({}, successAck);
             dataAck.data = preloadScripts;
-            ack(dataAck);
-        })
-        .catch(nack);
-}
-
-function getPluginModule(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
-    const { payload: name } = message;
-
-    System.getPluginModule(identity, name)
-        .then((pluginModule) => {
-            const dataAck = Object.assign({}, successAck);
-            dataAck.data = pluginModule;
             ack(dataAck);
         })
         .catch(nack);

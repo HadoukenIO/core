@@ -49,6 +49,7 @@ function five0BaseOptions() {
             'iframe': iframeBaseSettings
         },
         'applicationIcon': '',
+        'aspectRatio': 0,
         'autoShow': false,
         'backgroundThrottling': false,
         'contextMenu': true,

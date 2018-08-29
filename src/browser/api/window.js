@@ -28,7 +28,7 @@ import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
-let WindowGroups = require('../window_groups.js');
+import WindowGroups from '../window_groups';
 import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
@@ -36,12 +36,16 @@ import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
 import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
-// constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
     DEFAULT_RESIZE_SIDES
 } from '../../shapes';
+import {
+    ERROR_TITLE_RENDERER_CRASH,
+    ERROR_BOX_TYPES,
+    showErrorBox
+} from '../../common/errors';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -348,6 +352,13 @@ let optionSetters = {
             setOptOnBrowserWin('resizeRegion', newVal, browserWin);
         }
     },
+    aspectRatio: function(newVal, browserWin) {
+        if (typeof(newVal) !== 'number') {
+            return;
+        }
+        browserWin.setAspectRatio(newVal);
+        setOptOnBrowserWin('aspectRatio', newVal, browserWin);
+    },
     hasLoaded: function(newVal, browserWin) {
         if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
@@ -560,6 +571,16 @@ Window.create = function(id, opts) {
 
             if (isMainWindow) {
                 coreState.setAppRunningState(uuid, false);
+
+                // Show error box notifying the user of the crash
+                const message =
+                    `A crash occured in the renderer process of the ` +
+                    `application with the UUID "${uuid}"`;
+                const title = ERROR_TITLE_RENDERER_CRASH;
+                const type = ERROR_BOX_TYPES.RENDERER_CRASH;
+                log.writeToLog('info', '==========> ' + type);
+                const args = { message, title, type };
+                showErrorBox(args);
             }
         });
 
@@ -830,6 +851,18 @@ Window.create = function(id, opts) {
     };
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
+        /*
+            INFO:      0
+            WARNING:   1
+            ERROR:     2
+            FATAL:     3
+        */
+        if (level === /* INFO */ 0 ||
+            level === /* WARNING */ 1) {
+            // Prevent INFO and WARNING messages from writing to debug.log
+            event.preventDefault();
+        }
+
         const app = coreState.getAppByUuid(identity.uuid);
         if (!app) {
             electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);
@@ -1859,14 +1892,16 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     function handleSaveStateAlwaysResolve() {
         return new Promise((resolve, reject) => {
             if (browserWindow._options.saveWindowState) {
-                const cachedBounds = _boundsChangedHandler.getCachedBounds();
-                saveBoundsToDisk(identity, cachedBounds, err => {
-                    if (err) {
-                        log.writeToLog('info', err);
-                    }
-                    // These were causing an exception on close if the window was reloaded
-                    _boundsChangedHandler.teardown();
-                    resolve();
+                browserWindow.webContents.getZoomLevel(zoomLevel => {
+                    const cachedBounds = _boundsChangedHandler.getCachedBounds();
+                    saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
+                        if (err) {
+                            log.writeToLog('info', err);
+                        }
+                        // These were causing an exception on close if the window was reloaded
+                        _boundsChangedHandler.teardown();
+                        resolve();
+                    });
                 });
             } else {
                 _boundsChangedHandler.teardown();
@@ -1902,7 +1937,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     };
 }
 
-function saveBoundsToDisk(identity, bounds, callback) {
+function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
     const cacheFile = getBoundsCacheSafeFileName(identity);
     const data = {
         'active': 'true',
@@ -1911,7 +1946,8 @@ function saveBoundsToDisk(identity, bounds, callback) {
         'left': bounds.x,
         'top': bounds.y,
         'name': identity.name,
-        'windowState': bounds.windowState
+        'windowState': bounds.windowState,
+        'zoomLevel': zoomLevel
     };
 
     try {
@@ -1998,6 +2034,11 @@ function applyAdditionalOptionsToWindow(browserWindow) {
                 browserWindow.setAlphaMask(options.alphaMask.red, options.alphaMask.green, options.alphaMask.blue);
             } else if (options.opacity < 1) {
                 browserWindow.setOpacity(options.opacity);
+            }
+
+            // set aspect ratio if present
+            if (options.aspectRatio > 0) {
+                browserWindow.setAspectRatio(options.aspectRatio);
             }
 
             // set minimized or maximized
@@ -2381,6 +2422,13 @@ function restoreWindowPosition(identity, cb) {
             case 'minimized':
                 Window.minimize(identity);
                 break;
+        }
+
+        // set zoom level
+        const { zoomLevel } = savedBounds;
+        if (zoomLevel) {
+            const browserWindow = getElectronBrowserWindow(identity);
+            browserWindow.webContents.setZoomLevel(zoomLevel);
         }
 
         cb();

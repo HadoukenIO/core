@@ -25,7 +25,6 @@ const portDiscovery = require('../port_discovery').portDiscovery;
 
 import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
-import * as plugins from '../plugins';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch } from '../cached_resource_fetcher';
@@ -249,7 +248,19 @@ exports.System = {
         return hash.digest('hex');
     },
     getDeviceId: function() {
-        return electronApp.getHostToken();
+        if (process.platform === 'win32') {
+            return electronApp.getHostToken();
+        } else {
+            const hash = crypto.createHash('sha256');
+
+            const macAddress = os.networkInterfaces().en0[0].mac;
+            if (!macAddress) {
+                throw new Error(`MAC address (${macAddress}) not defined`);
+            }
+
+            hash.update(macAddress);
+            return hash.digest('hex');
+        }
     },
     getEntityInfo: function(identity) {
         return coreState.getEntityInfo(identity);
@@ -671,10 +682,6 @@ exports.System = {
 
     downloadPreloadScripts: function(identity, preloadScripts) {
         return downloadScripts(identity, preloadScripts);
-    },
-
-    getPluginModule: function(identity, name) {
-        return plugins.getModule(identity, name);
     },
 
     getPreloadScripts: function(identity) {

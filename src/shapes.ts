@@ -1,6 +1,7 @@
 
 import { PortInfo } from './browser/port_discovery';
 import { BrowserWindow as BrowserWindowElectron } from 'electron';
+import { ERROR_BOX_TYPES } from './common/errors';
 
 export interface Identity {
     uuid: string;
@@ -145,6 +146,7 @@ export interface WindowOptions {
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
     applicationIcon?: string;
+    aspectRatio?: number;
     autoShow?: boolean;
     backgroundColor?: string;
     backgroundThrottling?: boolean;
@@ -220,6 +222,7 @@ export interface WindowOptions {
     title?: string;
     toShowOnRun?: boolean;
     transparent?: boolean;
+    _type?: ERROR_BOX_TYPES;
     url: string;
     uuid: string;
     waitForPageLoad?: boolean;
@@ -256,7 +259,6 @@ export interface Manifest {
     };
     licenseKey: string;
     offlineAccess?: boolean;
-    plugins?: Plugin[];
     proxy?: ProxySettings;
     runtime: {
         arguments?: string;
@@ -285,13 +287,6 @@ export interface Manifest {
         forwardErrorReports?: boolean;
         enableErrorReporting?: boolean;
     };
-}
-
-export interface Plugin {
-    link?: string;
-    mandatory?: boolean;
-    name: string;
-    version: string;
 }
 
 export interface PreloadScript {
@@ -333,6 +328,7 @@ export interface SavedDiskBounds {
     top: number;
     width: number;
     windowState: string;
+    zoomLevel: number;
 }
 
 export interface Cookie {
@@ -368,4 +364,13 @@ export interface APIHandlerMap {
             checkPermissions: (args: any) => boolean;
         }
     };
+}
+
+export interface Subscriber {
+    directMsg: string;
+    name: string;
+    senderName: string;
+    senderUuid: string;
+    topic: string;
+    uuid: string;
 }

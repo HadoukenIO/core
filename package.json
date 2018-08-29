@@ -58,7 +58,7 @@
     "wrench": "^1.5.9"
   },
   "dependencies": {
-    "hadouken-js-adapter": "0.34.1-alpha.2",
+    "hadouken-js-adapter": "0.34.3",
     "minimist": "^1.2.0",
     "options": "0.0.6",
     "rx": "^4.1.0",

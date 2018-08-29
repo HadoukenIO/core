@@ -145,22 +145,20 @@ function EventListenerApiHandler() {
         'channel': {
             name: 'channel',
             subscribe: function(identity, type, payload, cb) {
-                const targetIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+                const targetIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
                 const { uuid } = targetIdentity;
                 const islocalUuid = coreState.isLocalUuid(uuid);
                 const localUnsub = Channel.addEventListener(targetIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalRuntime = ExternalApplication.isRuntimeClient(identity.uuid);
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
-                if (!islocalUuid && !isExternalRuntime) {
+                if (!islocalUuid && !isExternalClient && (type === 'channel-connected' || type === 'channel-disconnected')) {
                     const subscription = {
-                        uuid,
                         listenType: 'on',
                         className: 'channel',
                         eventName: type
                     };
-
-                    addRemoteSubscription(subscription).then(unSubscribe => {
+                    subscribeToAllRuntimes(subscription).then(unSubscribe => {
                         remoteUnSub = unSubscribe;
                     });
                 }
@@ -182,10 +180,14 @@ function EventListenerApiHandler() {
                     className: 'system',
                     eventName: type
                 };
+
                 let remoteUnSub;
-                subscribeToAllRuntimes(subscription).then(unSubscribe => {
-                    remoteUnSub = unSubscribe;
-                });
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+                if (!isExternalClient) {
+                    subscribeToAllRuntimes(subscription).then(unSubscribe => {
+                        remoteUnSub = unSubscribe;
+                    });
+                }
 
                 return () => {
                     localUnsub();

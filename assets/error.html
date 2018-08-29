@@ -73,9 +73,8 @@
 	<div id="container-error">
 		<img class="error-icon" src="error-icon.png">
 		<div id="error-wrapper">
-			<div id="error-title">A JavaScript error occurred in the main process</div>
+			<div id="error-title"></div>
 			<div id="error-body">
-				<div>Uncaught Exception:</div>
 				<div id="error-message"></div>
 			</div>
 		</div>
@@ -98,15 +97,22 @@
 
 		async function getExceptionData() {
 			const wnd = await fin.Window.getCurrent();
-			const { customData } = await wnd.getOptions();
+			const { customData: { title, error } } = await wnd.getOptions();
+			const errorTitleEl = document.querySelector('#error-title');
 			const errorMessageEl = document.querySelector('#error-message');
-
-			errorMessageEl.innerHTML = customData.error.stack;
+			
+			if (title) {
+				errorTitleEl.innerHTML = title;
+			} else {
+				errorTitleEl.remove();
+			}
+			
+			errorMessageEl.innerHTML = error;
 			
 			// Keep increasing the height of the error dialog until
 			// the error message is fully visible. This will ensure
 			// error dialogs are not too big in height.
-			let resizeSafetyCount = 30; // for safety, max 30 resizes (300px)
+			let resizeSafetyCount = 50; // for safety, max 50 resizes (500px)
 			while (resizeSafetyCount-- && !isElementInViewport(errorMessageEl)) {
 				await wnd.resizeBy(0, 10);
 				await wait(); // needs a small break for resizing to be fully done
@@ -115,7 +121,7 @@
 			await wnd.show();
 			
 			document.body.addEventListener('copy', (event) => {
-				fin.Clipboard.writeText({ data: customData.error.stack });
+				fin.Clipboard.writeText({ data: error });
 			});
 		}
 

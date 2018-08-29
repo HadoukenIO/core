@@ -25,13 +25,14 @@ let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
-let WindowGroups = require('../window_groups.js');
+import WindowGroups from '../window_groups';
 import { sendToRVM } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
 import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
+import { ERROR_BOX_TYPES } from '../../common/errors';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -310,6 +311,11 @@ Application.getParentApplication = function(identity) {
     } = app || {};
 
     return parentUuid;
+};
+
+Application.getZoomLevel = function(identity, callback) {
+    const app = coreState.appByUuid(identity.uuid);
+    Window.getZoomLevel(app.appObj.identity, callback);
 };
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
@@ -657,7 +663,13 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
         coreState.removeApp(app.id);
 
-        if (!app._options._runtimeAuthDialog && !runtimeIsClosing && coreState.shouldCloseRuntime()) {
+        const shouldCloseRuntime =
+            app._options._type !== ERROR_BOX_TYPES.RENDERER_CRASH &&
+            !app._options._runtimeAuthDialog &&
+            !runtimeIsClosing &&
+            coreState.shouldCloseRuntime();
+
+        if (shouldCloseRuntime) {
             try {
                 runtimeIsClosing = true;
                 let appsToClose = coreState.getAllAppObjects();
@@ -823,6 +835,20 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
         fetchingIcon[uuid] = false;
     });
+};
+
+Application.setZoomLevel = function(identity, level) {
+    const app = coreState.appByUuid(identity.uuid);
+
+    // set zoom level for each child window
+    app.children.forEach(function(childWindow) {
+        const childWindowIdentity = {
+            name: childWindow.openfinWindow.name,
+            uuid: childWindow.openfinWindow.uuid
+        };
+        Window.setZoomLevel(childWindowIdentity, level);
+    });
+
 };
 
 

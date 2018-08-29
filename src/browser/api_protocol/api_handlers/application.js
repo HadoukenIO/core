@@ -49,6 +49,7 @@ module.exports.applicationApiMap = {
     'external-window-action': externalWindowAction,
     'get-application-groups': getApplicationGroups,
     'get-application-manifest': getApplicationManifest,
+    'get-application-zoom-level': getApplicationZoomLevel,
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
@@ -66,6 +67,7 @@ module.exports.applicationApiMap = {
     'run-application': runApplication,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
     'set-tray-icon': setTrayIcon,
+    'set-application-zoom-level': setApplicationZoomLevel,
     'terminate-application': terminateApplication,
     'wait-for-hung-application': waitForHungApplication
 };
@@ -83,6 +85,16 @@ function setTrayIcon(identity, rawMessage, ack, nack) {
         ack(successAck);
     }, nack);
 }
+
+function setApplicationZoomLevel(identity, rawMessage, ack) {
+    const message = JSON.parse(JSON.stringify(rawMessage));
+    const payload = message.payload;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+
+    Application.setZoomLevel(appIdentity, payload.level);
+    ack(successAck);
+}
+
 
 function getTrayIconInfo(identity, message, ack, nack) {
     const dataAck = _.clone(successAck);
@@ -190,6 +202,15 @@ function getApplicationGroups(identity, message, ack) {
         });
     });
     ack(dataAck);
+}
+
+function getApplicationZoomLevel(identity, message, ack) {
+    const dataAck = _.clone(successAck);
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+    Application.getZoomLevel(appIdentity, level => {
+        dataAck.data = level;
+        ack(dataAck);
+    });
 }
 
 function getChildWindows(identity, message, ack) {
