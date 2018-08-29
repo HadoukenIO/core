@@ -28,7 +28,8 @@ const successAck = {
 };
 
 const privateEvents = {
-    'file-downloaded': true
+    'file-download-started': true,
+    'file-download-done': true
 };
 
 function EventListenerApiHandler() {

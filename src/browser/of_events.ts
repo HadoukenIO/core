@@ -32,6 +32,7 @@ class OFEvents extends EventEmitter {
                 if (channel === 'window') {
                     const propTopic = `window-${topic}`;
                     const dontPropagate = [
+                        'close-requested',
                         'close-requested'
                     ];
                     if (!dontPropagate.some(t => t === topic)) {

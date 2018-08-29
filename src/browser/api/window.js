@@ -544,43 +544,46 @@ Window.create = function(id, opts) {
             webContents.removeAllListeners();
         });
 
-        log.writeToLog('info', 'Ok, will sub to the will-download events');
         if (coreState.argo['get-download-events']) {
             try {
                 webContents.session.on('will-download', (event, item, webContents) => {
-                    log.writeToLog('info', 'Ok, I am getting these events');
-                    item.once('done', (event, state) => {
-                        try {
-                            const type = 'file-downloaded';
-                            const fileUuid = electronApp.generateGUID();
-                            const savePath = item.getSavePath();
-                            coreState.fileDownloadLocationMap.set(fileUuid, savePath);
+                    try {
+                        const fileUuid = electronApp.generateGUID();
 
-                            log.writeToLog('info', 'the item is done');
-                            log.writeToLog('info', savePath);
-                            //Only raise events for successful downloads.
-                            if (state !== 'completed') {
-                                return;
+                        const fileEvent = {
+                            fileUuid,
+                            url: item.getURL(),
+                            mimeType: item.getMimeType(),
+                            fileName: item.getFilename(),
+                            topic: 'window',
+                            type: 'file-download-started',
+                            uuid,
+                            name
+                        };
+
+                        ofEvents.emit(route.window(fileEvent.type, uuid, name), fileEvent);
+
+                        item.once('done', (event, state) => {
+                            try {
+                                const savePath = item.getSavePath();
+                                coreState.fileDownloadLocationMap.set(fileUuid, savePath);
+
+                                //Only raise events for successful downloads.
+                                if (state !== 'completed') {
+                                    log.writeToLog('info', `download not completed, state: ${state}`);
+                                }
+
+                                fileEvent.type = 'file-download-done';
+                                fileEvent.state = state;
+
+                                ofEvents.emit(route.window(fileEvent.type, uuid, name), fileEvent);
+                            } catch (e) {
+                                log.writeToLog('info', e);
                             }
-
-                            const fileEvent = {
-                                fileUuid,
-                                URL: item.getURL(),
-                                MimeType: item.getMimeType(),
-                                fileName: item.getFilename(),
-                                topic: 'window',
-                                type,
-                                uuid,
-                                name,
-                                state
-                            };
-
-                            ofEvents.emit(route.window(type, uuid, name), fileEvent);
-
-                        } catch (e) {
-                            log.writeToLog('info', e);
-                        }
-                    });
+                        });
+                    } catch (e) {
+                        log.writeToLog('info', e);
+                    }
                 });
             } catch (e) {
                 log.writeToLog('info', e);
