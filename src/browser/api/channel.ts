@@ -53,21 +53,6 @@ const constructOnDisconnection = (providerIdentity: ProviderIdentity): () => voi
     };
 };
 
-// const createChannelTeardown = (providerIdentity: ProviderIdentity): void => {
-//     // When channel exits, remove from channelMap
-//     const { uuid, name, isExternal, channelId } = providerIdentity;
-//     const closedEvent = isExternal ? route.externalApplication('closed', uuid) : route.window('closed', uuid, name);
-//     ofEvents.once(closedEvent, () => {
-//         channelMap.delete(channelId);
-//         ofEvents.emit(route.channel('disconnected'), providerIdentity);
-//         // Need channel-disconnected for compatibility with 9.61.34.*
-//         ofEvents.emit(route.channel('channel-disconnected'), providerIdentity);
-//     });
-
-//     // For some reason this is captured sometimes when window closed is not
-//     ofEvents.once(route.application('closed', uuid), () => channelMap.delete(channelId));
-// };
-
 export module Channel {
     export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
         const { uuid, name } = targetIdentity;
