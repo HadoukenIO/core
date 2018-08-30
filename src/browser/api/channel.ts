@@ -154,7 +154,7 @@ export module Channel {
                 }
             });
         } else if (identity.runtimeUuid) {
-            // Ack back with undefined for multi-runtime to make mesh middleware work
+            // Ack back with undefined payload for multi-runtime to make mesh middleware work
             ack({ success: true });
         } else {
             // Do not change this, checking for this in adapter
