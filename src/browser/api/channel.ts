@@ -95,7 +95,12 @@ export module Channel {
         const providerIdentity = { ...providerApp, channelName, channelId };
         channelMap.set(channelId, providerIdentity);
 
+        if (!providerIdentity.isExternal) {
+            const { uuid, name } = providerIdentity;
+            ofEvents.once(route.window('reloaded', uuid, name), () => ofEvents.emit(route.channel('disconnected'), providerIdentity));
+        }
         subscriptionManager.registerSubscription(constructOnDisconnection(providerIdentity), identity, channelId);
+
 
         // createChannelTeardown(providerIdentity);
         // Used internally by adapters for pending connections and onChannelConnect
@@ -125,6 +130,7 @@ export module Channel {
                 }
             });
         } else if (identity.runtimeUuid) {
+            // If has runtimeUuid call originated in another runtime, ack back undefined for mesh middleware purposes
             ack({ success: true });
         } else {
             // Do not change this, checking for this in adapter
