@@ -3,16 +3,12 @@ import { ApiTransportBase, MessagePackage } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
 import { Identity } from '../../../shapes';
-
+import { writeToLog } from '../../log';
 declare var require: any;
 
 const coreState = require('../../core_state');
 const electronIpc = require('../../transports/electron_ipc');
 const system = require('../../api/system').System;
-
-// this represents the future default behavior, here its opt-in
-const frameStrategy = coreState.argo.framestrategy;
-const bypassLocalFrameConnect = frameStrategy === 'frames';
 
 export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
@@ -27,24 +23,16 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             } else {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
-                    // If --framestrategy=frames is set, short circuit the checks. This will
-                    // allow calls from all frames through with iframes getting auto named
-                    if (bypassLocalFrameConnect ||
-                        !data.singleFrameOnly === false ||
-                        e.sender.isValidWithFrameConnect(e.frameRoutingId)) {
-                        Promise.resolve()
-                            .then(() => endpoint.apiFunc(identity, data, ack, nack))
-                            .then(result => {
-                                // older action calls will invoke ack internally, newer ones will return a value
-                                if (result !== undefined) {
-                                    ack(new AckPayload(result));
-                                }
-                            }).catch(err => {
-                                nack(err);
-                            });
-                    } else {
-                        nack('API access has been superseded by another frame in this window.');
-                    }
+                    Promise.resolve()
+                        .then(() => endpoint.apiFunc(identity, data, ack, nack))
+                        .then(result => {
+                            // older action calls will invoke ack internally, newer ones will return a value
+                            if (result !== undefined) {
+                                ack(new AckPayload(result));
+                            }
+                        }).catch(err => {
+                            nack(err);
+                        });
                 }
             }
         });
@@ -104,13 +92,28 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             const browserWindow = e.sender.getOwnerBrowserWindow();
             const currWindow = browserWindow ? coreState.getWinById(browserWindow.id) : null;
             const openfinWindow = currWindow && currWindow.openfinWindow;
-            const opts = openfinWindow && openfinWindow._options || {};
-            const subFrameName = bypassLocalFrameConnect ? e.sender.getFrameName(e.frameRoutingId) : null;
+            const opts = openfinWindow && openfinWindow._options;
+
+            if (!opts) {
+                throw new Error(`Unable to locate window information for endpoint with window id ${browserWindow.id}`);
+            }
+
+            const entityType = e.sender.getEntityType(e.frameRoutingId);
+            const isWindow  = ! e.sender.isIframe(e.frameRoutingId);
+            const { api: { iframe: { enableDepricatedSharedName } } } = opts;
+            let subFrameName;
+
+            if (isWindow || enableDepricatedSharedName) {
+                subFrameName = opts.name;
+            } else {
+                subFrameName = e.sender.getFrameName(e.frameRoutingId);
+            }
+
             const identity = {
-                name: subFrameName || opts.name,
+                name: subFrameName,
                 uuid: opts.uuid,
                 parentFrame: opts.name,
-                entityType: e.sender.getEntityType(e.frameRoutingId)
+                entityType
             };
 
             /* tslint:disable: max-line-length */
