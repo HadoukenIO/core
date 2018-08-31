@@ -1970,7 +1970,6 @@ function getBoundsCacheSafeFileName(identity) {
         // If an old file name exists, replace it by a new file name
         if (fs.existsSync(oldFileName)) {
             fs.renameSync(oldFileName, newFileName);
-            log.writeToLog('info', `renamed: ${oldFileName} to: ${newFileName}`);
         }
     }
     return newFileName;
