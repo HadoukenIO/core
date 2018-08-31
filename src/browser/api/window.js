@@ -1949,16 +1949,31 @@ function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
     } catch (err) {
         callback(err);
     }
-
 }
+
 //make sure the uuid/names with special characters do not break the bounds cache.
 function getBoundsCacheSafeFileName(identity) {
+    const userCache = electronApp.getPath('userCache');
+
+    // new style file name
     const hash = crypto.createHash('sha256');
     hash.update(identity.uuid);
     hash.update(identity.name);
     const safeName = hash.digest('hex');
-    const userCache = electronApp.getPath('userCache');
-    return path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
+    const newFileName = path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
+
+    if (!fs.existsSync(newFileName)) {
+        // current old style file name
+        const oldSafeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+        const oldFileName = path.join(userCache, windowPosCacheFolder, `${oldSafeName}.json`);
+
+        // If an old file name exists, replace it by a new file name
+        if (fs.existsSync(oldFileName)) {
+            fs.renameSync(oldFileName, newFileName);
+            log.writeToLog('info', `renamed: ${oldFileName} to: ${newFileName}`);
+        }
+    }
+    return newFileName;
 }
 
 function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
