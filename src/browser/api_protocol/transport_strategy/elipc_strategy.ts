@@ -100,10 +100,10 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
             const entityType = e.sender.getEntityType(e.frameRoutingId);
             const isWindow  = ! e.sender.isIframe(e.frameRoutingId);
-            const { api: { iframe: { enableDepricatedSharedName } } } = opts;
+            const { api: { iframe: { enableDeprecatedSharedName } } } = opts;
             let subFrameName;
 
-            if (isWindow || enableDepricatedSharedName) {
+            if (isWindow || enableDeprecatedSharedName) {
                 subFrameName = opts.name;
             } else {
                 subFrameName = e.sender.getFrameName(e.frameRoutingId);

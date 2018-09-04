@@ -29,7 +29,7 @@
     const {
         elIPCConfig,
         options: initialOptions,
-        options: { api: { iframe: { enableDepricatedSharedName } } },
+        options: { api: { iframe: { enableDeprecatedSharedName } } },
         socketServerState,
         runtimeArguments,
         frames
@@ -41,7 +41,7 @@
     // The following will check whether it is an iframe and update
     // entity information accordingly
     const frameInfo = frames.find(e => e.frameRoutingId === renderFrameId);
-    const entityInfo = isMainFrame || enableDepricatedSharedName ? glbl.__startOptions.entityInfo : frameInfo;
+    const entityInfo = isMainFrame || enableDeprecatedSharedName ? glbl.__startOptions.entityInfo : frameInfo;
     const decorateOpen = !runtimeArguments.includes('--native-window-open');
 
     let getOpenerSuccessCallbackCalled = () => {

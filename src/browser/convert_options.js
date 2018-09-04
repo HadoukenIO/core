@@ -27,7 +27,7 @@ const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 const iframeBaseSettings = {
     'crossOriginInjection': false,
     'sameOriginInjection': true,
-    'enableDepricatedSharedName': false
+    'enableDeprecatedSharedName': false
 };
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
