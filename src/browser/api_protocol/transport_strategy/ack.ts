@@ -3,6 +3,7 @@ const errors = require('../../../common/errors');
 
 export class AckMessage {
     public readonly action: string = 'ack';
+    public breadcrumbs: Array<any>;
     public correlationId: number;
     public payload: AckPayload | NackPayload;
 }

@@ -68,6 +68,7 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'api': {
+                'breadcrumbs': false,
                 'iframe': iframeBaseSettings
             },
             'disableInitialReload': false,
