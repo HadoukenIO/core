@@ -62,7 +62,7 @@ enum WindowState {
     Maximized = 'maximized',
     Minimized = 'minimized'
 }
-interface DefferedEvent {
+interface DeferedEvent {
     changeType: number;
     reason: string;
     name: string;
@@ -165,7 +165,7 @@ export default class BoundsChangedStateTracker {
     private _userBoundsChangeActive = false;
 
     private _deferred = false;
-    private _deferredEvents: DefferedEvent[] = [];
+    private _deferredEvents: DeferedEvent[] = [];
 
     private setUserBoundsChangeActive = (enabled: boolean): void => {
         this._userBoundsChangeActive = enabled;
@@ -499,8 +499,8 @@ export default class BoundsChangedStateTracker {
         return dispatchedChange;
     };
 
-    private collapseEventReasonTypes = (eventsList: DefferedEvent[]): DefferedEvent[] => {
-        const eventGroups: DefferedEvent[][] = [];
+    private collapseEventReasonTypes = (eventsList: DeferedEvent[]): DeferedEvent[] => {
+        const eventGroups: DeferedEvent[][] = [];
 
         eventsList.forEach((event, index): void => {
             if (index === 0 || event.reason !== eventsList[index - 1].reason) {
@@ -512,7 +512,7 @@ export default class BoundsChangedStateTracker {
             }
         });
 
-        return eventGroups.map((group): DefferedEvent => {
+        return eventGroups.map((group): DeferedEvent => {
             let sizeChange = false;
             let posChange = false;
 
