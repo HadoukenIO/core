@@ -129,6 +129,11 @@ export module Channel {
 
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { channelName, payload: connectionPayload } = payload;
+<<<<<<< HEAD
+=======
+
+        const providerIdentity = Channel.getChannelByChannelName(channelName);
+>>>>>>> 11aa3806e595392c56d1cc8ec4d3ab8c972f6e93
 
         const providerIdentity = Channel.getChannelByChannelName(channelName);
 
@@ -146,6 +151,10 @@ export module Channel {
                 }
             });
         } else if (identity.runtimeUuid) {
+<<<<<<< HEAD
+=======
+            // Ack back with undefined payload for multi-runtime to make mesh middleware work
+>>>>>>> 11aa3806e595392c56d1cc8ec4d3ab8c972f6e93
             ack({ success: true });
         } else {
             // Do not change this, checking for this in adapter
