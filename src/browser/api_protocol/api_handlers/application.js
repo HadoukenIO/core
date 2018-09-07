@@ -86,14 +86,13 @@ function setTrayIcon(identity, rawMessage, ack, nack) {
     }, nack);
 }
 
-function setApplicationZoomLevel(identity, rawMessage, ack, nack) {
+function setApplicationZoomLevel(identity, rawMessage, ack) {
     const message = JSON.parse(JSON.stringify(rawMessage));
     const payload = message.payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-    Application.setZoomLevel(appIdentity, payload.level, () => {
-        ack(successAck);
-    }, nack);
+    Application.setZoomLevel(appIdentity, payload.level);
+    ack(successAck);
 }
 
 
@@ -130,12 +129,11 @@ function terminateApplication(identity, message, ack) {
 
 }
 
-function restartApplication(identity, message, ack, nack) {
+function restartApplication(identity, message, ack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
-    Application.restart(appIdentity, () => {
-        ack(successAck);
-    }, nack);
+    Application.restart(appIdentity);
+    ack(successAck);
 }
 
 function createChildWindow(identity, message, ack) {
@@ -206,26 +204,24 @@ function getApplicationGroups(identity, message, ack) {
     ack(dataAck);
 }
 
-function getApplicationZoomLevel(identity, message, ack, nack) {
+function getApplicationZoomLevel(identity, message, ack) {
     const dataAck = _.clone(successAck);
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
     Application.getZoomLevel(appIdentity, level => {
         dataAck.data = level;
         ack(dataAck);
-    }, nack);
+    });
 }
 
-function getChildWindows(identity, message, ack, nack) {
+function getChildWindows(identity, message, ack) {
     const dataAck = _.clone(successAck);
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
 
-    Application.getChildWindows(appIdentity, response => {
-        dataAck.data = _.chain(response)
-            .filter(function(c) { return c.name !== c.uuid; })
-            .map(function(c) { return c.name; })
-            .value();
-        ack(dataAck);
-    }, nack);
+    dataAck.data = _.chain(Application.getChildWindows(appIdentity))
+        .filter(function(c) { return c.name !== c.uuid; })
+        .map(function(c) { return c.name; })
+        .value();
+    ack(dataAck);
 }
 
 function getInfo(identity, message, ack, nack) {

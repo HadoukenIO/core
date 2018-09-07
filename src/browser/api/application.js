@@ -278,15 +278,15 @@ Application.close = function(identity, force, callback) {
     }
 };
 
-Application.getChildWindows = function(identity, callback, errorCallback) {
+Application.getChildWindows = function(identity /*, callback, errorCallback*/ ) {
     const uuid = identity.uuid;
     const appError = checkApplicationAvailability(uuid);
 
     if (appError) {
-        errorCallback(new Error(appError));
+        throw new Error(appError);
     } else {
         const app = Application.wrap(uuid);
-        callback(coreState.getChildrenByApp(app.id));
+        return coreState.getChildrenByApp(app.id);
     }
 };
 
@@ -319,12 +319,12 @@ Application.getParentApplication = function(identity) {
     return parentUuid;
 };
 
-Application.getZoomLevel = function(identity, callback, errorCallback) {
+Application.getZoomLevel = function(identity, callback) {
     const uuid = identity.uuid;
     const appError = checkApplicationAvailability(uuid);
 
     if (appError) {
-        errorCallback(new Error(appError));
+        throw new Error(appError);
     } else {
         const app = coreState.appByUuid(uuid);
         Window.getZoomLevel(app.appObj.identity, callback);
@@ -451,15 +451,16 @@ Application.removeTrayIcon = function(identity) {
     removeTrayIcon(app);
 };
 
-Application.restart = function(identity, callback, errorCallback) {
+Application.restart = function(identity) {
     const uuid = identity.uuid;
     const appError = checkApplicationAvailability(uuid);
 
     if (appError) {
-        errorCallback(new Error(appError));
+        throw new Error(appError);
     }
 
     const appObj = coreState.getAppObjByUuid(uuid);
+
     coreState.setAppRestartingState(uuid, true);
 
     try {
