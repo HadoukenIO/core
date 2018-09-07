@@ -182,7 +182,12 @@ export module Channel {
         if (destinationToken) {
             if (success) {
                 ackObj.payload = new AckPayload(ackPayload);
-                sendToIdentity(destinationToken, ackObj);
+                if (destinationToken.runtimeUuid) {
+                    // Was sent from another runtime, ack to runtime not identity
+                    sendToIdentity({uuid: destinationToken.runtimeUuid}, ackObj);
+                } else {
+                    sendToIdentity(destinationToken, ackObj);
+                }
             } else {
                 ackObj.payload = new NackPayload(reason);
                 sendToIdentity(destinationToken, ackObj);
