@@ -861,12 +861,12 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     });
 };
 
-Application.setZoomLevel = function(identity, level, callback, errorCallback) {
+Application.setZoomLevel = function(identity, level) {
     const uuid = identity.uuid;
     const appError = checkApplicationAvailability(uuid);
 
     if (appError) {
-        errorCallback(new Error(appError));
+        throw new Error(appError);
     } else {
         const app = coreState.appByUuid(uuid);
 
@@ -878,9 +878,6 @@ Application.setZoomLevel = function(identity, level, callback, errorCallback) {
             };
             Window.setZoomLevel(childWindowIdentity, level);
         });
-        if (typeof callback === 'function') {
-            callback();
-        }
     }
 };
 
