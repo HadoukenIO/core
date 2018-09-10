@@ -167,9 +167,9 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
 
     try {
         if (connectionManager.connections.length && isAggregateAction && isLocalAction) {
-            let aggregateData = data;
+            const aggregateData = JSON.parse(JSON.stringify(data));
             if (action === 'create-channel') {
-                aggregateData = {...data, action: 'get-all-channels'};
+                aggregateData.action = 'get-all-channels';
             }
             Promise.all(connectionManager.connections.map(runtime => runtime.fin.System.executeOnRemote(identity, aggregateData)))
             .then(externalResults => {
