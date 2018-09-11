@@ -46,6 +46,7 @@ import {
     ERROR_BOX_TYPES,
     showErrorBox
 } from '../../common/errors';
+//import { createWillDownloadEventListener } from './file_download';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -543,52 +544,6 @@ Window.create = function(id, opts) {
         webContents.once('close', () => {
             webContents.removeAllListeners();
         });
-
-        if (coreState.argo['get-download-events']) {
-            try {
-                webContents.session.on('will-download', (event, item, webContents) => {
-                    try {
-                        const fileUuid = electronApp.generateGUID();
-
-                        const fileEvent = {
-                            fileUuid,
-                            url: item.getURL(),
-                            mimeType: item.getMimeType(),
-                            fileName: item.getFilename(),
-                            topic: 'window',
-                            type: 'file-download-started',
-                            uuid,
-                            name
-                        };
-
-                        ofEvents.emit(route.window(fileEvent.type, uuid, name), fileEvent);
-
-                        item.once('done', (event, state) => {
-                            try {
-                                const savePath = item.getSavePath();
-                                coreState.fileDownloadLocationMap.set(fileUuid, savePath);
-
-                                //Only raise events for successful downloads.
-                                if (state !== 'completed') {
-                                    log.writeToLog('info', `download not completed, state: ${state}`);
-                                }
-
-                                fileEvent.type = 'file-download-done';
-                                fileEvent.state = state;
-
-                                ofEvents.emit(route.window(fileEvent.type, uuid, name), fileEvent);
-                            } catch (e) {
-                                log.writeToLog('info', e);
-                            }
-                        });
-                    } catch (e) {
-                        log.writeToLog('info', e);
-                    }
-                });
-            } catch (e) {
-                log.writeToLog('info', e);
-            }
-        }
 
         const isMainWindow = (uuid === name);
         const emitToAppIfMainWin = (type, payload) => {

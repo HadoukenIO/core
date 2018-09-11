@@ -7,7 +7,7 @@ let ProcessMonitor = require('electron').processMonitor;
 
 import ofEvents from './of_events';
 import route from '../common/route';
-import { fileDownloadLocationMap } from './core_state';
+import * as fileDownload from './api/file_download';
 import * as log from './log';
 
 const isWin32 = (process.platform === 'win32');
@@ -234,10 +234,13 @@ ProcessTracker.prototype.launch = function(identity, options, errDataCallback) {
         log.writeToLog('info', fileUuid);
         //if we are given a fileUuid we will overwrite the filePath
         if (fileUuid) {
-            const downloadPath = fileDownloadLocationMap.get(fileUuid);
-            log.writeToLog('info', downloadPath);
-            if (downloadPath) {
-                filePath = downloadPath;
+            if (fileDownload.hasAccess(identity, fileUuid)) {
+                const FileDownloadLocation = fileDownload.downloadLocationMap.get(fileUuid);
+                if (FileDownloadLocation) {
+                    filePath = FileDownloadLocation.path;
+                }
+            } else {
+                error(`Identity uuid:${uuid} does not have access to fileUuid: ${fileUuid}`);
             }
         }
 
