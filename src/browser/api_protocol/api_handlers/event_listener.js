@@ -220,7 +220,7 @@ function EventListenerApiHandler() {
         }
     };
 
-    function subToDesktopEvent(identity, message, ack, nack) {
+    function subToDesktopEvent(identity, message, ack) {
         let topic = message.payload.topic;
         let uuid = message.payload.uuid;
         let type = message.payload.type;
@@ -270,5 +270,4 @@ function EventListenerApiHandler() {
         ack(successAck);
     }
 }
-
 module.exports.EventListenerApiHandler = EventListenerApiHandler;

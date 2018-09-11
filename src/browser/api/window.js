@@ -46,7 +46,6 @@ import {
     ERROR_BOX_TYPES,
     showErrorBox
 } from '../../common/errors';
-//import { createWillDownloadEventListener } from './file_download';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';

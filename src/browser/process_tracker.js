@@ -230,8 +230,6 @@ ProcessTracker.prototype.launch = function(identity, options, errDataCallback) {
         let certificateOptions = withDefaultCertOptions(options.certificate);
         let fileUuid = options.fileUuid;
 
-        log.writeToLog('info', 'fileUuid');
-        log.writeToLog('info', fileUuid);
         //if we are given a fileUuid we will overwrite the filePath
         if (fileUuid) {
             if (fileDownload.hasAccess(identity, fileUuid)) {
