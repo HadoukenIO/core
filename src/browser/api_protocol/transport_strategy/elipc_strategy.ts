@@ -38,6 +38,32 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         });
     }
 
+    private canTrySend(routingInfo: any): boolean {
+        const { browserWindow, frameRoutingId } = routingInfo;
+        const browserWindowLocated = browserWindow;
+        const browserWindowExists = !browserWindow.isDestroyed();
+        const validRoutingId = typeof frameRoutingId === 'number';
+        return browserWindowLocated && browserWindowExists && validRoutingId;
+    }
+
+    // Dispatch a message
+    private innerSend(payload: string,
+                      frameRoutingId: number,
+                      mainFrameRoutingId: number,
+                      browserWindow: any): void {
+        if (frameRoutingId === mainFrameRoutingId) {
+            // this is the main window frame
+            if (coreState.argo.framestrategy === 'frames') {
+                browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
+            } else {
+                browserWindow.send(electronIpc.channels.CORE_MESSAGE, payload);
+            }
+        } else {
+            // frameRoutingId != browserWindow.webContents.mainFrameRoutingId implies a frame
+            browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
+        }
+    }
+
     public registerMessageHandlers(): void {
         electronIpc.ipc.on(electronIpc.channels.WINDOW_MESSAGE, this.onMessage.bind(this));
     }
@@ -51,25 +77,13 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             return;
         }
 
-        const { browserWindow, frameRoutingId } = routingInfo;
+        const { browserWindow, mainFrameRoutingId, frameRoutingId } = routingInfo;
         const payload = JSON.stringify(payloadObj);
-        const browserWindowLocated = browserWindow;
-        const browserWindowExists = !browserWindow.isDestroyed();
-        const validRoutingId = typeof frameRoutingId === 'number';
-        const canTrySend = browserWindowLocated && browserWindowExists && validRoutingId;
 
-        if (!canTrySend) {
+        if (!this.canTrySend(routingInfo)) {
             system.debugLog(1, `uuid:${uuid} name:${name} frameRoutingId:${frameRoutingId} not reachable, payload:${payload}`);
-        } else if (frameRoutingId === routingInfo.mainFrameRoutingId) {
-            // this is the main window frame
-            if (coreState.argo.framestrategy === 'frames') {
-                browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
-            } else {
-                browserWindow.send(electronIpc.channels.CORE_MESSAGE, payload);
-            }
         } else {
-            // frameRoutingId != browserWindow.webContents.mainFrameRoutingId implies a frame
-            browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
+            this.innerSend(payload, frameRoutingId, mainFrameRoutingId, browserWindow);
         }
     }
 
