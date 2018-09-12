@@ -8,7 +8,6 @@ let ProcessMonitor = require('electron').processMonitor;
 import ofEvents from './of_events';
 import route from '../common/route';
 import * as fileDownload from './api/file_download';
-import * as log from './log';
 
 const isWin32 = (process.platform === 'win32');
 

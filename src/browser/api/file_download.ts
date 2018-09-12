@@ -12,7 +12,7 @@ export const FILE_DOWNLOAD_EVENTS = {
     COMPLETED: 'file-download-completed'
 };
 
-type DownloadState = 'started' | 'completed' | ' cancelled' |  'interrupted' | 'paused' | 'interrupted' | 'paused' | 'progressing';
+type DownloadState = 'started' | 'completed' | ' cancelled' |  'interrupted' | 'paused' | 'paused' | 'progressing';
 
 interface FileEvent {
     fileUuid: string;
