@@ -156,7 +156,7 @@ function getCrashReporterState(identity: Identity, message: APIMessage, ack: Ack
 }
 
 function getAppAssetInfo(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
-    const { options } = message;
+    const options = message.payload;
 
     System.getAppAssetInfo(identity, options, (data: any) => {
         const dataAck = Object.assign({}, successAck);
