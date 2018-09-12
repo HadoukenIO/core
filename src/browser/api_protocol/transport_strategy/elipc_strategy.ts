@@ -101,7 +101,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
         try {
             const data = JSON.parse(JSON.stringify(rawData));
-            const ack = !data.isSync ? this.ackDecorator(e, data.messageId) : this.ackDecoratorSync(e, data.messageId);
+            const ack = !data.isSync ? this.ackDecorator(e, data.messageId, data) : this.ackDecoratorSync(e, data.messageId);
             const nack = this.nackDecorator(ack);
             const browserWindow = e.sender.getOwnerBrowserWindow();
             const currWindow = browserWindow ? coreState.getWinById(browserWindow.id) : null;
@@ -168,9 +168,29 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         };
     }
 
-    protected ackDecorator(e: any, messageId: number): AckFunc {
+    private addBreadcrumb(message: any,  messageId: number, action: string, name: string): void {
+        if (message && message.breadcrumbs && message.breadcrumbs.length) {
+            message.breadcrumbs.push({
+                action,
+                messageId,
+                name,
+                time: Date.now()
+            });
+        }
+    }
+
+    protected ackDecorator(e: any, messageId: number, originalPayload: any): AckFunc {
         const ackObj = new AckMessage();
         ackObj.correlationId = messageId;
+
+        // It is inferred that breadcrumbs have been enabled for a window
+        // when the breadcrumb array is present in the original payload of the API request.
+        const usingBreadcrumbs = originalPayload.breadcrumbs && originalPayload.breadcrumbs.length;
+
+        if (usingBreadcrumbs) {
+            ackObj.breadcrumbs = originalPayload.breadcrumbs;
+            this.addBreadcrumb(ackObj, messageId, originalPayload.action, 'core/ackDecorator');
+        }
 
         return (payload: any): void => {
             ackObj.payload = payload;
@@ -184,6 +204,10 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             }
 
             if (!e.sender.isDestroyed()) {
+                if (usingBreadcrumbs) {
+                    this.addBreadcrumb(ackObj, messageId, originalPayload.action, 'core/ACK');
+                }
+
                 e.sender.sendToFrame(e.frameRoutingId, electronIpc.channels.CORE_MESSAGE, JSON.stringify(ackObj));
             }
         };
