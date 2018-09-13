@@ -107,7 +107,7 @@ export function showErrorBox(data: ErrorBox): Promise<void> {
                     autoShow: false, // shown later after resizing is done
                     alwaysOnTop: true,
                     resizable: false,
-                    contextMenu: true,
+                    contextMenu: false,
                     minimizable: false,
                     maximizable: false,
                     nonPersistent: true,
