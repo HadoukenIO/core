@@ -270,6 +270,4 @@ function EventListenerApiHandler() {
         ack(successAck);
     }
 }
-
-
 module.exports.EventListenerApiHandler = EventListenerApiHandler;
