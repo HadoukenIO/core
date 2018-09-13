@@ -70,6 +70,7 @@ function five0BaseOptions() {
         'experimental': {
             'api': {
                 'breadcrumbs': false,
+                'fileDownloadApi': false,
                 'iframe': iframeBaseSettings
             },
             'disableInitialReload': false,
