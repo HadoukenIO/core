@@ -69,7 +69,8 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'api': {
-                'iframe': iframeBaseSettings
+                'iframe': iframeBaseSettings,
+                'fileDownloadApi': false
             },
             'disableInitialReload': false,
             'node': false,
