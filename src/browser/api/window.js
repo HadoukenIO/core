@@ -578,7 +578,6 @@ Window.create = function(id, opts) {
                     `application with the UUID "${uuid}"`;
                 const title = ERROR_TITLE_RENDERER_CRASH;
                 const type = ERROR_BOX_TYPES.RENDERER_CRASH;
-                log.writeToLog('info', '==========> ' + type);
                 const args = { message, title, type };
                 showErrorBox(args);
             }
