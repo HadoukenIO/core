@@ -85,10 +85,10 @@ export function showErrorBox(data: ErrorBox): Promise<void> {
         }
 
         if (errorBoxesQty >= maxErrorBoxesQty) {
-            writeToLog('info', `Not showing custom error box because the ` +
-                `quantity of active custom error boxes exceeded maximum ` +
+            writeToLog('info', 'Not showing custom error box because the ' +
+                'quantity of active custom error boxes exceeded maximum ' +
                 `allowed of ${maxErrorBoxesQty}`);
-            return
+            return;
         }
 
         try {
