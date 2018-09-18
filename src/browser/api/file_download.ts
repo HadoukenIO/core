@@ -1,9 +1,11 @@
 import { app } from 'electron';
+import { BrowserWindow } from 'electron';
 import { Identity } from '../../shapes';
 import { writeToLog } from '../log';
 import ofEvents from '../of_events';
 import route from '../../common/route';
 import * as coreState from '../core_state';
+import { WindowOptions } from '../../shapes';
 
 const EVENT_TOPIC = 'window';
 export const FILE_DOWNLOAD_EVENTS = {
@@ -73,7 +75,7 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
             const progressTracker = (event: any, state: DownloadState): void => {
                 try {
                     let reportedState = state;
-                    //I am 100% sure we will never get into the paused state.
+                    //I am 99.9% sure we will never get into the paused state.
                     if (state === 'progressing' && item.isPaused()) {
                         reportedState = 'paused';
                     }
@@ -96,7 +98,9 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
             item.once('done', (event: Event, state: DownloadState) => {
                 try {
                     item.removeAllListeners('updated');
+
                     const savePath = item.getSavePath();
+
                     downloadLocationMap.set(fileUuid, {
                         fileUuid,
                         path: savePath,
@@ -112,6 +116,21 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
                         type: FILE_DOWNLOAD_EVENTS.COMPLETED,
                         state
                     }, baseFileEvent));
+
+                    const fileDownloadBrowserWindow = BrowserWindow.fromWebContents(webContents);
+                    const browserWindowId = fileDownloadBrowserWindow.id;
+                    const { url: urlFromDownloadWindow } = <WindowOptions> coreState.getWindowOptionsById(browserWindowId);
+
+                    // Windows that are created from a window.open that trigger a file download have their url set to
+                    // "" here no matter what the requested url was. This is not true if the file download was triggered
+                    // via setting location.href to the the desired file url. In this case the url will be that of
+                    // page it self, NOT the download url. In this case its enough to check that the url is not empty.
+                    // There is an extra process created for the download in the href case as well that does not go away
+                    // immediately (this is true in both electron and chrome). We just need to be sure that we dont close
+                    // the parent window in the href case as that is what the browser window will map to if the url is present
+                    if (!urlFromDownloadWindow) {
+                        fileDownloadBrowserWindow.close();
+                    }
 
                 } catch (e) {
                     writeToLog('info', e);

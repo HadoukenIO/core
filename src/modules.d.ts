@@ -66,7 +66,10 @@ declare module 'electron' {
 
         static fromId(id: string): BrowserWindow;
         static getAllWindows(): BrowserWindow[];
+        static fromWebContents(wc: webContents): BrowserWindow;
 
+        id: number;
+        close(): void;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         getWindowsByClassName(className: string): any;
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
