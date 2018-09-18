@@ -38,7 +38,7 @@ export abstract class ApiTransportBase<T> {
 
     protected abstract onMessage(id: number, data: any): void;
 
-    protected abstract ackDecorator(id: number, messageId: number): AckFunc;
+    protected abstract ackDecorator(id: number, messageId: number, originalPayload: any): AckFunc;
 
     protected abstract ackDecoratorSync(e: any, messageId: number): AckFunc;
 

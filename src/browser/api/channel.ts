@@ -2,7 +2,7 @@
 import { Identity, ProviderIdentity, EventPayload } from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
-import { RemoteAck, AckFunc, NackFunc, AckMessage, AckPayload, NackPayload } from '../api_protocol/transport_strategy/ack';
+import { AckFunc, NackFunc, AckMessage, AckPayload, NackPayload } from '../api_protocol/transport_strategy/ack';
 import { sendToIdentity } from '../api_protocol/api_handlers/api_protocol_base';
 import { getExternalOrOfWindowIdentity } from '../core_state';
 import SubscriptionManager from '../subscription_manager';
@@ -166,7 +166,12 @@ export module Channel {
         if (destinationToken) {
             if (success) {
                 ackObj.payload = new AckPayload(ackPayload);
-                sendToIdentity(destinationToken, ackObj);
+                if (destinationToken.runtimeUuid) {
+                    // Was sent from another runtime, ack to runtime not identity
+                    sendToIdentity({uuid: destinationToken.runtimeUuid}, ackObj);
+                } else {
+                    sendToIdentity(destinationToken, ackObj);
+                }
             } else {
                 ackObj.payload = new NackPayload(reason);
                 sendToIdentity(destinationToken, ackObj);

@@ -365,6 +365,17 @@ exports.System = {
             }
         });
     },
+    getMachineId: function() {
+        if (process.platform === 'win32') {
+            const registryInfo = this.readRegistryValue('HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Cryptography', 'MachineGuid');
+            return registryInfo.data;
+        } else if (process.platform === 'darwin') {
+            // This is implemented at the native level, as we need to access OS X-specific API functions.
+            return electronApp.getMachineId();
+        } else {
+            return '';
+        }
+    },
     getMinLogLevel: function() {
         try {
             const logLevel = electronApp.getMinLogLevel();
