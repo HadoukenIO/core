@@ -250,6 +250,7 @@ app.on('ready', function() {
 
     if (process.platform === 'win32') {
         log.writeToLog('info', `group-policy build: ${app.isGroupPolicyBuild()}`);
+        log.writeToLog('info', `enable-chromium build: ${app.isEnableChromiumBuild()}`);
     }
     log.writeToLog('info', `build architecture: ${process.arch}`);
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
