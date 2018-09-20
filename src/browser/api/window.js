@@ -1319,16 +1319,40 @@ Window.setWindowPreloadState = function(identity, payload) {
     } // @TODO ofEvents.emit(route.frame for iframes
 };
 
-Window.getSnapshot = function(identity, callback = () => {}) {
-    let browserWindow = getElectronBrowserWindow(identity);
+Window.getSnapshot = (opts) => {
+    return new Promise((resolve, reject) => {
+        const { identity, payload: { area } } = opts;
+        const browserWindow = getElectronBrowserWindow(identity);
 
-    if (!browserWindow) {
-        callback(new Error(`Unknown window named '${identity.name}'`));
-        return;
-    }
+        if (!browserWindow) {
+            const error = new Error(`Unknown window named '${identity.name}'`);
+            return reject(error);
+        }
 
-    browserWindow.capturePage(img => {
-        callback(undefined, img.toPNG().toString('base64'));
+        const callback = (img) => {
+            const imageBase64 = img.toPNG().toString('base64');
+            resolve(imageBase64);
+        };
+
+        if (typeof area === 'undefined') {
+            // Snapshot of a full window
+            return browserWindow.capturePage(callback);
+        }
+
+        if (
+            !area ||
+            typeof area !== 'object' ||
+            typeof area.x !== 'number' ||
+            typeof area.y !== 'number' ||
+            typeof area.width !== 'number' ||
+            typeof area.height !== 'number'
+        ) {
+            const error = new Error(`Invalid shape of the snapshot's area.`);
+            return reject(error);
+        }
+
+        // Snapshot of a specified area of the window
+        browserWindow.capturePage(area, callback);
     });
 };
 
