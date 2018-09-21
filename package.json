@@ -14,6 +14,9 @@
     "type": "git",
     "url": "https://github.com/openfin/openfin.git"
   },
+  "engines": {
+    "node": ">=8.2.1"
+  },
   "author": "OpenFin",
   "license": "Apache-2.0",
   "bugs": {
