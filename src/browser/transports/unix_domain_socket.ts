@@ -42,11 +42,29 @@ class UnixDomainSocket extends BaseTransport {
         this.server.bind(this.serverName);
 
         app.on('window-all-closed', this.cleanUpServer);
+
+        // Clean up abandoned file descriptors
+        Promise.all([this.getAllFileDescriptors(), this.getOpenFileDescriptors()]).then((values: [FileDescriptor[], FileDescriptor[]]) => {
+            values[0]
+                .filter((fd: FileDescriptor) => !values[1].includes(fd))
+                .forEach((fd: FileDescriptor) => {
+                    log.writeToLog(1, `Removing abandoned file descriptor ${fd}`, true);
+                    unlink(fd, (err) => {
+                        if (err) {
+                            log.writeToLog(1, '[unix domain socket] begin unlink error', true);
+                            log.writeToLog(1, err, true);
+                            log.writeToLog(1, '[unix domain socket] end unlink error', true);
+                            return;
+                        }
+                        log.writeToLog(1, `${fd} was deleted`, true);
+                    });
+                });
+        });
     }
 
     public publish(data: any): boolean {
         const message = new Buffer(JSON.stringify(data));
-        this.getFileDescriptors().then((fds: FileDescriptor[]) => {
+        this.getOpenFileDescriptors().then((fds: FileDescriptor[]) => {
             fds
                 .filter((fd: FileDescriptor) => fd !== this.serverName)
                 .forEach((fd: FileDescriptor) => {
@@ -73,9 +91,25 @@ class UnixDomainSocket extends BaseTransport {
         });
     }
 
-    private getFileDescriptors(): Promise<FileDescriptor[]> {
+    // Includes all file descriptors, including ones that may have been abandoned on runtime crashes
+    private getAllFileDescriptors(): Promise<FileDescriptor[]> {
         return new Promise<FileDescriptor[]>((resolve) => {
-            exec(`lsof -U | grep ${this.filenamePrefix}`, (error, stdout) => {
+            exec(`/bin/ls ${this.filenamePrefix}*`, (error, stdout) => {
+                if (error) {
+                    log.writeToLog(1, '[unix domain socket] begin exec error', true);
+                    log.writeToLog(1, error, true);
+                    log.writeToLog(1, '[unix domain socket] end exec error', true);
+                    return resolve([]);
+                }
+                resolve(this.parseOutput(stdout));
+            });
+        });
+    }
+
+    // Includes only file descriptors that are currently open
+    private getOpenFileDescriptors(): Promise<FileDescriptor[]> {
+        return new Promise<FileDescriptor[]>((resolve) => {
+            exec(`/usr/sbin/lsof -U | /usr/bin/grep ${this.filenamePrefix}`, (error, stdout) => {
                 if (error) {
                     log.writeToLog(1, '[unix domain socket] begin exec error', true);
                     log.writeToLog(1, error, true);

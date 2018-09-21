@@ -152,7 +152,7 @@ function EventListenerApiHandler() {
                 let remoteUnSub;
                 const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
-                if (!islocalUuid && !isExternalClient && (type === 'channel-connected' || type === 'channel-disconnected')) {
+                if (!islocalUuid && !isExternalClient && (type === 'connected' || type === 'disconnected')) {
                     const subscription = {
                         listenType: 'on',
                         className: 'channel',
@@ -270,6 +270,4 @@ function EventListenerApiHandler() {
         ack(successAck);
     }
 }
-
-
 module.exports.EventListenerApiHandler = EventListenerApiHandler;

@@ -51,6 +51,8 @@ import {
 } from './src/browser/remote_subscriptions';
 import route from './src/common/route';
 
+import { createWillDownloadEventListener } from './src/browser/api/file_download';
+
 // locals
 let firstApp = null;
 let rvmBus;
@@ -247,7 +249,8 @@ app.on('ready', function() {
     app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
 
     if (process.platform === 'win32') {
-        log.writeToLog('info', `group-policy build: ${app.isGroupPolicyBuild()}`);
+        log.writeToLog('info', `group-policy build: ${process.buildFlags.groupPolicy}`);
+        log.writeToLog('info', `enable-chromium build: ${process.buildFlags.enableChromium}`);
     }
     log.writeToLog('info', `build architecture: ${process.arch}`);
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
@@ -361,6 +364,25 @@ app.on('ready', function() {
         }
     });
 
+    try {
+        electron.session.defaultSession.on('will-download', (event, item, webContents) => {
+            try {
+                const { uuid, name } = webContents.browserWindowOptions;
+                const { experimental } = coreState.getAppObjByUuid(uuid)._options;
+                //Experimental flag for the download events.
+                if (experimental && experimental.api && experimental.api.fileDownloadApi) {
+                    const downloadListener = createWillDownloadEventListener({ uuid, name });
+                    downloadListener(event, item, webContents);
+                }
+            } catch (err) {
+                log.writeToLog('info', 'Error while processing will-download event.');
+                log.writeToLog('info', err);
+            }
+        });
+    } catch (err) {
+        log.writeToLog('info', 'Could not wire up File Download API');
+        log.writeToLog('info', err);
+    }
     handleDeferredLaunches();
 }); // end app.ready
 
@@ -394,6 +416,9 @@ function includeFlashPlugin() {
 
     if (pluginName) {
         app.commandLine.appendSwitch('ppapi-flash-path', path.join(process.resourcesPath, 'plugins', 'flash', pluginName));
+        // Currently for enable_chromium build the flash version need to be
+        // specified. See RUN-4510 and RUN-4580.
+        app.commandLine.appendSwitch('ppapi-flash-version', '30.0.0.154');
     }
 }
 

@@ -65,6 +65,8 @@ export function initSafeErrors(argo: any): void {
     isInitSafeErrors = true;
 }
 
+const maxErrorBoxesQty = 10;
+let errorBoxesQty = 0;
 export function showErrorBox(data: ErrorBox): Promise<void> {
     return new Promise((resolve) => {
 
@@ -74,11 +76,19 @@ export function showErrorBox(data: ErrorBox): Promise<void> {
 
         const { error, message, title = '', type } = data;
         const uuid = `error-app-${app.generateGUID()}`;
+        const errorMessage = message || error.stack;
 
-        writeToLog('info', error);
+        writeToLog('info', errorMessage);
 
         if (argo.noerrdialogs) {
             return resolve();
+        }
+
+        if (errorBoxesQty >= maxErrorBoxesQty) {
+            writeToLog('info', 'Not showing custom error box because the ' +
+                'quantity of active custom error boxes exceeded maximum ' +
+                `allowed of ${maxErrorBoxesQty}`);
+            return;
         }
 
         try {
@@ -97,7 +107,7 @@ export function showErrorBox(data: ErrorBox): Promise<void> {
                     autoShow: false, // shown later after resizing is done
                     alwaysOnTop: true,
                     resizable: false,
-                    contextMenu: true,
+                    contextMenu: false,
                     minimizable: false,
                     maximizable: false,
                     nonPersistent: true,
@@ -105,7 +115,7 @@ export function showErrorBox(data: ErrorBox): Promise<void> {
                         v2Api: true
                     },
                     customData: {
-                        error: message || error.stack,
+                        error: errorMessage,
                         title
                     }
                 }
@@ -115,10 +125,13 @@ export function showErrorBox(data: ErrorBox): Promise<void> {
 
             ofEvents.once(route.application('closed', uuid), () => {
                 deleteApp(uuid);
+                errorBoxesQty -= 1;
                 resolve();
             });
 
             Application.run({ uuid });
+
+            errorBoxesQty += 1;
 
         } catch (error) {
             writeToLog('info', error);

@@ -578,7 +578,6 @@ Window.create = function(id, opts) {
                     `application with the UUID "${uuid}"`;
                 const title = ERROR_TITLE_RENDERER_CRASH;
                 const type = ERROR_BOX_TYPES.RENDERER_CRASH;
-                log.writeToLog('info', '==========> ' + type);
                 const args = { message, title, type };
                 showErrorBox(args);
             }
@@ -851,6 +850,18 @@ Window.create = function(id, opts) {
     };
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
+        /*
+            INFO:      0
+            WARNING:   1
+            ERROR:     2
+            FATAL:     3
+        */
+        if (level === /* INFO */ 0 ||
+            level === /* WARNING */ 1) {
+            // Prevent INFO and WARNING messages from writing to debug.log
+            event.preventDefault();
+        }
+
         const app = coreState.getAppByUuid(identity.uuid);
         if (!app) {
             electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);

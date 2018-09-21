@@ -248,7 +248,19 @@ exports.System = {
         return hash.digest('hex');
     },
     getDeviceId: function() {
-        return electronApp.getHostToken();
+        if (process.platform === 'win32') {
+            return electronApp.getHostToken();
+        } else {
+            const hash = crypto.createHash('sha256');
+
+            const macAddress = os.networkInterfaces().en0[0].mac;
+            if (!macAddress) {
+                throw new Error(`MAC address (${macAddress}) not defined`);
+            }
+
+            hash.update(macAddress);
+            return hash.digest('hex');
+        }
     },
     getEntityInfo: function(identity) {
         return coreState.getEntityInfo(identity);
@@ -352,6 +364,17 @@ exports.System = {
                 callback('Could not locate any log files');
             }
         });
+    },
+    getMachineId: function() {
+        if (process.platform === 'win32') {
+            const registryInfo = this.readRegistryValue('HKEY_LOCAL_MACHINE', 'SOFTWARE\\Microsoft\\Cryptography', 'MachineGuid');
+            return registryInfo.data;
+        } else if (process.platform === 'darwin') {
+            // This is implemented at the native level, as we need to access OS X-specific API functions.
+            return electronApp.getMachineId();
+        } else {
+            return '';
+        }
     },
     getMinLogLevel: function() {
         try {
