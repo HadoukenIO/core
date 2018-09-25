@@ -2693,18 +2693,18 @@
       "dev": true
     },
     "hadouken-js-adapter": {
-      "version": "0.35.1-alpha.1",
-      "resolved": "https://registry.npmjs.org/hadouken-js-adapter/-/hadouken-js-adapter-0.35.1-alpha.1.tgz",
-      "integrity": "sha512-9pM8PrShcUbpUC+Hf+rQvZb2BYwP86VZ8eS8z1rkbaSLJMWZSulhjrY76CAkMhufxmcQnZOJoG2v/JuepxsbQw==",
+      "version": "0.35.1-alpha.2",
+      "resolved": "https://registry.npmjs.org/hadouken-js-adapter/-/hadouken-js-adapter-0.35.1-alpha.2.tgz",
+      "integrity": "sha512-AjNzqOY+UregALBnr6ngOy4XABEhyRYRXGBlQQz+24jgspJecsoJVDtwCrxy3NQgS0iXuC2JT6KT/hU76H9TKQ==",
       "requires": {
         "@types/node": "^9.4.6",
         "ws": "~1.1.1"
       },
       "dependencies": {
         "@types/node": {
-          "version": "9.6.31",
-          "resolved": "https://registry.npmjs.org/@types/node/-/node-9.6.31.tgz",
-          "integrity": "sha512-kIVlvUBizL51ALNMPbmcZoM7quHyB7J6fLRwQe22JsMp39nrVSHdBeVVS3fnQCK1orxI3O8LScmb8cuiihkAfA=="
+          "version": "9.6.32",
+          "resolved": "https://registry.npmjs.org/@types/node/-/node-9.6.32.tgz",
+          "integrity": "sha512-5+L3wQ+FHoQ589EaH6rYICleuj8gnunq+1CJkM9fxklirErIOv+kxm3s/vecYnpJOYnFowE5uUizcb3hgjHUug=="
         }
       }
     },
