@@ -23,6 +23,8 @@ const apiMessagesToIgnore: any = {
 };
 
 const apiMessagesToAggregate: any = {
+    'create-channel': true,
+    'connect-to-channel': true,
     'get-all-applications': true,
     'get-all-channels': true,
     'get-all-external-applications': true,
@@ -165,9 +167,22 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
 
     try {
         if (connectionManager.connections.length && isAggregateAction && isLocalAction) {
-            Promise.all(connectionManager.connections.map(runtime => runtime.fin.System.executeOnRemote(identity, data)))
+            const aggregateData = JSON.parse(JSON.stringify(data));
+            if (action === 'create-channel') {
+                aggregateData.action = 'get-all-channels';
+            }
+            Promise.all(connectionManager.connections.map(runtime => runtime.fin.System.executeOnRemote(identity, aggregateData)))
             .then(externalResults => {
-                const externalRuntimeData = externalResults.reduce((result, runtime) => [...result, ...runtime.data], []);
+                const externalRuntimeData = externalResults.reduce((result, runtime) => {
+                    if (runtime && runtime.data) {
+                        if (Array.isArray(runtime.data)) {
+                            return [...result, ...runtime.data];
+                        } else {
+                            return [...result, runtime.data];
+                        }
+                    }
+                    return result;
+                }, []);
                 const locals = { aggregate: externalRuntimeData };
                 next(locals);
             })

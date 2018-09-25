@@ -14,21 +14,6 @@ const wrench = require('wrench');
 const openfinSign = require('openfin-sign'); // OpenFin signing module
 const childProcess = require('child_process');
 
-// Polyfill for pre Node v7.0.0
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/entries#Polyfill
-if (!Object.entries) {
-  Object.entries = function( obj ) {
-    var ownProps = Object.keys( obj ),
-        i = ownProps.length,
-        resArray = new Array(i); // preallocate the Array
-    while (i--) {
-      resArray[i] = [ownProps[i], obj[ownProps[i]]];
-    }
-
-    return resArray;
-  };
-}
-
 // Use NPM to query immediate and nested production dependencies
 const npmDeps = JSON.parse(childProcess.execSync('npm ls --json --prod').toString('utf8'));
 const fullDependencies = Object.entries(npmDeps.dependencies);
@@ -277,7 +262,7 @@ module.exports = (grunt) => {
 
         electronRebuild.rebuild({
             buildPath: __dirname,
-            electronVersion: '2.0.2'
+            electronVersion: '2.0.7'
         }).then(() => {
             grunt.log.writeln('Rebuild successful!');
             done();

@@ -67,6 +67,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
     'get-focused-window': getFocusedWindow,
     'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
+    'get-machine-id': { apiFunc: getMachineId, apiPath: '.getMachineId' },
     'get-min-log-level': getMinLogLevel,
     'get-monitor-info': getMonitorInfo, // apiPath: '.getMonitorInfo' -> called by js adapter during init so can't be disabled
     'get-mouse-position': { apiFunc: getMousePosition, apiPath: '.getMousePosition' },
@@ -156,7 +157,7 @@ function getCrashReporterState(identity: Identity, message: APIMessage, ack: Ack
 }
 
 function getAppAssetInfo(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
-    const { options } = message;
+    const options = message.payload;
 
     System.getAppAssetInfo(identity, options, (data: any) => {
         const dataAck = Object.assign({}, successAck);
@@ -531,6 +532,12 @@ function downloadRuntime(identity: Identity, message: APIMessage, ack: Acker, na
 function getHostSpecs(identity: Identity, message: APIMessage, ack: Acker): void {
     const dataAck = Object.assign({}, successAck);
     dataAck.data = System.getHostSpecs();
+    ack(dataAck);
+}
+
+function getMachineId(identity: Identity, message: APIMessage, ack: Acker): void {
+    const dataAck = Object.assign({}, successAck);
+    dataAck.data = System.getMachineId();
     ack(dataAck);
 }
 

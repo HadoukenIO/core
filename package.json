@@ -14,6 +14,9 @@
     "type": "git",
     "url": "https://github.com/openfin/openfin.git"
   },
+  "engines": {
+    "node": ">=8.2.1"
+  },
   "author": "OpenFin",
   "license": "Apache-2.0",
   "bugs": {
@@ -58,7 +61,7 @@
     "wrench": "^1.5.9"
   },
   "dependencies": {
-    "hadouken-js-adapter": "0.34.3",
+    "hadouken-js-adapter": "0.35.1-alpha.1",
     "minimist": "^1.2.0",
     "options": "0.0.6",
     "rx": "^4.1.0",

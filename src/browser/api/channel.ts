@@ -2,12 +2,11 @@
 import { Identity, ProviderIdentity, EventPayload } from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
-import { RemoteAck, AckFunc, NackFunc } from '../api_protocol/transport_strategy/ack';
+import { AckFunc, NackFunc, AckMessage, AckPayload, NackPayload } from '../api_protocol/transport_strategy/ack';
 import { sendToIdentity } from '../api_protocol/api_handlers/api_protocol_base';
 import { getExternalOrOfWindowIdentity } from '../core_state';
 
 const channelMap: Map<string, ProviderIdentity> = new Map();
-const remoteAckMap: Map<string, RemoteAck> = new Map();
 const pendingChannelConnections: Map<string, any[]> = new Map();
 
 const CHANNEL_APP_ACTION = 'process-channel-message';
@@ -23,10 +22,6 @@ interface AckToSender {
         success: boolean
     };
 }
-
-const getAckKey = (id: number, identity: Identity): string => {
-    return `${ id }-${ identity.uuid }-${ identity.name }`;
-};
 
 const getChannelId = (uuid: string, name: string, channelName: string): string => {
     return `${uuid}/${name}/${channelName}`;
@@ -50,6 +45,8 @@ const createChannelTeardown = (providerIdentity: ProviderIdentity): void => {
     const closedEvent = isExternal ? route.externalApplication('closed', uuid) : route.window('closed', uuid, name);
     ofEvents.once(closedEvent, () => {
         channelMap.delete(channelId);
+        ofEvents.emit(route.channel('disconnected'), providerIdentity);
+        // Need channel-disconnected for compatibility with 9.61.34.*
         ofEvents.emit(route.channel('channel-disconnected'), providerIdentity);
     });
 
@@ -95,9 +92,10 @@ export module Channel {
         return providerIdentity;
     }
 
-    export function getChannelByChannelName(channelName: string): ProviderIdentity|undefined {
+    export function getChannelByChannelName(channelName: string, channelArray?: ProviderIdentity[]): ProviderIdentity|undefined {
         let providerIdentity;
-        channelMap.forEach(channel => {
+        const channels = channelArray || Array.from(channelMap.values());
+        channels.forEach((channel: ProviderIdentity) => {
             if (channel.channelName === channelName) {
                 providerIdentity = channel;
             }
@@ -105,50 +103,36 @@ export module Channel {
         return providerIdentity;
     }
 
-    export function createChannel(identity: Identity, channelName?: string): ProviderIdentity {
+    export function createChannel(identity: Identity, channelName: string, allChannels: ProviderIdentity[]): ProviderIdentity {
         const { uuid, name } = identity;
         const providerApp = getExternalOrOfWindowIdentity(identity);
 
-        const channelId = getChannelId(uuid, name, channelName);
-
-        // If a channel is already registered from that uuid, nack
-        if (!providerApp || getChannelByChannelId(channelId)) {
-            const nackString = 'Register Failed: Please note that only one channel may be registered per identity per channelName.';
+        // If a channel has already been created with that channelName
+        if (Channel.getChannelByChannelName(channelName, allChannels)) {
+            const nackString = 'Channel creation failed: Please note that only one channel may be registered per channelName.';
             throw new Error(nackString);
         }
 
+        const channelId = getChannelId(uuid, name, channelName);
+
         const providerIdentity = { ...providerApp, channelName, channelId };
-        const isExternal = providerIdentity;
         channelMap.set(channelId, providerIdentity);
 
         createChannelTeardown(providerIdentity);
         // Used internally by adapters for pending connections and onChannelConnect
+        ofEvents.emit(route.channel('connected'), providerIdentity);
+        // Need channel-connected for compatibility with 9.61.34.*
         ofEvents.emit(route.channel('channel-connected'), providerIdentity);
 
         return providerIdentity;
     }
 
-    export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): ProviderIdentity {
-        const { wait, uuid, name, channelName, payload: connectionPayload } = payload;
-        let providerIdentity: ProviderIdentity;
-        if (channelName) {
-            providerIdentity = Channel.getChannelByChannelName(channelName);
-        }
-        // No channel found by channel name, use identity
-        if (!providerIdentity && uuid) {
-            const providerIdentityArray = Channel.getChannelByIdentity({uuid, name});
-            if (providerIdentityArray.length > 1) {
-                const nackId = name ? `${uuid}/${name}` : uuid;
-                nack(`More than one channel found for provider with identity: ${nackId}, please include a channelName`);
-            } else {
-                [ providerIdentity ] = providerIdentityArray;
-            }
-        }
+    export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
+        const { channelName, payload: connectionPayload } = payload;
+
+        const providerIdentity = Channel.getChannelByChannelName(channelName);
 
         if (providerIdentity) {
-            const ackKey = getAckKey(messageId, identity);
-            remoteAckMap.set(ackKey, { ack, nack });
-
             const ackToSender = createAckToSender(identity, messageId, providerIdentity);
 
             // Forward the API call to the channel provider.
@@ -161,20 +145,19 @@ export module Channel {
                     payload: connectionPayload
                 }
             });
+        } else if (identity.runtimeUuid) {
+            // Ack back with undefined payload for multi-runtime to make mesh middleware work
+            ack({ success: true });
         } else {
             // Do not change this, checking for this in adapter
             const interimNackMessage = 'internal-nack';
             nack(interimNackMessage);
         }
-        return providerIdentity;
     }
 
     export function sendChannelMessage(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { uuid, name, payload: messagePayload, action: channelAction, providerIdentity } = payload;
-        const ackKey = getAckKey(messageId, identity);
         const targetIdentity = { uuid, name };
-
-        remoteAckMap.set(ackKey, { ack, nack });
 
         const ackToSender = createAckToSender(identity, messageId, providerIdentity);
 
@@ -193,21 +176,24 @@ export module Channel {
     // This preprocessor will check if the API call is an 'ack' action from a channel and match it to the original request.
     export function sendChannelResult(identity: Identity, payload: any, ack: AckFunc, nack: NackFunc): void {
         const { reason, success, destinationToken, correlationId, payload: ackPayload } = payload;
-        const ackKey = getAckKey(correlationId, destinationToken);
-        const remoteAck = remoteAckMap.get(ackKey);
+        const ackObj = new AckMessage();
+        ackObj.correlationId = correlationId;
 
-        if (remoteAck) {
+        if (destinationToken) {
             if (success) {
-                remoteAck.ack({
-                    success: true,
-                    ...(ackPayload ? { data: ackPayload } : {})
-                });
+                ackObj.payload = new AckPayload(ackPayload);
+                if (destinationToken.runtimeUuid) {
+                    // Was sent from another runtime, ack to runtime not identity
+                    sendToIdentity({uuid: destinationToken.runtimeUuid}, ackObj);
+                } else {
+                    sendToIdentity(destinationToken, ackObj);
+                }
             } else {
-                remoteAck.nack(new Error(reason || 'Channel provider error'));
+                ackObj.payload = new NackPayload(reason);
+                sendToIdentity(destinationToken, ackObj);
             }
-            remoteAckMap.delete(ackKey);
         } else {
-            nack('Ack failed, initial channel message not found.');
+            nack('Ack failed, initial channel destinationToken not found.');
         }
     }
 }

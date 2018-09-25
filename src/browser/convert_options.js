@@ -26,7 +26,8 @@ const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 
 const iframeBaseSettings = {
     'crossOriginInjection': false,
-    'sameOriginInjection': true
+    'sameOriginInjection': true,
+    'enableDeprecatedSharedName': false
 };
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
@@ -68,6 +69,8 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'api': {
+                'breadcrumbs': false,
+                'fileDownloadApi': false,
                 'iframe': iframeBaseSettings
             },
             'disableInitialReload': false,

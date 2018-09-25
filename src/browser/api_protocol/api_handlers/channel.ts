@@ -24,18 +24,41 @@ export class ChannelApiHandler {
     }
 
     private connectToChannel(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): void {
-        const { payload, messageId } = message;
+        const { payload, messageId, locals } = message;
+
+        // Mesh middleware tries to connect to other runtimes by channelName
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            if (Array.isArray(aggregate) && aggregate.length) {
+                const channel = aggregate.filter(c => !!c);
+                if (channel.length > 1) {
+                    nack(`Runtime Error: More than one channel for channelName ${payload.channelName}`);
+                } else {
+                    const dataAck = Object.assign({}, successAck, { data: channel[0] });
+                    ack(dataAck);
+                    return;
+                }
+            }
+        }
 
         Channel.connectToChannel(identity, payload, messageId, ack, nack);
         //return undefined so that El-IPC does not automatically ack
         return undefined;
     }
 
-    private createChannel(identity: Identity, message: APIMessage, ack: AckFunc): void {
-        const { payload } = message;
+    private createChannel(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): void {
+        const { payload, locals } = message;
         const { channelName } = payload;
 
-        const providerIdentity = Channel.createChannel(identity, channelName);
+        let allChannels = Channel.getAllChannels();
+
+        // Mesh middleware gets all channels from other runtimes
+        if (locals && locals.aggregate) {
+            const { aggregate } = locals;
+            allChannels = [...allChannels, ...aggregate];
+        }
+
+        const providerIdentity = Channel.createChannel(identity, channelName, allChannels);
         const dataAck = Object.assign({}, successAck, { data: providerIdentity });
         ack(dataAck);
     }
