@@ -17,7 +17,7 @@ interface Bounds {
     h?: number;
 }
 
-function handleMove(windowId: string, bounds: Bounds): void {
+function handleMove(windowId: number, bounds: Bounds): void {
     const browserWindow = <BrowserWindowOF>BrowserWindow.fromId(windowId);
 
     if (isWin32 && browserWindow && (browserWindow.isMinimized() || browserWindow.isMaximized())) {
