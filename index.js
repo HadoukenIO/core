@@ -724,13 +724,14 @@ function registerMacMenu() {
 function handleMacSingleTenant() {
     if (process.platform === 'darwin') {
         const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
-        let pathPost = encodeURIComponent(configUrl);
+        let cachePath = encodeURIComponent(configUrl);
         if (coreState.argo['security-realm']) {
-            pathPost = pathPost.concat(coreState.argo['security-realm']);
+            cachePath = path.join(cachePath, coreState.argo['security-realm']);
         }
         const userData = app.getPath('userData');
-        app.setPath('userData', path.join(userData, pathPost));
-        app.setPath('userCache', path.join(userData, pathPost));
+        cachePath = path.join(userData, 'cache', cachePath, process.versions['openfin']);
+        app.setPath('userData', cachePath);
+        app.setPath('userCache', cachePath);
     }
 }
 
