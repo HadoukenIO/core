@@ -226,7 +226,7 @@ app.on('chrome-browser-process-created', function() {
 
         app.commandLine.appendArgument('noerrdialogs');
         process.argv.push('--noerrdialogs');
-        app.quit();
+        app.exit(0);
 
         return;
     }
