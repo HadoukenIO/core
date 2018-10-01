@@ -70,3 +70,5 @@ function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEG
   max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
   return Math.min(Math.max(num, min, 0), max);
 }
+
+export const makeMutexKey = (uuid: string) => `uuid-${uuid}`;

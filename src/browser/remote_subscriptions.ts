@@ -30,7 +30,7 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
 /**
  * Shape of remote subscription props
  */
-interface RemoteSubscriptionProps extends Identity {
+interface RemoteSubscriptionProps extends Partial<Identity> {
     className: 'application'|'window'|'system'|'channel'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type

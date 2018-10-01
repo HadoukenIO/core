@@ -493,7 +493,9 @@ export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinW
     const win = getOfWindowByUuidName(uuid, name);
     return win && win.openfinWindow;
 }
-
+export function appInCoreState(uuid: string): boolean {
+    return !!appByUuid(uuid);
+}
 export function getBrowserWindow(identity: Shapes.Identity): Shapes.BrowserWindow|undefined {
     const { uuid, name } = identity;
     const wnd: Shapes.Window = getOfWindowByUuidName(uuid, name);
