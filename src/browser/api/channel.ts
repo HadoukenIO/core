@@ -129,11 +129,12 @@ export module Channel {
                     payload: connectionPayload
                 }
             });
+            const disconnectedEvent = 'client-disconnected';
             const clientDisconnect = () => {
                 const payload = { channelName, ...identity };
-                ofEvents.emit(route.channel('client-disconnected'), payload);
+                ofEvents.emit(route.channel(disconnectedEvent), payload);
             };
-            subscriptionManager.registerSubscription(clientDisconnect, identity);
+            subscriptionManager.registerSubscription(clientDisconnect, identity, `${disconnectedEvent}-${channelName}`);
         } else if (identity.runtimeUuid) {
             // If has runtimeUuid call originated in another runtime, ack back undefined for mesh middleware purposes
             ack({ success: true });
