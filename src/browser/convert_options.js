@@ -30,6 +30,12 @@ const iframeBaseSettings = {
     'enableDeprecatedSharedName': false
 };
 
+const rendererBatchingBaseSettings = {
+    'enabled': false,
+    'maxSize': Number.MAX_VALUE,
+    'ttl': 0
+};
+
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
     return {
@@ -69,6 +75,9 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'api': {
+                'batching': {
+                    'renderer': rendererBatchingBaseSettings
+                },
                 'breadcrumbs': false,
                 'fileDownloadApi': false,
                 'iframe': iframeBaseSettings
