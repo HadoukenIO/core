@@ -98,7 +98,7 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
             .then((id: any) => {
                 id.runtime.fin.System.executeOnRemote(identity, data)
                 .then(ack)
-                .catch(nack);
+                .catch((e: Error) => nack(e.message));
             }).catch((e: Error) => {
                 //Uuid was not found in the mesh, let local logic go its course
                 next();
@@ -140,7 +140,7 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
                     }
                 })
                 .then(ack)
-                .catch(nack);
+                .catch((e: Error) => nack(e.message));
             }).catch((e: Error) => {
                 //Uuid was not found in the mesh, let local logic go its course
                 next();
@@ -186,7 +186,7 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
                 const locals = { aggregate: externalRuntimeData };
                 next(locals);
             })
-            .catch(nack);
+            .catch((e: Error) => nack(e.message));
         } else {
             next();
         }
