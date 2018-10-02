@@ -121,9 +121,9 @@ let browserWindowEventMap = {
 };
 
 let webContentsEventMap = {
-    'did-get-response-details': {
-        topic: 'resource-response-received',
-        decorator: responseReceivedDecorator
+    'did-frame-navigate': {
+        topic: 'frame-navigated',
+        decorator: frameNavigatedDecorator
     },
     'did-fail-load': {
         topic: 'resource-load-failed',
@@ -737,14 +737,14 @@ Window.create = function(id, opts) {
             ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
         };
 
-        let resourceResponseReceivedHandler, resourceLoadFailedHandler;
+        let frameNavigatedHandler, resourceLoadFailedHandler;
 
-        let resourceResponseReceivedEventString = route.window('resource-response-received', uuid, name);
+        let frameNavigatedEventString = route.window('frame-navigated', uuid, name);
         let resourceLoadFailedEventString = route.window('resource-load-failed', uuid, name);
 
         let httpResponseCode = null;
 
-        resourceResponseReceivedHandler = (details) => {
+        frameNavigatedHandler = (details) => {
             httpResponseCode = details.httpResponseCode;
             ofEvents.removeListener(resourceLoadFailedEventString, resourceLoadFailedHandler);
         };
@@ -755,7 +755,7 @@ Window.create = function(id, opts) {
                 electronApp.vlog(1, `ignoring net error -3 for ${failed.validatedURL}`);
             } else {
                 emitErrMessage(failed.errorCode);
-                ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+                ofEvents.removeListener(frameNavigatedEventString, frameNavigatedHandler);
             }
         };
 
@@ -771,7 +771,7 @@ Window.create = function(id, opts) {
                 });
 
             } else {
-                ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+                ofEvents.once(frameNavigatedEventString, frameNavigatedHandler);
                 ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
                 ofEvents.once(route.window('connected', uuid, name), () => {
                     webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
@@ -2164,29 +2164,25 @@ function visibilityChangedDecorator(payload, args) {
     return propogate;
 }
 
-function responseReceivedDecorator(payload, args) {
+function frameNavigatedDecorator(payload, args) {
     var [
         /*event*/
         ,
-        status,
-        newUrl,
-        originalUrl,
+        url,
         httpResponseCode,
-        requestMethod,
-        referrer,
-        headers,
-        resourceType
+        httpStatusText,
+        isMainFrame,
+        frameProcessId,
+        frameRoutingId
     ] = args;
 
     Object.assign(payload, {
-        status,
-        newUrl,
-        originalUrl,
+        url,
         httpResponseCode,
-        requestMethod,
-        referrer,
-        headers,
-        resourceType
+        httpStatusText,
+        isMainFrame,
+        frameProcessId,
+        frameRoutingId
     });
 
     return true;
