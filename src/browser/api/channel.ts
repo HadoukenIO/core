@@ -102,7 +102,6 @@ export module Channel {
         subscriptionManager.registerSubscription(constructOnDisconnection(providerIdentity), identity, channelId);
 
 
-        // createChannelTeardown(providerIdentity);
         // Used internally by adapters for pending connections and onChannelConnect
         ofEvents.emit(route.channel('connected'), providerIdentity);
         // Need channel-connected for compatibility with 9.61.34.*
