@@ -529,10 +529,22 @@ Window.create = function(id, opts) {
             ofEvents.removeAllListeners(closeEventString);
         });
 
+        // If use HTML5 window.close (not OF window) then "will-close" event is not fired on browserwindow
+        let alreadyClosing = false;
+        browserWindow.once('closed', () => {
+            if (!alreadyClosing) {
+                windowTeardown()
+                    .catch(err => {
+                        log.writeToLog('info', `Error while tearing down in closed ${uuid} ${name}`);
+                        log.writeToLog('info', err);
+                    });
+            }
+        });
+
         browserWindow.once('will-close', () => {
+            alreadyClosing = true;
             const type = 'closing';
             windowTeardown()
-                .then(() => log.writeToLog('info', `Window tear down complete ${uuid} ${name}`))
                 .catch(err => {
                     log.writeToLog('info', `Error while tearing down ${uuid} ${name}`);
                     log.writeToLog('info', err);
@@ -1929,10 +1941,12 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
             promises.push(closeChildWin(childId));
         });
 
-        return Promise.all(promises).then(() => {
-            emitCloseEvents(identity);
-            browserWindow.removeAllListeners();
-        });
+        return Promise.all(promises)
+            .then(() => {
+                emitCloseEvents(identity);
+                browserWindow.removeAllListeners();
+            })
+            .then(() => log.writeToLog('info', `Window tear down complete ${identity.uuid} ${identity.name}`));
     };
 }
 
