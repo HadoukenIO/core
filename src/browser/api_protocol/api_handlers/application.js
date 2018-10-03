@@ -303,7 +303,7 @@ function notifyOnContentLoaded(identity, message, ack) {
 }
 
 function runApplication(identity, message, ack, nack) {
-    const { payload } = message;
+    const { payload, locals } = message;
     const { manifestUrl } = payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
     const { uuid } = appIdentity;
@@ -315,7 +315,7 @@ function runApplication(identity, message, ack, nack) {
         className: 'window',
         eventName: 'fire-constructor-callback'
     };
-    if (coreState.getAppRunningState(uuid) || (message.data && message.data.locals && message.data.locals.duplicateUuidRun)) {
+    if (coreState.getAppRunningState(uuid) || (locals && locals.duplicateUuidRun)) {
         Application.emitRunRequested(appIdentity);
         nack(`Application with specified UUID is already running: ${uuid}`);
         return;

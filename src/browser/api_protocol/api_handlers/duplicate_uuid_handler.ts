@@ -46,6 +46,7 @@ function lockOnRun(msg: MessagePackage, next: (locals?: any) => void): void {
         if (lock.locked) {
             if (lock.alreadyExists) {
                 namedMutex.releaseLock(key);
+                return next({ duplicateUuidRun: true });
             }
         } else {
             //Delete the app from core state to properly forward to owning runtime

@@ -3,7 +3,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
-import { isLocalUuid } from '../../core_state';
+import { isLocalUuid, appInCoreState } from '../../core_state';
 import { IdentityAddress } from '../../runtime_p2p/peer_connection_manager';
 
 const SUBSCRIBE_ACTION = 'subscribe';
@@ -19,7 +19,8 @@ const apiMessagesToIgnore: any = {
     'subscriber-added': true,
     'subscriber-removed': true,
     'subscribe-to-desktop-event': true,
-    'unsubscribe-to-desktop-event': true
+    'unsubscribe-to-desktop-event': true,
+    'create-application': true
 };
 
 const apiMessagesToAggregate: any = {
@@ -98,7 +99,7 @@ function sendMessageMiddleware(msg: MessagePackage, next: () => void) {
             .then((id: any) => {
                 id.runtime.fin.System.executeOnRemote(identity, data)
                 .then(ack)
-                .catch(nack);
+                .catch((e: Error) => nack(e.message));
             }).catch((e: Error) => {
                 //Uuid was not found in the mesh, let local logic go its course
                 next();
@@ -122,8 +123,8 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     const isRemoteEntity = !isLocalUuid(uuid);
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
     const isLocalAction = !identity.runtimeUuid;
-
-    if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction) {
+    const isLocalRun = action === 'run-application' && appInCoreState(uuid);
+    if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction && !isLocalRun) {
         try {
             connectionManager.resolveIdentity({uuid})
             .then((id: IdentityAddress) => {
@@ -140,7 +141,7 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
                     }
                 })
                 .then(ack)
-                .catch(nack);
+                .catch((e: Error) => nack(e.message));
             }).catch((e: Error) => {
                 //Uuid was not found in the mesh, let local logic go its course
                 next();
@@ -186,7 +187,7 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
                 const locals = { aggregate: externalRuntimeData };
                 next(locals);
             })
-            .catch(nack);
+            .catch((e: Error) => nack(e.message));
         } else {
             next();
         }
