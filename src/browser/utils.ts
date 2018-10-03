@@ -16,6 +16,7 @@ limitations under the License.
 
 import { BrowserWindow } from '../shapes';
 import { Rectangle, screen } from 'electron';
+import * as log from '../browser/log';
 
 /*
   This function sets window's bounds to be in a visible area, in case
@@ -55,18 +56,28 @@ export function clipBounds(bounds: Rectangle, browserWindow: BrowserWindow): Rec
 
   const { minWidth, minHeight, maxWidth, maxHeight } = browserWindow._options;
 
+  const xclamp = clamp(bounds.width, minWidth, maxWidth);
+  log.writeToLog(1, xclamp, true);
+  log.writeToLog(1, browserWindow._options.name, true);
+
+  const yclamp = clamp(bounds.height, minHeight, maxHeight);
   return {
-    x: bounds.x,
+    x: bounds.x + xclamp.clampedOffset,
     y: bounds.y,
-    width: clamp(bounds.width, minWidth, maxWidth),
-    height: clamp(bounds.height, minHeight, maxHeight)
+    width: xclamp.value,
+    height: yclamp.value
   };
 }
 
 /*
   Adjust the number to be within the range of minimum and maximum values
+  TODO: explain the offset
 */
-function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): number {
+function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): { value: number; clampedOffset: number; } {
   max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
-  return Math.min(Math.max(num, min, 0), max);
+  const value = Math.min(Math.max(num, min, 0), max);
+  return {
+    value,
+    clampedOffset: num < min ? -1 * (min - num) : 0
+  };
 }

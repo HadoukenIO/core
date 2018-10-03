@@ -75,6 +75,47 @@ interface DeferedEvent {
     width: number;
 }
 
+class Rect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+
+    constructor (x: number, y: number, width: number, height: number) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+
+    public isEmpty(): boolean {
+        return (this.width <= 0) || (this.height <= 0);
+    }
+
+    public intersection(r: Rect): Rect {
+        let tx1: number = this.x;
+        let ty1: number = this.y;
+        const rx1: number = r.x;
+        const ry1: number = r.y;
+        let tx2: number = tx1; tx2 += this.width;
+        let ty2: number = ty1; ty2 += this.height;
+        let rx2: number = rx1; rx2 += r.width;
+        let ry2: number = ry1; ry2 += r.height;
+        if (tx1 < rx1) tx1 = rx1;
+        if (ty1 < ry1) ty1 = ry1;
+        if (tx2 > rx2) tx2 = rx2;
+        if (ty2 > ry2) ty2 = ry2;
+        tx2 -= tx1;
+        ty2 -= ty1;
+        // tx2,ty2 will never overflow (they will never be
+        // larger than the smallest of the two source w,h)
+        // they might underflow, though...
+        if (tx2 < Number.MIN_VALUE) tx2 = Number.MIN_VALUE;
+        if (ty2 < Number.MIN_VALUE) ty2 = Number.MIN_VALUE;
+        return new Rect(tx1, ty1, tx2, ty2);
+    }
+}
+
 export default class BoundsChangedStateTracker {
     private _listeners: any;
     constructor(private uuid: string, private name: string, private browserWindow: BrowserWindow) {
@@ -253,16 +294,18 @@ export default class BoundsChangedStateTracker {
     };
 
     private sharedBoundPixelDiff = 5;
+
+    // TODO this needs to account for if the window boarder has been crossed over
     private sharedBound = (boundOne: number, boundTwo: number): boolean => {
         return Math.abs(boundOne - boundTwo) < this.sharedBoundPixelDiff;
     };
 
     // tslint:disable-next-line:max-line-length
-    private handleGroupedResize = (resizeChangeType: BoundChanged, delta: any, originalWindowCachedBounds: DecoratedBounds, windowToUpdate: OpenFinWindow): Rectangle => {
+    private handleGroupedResize = (resizeChangeType: BoundChanged, delta: any, originalWindowCachedBounds: DecoratedBounds, windowToUpdate: OpenFinWindow, bounds: Rectangle): Rectangle => {
         if (!trackingResize) {
-            return windowToUpdate.browserWindow.getBounds();
+            return bounds;
         }
-        let { x, y, width, height } = windowToUpdate.browserWindow.getBounds();
+        let { x, y, width, height } = bounds;
         if (resizeChangeType.height) {
             if (delta.y) {
                 if (this.sharedBound(y, originalWindowCachedBounds.y)) {
@@ -290,7 +333,9 @@ export default class BoundsChangedStateTracker {
 
         if (resizeChangeType.width) {
             if (delta.x) {
-                if (this.sharedBound(x, originalWindowCachedBounds.x)) {
+
+                if (this.sharedBound(x, originalWindowCachedBounds.x)
+                && originalWindowCachedBounds.x + originalWindowCachedBounds.width < x) {
                     // resize windows with matching left bound
                     x = toSafeInt(x + delta.x, x);
                     width = width + delta.width;
@@ -416,13 +461,14 @@ export default class BoundsChangedStateTracker {
                         flags = noZorder + noSize + noActivate;
                     }
 
+                    const moves = [];
                     WindowGroups.getGroup(groupUuid).filter((win): boolean => {
                         win.browserWindow.bringToFront();
                         return win.name !== this.name;
                     }).forEach((win): void => {
                         const winBounds = win.browserWindow.getBounds();
                         const bounds = (changeType === 1)
-                            ? this.handleGroupedResize(boundsCompare, delta, cachedBounds, win)
+                            ? this.handleGroupedResize(boundsCompare, delta, cachedBounds, win, winBounds)
                             : winBounds;
                         let { x, y } = bounds;
                         const { width, height } = bounds;
@@ -450,7 +496,8 @@ export default class BoundsChangedStateTracker {
                                 win.browserWindow.unmaximize();
                             }
                             const [w, h] = [width, height];
-                            wt.setWindowPos(hwnd, { x, y, w, h, flags });
+                            // no change on the resize behavior
+                            // wt.setWindowPos(hwnd, { x, y, w, h, flags });
                         } else {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
