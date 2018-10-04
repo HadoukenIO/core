@@ -23,9 +23,10 @@ const apiMessagesToIgnore: any = {
 };
 
 const apiMessagesToAggregate: any = {
-    'get-all-windows': true,
     'get-all-applications': true,
+    'get-all-channels': true,
     'get-all-external-applications': true,
+    'get-all-windows': true,
     'process-snapshot': true
 };
 

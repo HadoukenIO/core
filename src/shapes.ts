@@ -1,6 +1,7 @@
 
 import { PortInfo } from './browser/port_discovery';
 import { BrowserWindow as BrowserWindowElectron } from 'electron';
+import { ERROR_BOX_TYPES } from './common/errors';
 
 export interface Identity {
     uuid: string;
@@ -8,10 +9,11 @@ export interface Identity {
     runtimeUuid?: string;
 }
 
-export interface ServiceIdentity extends Identity {
+export interface ProviderIdentity extends Identity {
     channelId?: string;
+    channelName?: string;
     isExternal?: boolean;
-    serviceName?: string;
+    runtimeUuid?: string;
 }
 
 export interface ResourceFetchIdentity extends Identity {
@@ -20,6 +22,7 @@ export interface ResourceFetchIdentity extends Identity {
 
 export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
 export type AuthCallback = (username: string, password: string) => void;
+export type Listener = (...args: any[]) => void;
 
 export interface FrameInfo extends Identity {
     name?: string;
@@ -35,6 +38,9 @@ export interface APIMessage {
     action: string;
     messageId: number;
     payload: any;
+    locals?: any; // found in processSnapshot() in our System API handler
+    options?: any; // found in getAppAssetInfo() in our System API handler
+    eventName?: string; // found in raiseEvent() in our System API handler
 }
 
 // ToDo following duplicated in ack.ts
@@ -51,6 +57,8 @@ export interface APIPayloadNack {
     reason?: string;
 }
 export type Nacker = (payload: APIPayloadNack) => void;
+export type NackerError = (payload: Error) => void;
+export type NackerErrorString = (payload: string) => void;
 
 export interface ProxySettings {
     proxyAddress: string;
@@ -138,6 +146,7 @@ export interface WindowOptions {
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
     applicationIcon?: string;
+    aspectRatio?: number;
     autoShow?: boolean;
     backgroundColor?: string;
     backgroundThrottling?: boolean;
@@ -213,6 +222,7 @@ export interface WindowOptions {
     title?: string;
     toShowOnRun?: boolean;
     transparent?: boolean;
+    _type?: ERROR_BOX_TYPES;
     url: string;
     uuid: string;
     waitForPageLoad?: boolean;
@@ -249,7 +259,6 @@ export interface Manifest {
     };
     licenseKey: string;
     offlineAccess?: boolean;
-    plugins?: Plugin[];
     proxy?: ProxySettings;
     runtime: {
         arguments?: string;
@@ -278,13 +287,6 @@ export interface Manifest {
         forwardErrorReports?: boolean;
         enableErrorReporting?: boolean;
     };
-}
-
-export interface Plugin {
-    link?: string;
-    mandatory?: boolean;
-    name: string;
-    version: string;
 }
 
 export interface PreloadScript {
@@ -326,4 +328,39 @@ export interface SavedDiskBounds {
     top: number;
     width: number;
     windowState: string;
+}
+
+export interface Cookie {
+    domain: string;
+    expirationDate: number;
+    name: string;
+    path: string;
+}
+
+export interface Entity {
+    type: 'application' | 'external-app';
+    uuid: string;
+}
+
+export interface FileStatInfo {
+    name: string;
+    size: number;
+    date: number;
+}
+
+export interface StartManifest {
+    data: Manifest;
+    url: string;
+}
+
+export type APIHandlerFunc = (identity: Identity, message: APIMessage, ack: Acker, nack?: Nacker|NackerError|NackerErrorString) => void;
+
+export interface APIHandlerMap {
+    [route: string]: APIHandlerFunc | {
+        apiFunc: APIHandlerFunc;
+        apiPath?: string;
+        apiPolicyDelegate?: {
+            checkPermissions: (args: any) => boolean;
+        }
+    };
 }

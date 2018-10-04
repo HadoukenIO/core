@@ -183,9 +183,7 @@ function getApplicationGroups(identity, message, ack) {
     dataAck.data = _.map(groups, groupOfWindows => {
         return _.map(groupOfWindows, window => {
             if (payload.crossApp === true) {
-                var _window = _.clone(window);
-                _window.windowName = window.name;
-                return _window;
+                return { uuid: window.uuid, name: window.name, windowName: window.name };
             } else {
                 return window.name; // backward compatible
             }

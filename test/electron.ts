@@ -13,7 +13,14 @@ export const mockElectron = {
         },
         log: (level: string, val: string) => {
             lastLogValue = val;
+        },
+        getCommandLineArguments: (): any => {
+            return '';
+        },
+        getCommandLineArgv: (): any => {
+            return [];
         }
+
     },
     globalShortcut: {
         isRegistered: (accelerator: string) => {

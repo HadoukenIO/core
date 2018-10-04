@@ -2,14 +2,9 @@
 import RequestHandler from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { sendToIdentity } from './api_protocol_base';
-import { AckFunc, NackFunc } from '../transport_strategy/ack';
+import { RemoteAck } from '../transport_strategy/ack';
 
 const coreState = require('../../core_state');
-
-interface RemoteAck {
-    ack: AckFunc;
-    nack: NackFunc;
-}
 
 const validExternalAPIActions: any = {
    'blur-window': true,

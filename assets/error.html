@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>Error</title>
+	<style>
+		body {
+			display: flex;
+			flex-direction: column;
+			font-family: Helvetica, Arial, sans-serif;
+			font-size: 11px;
+			height: 100vh;
+			line-height: 1.5em;
+			margin: 0;
+			overflow: hidden;
+		}
+
+		.error-icon {
+			height: 30px;
+			width: 30px;
+		}
+
+		#container-error {
+			display: flex;
+			flex: 1;
+			padding: 10px;
+		}
+
+		#error-wrapper {
+			display: flex;
+			flex-direction: column;
+			flex: 1;
+			padding-left: 15px;
+		}
+
+		#error-title {
+			color: #3361ad;
+			font-size: 16px;
+			padding: 5px 0 15px 0;
+		}
+
+		#error-body {
+			flex: 1;
+			overflow: hidden;
+		}
+
+		#error-message {
+			overflow-wrap: break-word;
+			white-space: pre-wrap;
+			width: calc(100vw - 70px);
+		}
+
+		#footer {
+			background-color: #F0F0F0;
+			display: flex;
+			flex-direction: row-reverse;
+			height: 20px;
+			padding: 10px;
+		}
+
+		#footer button {
+			align-self: center;
+			font-size: 12px;
+			height: 20px;
+			width: 70px;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="container-error">
+		<img class="error-icon" src="error-icon.png">
+		<div id="error-wrapper">
+			<div id="error-title"></div>
+			<div id="error-body">
+				<div id="error-message"></div>
+			</div>
+		</div>
+	</div>
+	<div id="footer">
+		<button onclick="closeWin()">OK</button>
+	</div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', getExceptionData);
+
+		async function closeWin() {
+			try {
+				const wnd = await fin.Window.getCurrent();
+				return wnd.close();
+			} catch (err) {
+				console.log(err);
+			}
+		}
+
+		async function getExceptionData() {
+			const wnd = await fin.Window.getCurrent();
+			const { customData: { title, error } } = await wnd.getOptions();
+			const errorTitleEl = document.querySelector('#error-title');
+			const errorMessageEl = document.querySelector('#error-message');
+			
+			if (title) {
+				errorTitleEl.innerHTML = title;
+			} else {
+				errorTitleEl.remove();
+			}
+			
+			errorMessageEl.innerHTML = error;
+			
+			// Keep increasing the height of the error dialog until
+			// the error message is fully visible. This will ensure
+			// error dialogs are not too big in height.
+			let resizeSafetyCount = 50; // for safety, max 50 resizes (500px)
+			while (resizeSafetyCount-- && !isElementInViewport(errorMessageEl)) {
+				await wnd.resizeBy(0, 10);
+				await wait(); // needs a small break for resizing to be fully done
+			}
+			// Finally show the error dialog, now that it is properly resized
+			await wnd.show();
+			
+			document.body.addEventListener('copy', (event) => {
+				fin.Clipboard.writeText({ data: error });
+			});
+		}
+
+		// Answers whether a DOM element is fully visible
+		function isElementInViewport(el) {
+			const footerWithPaddingHeight = 60;
+			const rect = el.getBoundingClientRect();
+			return (
+				rect.top >= 0 &&
+				rect.left >= 0 &&
+				rect.bottom <= (window.innerHeight - footerWithPaddingHeight) &&
+				rect.right <= (window.innerWidth)
+			);
+		}
+		
+		function wait() {
+			return new Promise(resolve => setTimeout(resolve, 10));
+		}
+
+	</script>
+</body>
+
+</html>

@@ -47,7 +47,7 @@ export module Frame {
         return unsubscribe;
     }
 
-    export function removeEventListener (identity: Identity, type: string, listener: Function) {
+    export function removeEventListener(identity: Identity, type: string, listener: Shapes.Listener) {
         const browserFrame = <OpenFinWindow>coreState.getWindowByUuidName(identity.uuid, identity.name);
         if (browserFrame) {
             const id = String(browserFrame.id);

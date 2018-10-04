@@ -24,6 +24,11 @@ import {
 } from '../shapes';
 const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 
+const iframeBaseSettings = {
+    'crossOriginInjection': false,
+    'sameOriginInjection': true
+};
+
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
     return {
@@ -40,7 +45,11 @@ function five0BaseOptions() {
         },
         'alwaysOnBottom': false,
         'alwaysOnTop': false,
+        'api': {
+            'iframe': iframeBaseSettings
+        },
         'applicationIcon': '',
+        'aspectRatio': 0,
         'autoShow': false,
         'backgroundThrottling': false,
         'contextMenu': true,
@@ -59,10 +68,8 @@ function five0BaseOptions() {
         'exitOnClose': false,
         'experimental': {
             'api': {
-                'iframe': {
-                    'crossOriginInjection': false,
-                    'sameOriginInjection': true
-                }
+                'iframe': iframeBaseSettings,
+                'fileDownloadApi': false
             },
             'disableInitialReload': false,
             'node': false,
@@ -184,6 +191,8 @@ module.exports = {
 
     convertToElectron: function(options, returnAsString) {
 
+        const usingIframe = !!(options.api && options.api.iframe);
+
         // build on top of the 5.0 base
         let newOptions = validateOptions(options);
 
@@ -225,6 +234,14 @@ module.exports = {
         const useNodeInRenderer = newOptions.experimental.node;
         const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
 
+        // Because we have communicated the experimental option, this allows us to
+        // respect that if its set but defaults to the proper passed in `iframe` key
+        if (usingIframe) {
+            Object.assign(newOptions.experimental.api.iframe, newOptions.api.iframe);
+        } else {
+            newOptions.api.iframe = newOptions.experimental.api.iframe;
+        }
+
         // Electron BrowserWindow options
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
@@ -235,7 +252,8 @@ module.exports = {
             plugins: newOptions.plugins,
             preload: (!useNodeInRenderer ? noNodePreload : ''),
             sandbox: !useNodeInRenderer,
-            spellCheck: newOptions.spellCheck
+            spellCheck: newOptions.spellCheck,
+            backgroundThrottling: newOptions.backgroundThrottling
         };
 
         if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {

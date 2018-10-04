@@ -7,6 +7,7 @@ let ProcessMonitor = require('electron').processMonitor;
 
 import ofEvents from './of_events';
 import route from '../common/route';
+import * as fileDownload from './api/file_download';
 
 const isWin32 = (process.platform === 'win32');
 
@@ -226,6 +227,19 @@ ProcessTracker.prototype.launch = function(identity, options, errDataCallback) {
         let args = options.arguments || '';
         let filePath = options.target || options.path || '';
         let certificateOptions = withDefaultCertOptions(options.certificate);
+        let fileUuid = options.fileUuid;
+
+        //if we are given a fileUuid we will overwrite the filePath
+        if (fileUuid) {
+            if (fileDownload.hasAccess(identity, fileUuid)) {
+                const FileDownloadLocation = fileDownload.downloadLocationMap.get(fileUuid);
+                if (FileDownloadLocation) {
+                    filePath = FileDownloadLocation.path;
+                }
+            } else {
+                error(`Identity uuid:${uuid} does not have access to fileUuid: ${fileUuid}`);
+            }
+        }
 
         if (filePath) {
             if (path.isAbsolute(filePath)) {

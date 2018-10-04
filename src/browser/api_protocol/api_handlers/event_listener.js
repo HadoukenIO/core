@@ -6,12 +6,12 @@ let _ = require('underscore');
 
 // local modules
 let apiProtocolBase = require('./api_protocol_base.js');
-let Window = require('../../api/window.js').Window;
+import { Window } from '../../api/window';
 let Application = require('../../api/application.js').Application;
 let System = require('../../api/system.js').System;
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
-import { Service } from '../../api/service';
+import { Channel } from '../../api/channel';
 import { GlobalHotkey } from '../../api/global_hotkey';
 
 const coreState = require('../../core_state');
@@ -142,25 +142,23 @@ function EventListenerApiHandler() {
                 };
             }
         },
-        'service': {
-            name: 'service',
+        'channel': {
+            name: 'channel',
             subscribe: function(identity, type, payload, cb) {
-                const targetIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+                const targetIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
                 const { uuid } = targetIdentity;
                 const islocalUuid = coreState.isLocalUuid(uuid);
-                const localUnsub = Service.addEventListener(targetIdentity, type, cb);
+                const localUnsub = Channel.addEventListener(targetIdentity, type, cb);
                 let remoteUnSub;
-                const isExternalRuntime = ExternalApplication.isRuntimeClient(identity.uuid);
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
 
-                if (!islocalUuid && !isExternalRuntime) {
+                if (!islocalUuid && !isExternalClient && (type === 'channel-connected' || type === 'channel-disconnected')) {
                     const subscription = {
-                        uuid,
                         listenType: 'on',
-                        className: 'service',
+                        className: 'channel',
                         eventName: type
                     };
-
-                    addRemoteSubscription(subscription).then(unSubscribe => {
+                    subscribeToAllRuntimes(subscription).then(unSubscribe => {
                         remoteUnSub = unSubscribe;
                     });
                 }
@@ -182,10 +180,14 @@ function EventListenerApiHandler() {
                     className: 'system',
                     eventName: type
                 };
+
                 let remoteUnSub;
-                subscribeToAllRuntimes(subscription).then(unSubscribe => {
-                    remoteUnSub = unSubscribe;
-                });
+                const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+                if (!isExternalClient) {
+                    subscribeToAllRuntimes(subscription).then(unSubscribe => {
+                        remoteUnSub = unSubscribe;
+                    });
+                }
 
                 return () => {
                     localUnsub();
@@ -268,6 +270,4 @@ function EventListenerApiHandler() {
         ack(successAck);
     }
 }
-
-
 module.exports.EventListenerApiHandler = EventListenerApiHandler;

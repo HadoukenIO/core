@@ -31,7 +31,7 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
  * Shape of remote subscription props
  */
 interface RemoteSubscriptionProps extends Identity {
-    className: 'application'|'window'|'system'; // names of the class event emitters, used for subscriptions
+    className: 'application'|'window'|'system'|'channel'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
 }
@@ -219,7 +219,7 @@ export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
         if (!subscription.isSystemEvent) {
             applyRemoteSubscription(subscription, runtime);
         } else {
-            applySystemSubscription(subscription, runtime);
+            applySubscriptionToAllRuntimes(subscription, runtime);
         }
     });
 }
@@ -244,7 +244,7 @@ export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProp
 
         // Subscribe in all connected runtimes
         if (connectionManager.connections.length) {
-            connectionManager.connections.forEach(runtime => applySystemSubscription(subscription, runtime));
+            connectionManager.connections.forEach(runtime => applySubscriptionToAllRuntimes(subscription, runtime));
         }
 
         // Add the subscription to pending to cover any runtimes launched in the future
@@ -271,7 +271,7 @@ function systemUnsubscribe(subscription: any) {
 /**
  * Subscribe to a system event in a remote runtime
  */
-function applySystemSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
+function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtime: PeerRuntime) {
     const { className, eventName, listenType } = subscription;
     const fullEventName = route(className, eventName);
     const runtimeKey = keyFromPortInfo(runtime.portInfo);
@@ -282,9 +282,13 @@ function applySystemSubscription(subscription: RemoteSubscription, runtime: Peer
             ofEvents.emit(fullEventName, data);
         }
     };
-    // Subscribe to an event on a remote runtime
-    runtime.fin.System[listenType](eventName, listener);
 
+    // Subscribe to an event on a remote runtime
+    if (className === 'system') {
+        runtime.fin.System[listenType](eventName, listener);
+    } else if (className === 'channel') {
+        runtime.fin.InterApplicationBus.Channel[listenType](eventName, listener);
+    }
 
     // When runtime disconnects, remove the subscription for that runtime
     // It will be re-added from pending subscriptions if the runtime connects again
@@ -300,10 +304,18 @@ function applySystemSubscription(subscription: RemoteSubscription, runtime: Peer
         subscription.unSubscriptions.set(runtimeKey, []);
     }
 
-    subscription.unSubscriptions.get(runtimeKey).push(() => {
-        runtime.fin.System.removeListener(eventName, listener);
-        runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
-    });
+    // Subscribe to an event on a remote runtime
+    if (className === 'system') {
+        subscription.unSubscriptions.get(runtimeKey).push(() => {
+            runtime.fin.System.removeListener(eventName, listener);
+            runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
+        });
+    } else if (className === 'channel') {
+        subscription.unSubscriptions.get(runtimeKey).push(() => {
+            runtime.fin.InterApplicationBus.Channel.removeListener(eventName, listener);
+            runtime.fin.removeListener(disconnectEventName, unSubscribeListener);
+        });
+    }
 }
 
 /**

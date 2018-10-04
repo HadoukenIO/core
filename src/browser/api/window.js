@@ -36,12 +36,16 @@ import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
 import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
-// constants
 import {
     DEFAULT_RESIZE_REGION_SIZE,
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
     DEFAULT_RESIZE_SIDES
 } from '../../shapes';
+import {
+    ERROR_TITLE_RENDERER_CRASH,
+    ERROR_BOX_TYPES,
+    showErrorBox
+} from '../../common/errors';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -53,7 +57,7 @@ const WindowsMessages = {
     WM_SYSKEYUP: 0x0105,
 };
 
-let Window = {};
+let Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
@@ -348,6 +352,13 @@ let optionSetters = {
             setOptOnBrowserWin('resizeRegion', newVal, browserWin);
         }
     },
+    aspectRatio: function(newVal, browserWin) {
+        if (typeof(newVal) !== 'number') {
+            return;
+        }
+        browserWin.setAspectRatio(newVal);
+        setOptOnBrowserWin('aspectRatio', newVal, browserWin);
+    },
     hasLoaded: function(newVal, browserWin) {
         if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
@@ -560,6 +571,16 @@ Window.create = function(id, opts) {
 
             if (isMainWindow) {
                 coreState.setAppRunningState(uuid, false);
+
+                // Show error box notifying the user of the crash
+                const message =
+                    `A crash occured in the renderer process of the ` +
+                    `application with the UUID "${uuid}"`;
+                const title = ERROR_TITLE_RENDERER_CRASH;
+                const type = ERROR_BOX_TYPES.RENDERER_CRASH;
+                log.writeToLog('info', '==========> ' + type);
+                const args = { message, title, type };
+                showErrorBox(args);
             }
         });
 
@@ -684,11 +705,6 @@ Window.create = function(id, opts) {
                 uuid,
                 isMain,
                 documentName
-            });
-
-            ofEvents.emit(route.application('window-end-load'), {
-                name,
-                uuid
             });
         };
         let documentLoadedString = 'document-loaded';
@@ -2005,6 +2021,11 @@ function applyAdditionalOptionsToWindow(browserWindow) {
                 browserWindow.setOpacity(options.opacity);
             }
 
+            // set aspect ratio if present
+            if (options.aspectRatio > 0) {
+                browserWindow.setAspectRatio(options.aspectRatio);
+            }
+
             // set minimized or maximized
             if (options.state === 'minimized') {
                 browserWindow.minimize();
@@ -2303,8 +2324,7 @@ function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
 }
 
 function setBlankTaskbarIcon(browserWindow) {
-    // the file is located at ..\runtime-core\blank.ico
-    setIcon(browserWindow, path.resolve(`${__dirname}/../../../blank.ico`));
+    setIcon(browserWindow, path.resolve(`${__dirname}/../../../assets/blank.ico`));
 }
 
 function getMainWinIconUrl(id) {

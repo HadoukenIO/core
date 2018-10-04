@@ -9,7 +9,6 @@ let electron = require('electron');
 let app = electron.app; // Module to control application life.
 let BrowserWindow = electron.BrowserWindow;
 let crashReporter = electron.crashReporter;
-let dialog = electron.dialog;
 let globalShortcut = electron.globalShortcut;
 let ipc = electron.ipcMain;
 let Menu = electron.Menu;
@@ -21,7 +20,7 @@ let minimist = require('minimist');
 // local modules
 let Application = require('./src/browser/api/application.js').Application;
 let System = require('./src/browser/api/system.js').System;
-let Window = require('./src/browser/api/window.js').Window;
+import { Window } from './src/browser/api/window';
 
 let apiProtocol = require('./src/browser/api_protocol');
 let socketServer = require('./src/browser/transports/socket_server').server;
@@ -52,13 +51,14 @@ import {
 } from './src/browser/remote_subscriptions';
 import route from './src/common/route';
 
+import { createWillDownloadEventListener } from './src/browser/api/file_download';
+
 // locals
 let firstApp = null;
 let rvmBus;
 let otherInstanceRunning = false;
 let appIsReady = false;
 const deferredLaunches = [];
-const USER_DATA = app.getPath('userData');
 let resolveServerReady;
 const serverReadyPromise = new Promise((resolve) => {
     resolveServerReady = () => resolve();
@@ -124,7 +124,7 @@ app.on('select-client-certificate', function(event, webContents, url, list, call
     clientCertDialog.on('closed', onClosed);
 
     let params = '?url=' + encodeURIComponent(url) + '&uuid=' + encodeURIComponent(ipcUuid) + '&certs=' + encodeURIComponent(_.pluck(list, 'issuerName'));
-    clientCertDialog.loadURL(path.resolve(__dirname, 'src', 'certificate', 'index.html') + params);
+    clientCertDialog.loadURL(path.resolve(__dirname, 'assets', 'certificate.html') + params);
 });
 
 portDiscovery.on(route.runtime('launched'), (portInfo) => {
@@ -167,8 +167,12 @@ if (coreState.argo['local-startup-url']) {
         let localConfig = JSON.parse(fs.readFileSync(coreState.argo['local-startup-url']));
 
         if (typeof localConfig['devtools_port'] === 'number') {
-            console.log('remote-debugging-port:', localConfig['devtools_port']);
-            app.commandLine.appendSwitch('remote-debugging-port', localConfig['devtools_port'].toString());
+            if (!coreState.argo['remote-debugging-port']) {
+                log.writeToLog(1, `remote-debugging-port: ${localConfig['devtools_port']}`, true);
+                app.commandLine.appendSwitch('remote-debugging-port', localConfig['devtools_port'].toString());
+            } else {
+                log.writeToLog(1, 'Ignoring devtools_port from manifest', true);
+            }
         }
     } catch (err) {
         console.error(err);
@@ -359,6 +363,25 @@ app.on('ready', function() {
         }
     });
 
+    try {
+        electron.session.defaultSession.on('will-download', (event, item, webContents) => {
+            try {
+                const { uuid, name } = webContents.browserWindowOptions;
+                const { experimental } = coreState.getAppObjByUuid(uuid)._options;
+                //Experimental flag for the download events.
+                if (experimental && experimental.api && experimental.api.fileDownloadApi) {
+                    const downloadListener = createWillDownloadEventListener({ uuid, name });
+                    downloadListener(event, item, webContents);
+                }
+            } catch (err) {
+                log.writeToLog('info', 'Error while processing will-download event.');
+                log.writeToLog('info', err);
+            }
+        });
+    } catch (err) {
+        log.writeToLog('info', 'Could not wire up File Download API');
+        log.writeToLog('info', err);
+    }
     handleDeferredLaunches();
 }); // end app.ready
 
@@ -424,7 +447,7 @@ function rotateLogs(argo) {
             }).sort((a, b) => {
                 return (b.date - a.date);
             }).slice(6).forEach(file => {
-                let filepath = path.join(USER_DATA, file.name);
+                let filepath = path.join(app.getPath('userData'), file.name);
                 fs.unlink(filepath, err => {
                     if (err) {
                         System.log('error', `cannot delete logfile: ${filepath}`);
@@ -453,7 +476,7 @@ function deleteProcessLogfile(closeLogfile) {
         return;
     }
 
-    let filepath = path.join(USER_DATA, filename);
+    let filepath = path.join(app.getPath('userData'), filename);
 
     if (closeLogfile) {
         app.closeLogfile();
@@ -568,14 +591,13 @@ function launchApp(argo, startExternalAdapterServer) {
             tickCount: app.getTickCount(),
             uuid
         });
-    }, error => {
-        log.writeToLog(1, error, true);
-
-        if (!coreState.argo['noerrdialogs']) {
-            dialog.showErrorBox('Fatal Error', `${error}`);
-        }
-
-        app.quit();
+    }, (error) => {
+        const title = errors.ERROR_TITLE_APP_INITIALIZATION;
+        const type = errors.ERROR_BOX_TYPES.APP_INITIALIZATION;
+        const args = { error, title, type };
+        errors.showErrorBox(args)
+            .catch((error) => log.writeToLog('info', error))
+            .then(app.quit);
     });
 }
 
@@ -605,7 +627,6 @@ function initFirstApp(configObject, configUrl, licenseKey) {
         successfulLaunch = true;
 
     } catch (error) {
-        log.writeToLog(1, error, true);
 
         if (rvmBus) {
             rvmBus.publish({
@@ -615,18 +636,17 @@ function initFirstApp(configObject, configUrl, licenseKey) {
             });
         }
 
-        if (!coreState.argo['noerrdialogs']) {
-            const srcMsg = error ? error.message : '';
-            const errorMessage = startupAppOptions.loadErrorMessage || `There was an error loading the application: ${ srcMsg }`;
-
-            dialog.showErrorBox('Fatal Error', errorMessage);
-        }
-
-        if (coreState.shouldCloseRuntime()) {
-            _.defer(() => {
-                app.quit();
+        const message = startupAppOptions.loadErrorMessage;
+        const title = errors.ERROR_TITLE_APP_INITIALIZATION;
+        const type = errors.ERROR_BOX_TYPES.APP_INITIALIZATION;
+        const args = { error, message, title, type };
+        errors.showErrorBox(args)
+            .catch((error) => log.writeToLog('info', error))
+            .then(() => {
+                if (coreState.shouldCloseRuntime()) {
+                    app.quit();
+                }
             });
-        }
     }
 
     return successfulLaunch;
@@ -704,8 +724,9 @@ function handleMacSingleTenant() {
         if (coreState.argo['security-realm']) {
             pathPost = pathPost.concat(coreState.argo['security-realm']);
         }
-        app.setPath('userData', path.join(USER_DATA, pathPost));
-        app.setPath('userCache', path.join(USER_DATA, pathPost));
+        const userData = app.getPath('userData');
+        app.setPath('userData', path.join(userData, pathPost));
+        app.setPath('userCache', path.join(userData, pathPost));
     }
 }
 
