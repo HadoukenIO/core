@@ -11,7 +11,8 @@ import * as path from 'path';
  */
 let connect: any;
 try {
-    const jsAdapterDevPath = path.resolve(process.cwd(), 'resources', 'js-adapter', 'src', 'main.js');
+    const { resourcesPath } = <any>process;
+    const jsAdapterDevPath = path.join(resourcesPath, 'js-adapter', 'src', 'main.js');
     // tslint:disable-next-line
     connect = require(jsAdapterDevPath).connect; // DEV js-adapter
     writeToLog('info', `Core is using js-adapter found in: ${jsAdapterDevPath}`);
