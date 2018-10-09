@@ -2,8 +2,8 @@ import { EmitterMap } from './emitter_map';
 import { createHash } from 'crypto';
 import { Identity, Fin } from 'hadouken-js-adapter';
 import { EventEmitter } from 'events';
-import * as path from 'path';
 import { writeToLog } from '../log';
+import * as path from 'path';
 
 /*
     Try loading local dev js-adapter, if failed, resort to
@@ -11,7 +11,7 @@ import { writeToLog } from '../log';
  */
 let connect: any;
 try {
-    const jsAdapterDevPath = path.resolve(process.resourcesPath, 'js-adapter', 'src', 'main.js');
+    const jsAdapterDevPath = path.resolve(process.cwd(), 'resources', 'js-adapter', 'src', 'main.js');
     // tslint:disable-next-line
     connect = require(jsAdapterDevPath).connect; // DEV js-adapter
     writeToLog('info', `Core is using js-adapter found in: ${jsAdapterDevPath}`);
