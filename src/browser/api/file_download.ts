@@ -1,11 +1,9 @@
-import { app } from 'electron';
-import { BrowserWindow } from 'electron';
-import { Identity } from '../../shapes';
+import { app, BrowserWindow } from 'electron';
+import { Identity, WindowOptions } from '../../shapes';
 import { writeToLog } from '../log';
 import ofEvents from '../of_events';
 import route from '../../common/route';
 import * as coreState from '../core_state';
-import { WindowOptions } from '../../shapes';
 
 const EVENT_TOPIC = 'window';
 export const FILE_DOWNLOAD_EVENTS = {
