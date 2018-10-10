@@ -180,16 +180,12 @@ export module Channel {
         ackObj.correlationId = correlationId;
 
         if (destinationToken) {
-            if (success) {
-                ackObj.payload = new AckPayload(ackPayload);
-                if (destinationToken.runtimeUuid) {
-                    // Was sent from another runtime, ack to runtime not identity
-                    sendToIdentity({uuid: destinationToken.runtimeUuid}, ackObj);
-                } else {
-                    sendToIdentity(destinationToken, ackObj);
-                }
+            ackObj.payload = success ? new AckPayload(ackPayload) : new NackPayload(reason);
+
+            if (destinationToken.runtimeUuid) {
+                // Was sent from another runtime, ack to runtime not identity
+                sendToIdentity({uuid: destinationToken.runtimeUuid}, ackObj);
             } else {
-                ackObj.payload = new NackPayload(reason);
                 sendToIdentity(destinationToken, ackObj);
             }
         } else {
