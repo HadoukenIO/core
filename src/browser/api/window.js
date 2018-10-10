@@ -1962,15 +1962,19 @@ function getBoundsCacheSafeFileName(identity) {
     const safeName = hash.digest('hex');
     const newFileName = path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 
-    if (!fs.existsSync(newFileName)) {
-        // current old style file name
-        const oldSafeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
-        const oldFileName = path.join(userCache, windowPosCacheFolder, `${oldSafeName}.json`);
+    try {
+        if (!fs.existsSync(newFileName)) {
+            // current old style file name
+            const oldSafeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+            const oldFileName = path.join(userCache, windowPosCacheFolder, `${oldSafeName}.json`);
 
-        // If an old file name exists, replace it by a new file name
-        if (fs.existsSync(oldFileName)) {
-            fs.renameSync(oldFileName, newFileName);
+            // If an old file name exists, replace it by a new file name
+            if (fs.existsSync(oldFileName)) {
+                fs.renameSync(oldFileName, newFileName);
+            }
         }
+    } catch (err) {
+        log.writeToLog('info', err);
     }
     return newFileName;
 }
