@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import { Identity, WindowOptions } from '../../shapes';
+import * as path from 'path';
 import { writeToLog } from '../log';
 import ofEvents from '../of_events';
 import route from '../../common/route';
@@ -19,6 +20,7 @@ interface FileEvent {
     url: string;
     mimeType: string;
     fileName: string;
+    originalFileName: string;
     totalBytes: number;
     startTime: number;
     contentDisposition: string;
@@ -27,6 +29,9 @@ interface FileEvent {
     topic: string;
     uuid: string;
     name: string;
+    type: string;
+    state: string;
+    downloadedBytes: number;
 }
 
 interface FileDownloadLocation {
@@ -55,20 +60,24 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
 
         try {
             const fileUuid: string = app.generateGUID();
-            const baseFileEvent: FileEvent = {
-                fileUuid,
+            const getFileEventData = (type: string, state: DownloadState): FileEvent => ({
+                type,
+                state,
                 url: item.getURL(),
                 mimeType: item.getMimeType(),
-                fileName: item.getFilename(),
+                fileName: path.parse(item.getSavePath()).base,
+                originalFileName: item.getFilename(),
                 totalBytes: item.getTotalBytes(),
                 startTime: item.getStartTime(),
                 contentDisposition: item.getContentDisposition(),
                 lastModifiedTime: item.getLastModifiedTime(),
                 eTag: item.getETag(),
+                downloadedBytes: item.getReceivedBytes(),
                 topic: EVENT_TOPIC,
                 uuid,
-                name
-            };
+                name,
+                fileUuid
+            });
 
             const progressTracker = (event: any, state: DownloadState): void => {
                 try {
@@ -78,19 +87,19 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
                         reportedState = 'paused';
                     }
 
-                    ofEvents.emit(route.window(FILE_DOWNLOAD_EVENTS.PROGRESS, uuid, name), Object.assign({
-                        type: FILE_DOWNLOAD_EVENTS.PROGRESS,
-                        state,
-                        downloadedBytes: item.getReceivedBytes()
-                    }, baseFileEvent));
+                    ofEvents.emit(
+                        route.window(FILE_DOWNLOAD_EVENTS.PROGRESS, uuid, name),
+                        getFileEventData(FILE_DOWNLOAD_EVENTS.PROGRESS, state)
+                    );
                 } catch (e) {
                     writeToLog('info', e);
                 }
             };
 
-            ofEvents.emit(route.window(FILE_DOWNLOAD_EVENTS.STARTED, uuid, name), Object.assign({
-                type: FILE_DOWNLOAD_EVENTS.STARTED
-            }, baseFileEvent));
+            ofEvents.emit(
+                route.window(FILE_DOWNLOAD_EVENTS.STARTED, uuid, name),
+                getFileEventData(FILE_DOWNLOAD_EVENTS.STARTED, 'started')
+            );
 
             item.on('updated', progressTracker);
             item.once('done', (event: Event, state: DownloadState) => {
@@ -107,13 +116,13 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
 
                     //log that the download failed.
                     if (state !== 'completed') {
-                        writeToLog('info', `download ${baseFileEvent.fileUuid } failed, state: ${state}`);
+                        writeToLog('info', `download ${fileUuid} failed, state: ${state}`);
                     }
 
-                    ofEvents.emit(route.window(FILE_DOWNLOAD_EVENTS.COMPLETED, uuid, name), Object.assign({
-                        type: FILE_DOWNLOAD_EVENTS.COMPLETED,
-                        state
-                    }, baseFileEvent));
+                    ofEvents.emit(
+                        route.window(FILE_DOWNLOAD_EVENTS.COMPLETED, uuid, name),
+                        getFileEventData(FILE_DOWNLOAD_EVENTS.COMPLETED, state)
+                    );
 
                     const fileDownloadBrowserWindow = BrowserWindow.fromWebContents(webContents);
                     const browserWindowId = fileDownloadBrowserWindow.id;

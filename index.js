@@ -249,7 +249,8 @@ app.on('ready', function() {
     app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
 
     if (process.platform === 'win32') {
-        log.writeToLog('info', `group-policy build: ${app.isGroupPolicyBuild()}`);
+        log.writeToLog('info', `group-policy build: ${process.buildFlags.groupPolicy}`);
+        log.writeToLog('info', `enable-chromium build: ${process.buildFlags.enableChromium}`);
     }
     log.writeToLog('info', `build architecture: ${process.arch}`);
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
@@ -415,6 +416,9 @@ function includeFlashPlugin() {
 
     if (pluginName) {
         app.commandLine.appendSwitch('ppapi-flash-path', path.join(process.resourcesPath, 'plugins', 'flash', pluginName));
+        // Currently for enable_chromium build the flash version need to be
+        // specified. See RUN-4510 and RUN-4580.
+        app.commandLine.appendSwitch('ppapi-flash-version', '30.0.0.154');
     }
 }
 
@@ -720,13 +724,14 @@ function registerMacMenu() {
 function handleMacSingleTenant() {
     if (process.platform === 'darwin') {
         const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
-        let pathPost = encodeURIComponent(configUrl);
+        let cachePath = encodeURIComponent(configUrl);
         if (coreState.argo['security-realm']) {
-            pathPost = pathPost.concat(coreState.argo['security-realm']);
+            cachePath = path.join(cachePath, coreState.argo['security-realm']);
         }
         const userData = app.getPath('userData');
-        app.setPath('userData', path.join(userData, pathPost));
-        app.setPath('userCache', path.join(userData, pathPost));
+        cachePath = path.join(userData, 'cache', cachePath, process.versions['openfin']);
+        app.setPath('userData', cachePath);
+        app.setPath('userCache', cachePath);
     }
 }
 
