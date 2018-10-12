@@ -82,6 +82,7 @@ function five0BaseOptions() {
                 'fileDownloadApi': false,
                 'iframe': iframeBaseSettings
             },
+            'chromeContextMenu': false,
             'disableInitialReload': false,
             'node': false,
             'v2Api': true
@@ -258,6 +259,7 @@ module.exports = {
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
             api: newOptions.experimental.api,
+            chromeContextMenu: newOptions.experimental.chromeContextMenu,
             disableInitialReload: newOptions.experimental.disableInitialReload,
             nodeIntegration: false,
             plugins: newOptions.plugins,
