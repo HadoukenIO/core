@@ -175,6 +175,9 @@
     }
 
     function wireUpMenu(global) {
+        if (initialOptions.experimental.chromeContextMenu) {
+            return;
+        }
         global.addEventListener('contextmenu', e => {
             if (!e.defaultPrevented) {
                 e.preventDefault();
