@@ -368,12 +368,9 @@ app.on('ready', function() {
         electron.session.defaultSession.on('will-download', (event, item, webContents) => {
             try {
                 const { uuid, name } = webContents.browserWindowOptions;
-                const { experimental } = coreState.getAppObjByUuid(uuid)._options;
-                //Experimental flag for the download events.
-                if (experimental && experimental.api && experimental.api.fileDownloadApi) {
-                    const downloadListener = createWillDownloadEventListener({ uuid, name });
-                    downloadListener(event, item, webContents);
-                }
+
+                const downloadListener = createWillDownloadEventListener({ uuid, name });
+                downloadListener(event, item, webContents);
             } catch (err) {
                 log.writeToLog('info', 'Error while processing will-download event.');
                 log.writeToLog('info', err);
