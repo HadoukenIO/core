@@ -79,7 +79,6 @@ function five0BaseOptions() {
                     'renderer': rendererBatchingBaseSettings
                 },
                 'breadcrumbs': false,
-                'fileDownloadApi': false,
                 'iframe': iframeBaseSettings
             },
             'chromeContextMenu': false,
