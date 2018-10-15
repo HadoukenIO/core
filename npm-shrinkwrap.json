@@ -3705,9 +3705,9 @@
       }
     },
     "node-abi": {
-      "version": "2.4.3",
-      "resolved": "https://registry.npmjs.org/node-abi/-/node-abi-2.4.3.tgz",
-      "integrity": "sha512-b656V5C0628gOOA2kwcpNA/bxdlqYF9FvxJ+qqVX0ctdXNVZpS8J6xEUYir3WAKc7U0BH/NRlSpNbGsy+azjeg==",
+      "version": "2.4.5",
+      "resolved": "https://registry.npmjs.org/node-abi/-/node-abi-2.4.5.tgz",
+      "integrity": "sha512-aa/UC6Nr3+tqhHGRsAuw/edz7/q9nnetBrKWxj6rpTtm+0X9T1qU7lIEHMS3yN9JwAbRiKUbRRFy1PLz/y3aaA==",
       "dev": true,
       "requires": {
         "semver": "^5.4.1"
