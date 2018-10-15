@@ -50,6 +50,7 @@
     "load-grunt-tasks": "^4.0.0",
     "mocha": "^5.2.0",
     "mockery": "^2.1.0",
+    "node-abi": "^2.4.5",
     "openfin-sign": "openfin/openfin-sign.git#v1.0.0",
     "rewire": "^4.0.1",
     "should": "^13.2.1",
