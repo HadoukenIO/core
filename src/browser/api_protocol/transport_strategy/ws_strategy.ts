@@ -44,12 +44,17 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     public send(externalConnection: any, payload: any): void {
+        const id = externalConnection.id;
         try {
-            log.writeToLog('info', `sent external-adapter <= ${externalConnection.id} ${JSON.stringify(payload)}`);
+            log.writeToLog('info', `sent external-adapter <= ${id} ${JSON.stringify(payload)}`);
         } catch (err) {
             /* tslint:disable: no-empty */
         }
-        socketServer.send(externalConnection.id, JSON.stringify(payload));
+
+        // Make sure not to send any message to a closed/closing websocket.
+        if (socketServer.isConnectionOpen(id)) {
+            socketServer.send(id, JSON.stringify(payload));
+        }
     }
 
     public onClientAuthenticated(cb: Function): void {
