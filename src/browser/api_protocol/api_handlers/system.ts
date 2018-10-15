@@ -509,7 +509,7 @@ function downloadPreloadScripts(identity: Identity, message: APIMessage, ack: Ac
     const { payload: { scripts } } = message;
 
     System.downloadPreloadScripts(identity, scripts)
-        .then((downloadResults) => {
+        .then((downloadResults: any) => {
             const dataAck = Object.assign({}, successAck);
             dataAck.data = downloadResults;
             ack(dataAck);
@@ -556,7 +556,7 @@ function resolveUuid(identity: Identity, message: APIMessage, ack: Acker, nack: 
 
 function getPreloadScripts(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     System.getPreloadScripts(identity)
-        .then((preloadScripts) => {
+        .then((preloadScripts: any) => {
             const dataAck = Object.assign({}, successAck);
             dataAck.data = preloadScripts;
             ack(dataAck);
