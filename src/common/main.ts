@@ -3,8 +3,13 @@ import { parse as parseUrl } from 'url';
 import { Identity } from '../shapes';
 
 export function isChromePageUrl(url: string): boolean {
-    const protocol = parseUrl(url).protocol || '';
-    return protocol.startsWith('chrome');
+    const { buildFlags } = <any>process; // added by Runtime
+    if (buildFlags && buildFlags.enableChromium) {
+        const protocol = parseUrl(url).protocol || '';
+        return protocol.startsWith('chrome');
+    } else {
+        return false;
+    }
 }
 
 export function isFileUrl(url: string): boolean {
