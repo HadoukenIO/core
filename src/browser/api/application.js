@@ -777,6 +777,27 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     }
 };
 
+Application.setAppLogUsername = function(identity, username, callback, errorCallback) {
+    let app = Application.wrap(identity.uuid);
+
+    if (app) {
+        // Only apps started from a manifest can retrieve shortcut configuration
+        const options = {
+            topic: 'application',
+            action: 'application-log-username',
+            sourceUrl: app._configUrl,
+            data: {
+                userName: username
+            }
+        };
+        sendToRVM(options)
+            .then(callback, errorCallback)
+            .catch(errorCallback);
+    } else {
+        errorCallback(new Error('Application uuid not valid.'));
+    }
+};
+
 
 Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     let { uuid } = identity;
