@@ -40,15 +40,10 @@ function lockOnRun(msg: MessagePackage, next: (locals?: any) => void): void {
     const uuid = payload && payload.uuid;
     const name = payload && payload.name;
     const action = data && data.action;
-    if (action === 'run-application') {
+    if (action === 'run-application' && !identity.runtimeUuid) {
         const key = makeMutexKey(uuid);
         const lock = namedMutex.tryLock(key);
-        if (lock.locked) {
-            if (lock.alreadyExists) {
-                namedMutex.releaseLock(key);
-                return next({ duplicateUuidRun: true });
-            }
-        } else {
+        if (!lock.locked) {
             //Delete the app from core state to properly forward to owning runtime
             deleteApp(uuid);
             //Set duplicateUuidRun to true to avoid running on early multi -runtime

@@ -661,7 +661,11 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     ofEvents.once(route.window('closed', uuid, uuid), () => {
         delete fetchingIcon[uuid];
         removeTrayIcon(app);
-        namedMutex.releaseLock(makeMutexKey(uuid));
+        const key = makeMutexKey(uuid);
+        let released = namedMutex.releaseLock(key).ok;
+        while (released) {
+            released = namedMutex.releaseLock(key).ok;
+        }
 
         if (uuid in registeredUsersByApp) {
             delete registeredUsersByApp[uuid];
