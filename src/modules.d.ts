@@ -90,7 +90,9 @@ declare module 'electron' {
         public nativeId: string;
         static fromId(id: number): BrowserWindow;
         static getAllWindows(): BrowserWindow[];
+        static fromWebContents(wc: webContents): BrowserWindow;
 
+        close(): void;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         getWindowsByClassName(className: string): any;
