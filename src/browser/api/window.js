@@ -1761,22 +1761,23 @@ Window.exists = function(identity) {
 };
 
 Window.getBoundsFromDisk = function(identity, callback, errorCallback) {
-    let cacheFile = getBoundsCacheSafeFileName(identity);
-    try {
-        fs.readFile(cacheFile, 'utf8', (err, data) => {
-            if (err) {
-                errorCallback(err);
-            } else {
-                try {
-                    callback(JSON.parse(data));
-                } catch (parseErr) {
-                    errorCallback(new Error(`Error parsing saved bounds data ${parseErr.message}`));
+    getBoundsCacheSafeFileName(identity, cacheFile => {
+        try {
+            fs.readFile(cacheFile, 'utf8', (err, data) => {
+                if (err) {
+                    errorCallback(err);
+                } else {
+                    try {
+                        callback(JSON.parse(data));
+                    } catch (parseErr) {
+                        errorCallback(new Error(`Error parsing saved bounds data ${parseErr.message}`));
+                    }
                 }
-            }
-        });
-    } catch (err) {
-        errorCallback(err);
-    }
+            });
+        } catch (err) {
+            errorCallback(err);
+        }
+    }, errorCallback);
 };
 
 Window.authenticate = function(identity, username, password, callback) {
@@ -1927,35 +1928,36 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
 }
 
 function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
-    const cacheFile = getBoundsCacheSafeFileName(identity);
-    const data = {
-        'active': 'true',
-        'height': bounds.height,
-        'width': bounds.width,
-        'left': bounds.x,
-        'top': bounds.y,
-        'name': identity.name,
-        'windowState': bounds.windowState,
-        'zoomLevel': zoomLevel
-    };
+    getBoundsCacheSafeFileName(identity, cacheFile => {
+        const data = {
+            'active': 'true',
+            'height': bounds.height,
+            'width': bounds.width,
+            'left': bounds.x,
+            'top': bounds.y,
+            'name': identity.name,
+            'windowState': bounds.windowState,
+            'zoomLevel': zoomLevel
+        };
 
-    try {
-        const userCache = electronApp.getPath('userCache');
-        fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
-            fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
-                callback(writeFileErr);
+        try {
+            const userCache = electronApp.getPath('userCache');
+            fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
+                fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
+                    callback(writeFileErr);
+                });
             });
-        });
-    } catch (err) {
-        callback(err);
-    }
+        } catch (err) {
+            callback(err);
+        }
+    }, callback);
 }
 
 //make sure the uuid/names with special characters do not break the bounds cache.
-function getBoundsCacheSafeFileName(identity) {
+function getBoundsCacheSafeFileName(identity, callback, errorCallback) {
     const userCache = electronApp.getPath('userCache');
 
-    // new style file name
+    // new hashed file name
     const hash = crypto.createHash('sha256');
     hash.update(identity.uuid);
     hash.update(identity.name);
@@ -1963,20 +1965,29 @@ function getBoundsCacheSafeFileName(identity) {
     const newFileName = path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 
     try {
-        if (!fs.existsSync(newFileName)) {
-            // current old style file name
-            const oldSafeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
-            const oldFileName = path.join(userCache, windowPosCacheFolder, `${oldSafeName}.json`);
+        fs.access(newFileName, fs.constants.F_OK, (newFileErr) => {
+            if (newFileErr) { // new file name doesn't exist
+                // current old style file name
+                const oldSafeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+                const oldFileName = path.join(userCache, windowPosCacheFolder, `${oldSafeName}.json`);
 
-            // If an old file name exists, replace it by a new file name
-            if (fs.existsSync(oldFileName)) {
-                fs.renameSync(oldFileName, newFileName);
+                // check if an old file name exists
+                fs.access(oldFileName, fs.constants.F_OK, (oldFileErr) => {
+                    if (!oldFileErr) { // if it exists, rename it by a new file name.
+                        fs.rename(oldFileName, newFileName, () => {
+                            callback(newFileName);
+                        });
+                    } else {
+                        callback(newFileName);
+                    }
+                });
+            } else {
+                callback(newFileName);
             }
-        }
+        });
     } catch (err) {
-        log.writeToLog('info', err);
+        errorCallback(err);
     }
-    return newFileName;
 }
 
 function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
