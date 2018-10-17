@@ -5,10 +5,11 @@ import { deleteApp, getAppRunningState, appInCoreState, argo} from '../../core_s
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import RequestHandler from '../transport_strategy/base_handler';
 import { makeMutexKey } from '../../utils';
+import { meshEnabled } from '../../connection_manager';
 const namedMutex = require('electron').namedMutex;
 
 
-export const enforceUuidUniqueness = argo['enforce-uuid-uniqueness'] || false;
+export const enforceUuidUniqueness = meshEnabled && (argo['enforce-uuid-uniqueness'] || false);
 
 
 async function subscribeToRunningExternal() {
