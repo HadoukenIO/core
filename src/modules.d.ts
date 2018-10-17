@@ -102,8 +102,10 @@ declare module 'electron' {
         bringToFront(): any;
         isDestroyed(): boolean;
         isMaximized(): boolean;
+        isFullScreen(): boolean;
         isMinimized(): boolean;
         unmaximize(): any;
+        setFullScreen(fullscreen: boolean): void;
         emit(routeString: string, ...args: any[]): void;
         getBounds(): Rectangle;
         setBounds(bounds: Rectangle): void;
