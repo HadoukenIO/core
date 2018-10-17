@@ -230,7 +230,7 @@ export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
 export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
     return new Promise(resolve => {
         if (systemEventsToIgnore[subscriptionProps.eventName]) {
-            resolve();
+            return resolve();
         }
 
         const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
