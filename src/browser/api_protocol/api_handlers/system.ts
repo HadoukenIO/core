@@ -14,8 +14,10 @@ import {
     Nacker,
     NackerError,
     NackerErrorString,
+    PreloadScript,
     StartManifest
 } from '../../../shapes';
+import { DownloadResult } from '../../../browser/preload_scripts';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -509,7 +511,7 @@ function downloadPreloadScripts(identity: Identity, message: APIMessage, ack: Ac
     const { payload: { scripts } } = message;
 
     System.downloadPreloadScripts(identity, scripts)
-        .then((downloadResults: any) => {
+        .then((downloadResults: DownloadResult[]) => {
             const dataAck = Object.assign({}, successAck);
             dataAck.data = downloadResults;
             ack(dataAck);
@@ -556,7 +558,7 @@ function resolveUuid(identity: Identity, message: APIMessage, ack: Acker, nack: 
 
 function getPreloadScripts(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     System.getPreloadScripts(identity)
-        .then((preloadScripts: any) => {
+        .then((preloadScripts: PreloadScript[]) => {
             const dataAck = Object.assign({}, successAck);
             dataAck.data = preloadScripts;
             ack(dataAck);

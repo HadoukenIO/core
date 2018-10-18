@@ -44,7 +44,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     public send(externalConnection: any, payload: any): void {
-        const id = externalConnection.id;
+        const {id} = externalConnection;
         try {
             log.writeToLog('info', `sent external-adapter <= ${id} ${JSON.stringify(payload)}`);
         } catch (err) {
@@ -54,6 +54,10 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
         // Make sure not to send any message to a closed/closing websocket.
         if (socketServer.isConnectionOpen(id)) {
             socketServer.send(id, JSON.stringify(payload));
+        } else { // log the unsent message
+            log.writeToLog('info', `Aborted sending a message to external-adapter (ID: ${id}). ` +
+                    `Message not sent: ${JSON.stringify(payload)}`
+            );
         }
     }
 
