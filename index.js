@@ -13,6 +13,7 @@ let globalShortcut = electron.globalShortcut;
 let ipc = electron.ipcMain;
 let Menu = electron.Menu;
 
+
 // npm modules
 let _ = require('underscore');
 let minimist = require('minimist');
@@ -547,7 +548,7 @@ function launchApp(argo, startExternalAdapterServer) {
         const {
             configUrl,
             configObject,
-            configObject: { licenseKey }
+            configObject: { licenseKey, shortcut = {} }
         } = configuration;
 
         coreState.setManifest(configUrl, configObject);
@@ -560,9 +561,24 @@ function launchApp(argo, startExternalAdapterServer) {
 
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
         const uuid = startupAppOptions && startupAppOptions.uuid;
+        const name = startupAppOptions && startupAppOptions.name;
         const ofApp = Application.wrap(uuid);
         const ofManifestUrl = ofApp && ofApp._configUrl;
         const isRunning = Application.isRunning(ofApp);
+
+        const { company, name: shortcutName } = shortcut;
+        let appUserModelId;
+        let namePart;
+
+        if (company) {
+            namePart = shortcutName ? `.${shortcutName}` : '';
+            appUserModelId = `${company}${namePart}`;
+        } else {
+            namePart = name ? `.${name}` : '';
+            appUserModelId = `${uuid}${namePart}`;
+        }
+
+        app.setAppUserModelId(appUserModelId);
 
         // this ensures that external connections that start the runtime can do so without a main window
         let successfulInitialLaunch = true;
