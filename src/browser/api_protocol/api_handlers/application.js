@@ -66,6 +66,7 @@ module.exports.applicationApiMap = {
     'restart-application': restartApplication,
     'run-application': runApplication,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
+    'set-app-log-username': setAppLogUsername,
     'set-tray-icon': setTrayIcon,
     'set-application-zoom-level': setApplicationZoomLevel,
     'terminate-application': terminateApplication,
@@ -263,6 +264,17 @@ function setShortcuts(identity, message, ack, nack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
     Application.setShortcuts(appIdentity, payload.data, response => {
+        dataAck.data = response;
+        ack(dataAck);
+    }, nack);
+}
+
+function setAppLogUsername(identity, message, ack, nack) {
+    const payload = message.payload;
+    const dataAck = _.clone(successAck);
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+
+    Application.setAppLogUsername(appIdentity, payload.data, response => {
         dataAck.data = response;
         ack(dataAck);
     }, nack);

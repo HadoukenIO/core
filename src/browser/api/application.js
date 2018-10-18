@@ -779,9 +779,7 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
 
 Application.setAppLogUsername = function(identity, username, callback, errorCallback) {
     let app = Application.wrap(identity.uuid);
-
     if (app) {
-        // Only apps started from a manifest can retrieve shortcut configuration
         const options = {
             topic: 'application',
             action: 'application-log-username',
