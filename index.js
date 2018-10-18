@@ -13,7 +13,6 @@ let globalShortcut = electron.globalShortcut;
 let ipc = electron.ipcMain;
 let Menu = electron.Menu;
 
-
 // npm modules
 let _ = require('underscore');
 let minimist = require('minimist');
