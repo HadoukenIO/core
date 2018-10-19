@@ -95,20 +95,16 @@ export default class BoundsChangedStateTracker {
             'bounds-changed': (): void => {
                 const ofWindow = coreState.getWindowByUuidName(uuid, name);
                 const groupUuid = ofWindow ? ofWindow.groupUuid : null;
-
+                if (groupUuid) {
+                    return;
+                }
                 const dispatchedChange = this.handleBoundsChange(true);
 
                 if (dispatchedChange) {
-                    if (groupUuid) {
-                        const groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid);
-                        if (groupLeader && groupLeader.type === 'api') {
-                            this.handleBoundsChange(false, true);
-                        }
-                    } else {
+
                         if (!animations.getAnimationHandler().hasWindow(this.browserWindow.id) && !this.isUserBoundsChangeActive()) {
                             this.handleBoundsChange(false, true);
                         }
-                    }
                 }
             },
             'synth-animate-end': (meta: any): void => {

@@ -1339,8 +1339,7 @@ Window.getSnapshot = (opts) => {
             return browserWindow.capturePage(callback);
         }
 
-        if (
-            !area ||
+        if (!area ||
             typeof area !== 'object' ||
             typeof area.x !== 'number' ||
             typeof area.y !== 'number' ||

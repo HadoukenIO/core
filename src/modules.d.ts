@@ -112,6 +112,7 @@ declare module 'electron' {
         setWindowPlacement(bounds: Rectangle): void;
         devToolsWebContents: null;
         webContents: webContents;
+        setUserMovementEnabled(enabled: boolean): void;
 
         _eventsCount: number;
         _events: {
