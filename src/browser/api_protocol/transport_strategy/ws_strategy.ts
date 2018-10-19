@@ -52,7 +52,7 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
             log.writeToLog('info', `sent external-adapter <= ${id} ${message}`);
             socketServer.send(id, message);
         } else { // log the unsent message
-            log.writeToLog('info', `not sent external-adapter <= ${id} ${message}`);
+            log.writeToLog('info', `Socket connection is not open, therefore not sending message to external adapter <= ${id} ${message}`);
         }
     }
 
