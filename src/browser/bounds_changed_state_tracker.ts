@@ -16,8 +16,13 @@ import ofEvents from './of_events';
 import route from '../common/route';
 import { clipBounds, windowSetBoundsToVisible } from './utils';
 import { OpenFinWindow, BrowserWindow } from '../shapes';
-import { Rectangle, windowTransaction } from 'electron';
+import { windowTransaction } from 'electron';
+import * as log from '../browser/log';
+import {RectangleBase, Rectangle} from './rectangle';
 
+import Bounds from 'hadouken-js-adapter/out/types/src/api/window/bounds';
+
+const l = (x: any) => log.writeToLog(1, x, true);
 
 const isWin32 = process.platform === 'win32';
 
@@ -36,7 +41,7 @@ const shouldTrack = (action: string): boolean => {
 const trackingResize = shouldTrack('resize');
 const trackingAPI = shouldTrack('api');
 
-interface DecoratedBounds extends Rectangle {
+interface DecoratedBounds extends RectangleBase {
     frame: boolean;
     windowState: WindowState;
 }
@@ -73,47 +78,6 @@ interface DeferedEvent {
     left: number;
     height: number;
     width: number;
-}
-
-class Rect {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-
-    constructor (x: number, y: number, width: number, height: number) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-    }
-
-    public isEmpty(): boolean {
-        return (this.width <= 0) || (this.height <= 0);
-    }
-
-    public intersection(r: Rect): Rect {
-        let tx1: number = this.x;
-        let ty1: number = this.y;
-        const rx1: number = r.x;
-        const ry1: number = r.y;
-        let tx2: number = tx1; tx2 += this.width;
-        let ty2: number = ty1; ty2 += this.height;
-        let rx2: number = rx1; rx2 += r.width;
-        let ry2: number = ry1; ry2 += r.height;
-        if (tx1 < rx1) tx1 = rx1;
-        if (ty1 < ry1) ty1 = ry1;
-        if (tx2 > rx2) tx2 = rx2;
-        if (ty2 > ry2) ty2 = ry2;
-        tx2 -= tx1;
-        ty2 -= ty1;
-        // tx2,ty2 will never overflow (they will never be
-        // larger than the smallest of the two source w,h)
-        // they might underflow, though...
-        if (tx2 < Number.MIN_VALUE) tx2 = Number.MIN_VALUE;
-        if (ty2 < Number.MIN_VALUE) ty2 = Number.MIN_VALUE;
-        return new Rect(tx1, ty1, tx2, ty2);
-    }
 }
 
 export default class BoundsChangedStateTracker {
@@ -265,7 +229,7 @@ export default class BoundsChangedStateTracker {
         };
     };
 
-    private getBoundsDelta = (current: Rectangle, cached: Rectangle): Delta => {
+    private getBoundsDelta = (current: RectangleBase, cached: RectangleBase): Delta => {
         return {
             x: current.x - cached.x,
             x2: (current.x + current.width) - (cached.x + cached.width),
@@ -301,59 +265,97 @@ export default class BoundsChangedStateTracker {
     };
 
     // tslint:disable-next-line:max-line-length
-    private handleGroupedResize = (resizeChangeType: BoundChanged, delta: any, originalWindowCachedBounds: DecoratedBounds, windowToUpdate: OpenFinWindow, bounds: Rectangle): Rectangle => {
+    private handleGroupedResize = (resizeChangeType: BoundChanged, delta: any, originalWindowCachedBounds: DecoratedBounds, windowToUpdate: OpenFinWindow, bounds: RectangleBase): RectangleBase => {
         if (!trackingResize) {
             return bounds;
         }
         let { x, y, width, height } = bounds;
-        if (resizeChangeType.height) {
-            if (delta.y) {
-                if (this.sharedBound(y, originalWindowCachedBounds.y)) {
-                    // resize windows with matching top bound
-                    y = toSafeInt(y + delta.y, y);
-                    height = height + delta.height;
-                }
-                if (this.sharedBound(y + height, originalWindowCachedBounds.y)) {
-                    // resize windows with matching bottom bound
-                    height = height - delta.height;
-                }
-            }
-            if (delta.y2) {
-                if (this.sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                    // resize windows with matching bottom bound
-                    height = height + delta.height;
-                }
-                if (this.sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                    // resize windows with matching top bound
-                    y = toSafeInt(y + delta.height, y);
-                    height = height - delta.height;
-                }
-            }
+        // const { x: leaderx, y: leadery, width: leaderwidth, height: leaderheight } = originalWindowCachedBounds;
+        // const thisRect = new Rectangle(x, y, width, height);
+        // const leaderRect = new Rect(leaderx, leadery, leaderwidth, leaderheight);
+        // const intersectionRect = thisRect.intersection(leaderRect.grow(5, 5));
+        // l(intersectionRect);
+        // l('ooooook');
+
+        const thisRect = Rectangle.CREATE_FROM_BOUNDS(bounds);
+        const leaderRect = Rectangle.CREATE_FROM_BOUNDS(<RectangleBase> originalWindowCachedBounds);
+        const intersectionRect = thisRect.intersection(leaderRect.grow(5, 5));
+
+        const sharedBounds = leaderRect.sharedBounds(thisRect);
+
+        l(thisRect);
+        l(leaderRect);
+
+        if (sharedBounds.hasSharedBounds) {
+            l(sharedBounds);
+        } else {
+            l('nope');
+            // l(sharedBounds);
         }
 
-        if (resizeChangeType.width) {
-            if (delta.x) {
+        const sharedBoundsList = thisRect.sharedBoundsList(leaderRect);
+        const currentBounds = this.getCurrentBounds();
+        const cachedBounds = this.getCachedBounds();
 
-                if (this.sharedBound(x, originalWindowCachedBounds.x)
-                && originalWindowCachedBounds.x + originalWindowCachedBounds.width < x) {
-                    // resize windows with matching left bound
-                    x = toSafeInt(x + delta.x, x);
-                    width = width + delta.width;
+        l(sharedBoundsList);
+        l(`current: ${currentBounds}, cached: ${cachedBounds}`);
+        l(Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(Rectangle.CREATE_FROM_BOUNDS(currentBounds)));
+        l('and the \'real\' delta...');
+        l(delta);
+
+        const intersection = !intersectionRect.isEmpty();
+        if (intersection) {
+            if (resizeChangeType.height) {
+                if (delta.y) {
+                    if (this.sharedBound(y, originalWindowCachedBounds.y)) {
+                        // resize windows with matching top bound
+                        y = toSafeInt(y + delta.y, y);
+                        height = height + delta.height;
+                    }
+                    if (this.sharedBound(y + height, originalWindowCachedBounds.y)) {
+                        // resize windows with matching bottom bound
+                        height = height - delta.height;
+                    }
                 }
-                if (this.sharedBound(x + width, originalWindowCachedBounds.x)) {
-                    // resize windows with matching right bound
-                    width = width - delta.width;
+                if (delta.y2) {
+                    if (this.sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+                        // resize windows with matching bottom bound
+                        height = height + delta.height;
+                    }
+                    if (this.sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+                        // resize windows with matching top bound
+                        y = toSafeInt(y + delta.height, y);
+                        height = height - delta.height;
+                    }
                 }
             }
-            if (delta.x2) {
-                if (this.sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                    // resize windows with matching right bound
-                    width = width + delta.width;
+
+            if (resizeChangeType.width) {
+                if (delta.x) {
+
+                    // changed...
+                    if (this.sharedBound(x, originalWindowCachedBounds.x)
+                        // && originalWindowCachedBounds.x + originalWindowCachedBounds.width < x
+                        ) {
+                        // resize windows with matching left bound
+                        x = toSafeInt(x + delta.x, x);
+                        width = width + delta.width;
+                    }
+                    if (this.sharedBound(x + width, originalWindowCachedBounds.x)) {
+                        // resize windows with matching right bound
+                        width = width - delta.width;
+                    }
                 }
-                if (this.sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                    // resize windows with matching left bound
-                    x = toSafeInt(x + delta.width, x);
-                    width = width - delta.width;
+                if (delta.x2) {
+                    if (this.sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+                        // resize windows with matching right bound
+                        width = width + delta.width;
+                    }
+                    if (this.sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+                        // resize windows with matching left bound
+                        x = toSafeInt(x + delta.width, x);
+                        width = width - delta.width;
+                    }
                 }
             }
         }
@@ -454,6 +456,8 @@ export default class BoundsChangedStateTracker {
 
                     const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
                     let flags: number;
+
+                    //todo 1 means a change in size. this should be a const
                     if (changeType === 1) {
                         // this may need to change to 1 or 2 if we fix functionality for changeType 2
                         flags = noZorder + noActivate;
@@ -461,13 +465,40 @@ export default class BoundsChangedStateTracker {
                         flags = noZorder + noSize + noActivate;
                     }
 
-                    const moves = [];
-                    WindowGroups.getGroup(groupUuid).filter((win): boolean => {
-                        win.browserWindow.bringToFront();
-                        return win.name !== this.name;
-                    }).forEach((win): void => {
-                        const winBounds = win.browserWindow.getBounds();
+                    const windowGroup = WindowGroups.getGroup(groupUuid);
+                    const winsToMove = [];
+
+                    let resizingWindow;
+
+                    const positions: Map<string, RectangleBase> = new Map();
+
+                    for (let i = 0; i < windowGroup.length; i++) {
+                        if (windowGroup[i].name !== this.name) {
+                            winsToMove.push(windowGroup[i]);
+                            positions.set(windowGroup[i].name, windowGroup[i].browserWindow.getBounds());
+                        } else {
+                            resizingWindow = windowGroup[i];
+                        }
+                    }
+
+                    for (let i = 0; i < winsToMove.length; i++) {
+                        const win = winsToMove[i];
+
+
+                        // const resizingWindow = WindowGroups.getGroup(groupUuid).filter((win): boolean => {
+                        //     return win.name !== this.name;
+                        // });
+
+                        // what makes this needs to be broken apart, state why...
+                        //winsToMove.forEach((win): void => {
+                        win.browserWindow.bringToFront(); // maybe just do this once?
+                        //changed
+                        //const winBounds = win.browserWindow.getBounds();
+                        const winBounds = positions.get(win.name);
+
+                        //todo 1 means a change in size. this should be a const
                         const bounds = (changeType === 1)
+                            // here bounds compare and delta are from the window that is resizing
                             ? this.handleGroupedResize(boundsCompare, delta, cachedBounds, win, winBounds)
                             : winBounds;
                         let { x, y } = bounds;
@@ -505,7 +536,11 @@ export default class BoundsChangedStateTracker {
                             // no need to call clipBounds here because called earlier
                             win.browserWindow.setBounds({ x, y, width, height });
                         }
-                    });
+                        //});
+
+                    }
+
+                    // this.calculateAndExecuteWindowMoves();
 
                     if (wt) {
                         wt.commit();
