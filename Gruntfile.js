@@ -60,7 +60,7 @@ const beautifierOptions = {
 module.exports = (grunt) => {
 
     // The default task is to build and and package resulting in an asar file in ./out/
-    grunt.registerTask('default', ['submodules-update', 'build-pac']);
+    grunt.registerTask('default', ['build-pac']);
     grunt.registerTask('deploy', ['build-dev', 'copy-local']);
 
     // Load all grunt tasks matching the ['grunt-*', '@*/grunt-*'] patterns
@@ -86,14 +86,6 @@ module.exports = (grunt) => {
                 files: [{
                     src: ['package.json'],
                     dest: 'staging/core/'
-                }]
-            },
-            jsAdapter: {
-                files: [{
-                    cwd: './js-adapter/out',
-                    expand: true,
-                    src: ['js-adapter.js'],
-                    dest: 'staging/core/js-adapter'
                 }]
             }
         },
@@ -180,8 +172,7 @@ module.exports = (grunt) => {
         'clean',
         'babel',
         'typescript',
-        'js-adapter',
-        'mochaTest'
+        'mochaTest',
     ]);
 
     grunt.registerTask('build-dev', [
@@ -196,6 +187,7 @@ module.exports = (grunt) => {
     grunt.registerTask('build-pac', [
         'build-dev',
         'package',
+        'package-adapter',
         'sign-asars'
     ]);
 
@@ -217,6 +209,7 @@ module.exports = (grunt) => {
 
     grunt.registerTask('sign-asars', function() {
         openfinSign('out/app.asar');
+        openfinSign('out/js-adapter.asar');
         grunt.log.ok('Finished signing asar.');
     });
 
@@ -254,6 +247,14 @@ module.exports = (grunt) => {
         wrench.rmdirSyncRecursive(minimistLibPath);
         wrench.mkdirSyncRecursive(minimistLibPath);
         fs.writeFileSync(path.join(minimistLibPath, 'index.js'), minimistLib);
+
+        // JS-adapter (1.5MB -> 620KB)
+        const jsAdapterPath = path.join(stagingNodeModulesPath, 'hadouken-js-adapter');
+        if (fs.existsSync(path.join(jsAdapterPath, 'node_modules'))) {
+            wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'node_modules')); // 472KB
+        }
+        wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'out', 'resources')); // 172KB
+        wrench.rmdirSyncRecursive(path.join(jsAdapterPath, 'out', 'types')); // 136KB
     });
 
     grunt.registerTask('rebuild-native-modules', 'Rebuild native modules', function() {
@@ -286,6 +287,15 @@ module.exports = (grunt) => {
         });
     });
 
+    grunt.registerTask('package-adapter', 'Package the js-adapter', function() {
+        const done = this.async();
+
+        asar.createPackage(jsAdapterPath, 'out/js-adapter.asar', function () {
+            grunt.log.ok('Finished packaging the adapter as an asar');
+            done();
+        });
+    });
+
     grunt.registerTask('copy-local', function() {
         const target = grunt.option('target');
         const done = this.async();
@@ -311,25 +321,5 @@ module.exports = (grunt) => {
                 done();
             });
         }
-    });
-
-    /* 
-        Task that updates submodules and installs their dependencies
-    */
-    grunt.registerTask('submodules-update', () => {
-        grunt.log.subhead('Updating submodules...');
-        childProcess.execSync('git submodule update --init --recursive --remote');
-
-        grunt.log.subhead('Installing js-adapter dependencies...');
-        childProcess.execSync('cd js-adapter && npm install');
-    });
-    
-    /* 
-        Build webpack'ed js-adapter and copy it to core's staging
-    */
-   grunt.registerTask('js-adapter', () => {
-        grunt.log.subhead('Building js-adapter...');
-        childProcess.execSync('cd js-adapter && npm run build');
-        grunt.task.run(['copy:jsAdapter']);
     });
 };
