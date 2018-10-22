@@ -23,10 +23,10 @@ function readAdapterFromSearchPaths(searchPaths, packageFile) {
 const searchPaths = ['adapter', 'adapter.asar'];
 const jsAdapter = readAdapterFromSearchPaths(searchPaths, 'openfin-desktop.js');
 
+// This order of lookup paths is taken from runtime/lib/browser/init.js
 const searchPathsV2Api = [
-    path.join('app.asar', 'js-adapter'),
-    path.join('default_app', 'js-adapter')
-];
+    'default_app', 'core', 'app', 'core.asar', 'app.asar', 'default_app.asar'
+].map(e => path.join(e, 'js-adapter'));
 const jsAdapterV2 = readAdapterFromSearchPaths(searchPathsV2Api, 'js-adapter.js');
 
 // Remove strict (Prevents, as of now, poorly understood memory lifetime scoping issues with remote module)
