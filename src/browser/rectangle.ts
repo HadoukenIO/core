@@ -1,13 +1,34 @@
-import * as log from './log';
-const l = (x: any) => log.writeToLog(1, x, true);
+// import * as log from './log';
+// const l = (x: any) => log.writeToLog(1, x, true);
+
+//import * as log from './log';
+// const l = (x: any) => console.log.writeToLog(1, x, true);
 
 type SideName = 'top' | 'right' | 'bottom' | 'left';
+type SharedBound = Array<SideName>;
+export type SharedBoundsList = Array<SharedBound>;
+type SharedBounds = {
+    hasSharedBounds: boolean;
+    top: SideName;
+    right: SideName;
+    bottom: SideName;
+    left: SideName;
+};
 
 interface Opts {
     minWidth?: number;
     maxWidth?: number;
     minHeight?: number;
     maxHeight?: number;
+}
+
+type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
+
+export interface RectangleBase {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
 }
 
 // todo, does this make sense?
@@ -24,13 +45,6 @@ class RectOptionsOpts {
         this.minHeight = Math.max(opts.maxHeight || 10, 10);
         this.maxHeight = opts.maxHeight || Number.MAX_SAFE_INTEGER;
     }
-}
-
-export interface RectangleBase {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
 }
 
 export class Rectangle {
@@ -59,9 +73,19 @@ export class Rectangle {
         return this.x + this.width;
     }
 
+    // set right(num: number) {
+    //     if (num > this.)
+    // }
+
     get bottom(): number {
         return this.y + this.height;
     }
+
+    // set bottom(num: number) {
+    //     if (num > this.top) {
+    //         this.height = num;
+    //     }
+    // }
 
     get top() {
         return this.y;
@@ -71,14 +95,14 @@ export class Rectangle {
         return this.x;
     }
 
-    // public hasAdjacentEdge (r: Rectangle): { hasAdjacency: boolean, sharedEdge: string } {
-    //     const intersectionRect = this.intersection(r.grow(5, 5));
-
-    //     const intersection = !intersectionRect.isEmpty();
-
-    //     if (!intersection) { return { hasAdjacency: false, sharedEdge: null }; }
-
-    // }
+    get bounds(): RectangleBase {
+        return {
+            x: this.x,
+            y: this.y,
+            width: this.width,
+            height: this.height
+        };
+    }
 
     // tslint:disable 
     public grow(h: number, v: number): Rectangle {
@@ -195,20 +219,14 @@ export class Rectangle {
 
 
 
-    public sharedBounds(rect: Rectangle): {hasSharedBounds: boolean, top: string, right: string, bottom: string, left: string} {
+    public sharedBounds(rect: Rectangle): SharedBounds {
         const intersectionRect = this.intersection(rect.grow(this.boundShareThreshold, this.boundShareThreshold));
         const intersection = !intersectionRect.isEmpty();
-
-        l('ogging')
-        l(rect);
-    
-        l(this);
-
         let hasSharedBounds = false;
-        let top: string = null;
-        let right: string = null;
-        let bottom: string = null;
-        let left: string = null;
+        let top: SideName = null;
+        let right: SideName = null;
+        let bottom: SideName = null;
+        let left: SideName = null;
 
         if (!intersection) {
             return {hasSharedBounds, top, right, bottom, left};
@@ -225,16 +243,16 @@ export class Rectangle {
         return {hasSharedBounds, top, right, bottom, left};
     }
 
-    public sharedBoundsList(rect: Rectangle) {
+    public sharedBoundsList(rect: Rectangle): SharedBoundsList {
         const sides: Array<SideName> = ['top', 'right', 'left', 'bottom'];
         const sharedBounds = this.sharedBounds(rect);
 
         return sides.map(side => {
             const correspondingSide = sharedBounds[side];
-            let pair;
+            let pair: SharedBound;
 
             if (correspondingSide) {
-                return [side, correspondingSide]
+                pair = [side, correspondingSide]
             }
 
             return pair;
@@ -249,4 +267,90 @@ export class Rectangle {
             height: rect.height - this.height
         }
     }
+
+    // this is only for resize, move would be different
+    private edgeMoved(pair: Array<SideName>, delta: RectangleBase): boolean {
+        // { "x": 0, "y": 0, "width":  0, "height": -4 }    => bottom
+        // { "x": 9, "y": 0, "width": -9, "height":  0 }    => left
+        // { "x": 0, "y": 0, "width": -9, "height":  0 }    => right
+        const {x, y, width, height } = delta;
+        const [mySide, otherRectSharedSide] = pair;
+
+        const movedSides: Set<SideName> = new Set();
+        if (!x && width) { movedSides.add('right'); }
+        if (x && width) { movedSides.add('left'); }
+        if (!y && height) { movedSides.add('bottom'); }
+        if (y && height) { movedSides.add('top'); }
+
+        return movedSides.has(otherRectSharedSide);
+    }
+
+    public move(sharedBounds: SharedBoundsList, delta: RectangleBase) {
+        const bounds = this.bounds;
+        const movementTranslation: MovementTranslation = {
+            left: 'x',
+            top: 'y',
+            right: 'width',
+            bottom: 'height'
+        };
+        const correspondingSide: {[S in SideName]: SideName}= {
+            'top': 'bottom',
+            'bottom': 'top',
+            'right': 'left',
+            'left': 'right'
+        };
+
+        console.log(' ');
+        console.log(JSON.stringify(bounds, null, ' '));
+        console.log('.............');
+        console.log(JSON.stringify(delta, null, ' '));
+
+        // tslint:disable
+        // console.log(JSON.stringify(movementTranslation, null, ' '));
+        for (let [thisRectSharedSide, otherRectSharedSide] of sharedBounds) {
+            console.log(`${thisRectSharedSide}, ${otherRectSharedSide}. ${movementTranslation[thisRectSharedSide]}`);
+            const translation = movementTranslation[thisRectSharedSide];
+            console.log(`&&& ${translation}, ${delta[translation]}` );
+            /*
+                right, left
+                {"x":9,"y":0,"width":-9,"height":0}
+            */
+           // figure out if the side that moves impacts my position
+           // LOCATION AND SIZE ARE DIFFERENT AND NEED TO BE HANDLED DIFFERENTLY!!!
+           if (this.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
+               const deltaOtherSide = delta[movementTranslation[otherRectSharedSide]];
+               const deltaOtherCorrSide = delta[movementTranslation[correspondingSide[otherRectSharedSide]]];
+               console.log(`transition ${translation} (${bounds[translation]}): ${(deltaOtherSide + deltaOtherCorrSide)}`);
+               
+            bounds[translation] += deltaOtherSide; //(deltaOtherSide + deltaOtherCorrSide);
+
+            bounds[movementTranslation[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide);
+            console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]], ' ',
+            movementTranslation[correspondingSide[thisRectSharedSide]], -(deltaOtherSide + deltaOtherCorrSide));
+
+            // figure out if that movement impacts my size
+            // if (!delta[movementTranslation[correspondingSide[otherRectSharedSide]]]) {
+            //     // console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]])
+            //     bounds[movementTranslation[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide)
+            // }
+           }
+           // + delta[movementTranslation[correspondingSide[otherRectSharedSide]]]
+        }
+
+        return bounds;
+    }
 }
+
+// type SideName = 'top' | 'right' | 'bottom' | 'left';
+type MovementTranslation = {[S in SideName]: RectangleBaseKeys};
+
+// export interface RectangleBase {
+//     x: number;
+//     y: number;
+//     width: number;
+//     height: number;
+// }
+
+// interface MovementTranslation {
+//     [name: SideName]: SideName;
+// }

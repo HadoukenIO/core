@@ -270,12 +270,6 @@ export default class BoundsChangedStateTracker {
             return bounds;
         }
         let { x, y, width, height } = bounds;
-        // const { x: leaderx, y: leadery, width: leaderwidth, height: leaderheight } = originalWindowCachedBounds;
-        // const thisRect = new Rectangle(x, y, width, height);
-        // const leaderRect = new Rect(leaderx, leadery, leaderwidth, leaderheight);
-        // const intersectionRect = thisRect.intersection(leaderRect.grow(5, 5));
-        // l(intersectionRect);
-        // l('ooooook');
 
         const thisRect = Rectangle.CREATE_FROM_BOUNDS(bounds);
         const leaderRect = Rectangle.CREATE_FROM_BOUNDS(<RectangleBase> originalWindowCachedBounds);
@@ -292,17 +286,6 @@ export default class BoundsChangedStateTracker {
             l('nope');
             // l(sharedBounds);
         }
-
-        const sharedBoundsList = thisRect.sharedBoundsList(leaderRect);
-        const currentBounds = this.getCurrentBounds();
-        const cachedBounds = this.getCachedBounds();
-
-        l(sharedBoundsList);
-        l(`current: ${currentBounds}, cached: ${cachedBounds}`);
-        l(Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(Rectangle.CREATE_FROM_BOUNDS(currentBounds)));
-        l('and the \'real\' delta...');
-        l(delta);
-
         const intersection = !intersectionRect.isEmpty();
         if (intersection) {
             if (resizeChangeType.height) {
@@ -360,6 +343,24 @@ export default class BoundsChangedStateTracker {
             }
         }
         const newWindowBounds = { x, y, width, height };
+
+        const sharedBoundsList = thisRect.sharedBoundsList(leaderRect);
+        const currentBounds = this.getCurrentBounds();
+        const cachedBounds = this.getCachedBounds();
+        const d2 = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(Rectangle.CREATE_FROM_BOUNDS(currentBounds));
+
+        const moved = thisRect.move(sharedBoundsList, d2);
+
+        l(JSON.stringify(thisRect.bounds, null, ' '));
+        l('---------------!!!------------------');
+        l(JSON.stringify(d2, null, ' '));
+        l('---------------###------------------');
+        l(JSON.stringify(delta, null, ' '));
+        l('---------------()()()()------------------');
+        l(JSON.stringify(moved, null, ' '));
+        l('---------------###------------------');
+        l(JSON.stringify(newWindowBounds, null, ' '));
+        // newWindowBounds
         return clipBounds(newWindowBounds, windowToUpdate.browserWindow);
     };
 
