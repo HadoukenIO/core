@@ -302,64 +302,31 @@ export class Rectangle {
             case "right": {
                 this.width += (rect[sideToAlign] - (this.x +this.width));
             } break;
-            case "top": {
+            case "top": { // this is fucked
                 const yInitial = this.y;
                 this.y = rect[sideToAlign];
-                this.height += (yInitial - this.height); 
+                this.height += (yInitial - this.y); 
             } break;
             case "bottom": {
-                this.height = rect[sideToAlign];
+                // made it too big! 
+                this.height += (rect[sideToAlign] - (this.y +this.height));
             } break;
 
         }
     }
 
     public move2(cachedBounds: RectangleBase, currentBounds: RectangleBase) {
-        // const bounds = this.bounds;
         const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(cachedBounds));
         const currLeader = Rectangle.CREATE_FROM_BOUNDS(currentBounds);
         const delta = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(currLeader);
-        const mt: MovementTranslation = {
-            left: 'x',
-            top: 'y',
-            right: 'width',
-            bottom: 'height'
-        };
-
-        const correspondingSide: {[S in SideName]: SideName}= {
-            'top': 'bottom',
-            'bottom': 'top',
-            'right': 'left',
-            'left': 'right'
-        };
 
         for (let [thisRectSharedSide, otherRectSharedSide] of sharedBoundsList) {
             if (this.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
-                const deltaOtherSide = delta[mt[otherRectSharedSide]];
-                const deltaOtherCorrSide = delta[mt[correspondingSide[otherRectSharedSide]]];
-                const foo = mt[thisRectSharedSide];
-                
-                this.alignSide(thisRectSharedSide, currLeader, otherRectSharedSide)
-                // if (foo === 'x') {
-                //     bounds[foo] = currentBounds[mt[otherRectSharedSide]]
-                //     bounds.width += -deltaOtherSide;
-                // }
-                // if (foo === 'y') {
-                //     bounds[foo] = currentBounds[mt[otherRectSharedSide]]
-                //     bounds.height += -deltaOtherSide;
-                // }
-                // if (foo === 'width' || foo === 'height') {
-                //     bounds[foo] += deltaOtherSide
-                // }
-
-                // if (!(thisRectSharedSide === otherRectSharedSide)) {
-                //     bounds[mt[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide);
-                // }
+                this.alignSide(thisRectSharedSide, currLeader, otherRectSharedSide);
             }
         }
 
         return this.bounds;
-        
     }
 
     public move(sharedBounds: SharedBoundsList, delta: RectangleBase) {
