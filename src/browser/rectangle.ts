@@ -1,7 +1,7 @@
-// import * as log from './log';
-// const l = (x: any) => log.writeToLog(1, x, true);
+import * as log from './log';
+const l = (x: any) => log.writeToLog(1, x, true);
 
-//import * as log from './log';
+// import * as log from './log';
 // const l = (x: any) => console.log.writeToLog(1, x, true);
 
 type SideName = 'top' | 'right' | 'bottom' | 'left';
@@ -90,6 +90,10 @@ export class Rectangle {
     get top() {
         return this.y;
     }
+
+    // set top(num: number) {
+    //     this.y = num;
+    // }
 
     get left() {
         return this.x;
@@ -285,6 +289,79 @@ export class Rectangle {
         return movedSides.has(otherRectSharedSide);
     }
 
+
+    public alignSide(mySide: SideName, rect: Rectangle , sideToAlign: SideName) {
+        // left is joined to right is different than right is joined to left! 
+        l(`$$$$$$$$$$$$$$$$$ mySide: ${mySide}, sideToAlign: ${sideToAlign}`)
+        switch (mySide){
+            case "left": {
+                const xInitial = this.x;
+                this.x = rect[sideToAlign];
+                this.width += (xInitial - this.x); 
+            } break;
+            case "right": {
+                this.width += (rect[sideToAlign] - (this.x +this.width));
+            } break;
+            case "top": {
+                const yInitial = this.y;
+                this.y = rect[sideToAlign];
+                this.height += (yInitial - this.height); 
+            } break;
+            case "bottom": {
+                this.height = rect[sideToAlign];
+            } break;
+
+        }
+    }
+
+    public move2(cachedBounds: RectangleBase, currentBounds: RectangleBase) {
+        // const bounds = this.bounds;
+        const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(cachedBounds));
+        const currLeader = Rectangle.CREATE_FROM_BOUNDS(currentBounds);
+        const delta = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(currLeader);
+        const mt: MovementTranslation = {
+            left: 'x',
+            top: 'y',
+            right: 'width',
+            bottom: 'height'
+        };
+
+        const correspondingSide: {[S in SideName]: SideName}= {
+            'top': 'bottom',
+            'bottom': 'top',
+            'right': 'left',
+            'left': 'right'
+        };
+
+        for (let [thisRectSharedSide, otherRectSharedSide] of sharedBoundsList) {
+            if (this.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
+                const deltaOtherSide = delta[mt[otherRectSharedSide]];
+                const deltaOtherCorrSide = delta[mt[correspondingSide[otherRectSharedSide]]];
+                const foo = mt[thisRectSharedSide];
+                
+                this.alignSide(thisRectSharedSide, currLeader, otherRectSharedSide)
+                // if (foo === 'x') {
+                //     bounds[foo] = currentBounds[mt[otherRectSharedSide]]
+                //     bounds.width += -deltaOtherSide;
+                // }
+                // if (foo === 'y') {
+                //     bounds[foo] = currentBounds[mt[otherRectSharedSide]]
+                //     bounds.height += -deltaOtherSide;
+                // }
+                // if (foo === 'width' || foo === 'height') {
+                //     bounds[foo] += deltaOtherSide
+                // }
+
+                // if (!(thisRectSharedSide === otherRectSharedSide)) {
+                //     bounds[mt[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide);
+                // }
+            }
+        }
+
+        return this.bounds;
+        
+    }
+
     public move(sharedBounds: SharedBoundsList, delta: RectangleBase) {
         const bounds = this.bounds;
         const movementTranslation: MovementTranslation = {
@@ -321,13 +398,15 @@ export class Rectangle {
                const deltaOtherSide = delta[movementTranslation[otherRectSharedSide]];
                const deltaOtherCorrSide = delta[movementTranslation[correspondingSide[otherRectSharedSide]]];
                console.log(`transition ${translation} (${bounds[translation]}): ${(deltaOtherSide + deltaOtherCorrSide)}`);
-               
+
             bounds[translation] += deltaOtherSide; //(deltaOtherSide + deltaOtherCorrSide);
 
-            bounds[movementTranslation[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide);
-            console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]], ' ',
-            movementTranslation[correspondingSide[thisRectSharedSide]], -(deltaOtherSide + deltaOtherCorrSide));
-
+            if (!(thisRectSharedSide === otherRectSharedSide)) {
+                bounds[movementTranslation[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide);
+                console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]], ' ',
+                movementTranslation[correspondingSide[thisRectSharedSide]], -(deltaOtherSide + deltaOtherCorrSide));
+            }
+            
             // figure out if that movement impacts my size
             // if (!delta[movementTranslation[correspondingSide[otherRectSharedSide]]]) {
             //     // console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]])

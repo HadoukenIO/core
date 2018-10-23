@@ -201,7 +201,7 @@ describe('Rectangle', () => {
         assert.deepStrictEqual(moved, {x: 110, y: 0, width: 100, height: 100});
     });
 
-    it ('should move the window when there is a shared edge', () => {
+    it ('should move the window when there is a shared edge (left edge to right)', () => {
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(100, 0, 100, 100);
         const sharedBoundsList = rect2.sharedBoundsList(rect1);
@@ -212,7 +212,7 @@ describe('Rectangle', () => {
     });
 
     it ('should return the bounds should the rect move right to left', () => {
-        const rect1 = new Rectangle(0, 0, 100, 100);
+        // const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = Rectangle.CREATE_FROM_BOUNDS({
             "x": 554,
             "y": 69,
@@ -231,6 +231,45 @@ describe('Rectangle', () => {
 
         assert.deepStrictEqual(moved, {"x": 544, "y": 69, "width": 844, "height": 300});
     });
+
+    it ('should handle bounded bottom moves correctly', () =>{
+        const delta = { "x": 0, "y": 0, "width": 0, "height": 1 };
+        const rect = Rectangle.CREATE_FROM_BOUNDS({"x": 623, "y": 162, "width": 690, "height": 294})
+        const sharedBoundsList = <SharedBoundsList>[['bottom', 'bottom'], ['left', 'right']];
+        const moved = rect.move(sharedBoundsList, delta);
+        assert.deepStrictEqual(moved, {"x": 623, "y": 162, "width": 690, "height": 295})
+    });
+
+    it('should move with just the leader window move (leader left, leader grows)', () => {
+        const rect = new Rectangle(100, 0, 100, 100);
+        const move = rect.move2({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 110, height: 100});
+        assert.deepStrictEqual(move, {x: 110, y: 0, width: 90, height: 100});
+    });
+
+    it('should move with just the leader window move (leader right, leader grows)', () => {
+        const rect = new Rectangle(0, 0, 100, 100);
+        const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 90, y: 0, width: 110, height: 100});
+        assert.deepStrictEqual(move, {x: 0, y: 0, width: 90, height: 100});
+    });
+
+
+    it('should align the side given, left to right', () => {
+        const rect = new Rectangle(100, 0, 100, 100);
+        const otherRect = {x: 0, y: 0, width: 90, height: 100};
+        rect.alignSide('left', Rectangle.CREATE_FROM_BOUNDS(otherRect), 'right');
+        assert(rect.x === 90, 'side should line up');
+        assert(rect.width === 110, 'width should have been adjusted');
+    });
+    // it('should not jump left', () => {
+    //     const rect = Rectangle.CREATE_FROM_BOUNDS({
+    //         "x": 721,
+    //         "y": 193,
+    //         "width": 337,
+    //         "height": 212
+    //     });
+    //     const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 90, y: 0, width: 110, height: 100});
+    // });
+
     // RIGHT 
     // OVERLAPPING exactly 
     // LEFT 

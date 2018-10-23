@@ -348,8 +348,7 @@ export default class BoundsChangedStateTracker {
         const currentBounds = this.getCurrentBounds();
         const cachedBounds = this.getCachedBounds();
         const d2 = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(Rectangle.CREATE_FROM_BOUNDS(currentBounds));
-
-        const moved = thisRect.move(sharedBoundsList, d2);
+        const moved = thisRect.move2(cachedBounds, currentBounds);
 
         l(JSON.stringify(thisRect.bounds, null, ' '));
         l('---------------!!!------------------');
@@ -361,7 +360,9 @@ export default class BoundsChangedStateTracker {
         l('---------------###------------------');
         l(JSON.stringify(newWindowBounds, null, ' '));
         // newWindowBounds
-        return clipBounds(newWindowBounds, windowToUpdate.browserWindow);
+        return clipBounds(moved, windowToUpdate.browserWindow);
+        // orig
+        // return clipBounds(newWindowBounds, windowToUpdate.browserWindow);
     };
 
     private checkTrackingApi = (groupLeader: ITransaction): boolean => groupLeader.type === 'api'
