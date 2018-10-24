@@ -25,7 +25,7 @@ let coreState = require('../core_state.js');
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
-let WindowGroups = require('../window_groups.js');
+import WindowGroups from '../window_groups';
 import { sendToRVM } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
@@ -279,9 +279,15 @@ Application.close = function(identity, force, callback) {
 };
 
 Application.getChildWindows = function(identity /*, callback, errorCallback*/ ) {
-    var app = Application.wrap(identity.uuid);
+    const uuid = identity.uuid;
+    const appError = checkApplicationAvailability(uuid);
 
-    return coreState.getChildrenByApp(app.id);
+    if (appError) {
+        throw new Error(appError);
+    } else {
+        const app = Application.wrap(uuid);
+        return coreState.getChildrenByApp(app.id);
+    }
 };
 
 Application.getGroups = function( /* callback, errorCallback*/ ) {
@@ -311,6 +317,18 @@ Application.getParentApplication = function(identity) {
     } = app || {};
 
     return parentUuid;
+};
+
+Application.getZoomLevel = function(identity, callback) {
+    const uuid = identity.uuid;
+    const appError = checkApplicationAvailability(uuid);
+
+    if (appError) {
+        throw new Error(appError);
+    } else {
+        const app = coreState.appByUuid(uuid);
+        Window.getZoomLevel(app.appObj.identity, callback);
+    }
 };
 
 Application.getShortcuts = function(identity, callback, errorCallback) {
@@ -434,7 +452,13 @@ Application.removeTrayIcon = function(identity) {
 };
 
 Application.restart = function(identity) {
-    let uuid = identity.uuid;
+    const uuid = identity.uuid;
+    const appError = checkApplicationAvailability(uuid);
+
+    if (appError) {
+        throw new Error(appError);
+    }
+
     const appObj = coreState.getAppObjByUuid(uuid);
 
     coreState.setAppRestartingState(uuid, true);
@@ -764,7 +788,12 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     fetchingIcon[uuid] = true;
 
-    let app = Application.wrap(identity.uuid);
+    const appError = checkApplicationAvailability(uuid);
+    if (appError) {
+        errorCallback(new Error(appError));
+    }
+
+    const app = Application.wrap(uuid);
 
     // only one tray icon per app
     // cleanup the old one so it can be replaced
@@ -832,6 +861,26 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
     });
 };
 
+Application.setZoomLevel = function(identity, level) {
+    const uuid = identity.uuid;
+    const appError = checkApplicationAvailability(uuid);
+
+    if (appError) {
+        throw new Error(appError);
+    } else {
+        const app = coreState.appByUuid(uuid);
+
+        // set zoom level for each child window
+        app.children.forEach(function(childWindow) {
+            const childWindowIdentity = {
+                name: childWindow.openfinWindow.name,
+                uuid: childWindow.openfinWindow.uuid
+            };
+            Window.setZoomLevel(childWindowIdentity, level);
+        });
+    }
+};
+
 
 Application.getTrayIconInfo = function(identity, callback, errorCallback) {
     const app = Application.wrap(identity.uuid);
@@ -851,14 +900,16 @@ Application.getTrayIconInfo = function(identity, callback, errorCallback) {
 
 
 Application.scheduleRestart = function(identity, callback, errorCallback) {
-    let app = Application.wrap(identity.uuid);
+    const uuid = identity.uuid;
+    const appError = checkApplicationAvailability(uuid);
 
-    if (!app) {
-        errorCallback(new Error(`application with uuid ${identity.uuid} does not exist`));
+    if (appError) {
+        errorCallback(new Error(appError));
     } else if (!rvmBus) {
         errorCallback(new Error('cannot connect to the RVM'));
     } else {
-        let success = rvmBus.publish({
+        const app = Application.wrap(uuid);
+        const success = rvmBus.publish({
             topic: 'application',
             action: 'relaunch-on-close',
             sourceUrl: app._configUrl,
@@ -1130,4 +1181,12 @@ function isNonEmptyString(str) {
     return typeof str === 'string' && str.length > 0;
 }
 
+function checkApplicationAvailability(uuid) {
+    const app = Application.wrap(uuid);
+    if (!app) {
+        return `application with uuid '${uuid}' does not exist`;
+    } else {
+        return null;
+    }
+}
 module.exports.Application = Application;

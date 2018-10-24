@@ -14,21 +14,6 @@ const wrench = require('wrench');
 const openfinSign = require('openfin-sign'); // OpenFin signing module
 const childProcess = require('child_process');
 
-// Polyfill for pre Node v7.0.0
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/entries#Polyfill
-if (!Object.entries) {
-  Object.entries = function( obj ) {
-    var ownProps = Object.keys( obj ),
-        i = ownProps.length,
-        resArray = new Array(i); // preallocate the Array
-    while (i--) {
-      resArray[i] = [ownProps[i], obj[ownProps[i]]];
-    }
-
-    return resArray;
-  };
-}
-
 // Use NPM to query immediate and nested production dependencies
 const npmDeps = JSON.parse(childProcess.execSync('npm ls --json --prod').toString('utf8'));
 const fullDependencies = Object.entries(npmDeps.dependencies);
@@ -291,6 +276,9 @@ module.exports = (grunt) => {
     grunt.registerTask('package', 'Package in an asar', function() {
         const done = this.async();
 
+        //delete build/test related files before packaging.
+        grunt.file.delete('staging/core/Gruntfile.js');
+        wrench.rmdirSyncRecursive('staging/core/test', true);
         asar.createPackage('staging/core', 'out/app.asar', function() {
             grunt.log.ok('Finished packaging as asar.');
             wrench.rmdirSyncRecursive('staging', true);

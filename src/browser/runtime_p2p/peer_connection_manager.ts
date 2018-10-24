@@ -142,7 +142,7 @@ export class PeerConnectionManager extends EventEmitter {
                         resolve(identityAddress);
                     }).catch((err: Error) => {
                         failures++;
-                        if (failures === this._runtimeMap.size) {
+                        if (failures >= this._runtimeMap.size) {
                             reject(err);
                         }
                     });

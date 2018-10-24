@@ -12,7 +12,7 @@ import { ChannelApiHandler } from './api_handlers/channel';
 import { GlobalHotkeyApiHandler } from './api_handlers/global_hotkey';
 
 const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
-const InterApplicationBusApiHandler = require('./api_handlers/interappbus').InterApplicationBusApiHandler;
+import { init as initIabApiHandler } from './api_handlers/interappbus';
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
 import { init as initSystemApiHandler } from './api_handlers/system';
 import { init as initWindowApiHandler } from './api_handlers/window';
@@ -46,7 +46,7 @@ export function initApiHandlers() {
     const frameApiHandler = new FrameApiHandler();
     const channelApiHandler = new ChannelApiHandler();
     const eventListenerApiHandler = new EventListenerApiHandler();
-    const interApplicationBusApiHandler = new InterApplicationBusApiHandler();
+    initIabApiHandler();
     const notificationApiHandler = new NotificationApiHandler();
     initSystemApiHandler();
     const globalHotkeyApiHandler = new GlobalHotkeyApiHandler();

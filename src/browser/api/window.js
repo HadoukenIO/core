@@ -28,7 +28,7 @@ import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
-let WindowGroups = require('../window_groups.js');
+import WindowGroups from '../window_groups';
 import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
@@ -851,6 +851,18 @@ Window.create = function(id, opts) {
     };
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
+        /*
+            INFO:      0
+            WARNING:   1
+            ERROR:     2
+            FATAL:     3
+        */
+        if (level === /* INFO */ 0 ||
+            level === /* WARNING */ 1) {
+            // Prevent INFO and WARNING messages from writing to debug.log
+            event.preventDefault();
+        }
+
         const app = coreState.getAppByUuid(identity.uuid);
         if (!app) {
             electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);
@@ -1880,14 +1892,16 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     function handleSaveStateAlwaysResolve() {
         return new Promise((resolve, reject) => {
             if (browserWindow._options.saveWindowState) {
-                const cachedBounds = _boundsChangedHandler.getCachedBounds();
-                saveBoundsToDisk(identity, cachedBounds, err => {
-                    if (err) {
-                        log.writeToLog('info', err);
-                    }
-                    // These were causing an exception on close if the window was reloaded
-                    _boundsChangedHandler.teardown();
-                    resolve();
+                browserWindow.webContents.getZoomLevel(zoomLevel => {
+                    const cachedBounds = _boundsChangedHandler.getCachedBounds();
+                    saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
+                        if (err) {
+                            log.writeToLog('info', err);
+                        }
+                        // These were causing an exception on close if the window was reloaded
+                        _boundsChangedHandler.teardown();
+                        resolve();
+                    });
                 });
             } else {
                 _boundsChangedHandler.teardown();
@@ -1923,7 +1937,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     };
 }
 
-function saveBoundsToDisk(identity, bounds, callback) {
+function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
     const cacheFile = getBoundsCacheSafeFileName(identity);
     const data = {
         'active': 'true',
@@ -1932,7 +1946,8 @@ function saveBoundsToDisk(identity, bounds, callback) {
         'left': bounds.x,
         'top': bounds.y,
         'name': identity.name,
-        'windowState': bounds.windowState
+        'windowState': bounds.windowState,
+        'zoomLevel': zoomLevel
     };
 
     try {
@@ -2407,6 +2422,13 @@ function restoreWindowPosition(identity, cb) {
             case 'minimized':
                 Window.minimize(identity);
                 break;
+        }
+
+        // set zoom level
+        const { zoomLevel } = savedBounds;
+        if (zoomLevel) {
+            const browserWindow = getElectronBrowserWindow(identity);
+            browserWindow.webContents.setZoomLevel(zoomLevel);
         }
 
         cb();
