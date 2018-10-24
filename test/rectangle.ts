@@ -260,6 +260,35 @@ describe('Rectangle', () => {
         assert(rect.x === 90, 'side should line up');
         assert(rect.width === 110, 'width should have been adjusted');
     });
+
+    it('should align the side given, top to bottom', () => {
+        const rect = new Rectangle(0, 110, 100, 100);
+        const otherRect = {x: 0, y: 0, width: 100, height: 100};
+        rect.alignSide('top', Rectangle.CREATE_FROM_BOUNDS(otherRect), 'bottom');
+        // assert(rect.y === 90, 'side should line up');
+        // assert(rect.height === 110, 'height should have been adjusted');
+        assert.deepStrictEqual(rect.bounds, {x: 0, y: 100, width: 100, height: 110});
+    });
+
+    it('should return an adjacency list, quickly :)', () => {
+        const NS_PER_SEC = 1e9;
+        const time = process.hrtime();
+        const adjList = Rectangle.ADJACENCY_LIST([
+            new Rectangle(0,0,100,100),
+            new Rectangle(4,4,100,100),
+            new Rectangle(8,8,100,100),
+            new Rectangle(50,0,100,100),
+            new Rectangle(400,400,100,100),
+            new Rectangle(6,6,100,100),
+        ]);
+
+        const diff = process.hrtime(time);
+        const thing = diff[0] * NS_PER_SEC + diff[1];
+        const diffInMilliS = (diff[0] * NS_PER_SEC + diff[1]) / 1e6
+        const foo = adjList;
+        assert(diffInMilliS < 5);
+    });
+
     // it('should not jump left', () => {
     //     const rect = Rectangle.CREATE_FROM_BOUNDS({
     //         "x": 721,

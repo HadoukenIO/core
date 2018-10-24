@@ -73,27 +73,13 @@ export class Rectangle {
         return this.x + this.width;
     }
 
-    // set right(num: number) {
-    //     if (num > this.)
-    // }
-
     get bottom(): number {
         return this.y + this.height;
     }
 
-    // set bottom(num: number) {
-    //     if (num > this.top) {
-    //         this.height = num;
-    //     }
-    // }
-
     get top() {
         return this.y;
     }
-
-    // set top(num: number) {
-    //     this.y = num;
-    // }
 
     get left() {
         return this.x;
@@ -300,16 +286,15 @@ export class Rectangle {
                 this.width += (xInitial - this.x); 
             } break;
             case "right": {
-                this.width += (rect[sideToAlign] - (this.x +this.width));
+                this.width += (rect[sideToAlign] - (this.x + this.width));
             } break;
-            case "top": { // this is fucked
+            case "top": {
                 const yInitial = this.y;
                 this.y = rect[sideToAlign];
                 this.height += (yInitial - this.y); 
             } break;
             case "bottom": {
-                // made it too big! 
-                this.height += (rect[sideToAlign] - (this.y +this.height));
+                this.height += (rect[sideToAlign] - (this.y + this.height));
             } break;
 
         }
@@ -344,17 +329,17 @@ export class Rectangle {
             'left': 'right'
         };
 
-        console.log(' ');
-        console.log(JSON.stringify(bounds, null, ' '));
-        console.log('.............');
-        console.log(JSON.stringify(delta, null, ' '));
+        // console.log(' ');
+        // console.log(JSON.stringify(bounds, null, ' '));
+        // console.log('.............');
+        // console.log(JSON.stringify(delta, null, ' '));
 
         // tslint:disable
         // console.log(JSON.stringify(movementTranslation, null, ' '));
         for (let [thisRectSharedSide, otherRectSharedSide] of sharedBounds) {
-            console.log(`${thisRectSharedSide}, ${otherRectSharedSide}. ${movementTranslation[thisRectSharedSide]}`);
+            // console.log(`${thisRectSharedSide}, ${otherRectSharedSide}. ${movementTranslation[thisRectSharedSide]}`);
             const translation = movementTranslation[thisRectSharedSide];
-            console.log(`&&& ${translation}, ${delta[translation]}` );
+            // console.log(`&&& ${translation}, ${delta[translation]}` );
             /*
                 right, left
                 {"x":9,"y":0,"width":-9,"height":0}
@@ -364,26 +349,42 @@ export class Rectangle {
            if (this.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
                const deltaOtherSide = delta[movementTranslation[otherRectSharedSide]];
                const deltaOtherCorrSide = delta[movementTranslation[correspondingSide[otherRectSharedSide]]];
-               console.log(`transition ${translation} (${bounds[translation]}): ${(deltaOtherSide + deltaOtherCorrSide)}`);
+               // console.log(`transition ${translation} (${bounds[translation]}): ${(deltaOtherSide + deltaOtherCorrSide)}`);
 
-            bounds[translation] += deltaOtherSide; //(deltaOtherSide + deltaOtherCorrSide);
+            bounds[translation] += deltaOtherSide;
 
             if (!(thisRectSharedSide === otherRectSharedSide)) {
                 bounds[movementTranslation[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide);
-                console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]], ' ',
-                movementTranslation[correspondingSide[thisRectSharedSide]], -(deltaOtherSide + deltaOtherCorrSide));
+                // console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]], ' ',
+                // movementTranslation[correspondingSide[thisRectSharedSide]], -(deltaOtherSide + deltaOtherCorrSide));
             }
-            
-            // figure out if that movement impacts my size
-            // if (!delta[movementTranslation[correspondingSide[otherRectSharedSide]]]) {
-            //     // console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]])
-            //     bounds[movementTranslation[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide)
-            // }
            }
-           // + delta[movementTranslation[correspondingSide[otherRectSharedSide]]]
         }
 
         return bounds;
+    }
+
+    public static ADJACENCY_LIST(rects: Rectangle[]) {
+        const adjLists = new Map();
+        const rectLen = rects.length;
+
+        for (let i = 0; i < rectLen; i++) {
+            const adjacentRects = [];
+            const rect = rects[i];
+
+            for (let ii = 0; ii < rectLen; ii++) {
+                if (i !== ii) {
+                    if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
+                        adjacentRects.push(rects[ii]);
+                        adjacentRects.push(ii);
+                    }
+                }
+            }
+
+            adjLists.set(i, adjacentRects);
+        }
+
+        return adjLists;
     }
 }
 

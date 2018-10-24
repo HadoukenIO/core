@@ -469,6 +469,7 @@ export default class BoundsChangedStateTracker {
 
                     const windowGroup = WindowGroups.getGroup(groupUuid);
                     const winsToMove = [];
+                    // const adjLists = [];
 
                     let resizingWindow;
 
@@ -479,9 +480,25 @@ export default class BoundsChangedStateTracker {
                             winsToMove.push(windowGroup[i]);
                             positions.set(windowGroup[i].name, windowGroup[i].browserWindow.getBounds());
                         } else {
-                            resizingWindow = windowGroup[i];
+                            resizingWindow = i;
                         }
                     }
+
+                    const adjacencyList = Rectangle.ADJACENCY_LIST(
+                        windowGroup.map(w => Rectangle.CREATE_FROM_BOUNDS(w.browserWindow.getBounds()))
+                    );
+
+                    const leaderAdj: number[] = adjacencyList.get(resizingWindow);
+
+                    // if (changeType !== 0) {
+                    //     winsToMove = winsToMove.filter((v, i) => leaderAdj.includes(i));
+                    // }
+                    // for (let [name, bounds] in positions) {
+
+                    // }
+
+                    // todo make this a delayed commit
+                    const setPositions: Array<() => void> = [];
 
                     for (let i = 0; i < winsToMove.length; i++) {
                         const win = winsToMove[i];
@@ -530,18 +547,23 @@ export default class BoundsChangedStateTracker {
                             }
                             const [w, h] = [width, height];
                             // no change on the resize behavior
-                            // wt.setWindowPos(hwnd, { x, y, w, h, flags });
+                            wt.setWindowPos(hwnd, { x, y, w, h, flags });
                         } else {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             }
                             // no need to call clipBounds here because called earlier
-                            win.browserWindow.setBounds({ x, y, width, height });
+                            positions.set(win.name, { x, y, width, height });
+
+                            setPositions.push(() => {
+                                win.browserWindow.setBounds(positions.get(win.name));
+                            });
                         }
                         //});
 
                     }
 
+                    setPositions.forEach(boundsSet => boundsSet());
                     // this.calculateAndExecuteWindowMoves();
 
                     if (wt) {
