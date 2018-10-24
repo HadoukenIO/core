@@ -17,7 +17,8 @@ import route from '../common/route';
 import { clipBounds, windowSetBoundsToVisible } from './utils';
 import { OpenFinWindow, BrowserWindow } from '../shapes';
 import { Rectangle, windowTransaction } from 'electron';
-
+import { writeToLog } from './log';
+const { namedMutex } = require('electron');
 
 const isWin32 = process.platform === 'win32';
 
@@ -344,6 +345,7 @@ export default class BoundsChangedStateTracker {
         ];
 
         const isBoundsChanged = eventType === 'bounds-changed';
+        let groupHash;
 
         // if this is to be the "last" event in a transaction, be sure to
         // any diff in the size or position towards the change type
@@ -381,6 +383,15 @@ export default class BoundsChangedStateTracker {
             if (groupUuid) {
                 let groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid);
 
+                //Now check if we belong to a multi runtime group
+                if (WindowGroups.hasProxyWindows(groupUuid)) {
+                    groupHash = WindowGroups.getGroupHashName(groupUuid);
+                    writeToLog('info', 'Now moving this window group:');
+                    writeToLog('info', WindowGroups.getGroupHashName(groupUuid));
+                    if (namedMutex.tryLock(groupHash) !== 0) {
+                        return;
+                    }
+                }
                 if (force) {
                     if (groupLeader && groupLeader.name === this.name) {
                         // no need to notify group members for api moves since every window
@@ -496,6 +507,13 @@ export default class BoundsChangedStateTracker {
             this.positionChanged = false;
         }
 
+        if (groupHash) {
+            let released = namedMutex.releaseLock(groupHash);
+             while (released === 0) {
+                released = namedMutex.releaseLock(groupHash);
+             }
+        }
+
         return dispatchedChange;
     };
 
@@ -589,4 +607,3 @@ export default class BoundsChangedStateTracker {
     };
 
 }
-

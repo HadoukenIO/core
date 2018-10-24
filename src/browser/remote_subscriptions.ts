@@ -20,7 +20,7 @@ import ofEvents from './of_events';
 import connectionManager, { PeerRuntime, keyFromPortInfo, getMeshUuid } from './connection_manager';
 import { Identity } from '../shapes';
 import route from '../common/route';
-import { EventEmitter } from 'events';
+import { Application , Window } from 'hadouken-js-adapter';
 
 // id count to generate IDs for subscriptions
 let subscriptionIdCount = 0;
@@ -129,7 +129,8 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
 
 
     // Subscribe to an event on a remote runtime
-    classEventEmitter[listenType](eventName, listener);
+    const sub =  <Function>classEventEmitter[listenType];
+    sub(eventName, listener);
 
 
     // Store a cleanup function for the added listener in
@@ -138,7 +139,8 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
         unSubscriptions.set(runtimeKey, []);
     }
     unSubscriptions.get(runtimeKey).push(() => {
-        classEventEmitter.removeListener(eventName, listener);
+        const unsub = <Function>classEventEmitter.removeListener;
+        unsub(eventName, listener);
     });
 }
 
@@ -321,7 +323,7 @@ function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtim
 /**
  * Get event emitter of the class
  */
-async function getClassEventEmitter(subscription: RemoteSubscription, runtime: PeerRuntime): Promise<EventEmitter> {
+async function getClassEventEmitter(subscription: RemoteSubscription, runtime: PeerRuntime): Promise<Application | Window> {
     let classEventEmitter;
     const { uuid, name, className } = subscription;
 

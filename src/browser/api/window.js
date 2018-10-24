@@ -1369,16 +1369,8 @@ Window.isShowing = function(identity) {
 
 
 Window.joinGroup = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
 
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
-    WindowGroups.joinGroup(identityOfWindow, groupingOfWindow);
+    WindowGroups.joinGroup({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
@@ -1404,16 +1396,7 @@ Window.maximize = function(identity) {
 
 
 Window.mergeGroups = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
-
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
-    WindowGroups.mergeGroups(identityOfWindow, groupingOfWindow);
+    WindowGroups.mergeGroups({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
