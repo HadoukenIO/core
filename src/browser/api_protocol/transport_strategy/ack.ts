@@ -52,7 +52,7 @@ export class NackPayload {
             this.reason = error;
         } else {
             const errorObject = errors.errorToPOJO(error);
-            this.reason = errorObject.toString();
+            this.reason = error.message;
             this.error = errorObject;
         }
     }
