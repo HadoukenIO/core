@@ -226,22 +226,22 @@ function EventListenerApiHandler() {
         const { name, topic, type, uuid } = payload;
         const subTopicProvider = subscriptionProvider[topic];
 
-        const listener = (emmitedPayload) => {
+        const listener = (emittedPayload) => {
             const event = {
                 action: 'process-desktop-event',
                 payload: { topic, type, uuid }
             };
 
             if (name) {
-                event.payload.name = name; // name may exist in emmitedPayload
+                event.payload.name = name; // name may exist in emittedPayload
             }
 
-            if (!uuid && emmitedPayload.uuid) {
-                event.payload.uuid = emmitedPayload.uuid;
+            if (!uuid && emittedPayload.uuid) {
+                event.payload.uuid = emittedPayload.uuid;
             }
 
-            if (typeof emmitedPayload === 'object') {
-                _.extend(event.payload, _.omit(emmitedPayload, _.keys(event.payload)));
+            if (typeof emittedPayload === 'object') {
+                _.extend(event.payload, _.omit(emittedPayload, _.keys(event.payload)));
             }
 
             apiProtocolBase.sendToIdentity(identity, event);
