@@ -18,13 +18,11 @@ describe('Rectangle', () => {
     });
 
     it('should return the shared bounds within threshold, above', () => {
-        // bottom
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 97, 100, 100);
         const sharedBounds = rect1.sharedBounds(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-        // tslint:disable 
-        // console.log(rect1.sharedBounds(rect2));
+
         assert(hasSharedBounds, 'should have had shared bounds');
         assert(top === null, 'should not have had shared top bounds');
         assert(right === 'right', 'should have had shared right bounds');
@@ -33,13 +31,11 @@ describe('Rectangle', () => {
     });
 
     it('should return the shared bounds within threshold, below', () => {
-        // bottom
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 104, 100, 100);
         const sharedBounds = rect1.sharedBounds(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-        // tslint:disable 
-        // console.log(rect1.sharedBounds(rect2));
+
         assert(hasSharedBounds, 'should have had shared bounds');
         assert(top === null, 'should not have had shared top bounds');
         assert(right === 'right', 'should have had shared right bounds');
@@ -48,13 +44,12 @@ describe('Rectangle', () => {
     });
 
     it('should return the shared bounds exactly on the threshold', () => {
-        // bottom
+
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 100, 100, 100);
         const sharedBounds = rect1.sharedBounds(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-        // tslint:disable 
-        // console.log(rect1.sharedBounds(rect2));
+
         assert(hasSharedBounds, 'should have had shared bounds');
         assert(top === null, 'should not have had shared top bounds');
         assert(right === 'right', 'should have had shared right bounds');
@@ -63,13 +58,12 @@ describe('Rectangle', () => {
     });
 
     it('should return the false if past the threshold', () => {
-        // bottom
+
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 106, 100, 100);
         const sharedBounds = rect1.sharedBounds(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-        // tslint:disable 
-        // console.log(rect1.sharedBounds(rect2));
+
         assert(hasSharedBounds === false, 'should have had shared bounds');
         assert(top === null, 'should not have had shared top bounds');
         assert(right === null, 'should not have had shared right bounds');
@@ -79,13 +73,12 @@ describe('Rectangle', () => {
 
 
     it('should return true for all if directly on top', () => {
-        // bottom
+
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 0, 100, 100);
         const sharedBounds = rect1.sharedBounds(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-        // tslint:disable 
-        // console.log(rect1.sharedBounds(rect2));
+
         assert(hasSharedBounds, 'should have had shared bounds');
         assert(top === 'top', 'should have had shared top bounds');
         assert(right === 'right', 'should have had shared right bounds');
@@ -94,13 +87,11 @@ describe('Rectangle', () => {
     });
 
     it('should return true for all if directly on top, matching left bounds', () => {
-        // bottom
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 10, 90, 80);
         const sharedBounds = rect1.sharedBounds(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-        // tslint:disable 
-        // console.log(rect1.sharedBounds(rect2));
+
         assert(hasSharedBounds, 'should have had shared bounds');
         assert(top === null, 'should not have had shared top bounds');
         assert(right === null, 'should have had shared right bounds');
@@ -109,13 +100,11 @@ describe('Rectangle', () => {
     });
 
     it('should return true for all if directly on top, matching top, left bounds', () => {
-        // bottom
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 0, 90, 90);
         const sharedBounds = rect1.sharedBounds(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-        // tslint:disable 
-        // console.log(rect1.sharedBounds(rect2));
+
         assert(hasSharedBounds, 'should have had shared bounds');
         assert(top === 'top', 'should not have had shared top bounds');
         assert(right === null, 'should have had shared right bounds');
@@ -129,8 +118,7 @@ describe('Rectangle', () => {
         const rect2 = new Rectangle(10, 0, 80, 90);
         const sharedBounds = rect1.sharedBounds(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-        // tslint:disable 
-        // console.log(rect1.sharedBounds(rect2));
+
         assert(hasSharedBounds, 'should have had shared bounds');
         assert(top === 'top', 'should not have had shared top bounds');
         assert(right === null, 'should have had shared right bounds');
@@ -139,105 +127,54 @@ describe('Rectangle', () => {
     });
 
     it('shared bound list should return true for all if directly on top, matching top only', () => {
-        // bottom
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(10, 0, 80, 90);
         const sharedBoundsList = rect1.sharedBoundsList(rect2);
-        // tslint:disable 
-        assert.deepStrictEqual(sharedBoundsList, [['top', 'top']], 'should only match top top')
+        assert.deepStrictEqual(sharedBoundsList, [['top', 'top']], 'should only match top top');
     });
 
     it('shared bound list should return true for all if directly on top, matching top, left', () => {
-        // bottom
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 0, 90, 90);
         const sharedBoundsList = rect1.sharedBoundsList(rect2);
-        // tslint:disable 
-        assert.deepStrictEqual(sharedBoundsList, [['top', 'top'], ['left', 'left']], 'should only match top top')
+        assert.deepStrictEqual(sharedBoundsList, [['top', 'top'], ['left', 'left']], 'should only match top top');
     });
 
-    // enable me!!
-    it ('should return the bounds should the rect move left to right', () => {
-        const rect1 = new Rectangle(0, 0, 100, 100);
-        const rect2 = new Rectangle(100, 0, 100, 100);
-        const sharedBoundsList = rect2.sharedBoundsList(rect1);
-        const delta = {x: 0, y: 0, width: 10, height: 0};
-
-        const moved = rect2.move(sharedBoundsList, delta);
-
-        assert.deepStrictEqual(moved, {x: 110, y: 0, width: 90, height: 100});
+    it('should not move if no shared edges', () => {
+        const rect = new Rectangle(0, 0, 100, 100);
+        const move = rect.move2({x: 200, y: 0, width: 100, height: 100}, {x: 300, y: 0, width: 100, height: 100});
+        assert.deepStrictEqual(move, {x: 0, y: 0, width: 100, height: 100});
     });
 
-    it('should not move if the resizing edge is not a shared one', () => {
-        const rect1 = new Rectangle(0, 0, 100, 100);
-        const rect2 = new Rectangle(100, 0, 100, 100);
-        const sharedBoundsList = rect2.sharedBoundsList(rect1);
-        const delta = {x: 10, y: 0, width: -10, height: 0};
-
-        const moved = rect2.move(sharedBoundsList, delta);
-
-        assert.deepStrictEqual(moved, {x: 100, y: 0, width: 100, height: 100});
+    it('should not move if the resizing edge is not a shared one, (leader right, leader grows not shared)', () => {
+        const rect = new Rectangle(0, 0, 100, 100);
+        const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 100, y: 0, width: 110, height: 100});
+        assert.deepStrictEqual(move, {x: 0, y: 0, width: 100, height: 100});
     });
 
-    it('should not move if the resizing edge is not a shared one', () => {
-        const rect1 = new Rectangle(0, 0, 100, 100);
-        const rect2 = new Rectangle(100, 0, 100, 80);
-        const sharedBoundsList = rect2.sharedBoundsList(rect1);
-        const delta = {x: 0, y: 0, width: 0, height: -11};
 
-        const moved = rect2.move(sharedBoundsList, delta);
-
-        assert.deepStrictEqual(moved, {x: 100, y: 0, width: 100, height: 80});
+    it('should move with just the leader window move (leader top, leader grows)', () => {
+        const rect = new Rectangle(100, 100, 100, 100);
+        const move = rect.move2({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 110});
+        assert.deepStrictEqual(move, {x: 100, y: 110, width: 100, height: 90});
     });
 
-    it('should not move if the resizing edge is not a shared one, resize left, joined right', () => {
-        const rect1 = new Rectangle(10, 0, 100, 100);
-        const rect2 = new Rectangle(110, 0, 100, 100);
-        const sharedBoundsList = rect2.sharedBoundsList(rect1);
-        const delta = {x: -4, y: 0, width: 4, height: 0};
-
-        const moved = rect2.move(sharedBoundsList, delta);
-
-        assert.deepStrictEqual(moved, {x: 110, y: 0, width: 100, height: 100});
+    it('should move with just the leader window move (leader top, leader shrinks)', () => {
+        const rect = new Rectangle(100, 100, 100, 100);
+        const move = rect.move2({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 90});
+        assert.deepStrictEqual(move, {x: 100, y: 90, width: 100, height: 110});
     });
 
-    it ('should move the window when there is a shared edge (left edge to right)', () => {
-        const rect1 = new Rectangle(0, 0, 100, 100);
-        const rect2 = new Rectangle(100, 0, 100, 100);
-        const sharedBoundsList = rect2.sharedBoundsList(rect1);
-        const delta = {x: 0, y: 0, width: -10, height: 0};
-        const moved = rect2.move(sharedBoundsList, delta);
-
-        assert.deepStrictEqual(moved, {x: 90, y: 0, width: 110, height: 100});
+    it('should move with just the leader window move (leader bottom, leader grows)', () => {
+        const rect = new Rectangle(100, 100, 100, 100);
+        const move = rect.move2({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 190, width: 100, height: 110});
+        assert.deepStrictEqual(move, {x: 100, y: 100, width: 100, height: 90});
     });
 
-    it ('should return the bounds should the rect move right to left', () => {
-        // const rect1 = new Rectangle(0, 0, 100, 100);
-        const rect2 = Rectangle.CREATE_FROM_BOUNDS({
-            "x": 554,
-            "y": 69,
-            "width": 834,
-            "height": 300
-        });
-        const sharedBoundsList = <SharedBoundsList>[['top', 'top'], ['left', 'right']];
-        // const delta = {x: 10, y: 0, width: -10, height: 0};
-
-        const moved = rect2.move(sharedBoundsList, {
-            "x": 0,
-            "y": 0,
-            "width": -10,
-            "height": 0
-        });
-
-        assert.deepStrictEqual(moved, {"x": 544, "y": 69, "width": 844, "height": 300});
-    });
-
-    it ('should handle bounded bottom moves correctly', () =>{
-        const delta = { "x": 0, "y": 0, "width": 0, "height": 1 };
-        const rect = Rectangle.CREATE_FROM_BOUNDS({"x": 623, "y": 162, "width": 690, "height": 294})
-        const sharedBoundsList = <SharedBoundsList>[['bottom', 'bottom'], ['left', 'right']];
-        const moved = rect.move(sharedBoundsList, delta);
-        assert.deepStrictEqual(moved, {"x": 623, "y": 162, "width": 690, "height": 295})
+    it('should move with just the leader window move (leader bottom, leader shrinks)', () => {
+        const rect = new Rectangle(100, 100, 100, 100);
+        const move = rect.move2({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 210, width: 100, height: 90});
+        assert.deepStrictEqual(move, {x: 100, y: 100, width: 100, height: 110});
     });
 
     it('should move with just the leader window move (leader left, leader grows)', () => {
@@ -246,10 +183,22 @@ describe('Rectangle', () => {
         assert.deepStrictEqual(move, {x: 110, y: 0, width: 90, height: 100});
     });
 
+    it('should move with just the leader window move (leader left, leader shrinks)', () => {
+        const rect = new Rectangle(100, 0, 100, 100);
+        const move = rect.move2({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 90, height: 100});
+        assert.deepStrictEqual(move, {x: 90, y: 0, width: 110, height: 100});
+    });
+
     it('should move with just the leader window move (leader right, leader grows)', () => {
         const rect = new Rectangle(0, 0, 100, 100);
         const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 90, y: 0, width: 110, height: 100});
         assert.deepStrictEqual(move, {x: 0, y: 0, width: 90, height: 100});
+    });
+
+    it('should move with just the leader window move (leader right, leader shrinks)', () => {
+        const rect = new Rectangle(0, 0, 100, 100);
+        const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 110, y: 0, width: 90, height: 100});
+        assert.deepStrictEqual(move, {x: 0, y: 0, width: 110, height: 100});
     });
 
 
@@ -265,8 +214,6 @@ describe('Rectangle', () => {
         const rect = new Rectangle(0, 110, 100, 100);
         const otherRect = {x: 0, y: 0, width: 100, height: 100};
         rect.alignSide('top', Rectangle.CREATE_FROM_BOUNDS(otherRect), 'bottom');
-        // assert(rect.y === 90, 'side should line up');
-        // assert(rect.height === 110, 'height should have been adjusted');
         assert.deepStrictEqual(rect.bounds, {x: 0, y: 100, width: 100, height: 110});
     });
 
@@ -274,61 +221,45 @@ describe('Rectangle', () => {
         const NS_PER_SEC = 1e9;
         const time = process.hrtime();
         const adjList = Rectangle.ADJACENCY_LIST([
-            new Rectangle(0,0,100,100),
-            new Rectangle(4,4,100,100),
-            new Rectangle(8,8,100,100),
-            new Rectangle(50,0,100,100),
-            new Rectangle(400,400,100,100),
-            new Rectangle(6,6,100,100),
+            new Rectangle(0, 0, 100, 100),
+            new Rectangle(4, 4, 100, 100),
+            new Rectangle(8, 8, 100, 100),
+            new Rectangle(50, 0, 100, 100),
+            new Rectangle(400, 400, 100, 100),
+            new Rectangle(6, 6, 100, 100)
         ]);
 
         const diff = process.hrtime(time);
-        const thing = diff[0] * NS_PER_SEC + diff[1];
-        const diffInMilliS = (diff[0] * NS_PER_SEC + diff[1]) / 1e6
-        const foo = adjList;
-        assert(diffInMilliS < 5);
+        const diffInMilliSec = (diff[0] * NS_PER_SEC + diff[1]) / 1e6;
+        assert(diffInMilliSec < 5);
     });
 
-    // it('should not jump left', () => {
-    //     const rect = Rectangle.CREATE_FROM_BOUNDS({
-    //         "x": 721,
-    //         "y": 193,
-    //         "width": 337,
-    //         "height": 212
-    //     });
-    //     const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 90, y: 0, width: 110, height: 100});
-    // });
+    it ('should grow correctly on external monitors with negative y', () => {
+        const rect = Rectangle.CREATE_FROM_BOUNDS({'x': 1206, 'y': -540, 'width': 491, 'height': 253});
+        const grownUp = rect.grow(5, 5);
 
-    // RIGHT 
-    // OVERLAPPING exactly 
-    // LEFT 
-    // TOP 
-    // INSIDE 
-    // OVERLAPPING NO SHARED 
+        assert.deepStrictEqual(grownUp, Rectangle.CREATE_FROM_BOUNDS({'x': 1201, 'y': -545, 'width': 501, 'height': 263}));
+    });
 
-    // it('should return the shared right bounds within threshold', () => {
-    //     // bottom
-    //     const rect1 = new Rectangle(0, 0, 100, 100);
-    //     const rect2 = new Rectangle(0, 97, 100, 100);
-    //     const sharedBounds = rect1.sharedBounds(rect2);
-    //     const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-    //     // tslint:disable 
-    //     // console.log(rect1.sharedBounds(rect2));
-    //     assert(hasSharedBounds, 'should have had shared bounds');
-    //     assert(top === null, 'should not have had shared top bounds');
-    //     assert(right === 'right', 'should have had shared bottom bounds');
-    //     assert(bottom === 'top', 'should have had shared bottom bounds');
-    //     assert(left === 'left', 'should have had shared bottom bounds');
-    // });
+    it ('should grow correctly on external monitors with negative x', () => {
+        const rect = Rectangle.CREATE_FROM_BOUNDS({'x': -1206, 'y': 540, 'width': 491, 'height': 253});
+        const grownUp = rect.grow(5, 5);
 
-    // it('should return the shared bounds bottom right at the threshold', () => {
-    //     // bottom
-    //     const rect1 = new Rectangle(0, 0, 100, 100);
-    //     const rect2 = new Rectangle(0, 100, 100, 100);
-    //     const sharedBounds = rect1.sharedBounds(rect2);
-    //     const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
-    //     // tslint:disable 
-    //     // console.log(rect1.sharedBounds(rect2));
-    //     assert(hasSharedBounds, 'should have had shared bounds');
-    // });
+        assert.deepStrictEqual(grownUp, Rectangle.CREATE_FROM_BOUNDS({'x': -1211, 'y': 535, 'width': 501, 'height': 263}));
+    });
+
+    it ('should grow correctly on external monitors with negative x, y', () => {
+        const rect = Rectangle.CREATE_FROM_BOUNDS({'x': -1206, 'y': -540, 'width': 491, 'height': 253});
+        const grownUp = rect.grow(5, 5);
+
+        assert.deepStrictEqual(grownUp, Rectangle.CREATE_FROM_BOUNDS({'x': -1211, 'y': -545, 'width': 501, 'height': 263}));
+    });
+
+    it('should collide', () => {
+        const rect = Rectangle.CREATE_FROM_BOUNDS({'x': 918, 'y': -1009, 'width': 670, 'height': 454});
+        const rect2 = Rectangle.CREATE_FROM_BOUNDS({'x': 952, 'y': -556, 'width': 641, 'height': 549});
+        const collides = rect.collidesWith(rect2);
+
+        assert(collides, 'should have collided, top to bottom and right to right');
+    });
 });

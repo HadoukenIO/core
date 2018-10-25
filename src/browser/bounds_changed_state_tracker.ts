@@ -24,6 +24,11 @@ import Bounds from 'hadouken-js-adapter/out/types/src/api/window/bounds';
 
 const l = (x: any) => log.writeToLog(1, x, true);
 
+// change types
+const POSITION = 0;
+const SIZE = 1;
+const POSITION_AND_SIZE = 2;
+
 const isWin32 = process.platform === 'win32';
 
 const DisableWindowGroupTracking = 'disable-window-group-tracking';
@@ -269,100 +274,89 @@ export default class BoundsChangedStateTracker {
         if (!trackingResize) {
             return bounds;
         }
-        let { x, y, width, height } = bounds;
+        // let { x, y, width, height } = bounds;
+
+        //const leaderRect = Rectangle.CREATE_FROM_BOUNDS(<RectangleBase> originalWindowCachedBounds);
+        // l('take me to your leader!');
+        // l(JSON.stringify(leaderRect));
+        // const intersectionRect = thisRect.intersection(leaderRect.grow(5, 5));
+
+        // const sharedBounds = leaderRect.sharedBounds(thisRect);
+
+        // l(thisRect);
+        // l(leaderRect);
+
+        // if (sharedBounds.hasSharedBounds) {
+        //     l(sharedBounds);
+        // } else {
+        //     l('nope');
+        //     // l(sharedBounds);
+        // }
+        // const intersection = !intersectionRect.isEmpty();
+        // const intersection = thisRect.collidesWith(leaderRect.grow(5, 5));
+        // l(JSON.stringify(thisRect));
+        // l('.....');
+        // l(JSON.stringify(leaderRect.grow(5, 5)));
+        // if (intersection) {
+        //     // l('YESSSSSSSSS!@!@!@!@!@!@!@!@!@!@!@!@!@!@!@!@');
+        //     if (resizeChangeType.height) {
+        //         if (delta.y) {
+        //             if (this.sharedBound(y, originalWindowCachedBounds.y)) {
+        //                 // resize windows with matching top bound
+        //                 y = toSafeInt(y + delta.y, y);
+        //                 height = height + delta.height;
+        //             }
+        //             if (this.sharedBound(y + height, originalWindowCachedBounds.y)) {
+        //                 // resize windows with matching bottom bound
+        //                 height = height - delta.height;
+        //             }
+        //         }
+        //         if (delta.y2) {
+        //             if (this.sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+        //                 // resize windows with matching bottom bound
+        //                 height = height + delta.height;
+        //             }
+        //             if (this.sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
+        //                 // resize windows with matching top bound
+        //                 y = toSafeInt(y + delta.height, y);
+        //                 height = height - delta.height;
+        //             }
+        //         }
+        //     }
+        //     if (resizeChangeType.width) {
+        //         if (delta.x) {
+        //             // changed...
+        //             if (this.sharedBound(x, originalWindowCachedBounds.x)
+        //                 // && originalWindowCachedBounds.x + originalWindowCachedBounds.width < x
+        //                 ) {
+        //                 // resize windows with matching left bound
+        //                 x = toSafeInt(x + delta.x, x);
+        //                 width = width + delta.width;
+        //             }
+        //             if (this.sharedBound(x + width, originalWindowCachedBounds.x)) {
+        //                 // resize windows with matching right bound
+        //                 width = width - delta.width;
+        //             }
+        //         }
+        //         if (delta.x2) {
+        //             if (this.sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+        //                 // resize windows with matching right bound
+        //                 width = width + delta.width;
+        //             }
+        //             if (this.sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
+        //                 // resize windows with matching left bound
+        //                 x = toSafeInt(x + delta.width, x);
+        //                 width = width - delta.width;
+        //             }
+        //         }
+        //     }
+        // }
 
         const thisRect = Rectangle.CREATE_FROM_BOUNDS(bounds);
-        const leaderRect = Rectangle.CREATE_FROM_BOUNDS(<RectangleBase> originalWindowCachedBounds);
-        const intersectionRect = thisRect.intersection(leaderRect.grow(5, 5));
-
-        const sharedBounds = leaderRect.sharedBounds(thisRect);
-
-        l(thisRect);
-        l(leaderRect);
-
-        if (sharedBounds.hasSharedBounds) {
-            l(sharedBounds);
-        } else {
-            l('nope');
-            // l(sharedBounds);
-        }
-        const intersection = !intersectionRect.isEmpty();
-        if (intersection) {
-            if (resizeChangeType.height) {
-                if (delta.y) {
-                    if (this.sharedBound(y, originalWindowCachedBounds.y)) {
-                        // resize windows with matching top bound
-                        y = toSafeInt(y + delta.y, y);
-                        height = height + delta.height;
-                    }
-                    if (this.sharedBound(y + height, originalWindowCachedBounds.y)) {
-                        // resize windows with matching bottom bound
-                        height = height - delta.height;
-                    }
-                }
-                if (delta.y2) {
-                    if (this.sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                        // resize windows with matching bottom bound
-                        height = height + delta.height;
-                    }
-                    if (this.sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                        // resize windows with matching top bound
-                        y = toSafeInt(y + delta.height, y);
-                        height = height - delta.height;
-                    }
-                }
-            }
-
-            if (resizeChangeType.width) {
-                if (delta.x) {
-
-                    // changed...
-                    if (this.sharedBound(x, originalWindowCachedBounds.x)
-                        // && originalWindowCachedBounds.x + originalWindowCachedBounds.width < x
-                        ) {
-                        // resize windows with matching left bound
-                        x = toSafeInt(x + delta.x, x);
-                        width = width + delta.width;
-                    }
-                    if (this.sharedBound(x + width, originalWindowCachedBounds.x)) {
-                        // resize windows with matching right bound
-                        width = width - delta.width;
-                    }
-                }
-                if (delta.x2) {
-                    if (this.sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                        // resize windows with matching right bound
-                        width = width + delta.width;
-                    }
-                    if (this.sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                        // resize windows with matching left bound
-                        x = toSafeInt(x + delta.width, x);
-                        width = width - delta.width;
-                    }
-                }
-            }
-        }
-        const newWindowBounds = { x, y, width, height };
-
-        const sharedBoundsList = thisRect.sharedBoundsList(leaderRect);
         const currentBounds = this.getCurrentBounds();
         const cachedBounds = this.getCachedBounds();
-        const d2 = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(Rectangle.CREATE_FROM_BOUNDS(currentBounds));
         const moved = thisRect.move2(cachedBounds, currentBounds);
-
-        l(JSON.stringify(thisRect.bounds, null, ' '));
-        l('---------------!!!------------------');
-        l(JSON.stringify(d2, null, ' '));
-        l('---------------###------------------');
-        l(JSON.stringify(delta, null, ' '));
-        l('---------------()()()()------------------');
-        l(JSON.stringify(moved, null, ' '));
-        l('---------------###------------------');
-        l(JSON.stringify(newWindowBounds, null, ' '));
-        // newWindowBounds
         return clipBounds(moved, windowToUpdate.browserWindow);
-        // orig
-        // return clipBounds(newWindowBounds, windowToUpdate.browserWindow);
     };
 
     private checkTrackingApi = (groupLeader: ITransaction): boolean => groupLeader.type === 'api'
@@ -418,7 +412,7 @@ export default class BoundsChangedStateTracker {
             //1 means a change in size.
             //2 means a change in position and size.
             // Default to change in position when there is no change
-            const changeType = (sizeChange ? (posChange ? 2 : 1) : 0);
+            const changeType = (sizeChange ? (posChange ? POSITION_AND_SIZE : SIZE) : POSITION);
 
             const ofWindow = coreState.getWindowByUuidName(this.uuid, this.name);
             const groupUuid = ofWindow ? ofWindow.groupUuid : null;
@@ -460,7 +454,7 @@ export default class BoundsChangedStateTracker {
                     let flags: number;
 
                     //todo 1 means a change in size. this should be a const
-                    if (changeType === 1) {
+                    if (changeType === SIZE) {
                         // this may need to change to 1 or 2 if we fix functionality for changeType 2
                         flags = noZorder + noActivate;
                     } else {
@@ -469,61 +463,32 @@ export default class BoundsChangedStateTracker {
 
                     const windowGroup = WindowGroups.getGroup(groupUuid);
                     const winsToMove = [];
-                    // const adjLists = [];
-
-                    let resizingWindow;
-
                     const positions: Map<string, RectangleBase> = new Map();
+                    const setPositions: Array<() => void> = [];
 
                     for (let i = 0; i < windowGroup.length; i++) {
                         if (windowGroup[i].name !== this.name) {
                             winsToMove.push(windowGroup[i]);
-                            positions.set(windowGroup[i].name, windowGroup[i].browserWindow.getBounds());
-                        } else {
-                            resizingWindow = i;
                         }
+                        positions.set(windowGroup[i].name, windowGroup[i].browserWindow.getBounds());
                     }
-
-                    const adjacencyList = Rectangle.ADJACENCY_LIST(
-                        windowGroup.map(w => Rectangle.CREATE_FROM_BOUNDS(w.browserWindow.getBounds()))
-                    );
-
-                    const leaderAdj: number[] = adjacencyList.get(resizingWindow);
-
-                    // if (changeType !== 0) {
-                    //     winsToMove = winsToMove.filter((v, i) => leaderAdj.includes(i));
-                    // }
-                    // for (let [name, bounds] in positions) {
-
-                    // }
-
-                    // todo make this a delayed commit
-                    const setPositions: Array<() => void> = [];
 
                     for (let i = 0; i < winsToMove.length; i++) {
                         const win = winsToMove[i];
 
-
-                        // const resizingWindow = WindowGroups.getGroup(groupUuid).filter((win): boolean => {
-                        //     return win.name !== this.name;
-                        // });
-
-                        // what makes this needs to be broken apart, state why...
-                        //winsToMove.forEach((win): void => {
                         win.browserWindow.bringToFront(); // maybe just do this once?
-                        //changed
-                        //const winBounds = win.browserWindow.getBounds();
                         const winBounds = positions.get(win.name);
 
-                        //todo 1 means a change in size. this should be a const
-                        const bounds = (changeType === 1)
+                        const bounds = (changeType === SIZE)
                             // here bounds compare and delta are from the window that is resizing
                             ? this.handleGroupedResize(boundsCompare, delta, cachedBounds, win, winBounds)
                             : winBounds;
+
                         let { x, y } = bounds;
                         const { width, height } = bounds;
+
                         // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
-                        if (changeType === 0 || changeType === 2) {
+                        if (changeType === POSITION || changeType === POSITION_AND_SIZE) {
                             x = toSafeInt(x + delta.x, x);
                             y = toSafeInt(y + delta.y, y);
                         }
@@ -545,26 +510,28 @@ export default class BoundsChangedStateTracker {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             }
-                            const [w, h] = [width, height];
+
                             // no change on the resize behavior
-                            wt.setWindowPos(hwnd, { x, y, w, h, flags });
+                            setPositions.push(() => {
+                                const myBounds = positions.get(win.name);
+                                const { x, y, width, height } = myBounds;
+                                const [w, h] = [width, height];
+                                wt.setWindowPos(hwnd, { x, y, w, h, flags });
+                            });
+
                         } else {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             }
-                            // no need to call clipBounds here because called earlier
-                            positions.set(win.name, { x, y, width, height });
 
+                            positions.set(win.name, { x, y, width, height });
                             setPositions.push(() => {
                                 win.browserWindow.setBounds(positions.get(win.name));
                             });
                         }
-                        //});
-
                     }
 
                     setPositions.forEach(boundsSet => boundsSet());
-                    // this.calculateAndExecuteWindowMoves();
 
                     if (wt) {
                         wt.commit();
@@ -623,9 +590,9 @@ export default class BoundsChangedStateTracker {
             let posChange = false;
 
             group.forEach((event): void => {
-                if (event.changeType === 0) {
+                if (event.changeType === POSITION) {
                     posChange = true;
-                } else if (event.changeType === 1) {
+                } else if (event.changeType === SIZE) {
                     sizeChange = true;
                 } else {
                     sizeChange = true;
@@ -634,7 +601,7 @@ export default class BoundsChangedStateTracker {
             });
 
             const lastEvent = _.last(group);
-            lastEvent.changeType = (sizeChange ? (posChange ? 2 : 1) : 0);
+            lastEvent.changeType = (sizeChange ? (posChange ? POSITION_AND_SIZE : SIZE) : POSITION);
 
             return lastEvent;
         });

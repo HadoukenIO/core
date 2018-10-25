@@ -38,11 +38,12 @@ class RectOptionsOpts {
     public minHeight?: number;
     public maxHeight?: number;
 
+    // todo test this
     constructor(opts: Opts) {
         // when resizing, dont let the window get so small you cant see it / grab it
         this.minWidth = Math.max(opts.minWidth || 10, 10);
         this.maxWidth = opts.maxWidth || Number.MAX_SAFE_INTEGER;
-        this.minHeight = Math.max(opts.maxHeight || 10, 10);
+        this.minHeight = Math.max(opts.minHeight || 10, 10);
         this.maxHeight = opts.maxHeight || Number.MAX_SAFE_INTEGER;
     }
 }
@@ -100,11 +101,24 @@ export class Rectangle {
         let y0: number = this.y;
         let x1: number = this.width;
         let y1: number = this.height;
+
+        let x0Sign: number = this.x > 0 ? 1 : -1;
+        let y0Sign: number = this.y > 0 ? 1 : -1;
+        //let x1Sign: number = this.width > 0 ? 1 : -1;
+        // let y1Sign: number = this.height > 0 ? 1 : -1;
+
+        // x0 = Math.abs(x0);
+        // y0 = Math.abs(y0);
+
+        // // these should not be neg ever...
+        // x1 = Math.abs(x1);
+        // y1 = Math.abs(y1);
+
         x1 += x0;
         y1 += y0;
 
-        x0 -= h;
-        y0 -= v;
+        x0 -= h; // * x0Sign;
+        y0 -= v; // * y0Sign;
         x1 += h;
         y1 += v;
 
@@ -114,34 +128,34 @@ export class Rectangle {
             // it is clipped so that we avoid the risk that the clipping
             // of x0 will reverse the ordering of x0 and x1.
             x1 -= x0;
-            if (x1 < Number.MIN_VALUE) x1 = Number.MIN_VALUE;
-            if (x0 < Number.MIN_VALUE) x0 = Number.MIN_VALUE;
+            if (x1 < Number.MIN_SAFE_INTEGER) x1 = Number.MIN_SAFE_INTEGER;
+            if (x0 < Number.MIN_SAFE_INTEGER) x0 = Number.MIN_SAFE_INTEGER;
             else if (x0 > Number.MAX_VALUE) x0 = Number.MAX_VALUE;
         } else { // (x1 >= x0)
             // Clip x0 before we subtract it from x1 in case the clipping
             // affects the representable area of the rectangle.
-            if (x0 < Number.MIN_VALUE) x0 = Number.MIN_VALUE;
+            if (x0 < Number.MIN_SAFE_INTEGER) x0 = Number.MIN_SAFE_INTEGER;
             else if (x0 > Number.MAX_VALUE) x0 = Number.MAX_VALUE;
             x1 -= x0;
             // The only way x1 can be negative now is if we clipped
             // x0 against MIN and x1 is less than MIN - in which case
             // we want to leave the width negative since the result
             // did not intersect the representable area.
-            if (x1 < Number.MIN_VALUE) x1 = Number.MIN_VALUE;
+            if (x1 < Number.MIN_SAFE_INTEGER) x1 = Number.MIN_SAFE_INTEGER;
             else if (x1 > Number.MAX_VALUE) x1 = Number.MAX_VALUE;
         }
 
         if (y1 < y0) {
             // Non-existant in Y direction
             y1 -= y0;
-            if (y1 < Number.MIN_VALUE) y1 = Number.MIN_VALUE;
-            if (y0 < Number.MIN_VALUE) y0 = Number.MIN_VALUE;
+            if (y1 < Number.MIN_SAFE_INTEGER) y1 = Number.MIN_SAFE_INTEGER;
+            if (y0 < Number.MIN_SAFE_INTEGER) y0 = Number.MIN_SAFE_INTEGER;
             else if (y0 > Number.MAX_VALUE) y0 = Number.MAX_VALUE;
         } else { // (y1 >= y0)
-            if (y0 < Number.MIN_VALUE) y0 = Number.MIN_VALUE;
+            if (y0 < Number.MIN_SAFE_INTEGER) y0 = Number.MIN_SAFE_INTEGER;
             else if (y0 > Number.MAX_VALUE) y0 = Number.MAX_VALUE;
             y1 -= y0;
-            if (y1 < Number.MIN_VALUE) y1 = Number.MIN_VALUE;
+            if (y1 < Number.MIN_SAFE_INTEGER) y1 = Number.MIN_SAFE_INTEGER;
             else if (y1 > Number.MAX_VALUE) y1 = Number.MAX_VALUE;
         }
 
@@ -150,6 +164,20 @@ export class Rectangle {
     
     public isEmpty(): boolean {
         return (this.width <= 0.0001) || (this.height <= 0.0001);
+    }
+
+    public collidesWith (rect: RectangleBase) {
+        const {x, y, width, height } = rect;
+        let collision = false;
+        
+        if (this.x < x + width &&
+           this.x + this.width > x &&
+           this.y < y + height &&
+           this.y + this.height > y) {
+            collision = true;
+        }
+
+        return collision;
     }
 
     // todo revisit this for external monitor 
@@ -171,8 +199,8 @@ export class Rectangle {
         // tx2,ty2 will never overflow (they will never be
         // larger than the smallest of the two source w,h)
         // they might underflow, though...
-        if (tx2 < Number.MIN_VALUE) tx2 = Number.MIN_VALUE;
-        if (ty2 < Number.MIN_VALUE) ty2 = Number.MIN_VALUE;
+        if (tx2 < Number.MIN_SAFE_INTEGER) tx2 = Number.MIN_SAFE_INTEGER;
+        if (ty2 < Number.MIN_SAFE_INTEGER) ty2 = Number.MIN_SAFE_INTEGER;
         return new Rectangle(tx1, ty1, tx2, ty2);
     }
     // ts-lint:enable
@@ -210,8 +238,9 @@ export class Rectangle {
 
 
     public sharedBounds(rect: Rectangle): SharedBounds {
-        const intersectionRect = this.intersection(rect.grow(this.boundShareThreshold, this.boundShareThreshold));
-        const intersection = !intersectionRect.isEmpty();
+        const intersectionRect = rect.grow(this.boundShareThreshold, this.boundShareThreshold);
+        const intersection = this.collidesWith(intersectionRect);
+
         let hasSharedBounds = false;
         let top: SideName = null;
         let right: SideName = null;
@@ -222,7 +251,6 @@ export class Rectangle {
             return {hasSharedBounds, top, right, bottom, left};
         }
 
-        // what about if the top and bottom are in the same range... a super small window
         top = this.sharedBound('top', rect);
         right = this.sharedBound('right', rect);
         bottom = this.sharedBound('bottom', rect);
@@ -277,8 +305,6 @@ export class Rectangle {
 
 
     public alignSide(mySide: SideName, rect: Rectangle , sideToAlign: SideName) {
-        // left is joined to right is different than right is joined to left! 
-        l(`$$$$$$$$$$$$$$$$$ mySide: ${mySide}, sideToAlign: ${sideToAlign}`)
         switch (mySide){
             case "left": {
                 const xInitial = this.x;
@@ -329,13 +355,7 @@ export class Rectangle {
             'left': 'right'
         };
 
-        // console.log(' ');
-        // console.log(JSON.stringify(bounds, null, ' '));
-        // console.log('.............');
-        // console.log(JSON.stringify(delta, null, ' '));
-
         // tslint:disable
-        // console.log(JSON.stringify(movementTranslation, null, ' '));
         for (let [thisRectSharedSide, otherRectSharedSide] of sharedBounds) {
             // console.log(`${thisRectSharedSide}, ${otherRectSharedSide}. ${movementTranslation[thisRectSharedSide]}`);
             const translation = movementTranslation[thisRectSharedSide];
@@ -375,7 +395,7 @@ export class Rectangle {
             for (let ii = 0; ii < rectLen; ii++) {
                 if (i !== ii) {
                     if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
-                        adjacentRects.push(rects[ii]);
+                        // adjacentRects.push(rects[ii]);
                         adjacentRects.push(ii);
                     }
                 }
