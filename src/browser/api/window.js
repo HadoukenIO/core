@@ -2482,11 +2482,7 @@ function restoreWindowPosition(identity, cb) {
 
         // set zoom level
         const { zoomLevel } = savedBounds;
-        if (zoomLevel) {
-            const browserWindow = getElectronBrowserWindow(identity);
-            browserWindow.webContents.setZoomLevel(zoomLevel);
-        }
-
+        Window.setZoomLevel(identity, zoomLevel);
         cb();
     }, (err) => {
         //We care about errors but lets keep window creation going.
