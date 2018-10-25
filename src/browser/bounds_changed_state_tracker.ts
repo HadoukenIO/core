@@ -427,12 +427,24 @@ export default class BoundsChangedStateTracker {
                                 win.browserWindow.unmaximize();
                             }
 
-                            setPositions.push(() => {
-                                const myBounds = positions.get(win.name);
-                                const { x, y, width, height } = myBounds;
-                                const [w, h] = [width, height];
-                                wt.setWindowPos(hwnd, { x, y, w, h, flags });
-                            });
+                            /*
+                                Leave this in here (commented out) for now. The idea is to only actually move the
+                                windows after all window positions are known in order to detect if any min/max
+                                restriction has been violated. The reason it is not included here is that it changes
+                                the .deferred and .reason values on the event payloads in a way that breaks tests,
+                                though it may be the desired behavior. This will be revisited as we evaluate making
+                                the entire transaction happen deferred window bounds.
+
+
+                                setPositions.push(() => {
+                                    const myBounds = positions.get(win.name);
+                                    const { x, y, width, height } = myBounds;
+                                    const [w, h] = [width, height];
+                                    wt.setWindowPos(hwnd, { x, y, w, h, flags });
+                                });
+                             */
+                            const [w, h] = [width, height];
+                            wt.setWindowPos(hwnd, { x, y, w, h, flags });
 
                         } else {
                             if (win.browserWindow.isMaximized()) {
@@ -440,13 +452,16 @@ export default class BoundsChangedStateTracker {
                             }
 
                             positions.set(win.name, { x, y, width, height });
-                            setPositions.push(() => {
-                                win.browserWindow.setBounds(positions.get(win.name));
-                            });
+                            // see note above about deferred moves
+                            // setPositions.push(() => {
+                            //     win.browserWindow.setBounds(positions.get(win.name));
+                            // });
+                            win.browserWindow.setBounds(positions.get(win.name));
                         }
                     }
 
-                    setPositions.forEach(boundsSet => boundsSet());
+                    // see note above about deferred moves
+                    // setPositions.forEach(boundsSet => boundsSet());
 
                     if (wt) {
                         wt.commit();
