@@ -16,7 +16,11 @@ limitations under the License.
 
 import { BrowserWindow } from '../shapes';
 import { Rectangle, screen } from 'electron';
-import * as log from '../browser/log';
+
+interface Clamped {
+  value: number;
+  clampedOffset: number;
+}
 
 /*
   This function sets window's bounds to be in a visible area, in case
@@ -57,18 +61,15 @@ export function clipBounds(bounds: Rectangle, browserWindow: BrowserWindow): Rec
   const { minWidth, minHeight, maxWidth, maxHeight } = browserWindow._options;
 
   const xclamp = clamp(bounds.width, minWidth, maxWidth);
-  log.writeToLog(1, browserWindow._options.name, true);
-  log.writeToLog(1, xclamp, true);
   const yclamp = clamp(bounds.height, minHeight, maxHeight);
-  log.writeToLog(1, yclamp, true);
 
-  if (yclamp.clampedOffsetHigh < 0) {
-    // !! reprop the move and (remeasure???)
+  if (yclamp.clampedOffset || xclamp.clampedOffset) {
+    // here is where we can indicate a "pushed" window and may need to check all bounds
   }
 
   return {
-    x: bounds.x + xclamp.clampedOffsetLow,
-    y: bounds.y + yclamp.clampedOffsetHigh,
+    x: bounds.x + xclamp.clampedOffset,
+    y: bounds.y + yclamp.clampedOffset,
     width: xclamp.value,
     height: yclamp.value
   };
@@ -76,17 +77,12 @@ export function clipBounds(bounds: Rectangle, browserWindow: BrowserWindow): Rec
 
 /*
   Adjust the number to be within the range of minimum and maximum values
-  TODO: explain the offset
 */
-function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER):
-{ value: number;
-  clampedOffsetLow: number;
-  clampedOffsetHigh: number; } {
+function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): Clamped {
   max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
   const value = Math.min(Math.max(num, min, 0), max);
   return {
     value,
-    clampedOffsetLow: num < min ? -1 * (min - num) : 0,
-    clampedOffsetHigh: num > max ? -1 * (num - max) : 0
+    clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
   };
 }

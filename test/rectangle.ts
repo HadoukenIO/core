@@ -142,62 +142,62 @@ describe('Rectangle', () => {
 
     it('should not move if no shared edges', () => {
         const rect = new Rectangle(0, 0, 100, 100);
-        const move = rect.move2({x: 200, y: 0, width: 100, height: 100}, {x: 300, y: 0, width: 100, height: 100});
+        const move = rect.move({x: 200, y: 0, width: 100, height: 100}, {x: 300, y: 0, width: 100, height: 100});
         assert.deepStrictEqual(move, {x: 0, y: 0, width: 100, height: 100});
     });
 
     it('should not move if the resizing edge is not a shared one, (leader right, leader grows not shared)', () => {
         const rect = new Rectangle(0, 0, 100, 100);
-        const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 100, y: 0, width: 110, height: 100});
+        const move = rect.move({x: 100, y: 0, width: 100, height: 100}, {x: 100, y: 0, width: 110, height: 100});
         assert.deepStrictEqual(move, {x: 0, y: 0, width: 100, height: 100});
     });
 
 
     it('should move with just the leader window move (leader top, leader grows)', () => {
         const rect = new Rectangle(100, 100, 100, 100);
-        const move = rect.move2({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 110});
+        const move = rect.move({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 110});
         assert.deepStrictEqual(move, {x: 100, y: 110, width: 100, height: 90});
     });
 
     it('should move with just the leader window move (leader top, leader shrinks)', () => {
         const rect = new Rectangle(100, 100, 100, 100);
-        const move = rect.move2({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 90});
+        const move = rect.move({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 90});
         assert.deepStrictEqual(move, {x: 100, y: 90, width: 100, height: 110});
     });
 
     it('should move with just the leader window move (leader bottom, leader grows)', () => {
         const rect = new Rectangle(100, 100, 100, 100);
-        const move = rect.move2({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 190, width: 100, height: 110});
+        const move = rect.move({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 190, width: 100, height: 110});
         assert.deepStrictEqual(move, {x: 100, y: 100, width: 100, height: 90});
     });
 
     it('should move with just the leader window move (leader bottom, leader shrinks)', () => {
         const rect = new Rectangle(100, 100, 100, 100);
-        const move = rect.move2({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 210, width: 100, height: 90});
+        const move = rect.move({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 210, width: 100, height: 90});
         assert.deepStrictEqual(move, {x: 100, y: 100, width: 100, height: 110});
     });
 
     it('should move with just the leader window move (leader left, leader grows)', () => {
         const rect = new Rectangle(100, 0, 100, 100);
-        const move = rect.move2({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 110, height: 100});
+        const move = rect.move({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 110, height: 100});
         assert.deepStrictEqual(move, {x: 110, y: 0, width: 90, height: 100});
     });
 
     it('should move with just the leader window move (leader left, leader shrinks)', () => {
         const rect = new Rectangle(100, 0, 100, 100);
-        const move = rect.move2({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 90, height: 100});
+        const move = rect.move({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 90, height: 100});
         assert.deepStrictEqual(move, {x: 90, y: 0, width: 110, height: 100});
     });
 
     it('should move with just the leader window move (leader right, leader grows)', () => {
         const rect = new Rectangle(0, 0, 100, 100);
-        const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 90, y: 0, width: 110, height: 100});
+        const move = rect.move({x: 100, y: 0, width: 100, height: 100}, {x: 90, y: 0, width: 110, height: 100});
         assert.deepStrictEqual(move, {x: 0, y: 0, width: 90, height: 100});
     });
 
     it('should move with just the leader window move (leader right, leader shrinks)', () => {
         const rect = new Rectangle(0, 0, 100, 100);
-        const move = rect.move2({x: 100, y: 0, width: 100, height: 100}, {x: 110, y: 0, width: 90, height: 100});
+        const move = rect.move({x: 100, y: 0, width: 100, height: 100}, {x: 110, y: 0, width: 90, height: 100});
         assert.deepStrictEqual(move, {x: 0, y: 0, width: 110, height: 100});
     });
 

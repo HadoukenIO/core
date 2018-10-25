@@ -1,12 +1,4 @@
-import * as log from './log';
-const l = (x: any) => log.writeToLog(1, x, true);
-
-// import * as log from './log';
-// const l = (x: any) => console.log.writeToLog(1, x, true);
-
 type SideName = 'top' | 'right' | 'bottom' | 'left';
-type SharedBound = Array<SideName>;
-export type SharedBoundsList = Array<SharedBound>;
 type SharedBounds = {
     hasSharedBounds: boolean;
     top: SideName;
@@ -14,6 +6,9 @@ type SharedBounds = {
     bottom: SideName;
     left: SideName;
 };
+type SharedBound = Array<SideName>;
+type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
+export type SharedBoundsList = Array<SharedBound>;
 
 interface Opts {
     minWidth?: number;
@@ -22,8 +17,6 @@ interface Opts {
     maxHeight?: number;
 }
 
-type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
-
 export interface RectangleBase {
     x: number;
     y: number;
@@ -31,14 +24,12 @@ export interface RectangleBase {
     height: number;
 }
 
-// todo, does this make sense?
 class RectOptionsOpts {
     public minWidth?: number;
     public maxWidth?: number;
     public minHeight?: number;
     public maxHeight?: number;
 
-    // todo test this
     constructor(opts: Opts) {
         // when resizing, dont let the window get so small you cant see it / grab it
         this.minWidth = Math.max(opts.minWidth || 10, 10);
@@ -61,7 +52,6 @@ export class Rectangle {
     public opts: Opts;
     public boundShareThreshold = 5;
 
-    // todo check the constructor here...
     constructor (x: number, y: number, width: number, height: number, opts: Opts = {}) {
         this.x = x;
         this.y = y;
@@ -97,75 +87,49 @@ export class Rectangle {
 
     // tslint:disable 
     public grow(h: number, v: number): Rectangle {
-        let x0: number = this.x;
-        let y0: number = this.y;
-        let x1: number = this.width;
-        let y1: number = this.height;
+        let x: number = this.x;
+        let y: number = this.y;
+        let width: number = this.width;
+        let height: number = this.height;
 
-        let x0Sign: number = this.x > 0 ? 1 : -1;
-        let y0Sign: number = this.y > 0 ? 1 : -1;
-        //let x1Sign: number = this.width > 0 ? 1 : -1;
-        // let y1Sign: number = this.height > 0 ? 1 : -1;
+        width += x;
+        height += y;
 
-        // x0 = Math.abs(x0);
-        // y0 = Math.abs(y0);
+        x -= h;
+        y -= v;
+        width += h;
+        height += v;
 
-        // // these should not be neg ever...
-        // x1 = Math.abs(x1);
-        // y1 = Math.abs(y1);
-
-        x1 += x0;
-        y1 += y0;
-
-        x0 -= h; // * x0Sign;
-        y0 -= v; // * y0Sign;
-        x1 += h;
-        y1 += v;
-
-        if (x1 < x0) {
-            // Non-existant in X direction
-            // Final width must remain negative so subtract x0 before
-            // it is clipped so that we avoid the risk that the clipping
-            // of x0 will reverse the ordering of x0 and x1.
-            x1 -= x0;
-            if (x1 < Number.MIN_SAFE_INTEGER) x1 = Number.MIN_SAFE_INTEGER;
-            if (x0 < Number.MIN_SAFE_INTEGER) x0 = Number.MIN_SAFE_INTEGER;
-            else if (x0 > Number.MAX_VALUE) x0 = Number.MAX_VALUE;
-        } else { // (x1 >= x0)
-            // Clip x0 before we subtract it from x1 in case the clipping
-            // affects the representable area of the rectangle.
-            if (x0 < Number.MIN_SAFE_INTEGER) x0 = Number.MIN_SAFE_INTEGER;
-            else if (x0 > Number.MAX_VALUE) x0 = Number.MAX_VALUE;
-            x1 -= x0;
-            // The only way x1 can be negative now is if we clipped
-            // x0 against MIN and x1 is less than MIN - in which case
-            // we want to leave the width negative since the result
-            // did not intersect the representable area.
-            if (x1 < Number.MIN_SAFE_INTEGER) x1 = Number.MIN_SAFE_INTEGER;
-            else if (x1 > Number.MAX_VALUE) x1 = Number.MAX_VALUE;
+        if (width < x) {
+            width -= x;
+            if (width < Number.MIN_SAFE_INTEGER) width = Number.MIN_SAFE_INTEGER;
+            if (x < Number.MIN_SAFE_INTEGER) x = Number.MIN_SAFE_INTEGER;
+            else if (x > Number.MAX_VALUE) x = Number.MAX_VALUE;
+        } else {
+            if (x < Number.MIN_SAFE_INTEGER) x = Number.MIN_SAFE_INTEGER;
+            else if (x > Number.MAX_VALUE) x = Number.MAX_VALUE;
+            width -= x;
+            if (width < Number.MIN_SAFE_INTEGER) width = Number.MIN_SAFE_INTEGER;
+            else if (width > Number.MAX_VALUE) width = Number.MAX_VALUE;
         }
 
-        if (y1 < y0) {
-            // Non-existant in Y direction
-            y1 -= y0;
-            if (y1 < Number.MIN_SAFE_INTEGER) y1 = Number.MIN_SAFE_INTEGER;
-            if (y0 < Number.MIN_SAFE_INTEGER) y0 = Number.MIN_SAFE_INTEGER;
-            else if (y0 > Number.MAX_VALUE) y0 = Number.MAX_VALUE;
-        } else { // (y1 >= y0)
-            if (y0 < Number.MIN_SAFE_INTEGER) y0 = Number.MIN_SAFE_INTEGER;
-            else if (y0 > Number.MAX_VALUE) y0 = Number.MAX_VALUE;
-            y1 -= y0;
-            if (y1 < Number.MIN_SAFE_INTEGER) y1 = Number.MIN_SAFE_INTEGER;
-            else if (y1 > Number.MAX_VALUE) y1 = Number.MAX_VALUE;
+        if (height < y) {
+            height -= y;
+            if (height < Number.MIN_SAFE_INTEGER) height = Number.MIN_SAFE_INTEGER;
+            if (y < Number.MIN_SAFE_INTEGER) y = Number.MIN_SAFE_INTEGER;
+            else if (y > Number.MAX_VALUE) y = Number.MAX_VALUE;
+        } else {
+            if (y < Number.MIN_SAFE_INTEGER) y = Number.MIN_SAFE_INTEGER;
+            else if (y > Number.MAX_VALUE) y = Number.MAX_VALUE;
+            height -= y;
+            if (height < Number.MIN_SAFE_INTEGER) height = Number.MIN_SAFE_INTEGER;
+            else if (height > Number.MAX_VALUE) height = Number.MAX_VALUE;
         }
 
-        return new Rectangle(x0, y0, x1, y1);
+        return new Rectangle(x, y, width, height);
     }
+    // ts-lint:enable
     
-    public isEmpty(): boolean {
-        return (this.width <= 0.0001) || (this.height <= 0.0001);
-    }
-
     public collidesWith (rect: RectangleBase) {
         const {x, y, width, height } = rect;
         let collision = false;
@@ -179,32 +143,6 @@ export class Rectangle {
 
         return collision;
     }
-
-    // todo revisit this for external monitor 
-    public intersection(r: Rectangle): Rectangle {
-        let tx1: number = this.x;
-        let ty1: number = this.y;
-        const rx1: number = r.x;
-        const ry1: number = r.y;
-        let tx2: number = tx1; tx2 += this.width;
-        let ty2: number = ty1; ty2 += this.height;
-        let rx2: number = rx1; rx2 += r.width;
-        let ry2: number = ry1; ry2 += r.height;
-        if (tx1 < rx1) tx1 = rx1;
-        if (ty1 < ry1) ty1 = ry1;
-        if (tx2 > rx2) tx2 = rx2;
-        if (ty2 > ry2) ty2 = ry2;
-        tx2 -= tx1;
-        ty2 -= ty1;
-        // tx2,ty2 will never overflow (they will never be
-        // larger than the smallest of the two source w,h)
-        // they might underflow, though...
-        if (tx2 < Number.MIN_SAFE_INTEGER) tx2 = Number.MIN_SAFE_INTEGER;
-        if (ty2 < Number.MIN_SAFE_INTEGER) ty2 = Number.MIN_SAFE_INTEGER;
-        return new Rectangle(tx1, ty1, tx2, ty2);
-    }
-    // ts-lint:enable
-
 
     // note this does not match both... just note it
     private sharedBound(side: SideName, rect: Rectangle): SideName {
@@ -288,9 +226,6 @@ export class Rectangle {
 
     // this is only for resize, move would be different
     private edgeMoved(pair: Array<SideName>, delta: RectangleBase): boolean {
-        // { "x": 0, "y": 0, "width":  0, "height": -4 }    => bottom
-        // { "x": 9, "y": 0, "width": -9, "height":  0 }    => left
-        // { "x": 0, "y": 0, "width": -9, "height":  0 }    => right
         const {x, y, width, height } = delta;
         const [mySide, otherRectSharedSide] = pair;
 
@@ -326,7 +261,7 @@ export class Rectangle {
         }
     }
 
-    public move2(cachedBounds: RectangleBase, currentBounds: RectangleBase) {
+    public move(cachedBounds: RectangleBase, currentBounds: RectangleBase) {
         const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(cachedBounds));
         const currLeader = Rectangle.CREATE_FROM_BOUNDS(currentBounds);
         const delta = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(currLeader);
@@ -340,50 +275,6 @@ export class Rectangle {
         return this.bounds;
     }
 
-    public move(sharedBounds: SharedBoundsList, delta: RectangleBase) {
-        const bounds = this.bounds;
-        const movementTranslation: MovementTranslation = {
-            left: 'x',
-            top: 'y',
-            right: 'width',
-            bottom: 'height'
-        };
-        const correspondingSide: {[S in SideName]: SideName}= {
-            'top': 'bottom',
-            'bottom': 'top',
-            'right': 'left',
-            'left': 'right'
-        };
-
-        // tslint:disable
-        for (let [thisRectSharedSide, otherRectSharedSide] of sharedBounds) {
-            // console.log(`${thisRectSharedSide}, ${otherRectSharedSide}. ${movementTranslation[thisRectSharedSide]}`);
-            const translation = movementTranslation[thisRectSharedSide];
-            // console.log(`&&& ${translation}, ${delta[translation]}` );
-            /*
-                right, left
-                {"x":9,"y":0,"width":-9,"height":0}
-            */
-           // figure out if the side that moves impacts my position
-           // LOCATION AND SIZE ARE DIFFERENT AND NEED TO BE HANDLED DIFFERENTLY!!!
-           if (this.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
-               const deltaOtherSide = delta[movementTranslation[otherRectSharedSide]];
-               const deltaOtherCorrSide = delta[movementTranslation[correspondingSide[otherRectSharedSide]]];
-               // console.log(`transition ${translation} (${bounds[translation]}): ${(deltaOtherSide + deltaOtherCorrSide)}`);
-
-            bounds[translation] += deltaOtherSide;
-
-            if (!(thisRectSharedSide === otherRectSharedSide)) {
-                bounds[movementTranslation[correspondingSide[thisRectSharedSide]]] += -(deltaOtherSide + deltaOtherCorrSide);
-                // console.log('this and that...', movementTranslation[correspondingSide[otherRectSharedSide]], ' ',
-                // movementTranslation[correspondingSide[thisRectSharedSide]], -(deltaOtherSide + deltaOtherCorrSide));
-            }
-           }
-        }
-
-        return bounds;
-    }
-
     public static ADJACENCY_LIST(rects: Rectangle[]) {
         const adjLists = new Map();
         const rectLen = rects.length;
@@ -395,7 +286,6 @@ export class Rectangle {
             for (let ii = 0; ii < rectLen; ii++) {
                 if (i !== ii) {
                     if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
-                        // adjacentRects.push(rects[ii]);
                         adjacentRects.push(ii);
                     }
                 }
@@ -407,17 +297,3 @@ export class Rectangle {
         return adjLists;
     }
 }
-
-// type SideName = 'top' | 'right' | 'bottom' | 'left';
-type MovementTranslation = {[S in SideName]: RectangleBaseKeys};
-
-// export interface RectangleBase {
-//     x: number;
-//     y: number;
-//     width: number;
-//     height: number;
-// }
-
-// interface MovementTranslation {
-//     [name: SideName]: SideName;
-// }
