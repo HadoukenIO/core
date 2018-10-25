@@ -1,0 +1,3 @@
+[submodule "js-adapter"]
+	path = js-adapter
+	url = https://github.com/HadoukenIO/js-adapter.git

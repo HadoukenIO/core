@@ -1,6 +1,6 @@
 import { EmitterMap } from './emitter_map';
 import { createHash } from 'crypto';
-import { connect, Identity, Fin } from 'hadouken-js-adapter';
+import { connect, Identity, Fin } from '../../../js-adapter/src/main';
 import { EventEmitter } from 'events';
 
 //TODO: This belongs somewhere else, need to find out where.
