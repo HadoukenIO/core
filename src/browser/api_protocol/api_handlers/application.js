@@ -269,15 +269,11 @@ function setShortcuts(identity, message, ack, nack) {
     }, nack);
 }
 
-function setAppLogUsername(identity, message, ack, nack) {
+function setAppLogUsername(identity, message) {
     const payload = message.payload;
-    const dataAck = _.clone(successAck);
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-    Application.setAppLogUsername(appIdentity, payload.data, response => {
-        dataAck.data = response;
-        ack(dataAck);
-    }, nack);
+    return Application.setAppLogUsername(appIdentity, payload.data);
 }
 
 function closeApplication(identity, message, ack) {
