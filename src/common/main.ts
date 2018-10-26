@@ -40,3 +40,8 @@ export const getIdentityFromObject = (obj: any): Identity => {
     const { uuid, name } = obj;
     return { uuid, name };
 };
+
+export function isEnableChromiumBuild(): boolean {
+    const { buildFlags } = <any> process;
+    return buildFlags && buildFlags.enableChromium;
+}

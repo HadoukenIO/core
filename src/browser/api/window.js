@@ -144,9 +144,17 @@ function genWindowKey(identity) {
 */
 let optionSetters = {
     contextMenu: function(newVal, browserWin) {
+        // so old API still works
         let contextMenuBool = !!newVal;
-
-        setOptOnBrowserWin('contextMenu', contextMenuBool, browserWin);
+        optionSetters['contextMenuSettings']({ enable: contextMenuBool }, browserWin);
+    },
+    contextMenuSettings: function(newVal, browserWin) {
+        if (!newVal || typeof newVal.enable !== 'boolean') {
+            return;
+        }
+        const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
+            newVal);
+        setOptOnBrowserWin('contextMenuSettings', val, browserWin);
         browserWin.setMenu(null);
     },
     customData: function(newVal, browserWin) {
@@ -1340,8 +1348,7 @@ Window.getSnapshot = (opts) => {
             return browserWindow.capturePage(callback);
         }
 
-        if (
-            !area ||
+        if (!area ||
             typeof area !== 'object' ||
             typeof area.x !== 'number' ||
             typeof area.y !== 'number' ||

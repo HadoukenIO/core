@@ -24,6 +24,13 @@ import {
 } from '../shapes';
 const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 
+// contextMenuSettings is not updateable for enable_chromium.  RUN-4721
+const contextMenuSettings = {
+    'enable': true,
+    'devtools': true, // enable_chromium only
+    'reload': true, // enable_chromium only
+};
+
 const iframeBaseSettings = {
     'crossOriginInjection': false,
     'sameOriginInjection': true,
@@ -59,7 +66,7 @@ function five0BaseOptions() {
         'aspectRatio': 0,
         'autoShow': false,
         'backgroundThrottling': false,
-        'contextMenu': true,
+        'contextMenuSettings': contextMenuSettings,
         'cornerRounding': {
             'height': 0,
             'width': 0
@@ -81,7 +88,6 @@ function five0BaseOptions() {
                 'breadcrumbs': false,
                 'iframe': iframeBaseSettings
             },
-            'chromeContextMenu': false,
             'disableInitialReload': false,
             'node': false,
             'v2Api': true
@@ -253,12 +259,16 @@ module.exports = {
             newOptions.api.iframe = newOptions.experimental.api.iframe;
         }
 
+        if (_.has(options, 'contextMenu')) { // backwards compatible
+            newOptions.contextMenuSettings.enable = options.contextMenu;
+        }
+
         // Electron BrowserWindow options
         newOptions.enableLargerThanScreen = true;
         newOptions['enable-plugins'] = true;
         newOptions.webPreferences = {
             api: newOptions.experimental.api,
-            chromeContextMenu: newOptions.experimental.chromeContextMenu,
+            contextMenuSettings: newOptions.contextMenuSettings,
             disableInitialReload: newOptions.experimental.disableInitialReload,
             nodeIntegration: false,
             plugins: newOptions.plugins,
