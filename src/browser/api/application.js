@@ -31,7 +31,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
+import { isAboutPageUrl, isChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 
 const subscriptionManager = new SubscriptionManager();
@@ -1091,7 +1091,9 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         opts.url = opts.url || 'about:blank';
 
-        if (!isHttpUrl(opts.url) && !isFileUrl(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
+        const isValidUrl = isChromePageUrl(opts.url) || isHttpUrl(opts.url) || isFileUrl(opts.url) ||
+            isAboutPageUrl(opts.url) || path.isAbsolute(opts.url);
+        if (!isValidUrl || !isURLAllowed(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
         }
 
