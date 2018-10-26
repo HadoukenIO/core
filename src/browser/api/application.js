@@ -31,8 +31,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { isAboutPageUrl, isChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject }
-from '../../common/main';
+import { isAboutPageUrl, isChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 
 const subscriptionManager = new SubscriptionManager();
