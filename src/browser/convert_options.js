@@ -24,7 +24,7 @@ import {
 } from '../shapes';
 const TRANSPARENT_WHITE = '#0FFF'; // format #ARGB
 
-// contextMenuSettings is not updateable for enable_chromium
+// contextMenuSettings is not updateable for enable_chromium.  RUN-4721
 const contextMenuSettings = {
     'enable': true,
     'devtools': true, // enable_chromium only
