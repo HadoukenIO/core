@@ -11,7 +11,7 @@ interface PreloadScriptWithContent extends PreloadScript {
     _content: string;
 }
 
-interface DownloadResult {
+export interface DownloadResult {
     url: string;
     success: boolean;
     error?: string;
