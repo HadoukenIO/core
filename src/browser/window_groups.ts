@@ -14,6 +14,12 @@ let uuidSeed = 0;
 export class WindowGroups extends EventEmitter {
     constructor() {
         super();
+
+        windowGroupsProxy.eventsPipe.on('process-change', (changeState) => {
+            if (changeState.action === 'remove') {
+                this.leaveGroup(changeState.window);
+            }
+        });
     }
 
     private _windowGroups: { [groupName: string]: { [windowName: string]: OpenFinWindow; } } = {};
@@ -48,41 +54,6 @@ export class WindowGroups extends EventEmitter {
 
         return hash.digest('hex');
     }
-
-    // //create a proxy to a window that belongs to another runtime
-    // private _createRuntimeWindowProxyWindow = async (identity: Identity): Promise<RuntimeProxyWindow> => {
-    //     const { runtime: hostRuntime} = await connectionManager.resolveIdentity(identity);
-    //     const remoteWindow = hostRuntime.fin.Window.wrapSync(identity);
-    //     const nativeId = await remoteWindow.getNativeId();
-    //     const proxyWindowOptions = {
-    //         hwnd: '' + nativeId,
-    //         uuid: identity.uuid,
-    //         name: identity.name,
-    //         url: ''
-    //     };
-    //     const browserwindow: any = new BrowserWindowElectron(proxyWindowOptions);
-
-    //     browserwindow._options = proxyWindowOptions;
-    //     const proxyWindow: OpenFinWindow = {
-    //         _options : proxyWindowOptions,
-    //         _window : <BrowserWindow>browserwindow,
-    //         app_uuid: identity.uuid,
-    //         browserWindow: <BrowserWindow>browserwindow,
-    //         children: new Array<OpenFinWindow>(),
-    //         frames: new Map<string, ChildFrameInfo>(),
-    //         forceClose: false,
-    //         groupUuid: '',
-    //         hideReason: '',
-    //         id: 0,
-    //         name: identity.name,
-    //         preloadScripts: new Array<PreloadScriptState>(),
-    //         uuid: identity.uuid,
-    //         mainFrameRoutingId: 0,
-    //         isProxy: true
-    //     };
-
-    //     return {hostRuntime, proxyWindow};
-    // }
 
     //TODO: Remove this
     // tslint:disable-next-line
@@ -147,13 +118,15 @@ export class WindowGroups extends EventEmitter {
             this._handleDisbandingGroup(sourceGroupName);
         }
 
+        //TODO: remove code duplication
         //we just added a proxy window, we need to take some additional actions.
         if (runtimeProxyWindow && !runtimeProxyWindow.isRegistered) {
             const windowGroup = await windowGroupsProxy.getWindowGroupProxyWindows(runtimeProxyWindow);
             await windowGroupsProxy.registerRemoteProxyWindow(source, runtimeProxyWindow);
-            windowGroup.forEach(pWin => {
+            await Promise.all(windowGroup.map(async (pWin) => {
                 this._addWindowToGroup(sourceWindow.groupUuid, pWin.window);
-            });
+                await windowGroupsProxy.registerRemoteProxyWindow(source, pWin);
+            }));
         }
 
     };
@@ -166,7 +139,12 @@ export class WindowGroups extends EventEmitter {
             return;
         }
 
+        if (win.isProxy) {
+            windowGroupsProxy.unregisterRemoteProxyWindow(win);
+        }
+
         this._removeWindowFromGroup(groupUuid, win);
+
         if (groupUuid) {
             this.emit('group-changed', {
                 groupUuid,
@@ -250,9 +228,10 @@ export class WindowGroups extends EventEmitter {
         if (runtimeProxyWindow && !runtimeProxyWindow.isRegistered) {
             const windowGroup = await windowGroupsProxy.getWindowGroupProxyWindows(runtimeProxyWindow);
             await windowGroupsProxy.registerRemoteProxyWindow(source, runtimeProxyWindow);
-            windowGroup.forEach(pWin => {
+            await Promise.all(windowGroup.map(async (pWin) => {
                 this._addWindowToGroup(sourceWindow.groupUuid, pWin.window);
-            });
+                await windowGroupsProxy.registerRemoteProxyWindow(source, pWin);
+            }));
         }
     };
 
@@ -260,6 +239,7 @@ export class WindowGroups extends EventEmitter {
         const _groupName = groupName || generateUuid();
         this._windowGroups[_groupName] = this._windowGroups[_groupName] || {};
         this._windowGroups[_groupName][win.name] = win;
+        win.groupUuid = groupName;
         return _groupName;
     };
 

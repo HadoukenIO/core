@@ -8,6 +8,7 @@ import { default as connectionManager, PeerRuntime } from './connection_manager'
 import * as coreState from './core_state';
 import { _Window } from 'hadouken-js-adapter/out/types/src/api/window/window';
 import { EventEmitter } from 'events';
+import { writeToLog } from './log';
 
 class MyEmitter extends EventEmitter {}
 
@@ -77,28 +78,6 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         return runtimeProxyWindow;
     }
 }
-
-export async function getRemoteWindowInformation(windowIdentity: Identity): Promise<RemoteWindowInformation> {
-    const remoteWindow = await getRuntimeProxyWindow(windowIdentity);
-    const existingWindowGroup: Array<RuntimeProxyWindow> = [];
-    const winGroup = await remoteWindow.wrappedWindow.getGroup();
-
-    await Promise.all(winGroup.map(async (w) => {
-        if (coreState.getWindowByUuidName(w.identity.uuid, w.identity.name)) {
-            return;
-        }
-        if (w.identity.uuid !== windowIdentity.uuid || w.identity.name !== windowIdentity.name) {
-            const pWin = await getRuntimeProxyWindow(w.identity);
-            existingWindowGroup.push(pWin);
-        }
-    }));
-
-    return {
-        proxyWindow: remoteWindow,
-        existingWindowGroup
-    };
-}
-
 export async function getWindowGroupProxyWindows(runtimeProxyWindow: RuntimeProxyWindow) {
     const { identity } = runtimeProxyWindow.wrappedWindow;
     const winGroup = await runtimeProxyWindow.wrappedWindow.getGroup();
@@ -122,9 +101,25 @@ export async function getWindowGroupProxyWindows(runtimeProxyWindow: RuntimeProx
 export async function registerRemoteProxyWindow(sourceIdentity: Identity, win: RuntimeProxyWindow) {
     const source = win.hostRuntime.fin.Window.wrapSync(sourceIdentity);
     await win.wrappedWindow.mergeGroups(source);
-    await win.wrappedWindow.on('group-changed', () => {
-        //raise some normalized events, also re-write this to allow cleanup of events.
-        //do stuff.
+    await win.wrappedWindow.on('group-changed', (evt) => {
+        writeToLog('info', 'Group changed event');
+        writeToLog('info', evt);
+
+        //We only care for leave now so we look for target.
+        if (win.window.uuid === evt.targetWindowAppUuid && win.window.name === evt.targetWindowName) {
+            //we will construct a state object here but now let's focus on leave group:
+            if (evt.reason === 'leave') {
+                const leaveGroupState = {
+                    action: 'remove',
+                    identity: {
+                        uuid: evt.targetWindowAppUuid,
+                        name: evt.targetWindowName
+                    },
+                    window: win.window
+                };
+                eventsPipe.emit('process-change', leaveGroupState);
+            }
+        }
     });
     await win.hostRuntime.fin.once('disconnected', () => {
         //raise some normalized events, also re-write to allow cleanup.
@@ -132,7 +127,27 @@ export async function registerRemoteProxyWindow(sourceIdentity: Identity, win: R
     });
 }
 
-export async function getExistingWindowGroup(win: RuntimeProxyWindow) {
-    const wg = await win.wrappedWindow.getGroup();
-    return wg.map(w => w.identity);
+export async function unregisterRemoteProxyWindow(identity: Identity) {
+    const runtimeProxyWindow = await getRuntimeProxyWindow(identity);
+    runtimeProxyWindow.wrappedWindow.removeAllListeners();
 }
+
+//Leave from a single group
+// {
+//     "topic": "window",
+//     "type": "group-changed",
+//     "uuid": "OpenfinPOC2",
+//     "name": "OpenfinPOC2",
+//     "reason": "leave",
+//     "sourceGroup": [
+//         {
+//             "appUuid": "OpenfinPOC",
+//             "windowName": "OpenfinPOC"
+//         }],
+//     "sourceWindowAppUuid": "OpenfinPOC2",
+//     "sourceWindowName": "OpenfinPOC2",
+//     "targetGroup": [],
+//     "targetWindowAppUuid": "OpenfinPOC2",
+//     "targetWindowName": "OpenfinPOC2",
+//     "memberOf": "nothing"
+// }
