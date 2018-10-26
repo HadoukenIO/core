@@ -62,5 +62,12 @@ export abstract class ApiTransportBase<T> {
         }
     }
 
+    protected passwordReplacer(key: string, value: any): any {
+        if (key === 'password') {
+            return undefined;
+        } else {
+            return value;
+        }
+    }
 
 }

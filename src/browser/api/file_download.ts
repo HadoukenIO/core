@@ -1,5 +1,6 @@
-import { app } from 'electron';
-import { Identity } from '../../shapes';
+import { app, BrowserWindow } from 'electron';
+import { Identity, WindowOptions } from '../../shapes';
+import * as path from 'path';
 import { writeToLog } from '../log';
 import ofEvents from '../of_events';
 import route from '../../common/route';
@@ -19,6 +20,7 @@ interface FileEvent {
     url: string;
     mimeType: string;
     fileName: string;
+    originalFileName: string;
     totalBytes: number;
     startTime: number;
     contentDisposition: string;
@@ -27,6 +29,9 @@ interface FileEvent {
     topic: string;
     uuid: string;
     name: string;
+    type: string;
+    state: string;
+    downloadedBytes: number;
 }
 
 interface FileDownloadLocation {
@@ -55,48 +60,54 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
 
         try {
             const fileUuid: string = app.generateGUID();
-            const baseFileEvent: FileEvent = {
-                fileUuid,
+            const getFileEventData = (type: string, state: DownloadState): FileEvent => ({
+                type,
+                state,
                 url: item.getURL(),
                 mimeType: item.getMimeType(),
-                fileName: item.getFilename(),
+                fileName: path.parse(item.getSavePath()).base,
+                originalFileName: item.getFilename(),
                 totalBytes: item.getTotalBytes(),
                 startTime: item.getStartTime(),
                 contentDisposition: item.getContentDisposition(),
                 lastModifiedTime: item.getLastModifiedTime(),
                 eTag: item.getETag(),
+                downloadedBytes: item.getReceivedBytes(),
                 topic: EVENT_TOPIC,
                 uuid,
-                name
-            };
+                name,
+                fileUuid
+            });
 
             const progressTracker = (event: any, state: DownloadState): void => {
                 try {
                     let reportedState = state;
-                    //I am 100% sure we will never get into the paused state.
+                    //I am 99.9% sure we will never get into the paused state.
                     if (state === 'progressing' && item.isPaused()) {
                         reportedState = 'paused';
                     }
 
-                    ofEvents.emit(route.window(FILE_DOWNLOAD_EVENTS.PROGRESS, uuid, name), Object.assign({
-                        type: FILE_DOWNLOAD_EVENTS.PROGRESS,
-                        state,
-                        downloadedBytes: item.getReceivedBytes()
-                    }, baseFileEvent));
+                    ofEvents.emit(
+                        route.window(FILE_DOWNLOAD_EVENTS.PROGRESS, uuid, name),
+                        getFileEventData(FILE_DOWNLOAD_EVENTS.PROGRESS, state)
+                    );
                 } catch (e) {
                     writeToLog('info', e);
                 }
             };
 
-            ofEvents.emit(route.window(FILE_DOWNLOAD_EVENTS.STARTED, uuid, name), Object.assign({
-                type: FILE_DOWNLOAD_EVENTS.STARTED
-            }, baseFileEvent));
+            ofEvents.emit(
+                route.window(FILE_DOWNLOAD_EVENTS.STARTED, uuid, name),
+                getFileEventData(FILE_DOWNLOAD_EVENTS.STARTED, 'started')
+            );
 
             item.on('updated', progressTracker);
             item.once('done', (event: Event, state: DownloadState) => {
                 try {
                     item.removeAllListeners('updated');
+
                     const savePath = item.getSavePath();
+
                     downloadLocationMap.set(fileUuid, {
                         fileUuid,
                         path: savePath,
@@ -105,13 +116,28 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
 
                     //log that the download failed.
                     if (state !== 'completed') {
-                        writeToLog('info', `download ${baseFileEvent.fileUuid } failed, state: ${state}`);
+                        writeToLog('info', `download ${fileUuid} failed, state: ${state}`);
                     }
 
-                    ofEvents.emit(route.window(FILE_DOWNLOAD_EVENTS.COMPLETED, uuid, name), Object.assign({
-                        type: FILE_DOWNLOAD_EVENTS.COMPLETED,
-                        state
-                    }, baseFileEvent));
+                    ofEvents.emit(
+                        route.window(FILE_DOWNLOAD_EVENTS.COMPLETED, uuid, name),
+                        getFileEventData(FILE_DOWNLOAD_EVENTS.COMPLETED, state)
+                    );
+
+                    const fileDownloadBrowserWindow = BrowserWindow.fromWebContents(webContents);
+                    const browserWindowId = fileDownloadBrowserWindow.id;
+                    const { url: urlFromDownloadWindow } = <WindowOptions> coreState.getWindowOptionsById(browserWindowId);
+
+                    // Windows that are created from a window.open that trigger a file download have their url set to
+                    // "" here no matter what the requested url was. This is not true if the file download was triggered
+                    // via setting location.href to the the desired file url. In this case the url will be that of
+                    // page it self, NOT the download url. In this case its enough to check that the url is not empty.
+                    // There is an extra process created for the download in the href case as well that does not go away
+                    // immediately (this is true in both electron and chrome). We just need to be sure that we dont close
+                    // the parent window in the href case as that is what the browser window will map to if the url is present
+                    if (!urlFromDownloadWindow) {
+                        fileDownloadBrowserWindow.close();
+                    }
 
                 } catch (e) {
                     writeToLog('info', e);

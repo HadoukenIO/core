@@ -447,16 +447,19 @@ export default class BoundsChangedStateTracker {
                             wt.setWindowPos(hwnd, { x, y, w, h, flags });
 
                         } else {
-                            if (win.browserWindow.isMaximized()) {
+                            if (win.browserWindow.isFullScreen()) {
+                                win.browserWindow.setFullScreen(false);
+                            } else if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
-                            }
+                            } else {
+                                positions.set(win.name, { x, y, width, height });
 
-                            positions.set(win.name, { x, y, width, height });
-                            // see note above about deferred moves
-                            // setPositions.push(() => {
-                            //     win.browserWindow.setBounds(positions.get(win.name));
-                            // });
-                            win.browserWindow.setBounds(positions.get(win.name));
+                                // see note above about deferred moves
+                                // setPositions.push(() => {
+                                //     win.browserWindow.setBounds(positions.get(win.name));
+                                // });
+                                win.browserWindow.setBounds(positions.get(win.name));
+                            }
                         }
                     }
 

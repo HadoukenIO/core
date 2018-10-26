@@ -132,6 +132,9 @@ export class PeerConnectionManager extends EventEmitter {
                 if (this._runtimeMap.size < 1) {
                     reject(new Error('No Connections'));
                 }
+                //Need to compare against amount of requests sent out
+                //not the number of connections once the promise resolves/rejects
+                const checkingConnectionSize = this._runtimeMap.size;
                 for (const kvPair of this._runtimeMap) {
                     kvPair[1].fin.System.resolveUuid(identity.uuid).then(() => {
                         identityAddress = {
@@ -142,7 +145,7 @@ export class PeerConnectionManager extends EventEmitter {
                         resolve(identityAddress);
                     }).catch((err: Error) => {
                         failures++;
-                        if (failures >= this._runtimeMap.size) {
+                        if (failures >= checkingConnectionSize) {
                             reject(err);
                         }
                     });
