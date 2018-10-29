@@ -14,6 +14,7 @@ let nativeImage = electron.nativeImage;
 
 // npm modules
 let _ = require('underscore');
+const crypto = require('crypto');
 import * as Rx from 'rx';
 
 // local modules
@@ -143,9 +144,17 @@ function genWindowKey(identity) {
 */
 let optionSetters = {
     contextMenu: function(newVal, browserWin) {
+        // so old API still works
         let contextMenuBool = !!newVal;
-
-        setOptOnBrowserWin('contextMenu', contextMenuBool, browserWin);
+        optionSetters['contextMenuSettings']({ enable: contextMenuBool }, browserWin);
+    },
+    contextMenuSettings: function(newVal, browserWin) {
+        if (!newVal || typeof newVal.enable !== 'boolean') {
+            return;
+        }
+        const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
+            newVal);
+        setOptOnBrowserWin('contextMenuSettings', val, browserWin);
         browserWin.setMenu(null);
     },
     customData: function(newVal, browserWin) {
@@ -1319,16 +1328,39 @@ Window.setWindowPreloadState = function(identity, payload) {
     } // @TODO ofEvents.emit(route.frame for iframes
 };
 
-Window.getSnapshot = function(identity, callback = () => {}) {
-    let browserWindow = getElectronBrowserWindow(identity);
+Window.getSnapshot = (opts) => {
+    return new Promise((resolve, reject) => {
+        const { identity, payload: { area } } = opts;
+        const browserWindow = getElectronBrowserWindow(identity);
 
-    if (!browserWindow) {
-        callback(new Error(`Unknown window named '${identity.name}'`));
-        return;
-    }
+        if (!browserWindow) {
+            const error = new Error(`Unknown window named '${identity.name}'`);
+            return reject(error);
+        }
 
-    browserWindow.capturePage(img => {
-        callback(undefined, img.toPNG().toString('base64'));
+        const callback = (img) => {
+            const imageBase64 = img.toPNG().toString('base64');
+            resolve(imageBase64);
+        };
+
+        if (typeof area === 'undefined') {
+            // Snapshot of a full window
+            return browserWindow.capturePage(callback);
+        }
+
+        if (!area ||
+            typeof area !== 'object' ||
+            typeof area.x !== 'number' ||
+            typeof area.y !== 'number' ||
+            typeof area.width !== 'number' ||
+            typeof area.height !== 'number'
+        ) {
+            const error = new Error(`Invalid shape of the snapshot's area.`);
+            return reject(error);
+        }
+
+        // Snapshot of a specified area of the window
+        browserWindow.capturePage(area, callback);
     });
 };
 
@@ -1771,22 +1803,23 @@ Window.exists = function(identity) {
 };
 
 Window.getBoundsFromDisk = function(identity, callback, errorCallback) {
-    let cacheFile = getBoundsCacheSafeFileName(identity);
-    try {
-        fs.readFile(cacheFile, 'utf8', (err, data) => {
-            if (err) {
-                errorCallback(err);
-            } else {
-                try {
-                    callback(JSON.parse(data));
-                } catch (parseErr) {
-                    errorCallback(new Error(`Error parsing saved bounds data ${parseErr.message}`));
+    getBoundsCacheSafeFileName(identity, cacheFile => {
+        try {
+            fs.readFile(cacheFile, 'utf8', (err, data) => {
+                if (err) {
+                    errorCallback(err);
+                } else {
+                    try {
+                        callback(JSON.parse(data));
+                    } catch (parseErr) {
+                        errorCallback(new Error(`Error parsing saved bounds data ${parseErr.message}`));
+                    }
                 }
-            }
-        });
-    } catch (err) {
-        errorCallback(err);
-    }
+            });
+        } catch (err) {
+            errorCallback(err);
+        }
+    }, errorCallback);
 };
 
 Window.authenticate = function(identity, username, password, callback) {
@@ -1937,35 +1970,66 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
 }
 
 function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
-    const cacheFile = getBoundsCacheSafeFileName(identity);
-    const data = {
-        'active': 'true',
-        'height': bounds.height,
-        'width': bounds.width,
-        'left': bounds.x,
-        'top': bounds.y,
-        'name': identity.name,
-        'windowState': bounds.windowState,
-        'zoomLevel': zoomLevel
-    };
+    getBoundsCacheSafeFileName(identity, cacheFile => {
+        const data = {
+            'active': 'true',
+            'height': bounds.height,
+            'width': bounds.width,
+            'left': bounds.x,
+            'top': bounds.y,
+            'name': identity.name,
+            'windowState': bounds.windowState,
+            'zoomLevel': zoomLevel
+        };
+
+        try {
+            const userCache = electronApp.getPath('userCache');
+            fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
+                fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
+                    callback(writeFileErr);
+                });
+            });
+        } catch (err) {
+            callback(err);
+        }
+    }, callback);
+}
+
+//make sure the uuid/names with special characters do not break the bounds cache.
+function getBoundsCacheSafeFileName(identity, callback, errorCallback) {
+    const userCache = electronApp.getPath('userCache');
+
+    // new hashed file name
+    const hash = crypto.createHash('sha256');
+    hash.update(identity.uuid);
+    hash.update(identity.name);
+    const safeName = hash.digest('hex');
+    const newFileName = path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 
     try {
-        const userCache = electronApp.getPath('userCache');
-        fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
-            fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
-                callback(writeFileErr);
-            });
+        fs.access(newFileName, fs.constants.F_OK, (newFileErr) => {
+            if (newFileErr) { // new file name doesn't exist
+                // current old style file name
+                const oldSafeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+                const oldFileName = path.join(userCache, windowPosCacheFolder, `${oldSafeName}.json`);
+
+                // check if an old file name exists
+                fs.access(oldFileName, fs.constants.F_OK, (oldFileErr) => {
+                    if (!oldFileErr) { // if it exists, rename it by a new file name.
+                        fs.rename(oldFileName, newFileName, () => {
+                            callback(newFileName);
+                        });
+                    } else {
+                        callback(newFileName);
+                    }
+                });
+            } else {
+                callback(newFileName);
+            }
         });
     } catch (err) {
-        callback(err);
+        errorCallback(err);
     }
-
-}
-//make sure the uuid/names with special characters do not break the bounds cache.
-function getBoundsCacheSafeFileName(identity) {
-    let safeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
-    const userCache = electronApp.getPath('userCache');
-    return path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 }
 
 function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
@@ -2425,11 +2489,7 @@ function restoreWindowPosition(identity, cb) {
 
         // set zoom level
         const { zoomLevel } = savedBounds;
-        if (zoomLevel) {
-            const browserWindow = getElectronBrowserWindow(identity);
-            browserWindow.webContents.setZoomLevel(zoomLevel);
-        }
-
+        Window.setZoomLevel(identity, zoomLevel);
         cb();
     }, (err) => {
         //We care about errors but lets keep window creation going.

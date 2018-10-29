@@ -40,8 +40,8 @@ class ChromiumIPCTransport extends BaseTransport {
         if (this.connected) {
             this.ipc.send(JSON.stringify(data));
         } else {
-            this.connect();
             this.messageQueue.push(data);
+            this.connect();
         }
 
         return true;

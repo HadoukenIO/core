@@ -1,15 +1,31 @@
 import { EventEmitter } from 'events';
 import route from '../common/route';
 
+interface PastEvent {
+    payload: any;
+    routeString: string;
+    timestamp: number;
+}
+
 class OFEvents extends EventEmitter {
+    private history: PastEvent[]; // for temporarily storing past events
+    private isSavingEvents: boolean; // for temporarily storing past events
+
     constructor() {
         super();
+        this.startTempSaveEvents();
     }
 
     public emit(routeString: string, ...data: any[]) {
+        const timestamp = Date.now();
         const tokenizedRoute = routeString.split('/');
         const eventPropagations = new Map<string, any>();
         const [payload, ...extraArgs] = data;
+
+        if (this.isSavingEvents) {
+            this.history.push({ payload, routeString, timestamp });
+        }
+
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
             const uuid: string = (payload && payload.uuid) || tokenizedRoute[2] || '*';
@@ -73,6 +89,39 @@ class OFEvents extends EventEmitter {
         ADDED: 'subscriber-added',
         REMOVED: 'subscriber-removed'
     };
+
+    /*
+        Check missed events for subscriptions received
+        after the event has already fired
+    */
+    public checkMissedEvents(data: any, listener: (payload: any) => void): void {
+        const { name, timestamp, topic, type, uuid } = data;
+        const routeString = route[topic](type, uuid, name);
+
+        this.history.forEach((pastEvent) => {
+            const routeMatches = pastEvent.routeString === routeString;
+            const missedEvent = pastEvent.timestamp >= timestamp;
+
+            if (routeMatches && missedEvent) {
+                listener(pastEvent.payload);
+            }
+        });
+    }
+
+    /*
+        Temporary indicator for saving past events
+    */
+    private startTempSaveEvents() {
+        const STARTUP_SAVE_EVENTS_DURATION = 10000;
+
+        this.history = [];
+        this.isSavingEvents = true;
+
+        setTimeout(() => {
+            this.history.length = 0;
+            this.isSavingEvents = false;
+        }, STARTUP_SAVE_EVENTS_DURATION);
+    }
 }
 
 interface StringMap {

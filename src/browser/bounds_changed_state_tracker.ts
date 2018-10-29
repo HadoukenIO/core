@@ -452,11 +452,14 @@ export default class BoundsChangedStateTracker {
                             const [w, h] = [width, height];
                             wt.setWindowPos(hwnd, { x, y, w, h, flags });
                         } else {
-                            if (win.browserWindow.isMaximized()) {
+                            if (win.browserWindow.isFullScreen()) {
+                                win.browserWindow.setFullScreen(false);
+                            } else if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
+                            } else {
+                                // no need to call clipBounds here because called earlier
+                                win.browserWindow.setBounds({ x, y, width, height });
                             }
-                            // no need to call clipBounds here because called earlier
-                            win.browserWindow.setBounds({ x, y, width, height });
                         }
                     });
 
