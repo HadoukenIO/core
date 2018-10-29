@@ -645,12 +645,13 @@ Window.create = function(id, opts) {
             var _win = coreState.getWindowByUuidName(uuid, name) || {};
             var _groupUuid = _win.groupUuid || null;
 
-            if (event.groupUuid === _groupUuid) {
+            //if the groupUuid's match or the _win object has no uuid (the window has closed)
+            if (event.groupUuid === _groupUuid || _win.uuid === void 0) {
                 var payload = event.payload;
 
                 payload.name = name;
                 /* jshint ignore:start */
-                payload.uuid = _win.app_uuid;
+                payload.uuid = _win.app_uuid || event.uuid;
                 /* jshint ignore:end */
 
                 if (payload.reason === 'disband') {

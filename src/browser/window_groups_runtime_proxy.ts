@@ -99,8 +99,10 @@ export async function getWindowGroupProxyWindows(runtimeProxyWindow: RuntimeProx
 }
 
 export async function registerRemoteProxyWindow(sourceIdentity: Identity, win: RuntimeProxyWindow) {
+    //TODO: this might need to be optional or in a seperate function. not all events will require a merge.
     const source = win.hostRuntime.fin.Window.wrapSync(sourceIdentity);
     await win.wrappedWindow.mergeGroups(source);
+
     await win.wrappedWindow.on('group-changed', (evt) => {
         writeToLog('info', 'Group changed event');
         writeToLog('info', evt);
@@ -118,6 +120,18 @@ export async function registerRemoteProxyWindow(sourceIdentity: Identity, win: R
                     window: win.window
                 };
                 eventsPipe.emit('process-change', leaveGroupState);
+            }
+            if (evt.reason === 'join') {
+                //TODO: handle the case where the window has joined another group (check the memberOf and source/target groups properties)
+                const joinGroupState = {
+                    action: 'add',
+                    identity: {
+                        uuid: evt.sourceWindowAppUuid,
+                        name: evt.sourceWindowName
+                    },
+                    window: win.window
+                };
+                eventsPipe.emit('process-change', joinGroupState);
             }
         }
     });

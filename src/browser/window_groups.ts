@@ -4,7 +4,6 @@ import { createHash } from 'crypto';
 
 import * as _ from 'underscore';
 import { OpenFinWindow, Identity, BrowserWindow, ChildFrameInfo, PreloadScriptState } from '../shapes';
-import { default as connectionManager, PeerRuntime } from './connection_manager';
 import * as coreState from './core_state';
 import * as log from './log';
 import * as windowGroupsProxy from './window_groups_runtime_proxy';
@@ -15,9 +14,16 @@ export class WindowGroups extends EventEmitter {
     constructor() {
         super();
 
-        windowGroupsProxy.eventsPipe.on('process-change', (changeState) => {
+        windowGroupsProxy.eventsPipe.on('process-change', async (changeState) => {
             if (changeState.action === 'remove') {
                 this.leaveGroup(changeState.window);
+            }
+            if (changeState.action === 'add') {
+                //TODO: identity here is misleading, specially since the window is going to be different.
+                // Refactor both events to include the proxyWindow on each case instead of the browser window.
+                const runtimeProxyWindow  = await windowGroupsProxy.getRuntimeProxyWindow(changeState.identity);
+                this._addWindowToGroup(changeState.window.groupUuid, runtimeProxyWindow.window);
+                await windowGroupsProxy.registerRemoteProxyWindow(changeState.window, runtimeProxyWindow);
             }
         });
     }
@@ -87,7 +93,7 @@ export class WindowGroups extends EventEmitter {
 
         // remove source from any group it belongs to
         if (sourceGroupName) {
-            this._removeWindowFromGroup(sourceGroupName, sourceWindow);
+            this.leaveGroup(sourceWindow);
         }
 
         // _addWindowToGroup returns the group's uuid that source was added to. in
