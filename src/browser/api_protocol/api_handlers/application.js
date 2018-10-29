@@ -316,6 +316,12 @@ function runApplication(identity, message, ack, nack) {
         eventName: 'fire-constructor-callback'
     };
 
+    if (coreState.getAppRunningState(uuid)) {
+        Application.emitRunRequested(appIdentity);
+        nack(`Application with specified UUID is already running: ${uuid}`);
+        return;
+    }
+
     ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
         if (loadInfo.success) {
             const successReturn = _.clone(successAck);

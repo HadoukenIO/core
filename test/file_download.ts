@@ -46,6 +46,9 @@ class MockdownloadItem extends EventEmitter {
 }
 
 mockery.registerMock('electron', mockElectron);
+mockery.registerMock('../core_state', {
+    getWindowOptionsById: () => ({url: ''})
+});
 mockery.registerMock('./api/external_application', {});
 mockery.enable({
     warnOnReplace: false,
