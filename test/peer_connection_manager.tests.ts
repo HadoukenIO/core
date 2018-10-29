@@ -46,7 +46,7 @@ const nodeAdapter = {
     }
 };
 
-mockery.registerMock('hadouken-js-adapter', nodeAdapter);
+mockery.registerMock('../../../js-adapter/src/main', nodeAdapter);
 mockery.enable({
     warnOnReplace: false,
     warnOnUnregistered: false
