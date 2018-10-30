@@ -28,20 +28,20 @@ export class WindowGroups extends EventEmitter {
         });
     }
 
-    private _windowGroups: { [groupName: string]: { [windowName: string]: OpenFinWindow; } } = {};
-    public getGroup = (groupName: string): OpenFinWindow[] => {
-        return _.values(this._windowGroups[groupName]);
+    private _windowGroups: { [groupUuid: string]: { [windowName: string]: OpenFinWindow; } } = {};
+    public getGroup = (groupUuid: string): OpenFinWindow[] => {
+        return _.values(this._windowGroups[groupUuid]);
     };
 
     public getGroups = (): OpenFinWindow[][] => {
-        return _.map(_.keys(this._windowGroups), (groupName) => {
-            return this.getGroup(groupName);
+        return _.map(_.keys(this._windowGroups), (groupUuid) => {
+            return this.getGroup(groupUuid);
         });
     };
 
-    public hasProxyWindows = (groupName: string): boolean => {
+    public hasProxyWindows = (groupUuid: string): boolean => {
         let hasProxyWindows = false;
-        this.getGroup(groupName).forEach(win => {
+        this.getGroup(groupUuid).forEach(win => {
             if (win.isProxy) {
                 hasProxyWindows = true;
             }
@@ -50,9 +50,9 @@ export class WindowGroups extends EventEmitter {
         return hasProxyWindows;
     };
 
-    public getGroupHashName = (groupName: string): string => {
+    public getGroupHashName = (groupUuid: string): string => {
 
-        const winGroup = this.getGroup(groupName);
+        const winGroup = this.getGroup(groupUuid);
         const hash = createHash('sha256');
         winGroup.map(x => x.browserWindow.nativeId)
             .sort()
@@ -68,7 +68,7 @@ export class WindowGroups extends EventEmitter {
         let targetWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
 
         let runtimeProxyWindow;
-        const sourceGroupName = sourceWindow.groupUuid;
+        const sourceGroupUuid = sourceWindow.groupUuid;
         //identify if either the target or the source belong to a different runtime:
         if (!targetWindow) {
             //this try should be replaced by a general try here.
@@ -87,12 +87,12 @@ export class WindowGroups extends EventEmitter {
         }
 
         // cannot join the same group you're already in
-        if (sourceGroupName && targetGroupUuid && sourceGroupName === targetGroupUuid) {
+        if (sourceGroupUuid && targetGroupUuid && sourceGroupUuid === targetGroupUuid) {
             return;
         }
 
         // remove source from any group it belongs to
-        if (sourceGroupName) {
+        if (sourceGroupUuid) {
             await this.leaveGroup(sourceWindow);
         }
 
@@ -104,10 +104,10 @@ export class WindowGroups extends EventEmitter {
             targetWindow.groupUuid = targetGroupUuid = this._addWindowToGroup(sourceWindow.groupUuid, targetWindow);
         }
 
-        const payload = generatePayload('join', sourceWindow, targetWindow, this.getGroup(sourceGroupName), this.getGroup(targetGroupUuid));
-        if (sourceGroupName) {
+        const payload = generatePayload('join', sourceWindow, targetWindow, this.getGroup(sourceGroupUuid), this.getGroup(targetGroupUuid));
+        if (sourceGroupUuid) {
             this.emit('group-changed', {
-                groupUuid: sourceGroupName,
+                groupUuid: sourceGroupUuid,
                 payload
             });
         }
@@ -120,8 +120,8 @@ export class WindowGroups extends EventEmitter {
 
         // disband in the case where source leaves a group
         // with only one remaining window
-        if (sourceGroupName) {
-            this._handleDisbandingGroup(sourceGroupName);
+        if (sourceGroupUuid) {
+            this._handleDisbandingGroup(sourceGroupUuid);
         }
 
         //TODO: remove code duplication
@@ -242,16 +242,16 @@ export class WindowGroups extends EventEmitter {
         }
     };
 
-    private _addWindowToGroup = (groupName: string, win: OpenFinWindow): string => {
-        const _groupName = groupName || generateUuid();
-        this._windowGroups[_groupName] = this._windowGroups[_groupName] || {};
-        this._windowGroups[_groupName][win.name] = win;
-        win.groupUuid = groupName;
-        return _groupName;
+    private _addWindowToGroup = (groupUuid: string, win: OpenFinWindow): string => {
+        const _groupUuid = groupUuid || generateUuid();
+        this._windowGroups[_groupUuid] = this._windowGroups[_groupUuid] || {};
+        this._windowGroups[_groupUuid][win.name] = win;
+        win.groupUuid = groupUuid;
+        return _groupUuid;
     };
 
-    private _removeWindowFromGroup = (uuid: string, win: OpenFinWindow): void => {
-        delete this._windowGroups[uuid][win.name];
+    private _removeWindowFromGroup = (groupUuid: string, win: OpenFinWindow): void => {
+        delete this._windowGroups[groupUuid][win.name];
     };
 
     private _handleDisbandingGroup = (groupUuid: string): void => {
