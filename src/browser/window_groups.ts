@@ -16,7 +16,7 @@ export class WindowGroups extends EventEmitter {
 
         windowGroupsProxy.eventsPipe.on('process-change', async (changeState) => {
             if (changeState.action === 'remove') {
-                this.leaveGroup(changeState.window);
+                await this.leaveGroup(changeState.window);
             }
             if (changeState.action === 'add') {
                 //TODO: identity here is misleading, specially since the window is going to be different.
@@ -93,7 +93,7 @@ export class WindowGroups extends EventEmitter {
 
         // remove source from any group it belongs to
         if (sourceGroupName) {
-            this.leaveGroup(sourceWindow);
+            await this.leaveGroup(sourceWindow);
         }
 
         // _addWindowToGroup returns the group's uuid that source was added to. in
@@ -137,7 +137,7 @@ export class WindowGroups extends EventEmitter {
 
     };
 
-    public leaveGroup = (win: OpenFinWindow): void => {
+    public leaveGroup = async (win: OpenFinWindow): Promise<void> => {
         const groupUuid = win && win.groupUuid;
 
         // cannot leave a group if you don't belong to one
@@ -146,7 +146,7 @@ export class WindowGroups extends EventEmitter {
         }
 
         if (win.isProxy) {
-            windowGroupsProxy.unregisterRemoteProxyWindow(win);
+            await windowGroupsProxy.unregisterRemoteProxyWindow(win);
         }
 
         this._removeWindowFromGroup(groupUuid, win);

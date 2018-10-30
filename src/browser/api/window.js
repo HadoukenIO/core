@@ -1905,7 +1905,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
         coreState.removeChildById(id);
 
         // remove window from any groups it belongs to
-        WindowGroups.leaveGroup(ofWindow);
+        promises.push(WindowGroups.leaveGroup(ofWindow));
 
         promises.push(handleSaveStateAlwaysResolve());
 

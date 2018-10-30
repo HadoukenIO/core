@@ -33,6 +33,7 @@ import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
 import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
+import { unHookAllProxyWindows } from '../window_groups_runtime_proxy';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -699,6 +700,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                         Application.close(a.identity, true);
                     }
                 }
+
+                //unhook all proxy windows
+                unHookAllProxyWindows();
 
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {

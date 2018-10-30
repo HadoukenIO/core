@@ -143,8 +143,16 @@ export async function registerRemoteProxyWindow(sourceIdentity: Identity, win: R
 
 export async function unregisterRemoteProxyWindow(identity: Identity) {
     const runtimeProxyWindow = await getRuntimeProxyWindow(identity);
+    runtimeProxyWindow.window.browserWindow.setExternalWindowNativeId('0x0');
     runtimeProxyWindow.wrappedWindow.removeAllListeners();
 }
+
+export function unHookAllProxyWindows(): void {
+    externalWindowsProxyList.forEach(runtimeProxyWindow => {
+        runtimeProxyWindow.window.browserWindow.setExternalWindowNativeId('0x0');
+    });
+}
+
 
 //Leave from a single group
 // {
