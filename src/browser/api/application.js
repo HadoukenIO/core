@@ -893,22 +893,16 @@ Application.setZoomLevel = function(identity, level) {
     }
 };
 
-Application.sendAppLog = function() {
-    // TODO (arjun): Also check if AppLog is registered on core side, and then don't send message
+Application.sendAppLog = function(identity) {
     let app = Application.wrap(identity.uuid);
-    if (app) {
-        const option = {
-            topic = 'application',
-            action = 'send-application-log',
-            sourceUrl: app._configUrl
-        };
 
-        sendToRVM(options)
-        .then(callback, errorCallback)
-        .catch(errorCallback);
-    } else {
-        errorCallback(new Error('Application uuid not valid.'));
+    const options = {
+        topic: 'application',
+        action: 'send-application-log',
+        sourceUrl: app._configUrl
     };
+
+    return sendToRVM(options);
 };
 
 Application.getTrayIconInfo = function(identity, callback, errorCallback) {
