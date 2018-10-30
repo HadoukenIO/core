@@ -110,6 +110,7 @@ export interface OpenFinWindow {
 export interface BrowserWindow extends BrowserWindowElectron {
     _options: WindowOptions;
     setExternalWindowNativeId?: Function;
+    close?: Function;
 }
 
 export interface AppObj {

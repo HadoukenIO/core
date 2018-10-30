@@ -98,17 +98,17 @@ export async function getWindowGroupProxyWindows(runtimeProxyWindow: RuntimeProx
     return existingWindowGroup;
 }
 
-export async function registerRemoteProxyWindow(sourceIdentity: Identity, win: RuntimeProxyWindow) {
+export async function registerRemoteProxyWindow(sourceIdentity: Identity, runtimeProxyWindow: RuntimeProxyWindow) {
     //TODO: this might need to be optional or in a seperate function. not all events will require a merge.
-    const source = win.hostRuntime.fin.Window.wrapSync(sourceIdentity);
-    await win.wrappedWindow.mergeGroups(source);
+    const source = runtimeProxyWindow.hostRuntime.fin.Window.wrapSync(sourceIdentity);
+    await runtimeProxyWindow.wrappedWindow.mergeGroups(source);
 
-    await win.wrappedWindow.on('group-changed', (evt) => {
+    await runtimeProxyWindow.wrappedWindow.on('group-changed', (evt) => {
         writeToLog('info', 'Group changed event');
         writeToLog('info', evt);
 
         //We only care for leave now so we look for target.
-        if (win.window.uuid === evt.targetWindowAppUuid && win.window.name === evt.targetWindowName) {
+        if (runtimeProxyWindow.window.uuid === evt.targetWindowAppUuid && runtimeProxyWindow.window.name === evt.targetWindowName) {
             //we will construct a state object here but now let's focus on leave group:
             if (evt.reason === 'leave') {
                 const leaveGroupState = {
@@ -117,7 +117,7 @@ export async function registerRemoteProxyWindow(sourceIdentity: Identity, win: R
                         uuid: evt.targetWindowAppUuid,
                         name: evt.targetWindowName
                     },
-                    window: win.window
+                    window: runtimeProxyWindow.window
                 };
                 eventsPipe.emit('process-change', leaveGroupState);
             }
@@ -129,47 +129,36 @@ export async function registerRemoteProxyWindow(sourceIdentity: Identity, win: R
                         uuid: evt.sourceWindowAppUuid,
                         name: evt.sourceWindowName
                     },
-                    window: win.window
+                    window: runtimeProxyWindow.window
                 };
                 eventsPipe.emit('process-change', joinGroupState);
             }
         }
     });
-    await win.hostRuntime.fin.once('disconnected', () => {
-        //raise some normalized events, also re-write to allow cleanup.
-        //do more stuff.
+    await runtimeProxyWindow.hostRuntime.fin.once('disconnected', () => {
+        const leaveGroupState = {
+            action: 'remove',
+            identity: {
+                uuid: runtimeProxyWindow.wrappedWindow.identity.uuid,
+                name: runtimeProxyWindow.wrappedWindow.identity.name
+            },
+            window: runtimeProxyWindow.window
+        };
+        eventsPipe.emit('process-change', leaveGroupState);
     });
 }
 
-export async function unregisterRemoteProxyWindow(identity: Identity) {
-    const runtimeProxyWindow = await getRuntimeProxyWindow(identity);
+export function unregisterRemoteProxyWindow(runtimeProxyWindow: RuntimeProxyWindow) {
+    const { uuid, name } = runtimeProxyWindow.wrappedWindow.identity;
+    const windowKey = `${uuid}${name}`;
     runtimeProxyWindow.window.browserWindow.setExternalWindowNativeId('0x0');
     runtimeProxyWindow.wrappedWindow.removeAllListeners();
+    externalWindowsProxyList.set(windowKey, void 0);
+    runtimeProxyWindow.window.browserWindow.close();
 }
 
 export function unHookAllProxyWindows(): void {
     externalWindowsProxyList.forEach(runtimeProxyWindow => {
-        runtimeProxyWindow.window.browserWindow.setExternalWindowNativeId('0x0');
+        unregisterRemoteProxyWindow(runtimeProxyWindow);
     });
 }
-
-
-//Leave from a single group
-// {
-//     "topic": "window",
-//     "type": "group-changed",
-//     "uuid": "OpenfinPOC2",
-//     "name": "OpenfinPOC2",
-//     "reason": "leave",
-//     "sourceGroup": [
-//         {
-//             "appUuid": "OpenfinPOC",
-//             "windowName": "OpenfinPOC"
-//         }],
-//     "sourceWindowAppUuid": "OpenfinPOC2",
-//     "sourceWindowName": "OpenfinPOC2",
-//     "targetGroup": [],
-//     "targetWindowAppUuid": "OpenfinPOC2",
-//     "targetWindowName": "OpenfinPOC2",
-//     "memberOf": "nothing"
-// }

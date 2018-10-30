@@ -146,7 +146,8 @@ export class WindowGroups extends EventEmitter {
         }
 
         if (win.isProxy) {
-            await windowGroupsProxy.unregisterRemoteProxyWindow(win);
+            const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(win);
+            windowGroupsProxy.unregisterRemoteProxyWindow(runtimeProxyWindow);
         }
 
         this._removeWindowFromGroup(groupUuid, win);
