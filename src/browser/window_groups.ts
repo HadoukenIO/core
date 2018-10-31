@@ -24,6 +24,18 @@ export class WindowGroups extends EventEmitter {
                 const runtimeProxyWindow  = await windowGroupsProxy.getRuntimeProxyWindow(changeState.identity);
                 this._addWindowToGroup(changeState.window.groupUuid, runtimeProxyWindow.window);
                 await windowGroupsProxy.registerRemoteProxyWindow(changeState.window, runtimeProxyWindow, false);
+
+                const sourceWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(changeState.sourceIdentity.uuid,
+                    changeState.sourceIdentity.name);
+                const sourceGroupUuid = sourceWindow.groupUuid;
+                const payload = generatePayload('join', sourceWindow, runtimeProxyWindow.window,
+                    changeState.sourceGroup, this.getGroup(sourceGroupUuid));
+                if (sourceGroupUuid) {
+                    this.emit('group-changed', {
+                        groupUuid: sourceGroupUuid,
+                        payload
+                    });
+                }
             }
         });
     }
@@ -104,6 +116,17 @@ export class WindowGroups extends EventEmitter {
             targetWindow.groupUuid = targetGroupUuid = this._addWindowToGroup(sourceWindow.groupUuid, targetWindow);
         }
 
+        //TODO: remove code duplication
+        //we just added a proxy window, we need to take some additional actions.
+        if (runtimeProxyWindow && !runtimeProxyWindow.isRegistered) {
+            const windowGroup = await windowGroupsProxy.getWindowGroupProxyWindows(runtimeProxyWindow);
+            await windowGroupsProxy.registerRemoteProxyWindow(source, runtimeProxyWindow, true);
+            await Promise.all(windowGroup.map(async (pWin) => {
+                this._addWindowToGroup(sourceWindow.groupUuid, pWin.window);
+                await windowGroupsProxy.registerRemoteProxyWindow(source, pWin, false);
+            }));
+        }
+
         const payload = generatePayload('join', sourceWindow, targetWindow, this.getGroup(sourceGroupUuid), this.getGroup(targetGroupUuid));
         if (sourceGroupUuid) {
             this.emit('group-changed', {
@@ -116,23 +139,6 @@ export class WindowGroups extends EventEmitter {
                 groupUuid: targetGroupUuid,
                 payload
             });
-        }
-
-        // disband in the case where source leaves a group
-        // with only one remaining window
-        if (sourceGroupUuid) {
-            this._handleDisbandingGroup(sourceGroupUuid);
-        }
-
-        //TODO: remove code duplication
-        //we just added a proxy window, we need to take some additional actions.
-        if (runtimeProxyWindow && !runtimeProxyWindow.isRegistered) {
-            const windowGroup = await windowGroupsProxy.getWindowGroupProxyWindows(runtimeProxyWindow);
-            await windowGroupsProxy.registerRemoteProxyWindow(source, runtimeProxyWindow, true);
-            await Promise.all(windowGroup.map(async (pWin) => {
-                this._addWindowToGroup(sourceWindow.groupUuid, pWin.window);
-                await windowGroupsProxy.registerRemoteProxyWindow(source, pWin, false);
-            }));
         }
 
     };
@@ -220,8 +226,18 @@ export class WindowGroups extends EventEmitter {
         _.extend(this._windowGroups[targetGroupUuid], this._windowGroups[sourceGroupUuid]);
         delete this._windowGroups[sourceGroupUuid];
 
+        //we just added a proxy window, we need to take some additional actions.
+        if (runtimeProxyWindow && !runtimeProxyWindow.isRegistered) {
+            const windowGroup = await windowGroupsProxy.getWindowGroupProxyWindows(runtimeProxyWindow);
+            await windowGroupsProxy.registerRemoteProxyWindow(source, runtimeProxyWindow, true);
+            await Promise.all(windowGroup.map(async (pWin) => {
+                this._addWindowToGroup(sourceWindow.groupUuid, pWin.window);
+                await windowGroupsProxy.registerRemoteProxyWindow(source, pWin, false);
+            }));
+        }
+
         const payload = generatePayload('merge', sourceWindow, targetWindow,
-            this.getGroup(sourceGroupUuid), this.getGroup(targetGroupUuid));
+        this.getGroup(sourceGroupUuid), this.getGroup(targetGroupUuid));
         if (sourceGroupUuid) {
             this.emit('group-changed', {
                 groupUuid: sourceGroupUuid,
@@ -233,15 +249,6 @@ export class WindowGroups extends EventEmitter {
                 groupUuid: targetGroupUuid,
                 payload
             });
-        }
-        //we just added a proxy window, we need to take some additional actions.
-        if (runtimeProxyWindow && !runtimeProxyWindow.isRegistered) {
-            const windowGroup = await windowGroupsProxy.getWindowGroupProxyWindows(runtimeProxyWindow);
-            await windowGroupsProxy.registerRemoteProxyWindow(source, runtimeProxyWindow, true);
-            await Promise.all(windowGroup.map(async (pWin) => {
-                this._addWindowToGroup(sourceWindow.groupUuid, pWin.window);
-                await windowGroupsProxy.registerRemoteProxyWindow(source, pWin, false);
-            }));
         }
     };
 
