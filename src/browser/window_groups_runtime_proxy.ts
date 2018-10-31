@@ -98,10 +98,12 @@ export async function getWindowGroupProxyWindows(runtimeProxyWindow: RuntimeProx
     return existingWindowGroup;
 }
 
-export async function registerRemoteProxyWindow(sourceIdentity: Identity, runtimeProxyWindow: RuntimeProxyWindow) {
+export async function registerRemoteProxyWindow(sourceIdentity: Identity, runtimeProxyWindow: RuntimeProxyWindow, merge: boolean) {
     //TODO: this might need to be optional or in a seperate function. not all events will require a merge.
+    //if (true) {
     const source = runtimeProxyWindow.hostRuntime.fin.Window.wrapSync(sourceIdentity);
     await runtimeProxyWindow.wrappedWindow.mergeGroups(source);
+    //}
 
     await runtimeProxyWindow.wrappedWindow.on('group-changed', (evt) => {
         writeToLog('info', 'Group changed event');
