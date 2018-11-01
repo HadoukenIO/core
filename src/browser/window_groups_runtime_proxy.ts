@@ -17,30 +17,27 @@ const externalWindowsProxyList = new Map<string, RuntimeProxyWindow>();
 //TODO: better name.
 export const eventsPipe = new MyEmitter();
 
-export interface RuntimeProxyWindow {
-    hostRuntime: PeerRuntime;
+export interface GroupProxyChange {
+    action: 'add' | 'remove';
+    targetIdentity: Identity;
     window: OpenFinWindow;
-    wrappedWindow: _Window;
-    isRegistered: boolean;
+    sourceIdentity: Identity;
+    sourceGroup: Array<any>;
 }
 
-export interface RemoteWindowInformation {
-    proxyWindow: RuntimeProxyWindow;
-    existingWindowGroup: Array<RuntimeProxyWindow>;
-}
+export class RuntimeProxyWindow {
+    public hostRuntime: PeerRuntime;
+    public window: OpenFinWindow;
+    public wrappedWindow: _Window;
+    public isRegistered: boolean;
+    //TODO: this is a terrible name
+    public sourceIdentity: Identity;
 
-//TODO: should return bool as well if this needs registration
-export async function getRuntimeProxyWindow(identity: Identity): Promise<RuntimeProxyWindow> {
-    const { uuid, name } = identity;
-    const windowKey = `${uuid}${name}`;
-    const existingProxyWindow = externalWindowsProxyList.get(windowKey);
+    constructor(hostRuntime: PeerRuntime, wrappedWindow: _Window, nativeId: string) {
+        this.hostRuntime = hostRuntime;
+        this.wrappedWindow = wrappedWindow;
+        const { identity: { uuid, name } } = wrappedWindow;
 
-    if (existingProxyWindow) {
-        return existingProxyWindow;
-    } else {
-        const { runtime: hostRuntime} = await connectionManager.resolveIdentity(identity);
-        const wrappedWindow = hostRuntime.fin.Window.wrapSync(identity);
-        const nativeId = await wrappedWindow.getNativeId();
         const proxyWindowOptions = {
             hwnd: '' + nativeId,
             uuid,
@@ -50,10 +47,10 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         const browserwindow: any = new BrowserWindowElectron(proxyWindowOptions);
 
         browserwindow._options = proxyWindowOptions;
-        const window: OpenFinWindow = {
+        this.window = {
             _options : proxyWindowOptions,
             _window : <BrowserWindow>browserwindow,
-            app_uuid: wrappedWindow.identity.uuid,
+            app_uuid: uuid,
             browserWindow: <BrowserWindow>browserwindow,
             children: new Array<OpenFinWindow>(),
             frames: new Map<string, ChildFrameInfo>(),
@@ -67,135 +64,121 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
             mainFrameRoutingId: 0,
             isProxy: true
         };
-
-        const runtimeProxyWindow = {
-            window,
-            hostRuntime,
-            wrappedWindow,
-            isRegistered: false
-        };
-        externalWindowsProxyList.set(windowKey, runtimeProxyWindow);
-        return runtimeProxyWindow;
-    }
-}
-export async function getWindowGroupProxyWindows(runtimeProxyWindow: RuntimeProxyWindow) {
-    const { identity } = runtimeProxyWindow.wrappedWindow;
-    const winGroup = await runtimeProxyWindow.wrappedWindow.getGroup();
-    const existingWindowGroup: Array<RuntimeProxyWindow> = [];
-
-    await Promise.all(winGroup.map(async (w) => {
-        //check if we are dealing with a local window.
-        if (coreState.getWindowByUuidName(w.identity.uuid, w.identity.name)) {
-            return;
-        }
-        //confirm we do not return the same runtimeProxyWindow.
-        if (w.identity.uuid !== identity.uuid || w.identity.name !== identity.name) {
-            const pWin = await getRuntimeProxyWindow(w.identity);
-            existingWindowGroup.push(pWin);
-        }
-    }));
-
-    return existingWindowGroup;
-}
-
-export async function registerRemoteProxyWindow(sourceIdentity: Identity, runtimeProxyWindow: RuntimeProxyWindow, merge: boolean) {
-    //TODO: this might need to be optional or in a seperate function. not all events will require a merge.
-    if (merge) {
-        const source = runtimeProxyWindow.hostRuntime.fin.Window.wrapSync(sourceIdentity);
-        await runtimeProxyWindow.wrappedWindow.mergeGroups(source);
+        const windowKey = `${uuid}${name}`;
+        externalWindowsProxyList.set(windowKey, this);
     }
 
-    await runtimeProxyWindow.wrappedWindow.on('group-changed', (evt) => {
-        writeToLog('info', 'Group changed event');
-        writeToLog('info', evt);
+    public register = async (sourceIdentity: Identity): Promise<Array<RuntimeProxyWindow>> => {
+        this.sourceIdentity = sourceIdentity;
+        await this.merge();
+        await this.wireUpEvents();
 
-        // "{
-        //     "topic": "window",
-        //     "type": "group-changed",
-        //     "uuid": "OpenfinPOC2",
-        //     "name": "OpenfinPOC2",
-        //     "reason": "join",
-        //     "sourceGroup": [],
-        //     "sourceWindowAppUuid": "OpenfinPOC2",
-        //     "sourceWindowName": "child1",
-        //     "targetGroup": [
-        //       {
-        //         "appUuid": "OpenfinPOC",
-        //         "windowName": "OpenfinPOC"
-        //       },
-        //       {
-        //         "appUuid": "OpenfinPOC2",
-        //         "windowName": "OpenfinPOC2"
-        //       },
-        //       {
-        //         "appUuid": "OpenfinPOC2",
-        //         "windowName": "child2"
-        //       },
-        //       {
-        //         "appUuid": "OpenfinPOC2",
-        //         "windowName": "child1"
-        //       }
-        //     ],
-        //     "targetWindowAppUuid": "OpenfinPOC2",
-        //     "targetWindowName": "OpenfinPOC2",
-        //     "memberOf": "target"
-        //   }"
-        //We only care for leave now so we look for target.
-        if (runtimeProxyWindow.window.uuid === evt.targetWindowAppUuid && runtimeProxyWindow.window.name === evt.targetWindowName) {
-            //we will construct a state object here but now let's focus on leave group:
-            if (evt.reason === 'leave') {
-                const leaveGroupState = {
-                    action: 'remove',
-                    identity: {
+        const remoteWindowGroup = await this.getRemoteWindowGroup();
+        await Promise.all(remoteWindowGroup.map(async w => {
+            if (!w.isRegistered) {
+                await w.wireUpEvents();
+            }
+        }));
+        return remoteWindowGroup;
+    }
+
+    //https://english.stackexchange.com/questions/25931/unregister-vs-deregister
+    public deregister = async () => {
+        const { identity: { uuid, name } } = this.wrappedWindow;
+        const windowKey = `${uuid}${name}`;
+
+        externalWindowsProxyList.delete(windowKey);
+        this.window.browserWindow.setExternalWindowNativeId('0x0');
+        this.window.browserWindow.close();
+        await this.wrappedWindow.removeAllListeners();
+    }
+
+    //TODO: Better name
+    private merge = async (): Promise<void> => {
+        const source = this.hostRuntime.fin.Window.wrapSync(this.sourceIdentity);
+        await this.wrappedWindow.mergeGroups(source);
+    }
+
+    private wireUpEvents = async (): Promise<void> => {
+        await this.wrappedWindow.on('group-changed', (evt) => {
+            writeToLog('info', 'Group changed event');
+            writeToLog('info', evt);
+
+            //We only care for leave now so we look for target.
+            if (this.window.uuid === evt.targetWindowAppUuid && this.window.name === evt.targetWindowName) {
+                //we will construct a state object here but now let's focus on leave group:
+                if (evt.reason === 'leave') {
+                    this.raiseChangeEvents(this.sourceIdentity, {
                         uuid: evt.targetWindowAppUuid,
                         name: evt.targetWindowName
-                    },
-                    window: runtimeProxyWindow.window,
-                    sourceIdentity
-                };
-                eventsPipe.emit('process-change', leaveGroupState);
-            }
-            if (evt.reason === 'join') {
-                //TODO: handle the case where the window has joined another group (check the memberOf and source/target groups properties)
-                const joinGroupState = {
-                    action: 'add',
-                    identity: {
+                    }, 'remove', []);
+                }
+                if (evt.reason === 'join') {
+                    //TODO: handle the case where the window has joined another group
+                    //(check the memberOf and source/target groups properties)
+                    this.raiseChangeEvents(this.sourceIdentity, {
                         uuid: evt.sourceWindowAppUuid,
                         name: evt.sourceWindowName
-                    },
-                    window: runtimeProxyWindow.window,
-                    sourceIdentity,
-                    sourceGroup: evt.sourceGroup
-                };
-                eventsPipe.emit('process-change', joinGroupState);
+                    }, 'add', evt.sourceGroup);
+                }
             }
-        }
-    });
-    await runtimeProxyWindow.hostRuntime.fin.once('disconnected', () => {
-        const leaveGroupState = {
-            action: 'remove',
-            identity: {
-                uuid: runtimeProxyWindow.wrappedWindow.identity.uuid,
-                name: runtimeProxyWindow.wrappedWindow.identity.name
-            },
-            window: runtimeProxyWindow.window,
-            sourceIdentity
+        });
+        await this.hostRuntime.fin.once('disconnected', () => {
+            this.raiseChangeEvents(this.sourceIdentity, this.wrappedWindow.identity, 'remove', []);
+        });
+        this.isRegistered = true;
+    };
+
+    private getRemoteWindowGroup = async(): Promise<Array<RuntimeProxyWindow>> => {
+        const { identity: { uuid, name } } = this.wrappedWindow;
+        const winGroup = await this.wrappedWindow.getGroup();
+        const existingWindowGroup: Array<RuntimeProxyWindow> = [];
+
+        await Promise.all(winGroup.map(async (w) => {
+            //check if we are dealing with a local window.
+            if (coreState.getWindowByUuidName(w.identity.uuid, w.identity.name)) {
+                return;
+            }
+            //confirm we do not return the same runtimeProxyWindow.
+            if (w.identity.uuid !== uuid || w.identity.name !== name) {
+                const pWin = await getRuntimeProxyWindow(w.identity);
+                existingWindowGroup.push(pWin);
+            }
+        }));
+
+        return existingWindowGroup;
+    }
+
+    private raiseChangeEvents = async(sourceIdentity: Identity, targetIdentity: Identity,
+        action: 'add' | 'remove', sourceGroup: Array<any>) => {
+        const groupStateChange: GroupProxyChange = {
+            action,
+            targetIdentity,
+            window: this.window,
+            sourceIdentity,
+            sourceGroup
         };
-        eventsPipe.emit('process-change', leaveGroupState);
-    });
+        eventsPipe.emit('process-change', groupStateChange);
+    }
 }
 
-export function unregisterRemoteProxyWindow(runtimeProxyWindow: RuntimeProxyWindow) {
-    const { uuid, name } = runtimeProxyWindow.wrappedWindow.identity;
+export async function getRuntimeProxyWindow(identity: Identity): Promise<RuntimeProxyWindow> {
+    const { uuid, name } = identity;
     const windowKey = `${uuid}${name}`;
-    runtimeProxyWindow.window.browserWindow.setExternalWindowNativeId('0x0');
-    runtimeProxyWindow.wrappedWindow.removeAllListeners();
-    externalWindowsProxyList.set(windowKey, void 0);
-    runtimeProxyWindow.window.browserWindow.close();
+    const existingProxyWindow = externalWindowsProxyList.get(windowKey);
+
+    if (existingProxyWindow) {
+        return existingProxyWindow;
+    } else {
+        const { runtime: hostRuntime} = await connectionManager.resolveIdentity(identity);
+        const wrappedWindow = hostRuntime.fin.Window.wrapSync(identity);
+        const nativeId = await wrappedWindow.getNativeId();
+        return new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId);
+    }
 }
 
-export function unHookAllProxyWindows(): void {
+export function deregisterAllRuntimeProxyWindows(): void {
     externalWindowsProxyList.forEach(runtimeProxyWindow => {
-        unregisterRemoteProxyWindow(runtimeProxyWindow);
+        runtimeProxyWindow.deregister();
     });
 }
