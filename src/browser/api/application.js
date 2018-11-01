@@ -777,14 +777,14 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     }
 };
 
-Application.setAppLogUsername = function(identity, userName) {
+Application.setAppLogUsername = function(identity, username) {
     let app = Application.wrap(identity.uuid);
 
     const options = {
         topic: 'application',
         action: 'application-log-username',
         sourceUrl: app._configUrl,
-        data: { userName }
+        data: { 'userName': username }
     };
     return sendToRVM(options);
 };
