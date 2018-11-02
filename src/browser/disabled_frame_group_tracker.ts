@@ -7,10 +7,10 @@ import {Rectangle, RectangleBase} from './rectangle';
 import { writeToLog } from './log';
 
 /*
-TODO deregister listener on leave group
 Edge cases
-restore frame on leave
-disabled window movi  ng
+respect max
+whether to restore frame on leave
+disabled window moving
 event propagation
 */
 
