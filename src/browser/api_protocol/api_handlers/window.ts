@@ -269,13 +269,12 @@ function minimizeWindow(identity: Identity, message: APIMessage, ack: Acker): vo
     ack(successAck);
 }
 
-function mergeWindowGroups(identity: Identity, message: APIMessage, ack: Acker): void {
+function mergeWindowGroups(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const groupingIdentity = getGroupingWindowIdentity(payload);
 
-    Window.mergeGroups(windowIdentity, groupingIdentity);
-    ack(successAck);
+    return Window.mergeGroups(windowIdentity, groupingIdentity).then(() => ack(successAck));
 }
 
 function maximizeWindow(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -286,21 +285,19 @@ function maximizeWindow(identity: Identity, message: APIMessage, ack: Acker): vo
     ack(successAck);
 }
 
-function leaveWindowGroup(identity: Identity, message: APIMessage, ack: Acker): void {
+function leaveWindowGroup(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.leaveGroup(windowIdentity);
-    ack(successAck);
+    return Window.leaveGroup(windowIdentity).then(() => ack(successAck));
 }
 
-function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker): void {
+function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const groupingIdentity = getGroupingWindowIdentity(payload);
 
-    Window.joinGroup(windowIdentity, groupingIdentity);
-    ack(successAck);
+    return Window.joinGroup(windowIdentity, groupingIdentity).then(() => ack(successAck));
 }
 
 function isWindowShowing(identity: Identity, message: APIMessage, ack: Acker): void {

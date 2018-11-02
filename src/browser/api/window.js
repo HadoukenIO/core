@@ -1370,8 +1370,7 @@ Window.isShowing = function(identity) {
 
 
 Window.joinGroup = function(identity, grouping) {
-
-    WindowGroups.joinGroup({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
+    return WindowGroups.joinGroup({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
@@ -1383,7 +1382,7 @@ Window.leaveGroup = function(identity) {
     }
 
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    WindowGroups.leaveGroup(openfinWindow);
+    return WindowGroups.leaveGroup(openfinWindow);
 };
 
 
@@ -1397,7 +1396,7 @@ Window.maximize = function(identity) {
 
 
 Window.mergeGroups = function(identity, grouping) {
-    WindowGroups.mergeGroups({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
+    return WindowGroups.mergeGroups({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 

@@ -11,11 +11,9 @@ import { EventEmitter } from 'events';
 import { writeToLog } from './log';
 
 class MyEmitter extends EventEmitter {}
-
 const externalWindowsProxyList = new Map<string, RuntimeProxyWindow>();
 
-//TODO: better name.
-export const eventsPipe = new MyEmitter();
+export const groupProxyEvents = new MyEmitter();
 
 export interface GroupProxyChange {
     action: 'add' | 'remove';
@@ -68,10 +66,16 @@ export class RuntimeProxyWindow {
         externalWindowsProxyList.set(windowKey, this);
     }
 
-    public register = async (sourceIdentity: Identity): Promise<Array<RuntimeProxyWindow>> => {
+    public registerSingle = async (sourceIdentity: Identity): Promise<RuntimeProxyWindow> => {
         this.sourceIdentity = sourceIdentity;
-        await this.merge();
         await this.wireUpEvents();
+        await this.remoteMerge();
+
+        return this;
+    }
+
+    public register = async (sourceIdentity: Identity): Promise<Array<RuntimeProxyWindow>> => {
+        this.registerSingle(sourceIdentity);
 
         const remoteWindowGroup = await this.getRemoteWindowGroup();
         await Promise.all(remoteWindowGroup.map(async w => {
@@ -93,8 +97,7 @@ export class RuntimeProxyWindow {
         await this.wrappedWindow.removeAllListeners();
     }
 
-    //TODO: Better name
-    private merge = async (): Promise<void> => {
+    private remoteMerge = async (): Promise<void> => {
         const source = this.hostRuntime.fin.Window.wrapSync(this.sourceIdentity);
         await this.wrappedWindow.mergeGroups(source);
     }
@@ -158,7 +161,7 @@ export class RuntimeProxyWindow {
             sourceIdentity,
             sourceGroup
         };
-        eventsPipe.emit('process-change', groupStateChange);
+        groupProxyEvents.emit('process-change', groupStateChange);
     }
 }
 

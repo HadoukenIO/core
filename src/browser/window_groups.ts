@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events';
-import { BrowserWindow as BrowserWindowElectron } from 'electron';
 import { createHash } from 'crypto';
 
 import * as _ from 'underscore';
-import { OpenFinWindow, Identity, BrowserWindow, ChildFrameInfo, PreloadScriptState } from '../shapes';
+import { OpenFinWindow, Identity } from '../shapes';
 import * as coreState from './core_state';
 import * as log from './log';
 import * as windowGroupsProxy from './window_groups_runtime_proxy';
@@ -14,19 +13,18 @@ export class WindowGroups extends EventEmitter {
     constructor() {
         super();
 
-        windowGroupsProxy.eventsPipe.on('process-change', async (changeState) => {
+        windowGroupsProxy.groupProxyEvents.on('process-change', async (changeState) => {
             if (changeState.action === 'remove') {
                 await this.leaveGroup(changeState.window);
             }
             if (changeState.action === 'add') {
-                //TODO: identity here is misleading, specially since the window is going to be different.
-                // Refactor both events to include the proxyWindow on each case instead of the browser window.
-                const runtimeProxyWindow  = await windowGroupsProxy.getRuntimeProxyWindow(changeState.identity);
+                const runtimeProxyWindow  = await windowGroupsProxy.getRuntimeProxyWindow(changeState.targetIdentity);
                 this._addWindowToGroup(changeState.window.groupUuid, runtimeProxyWindow.window);
-                await runtimeProxyWindow.register(changeState.window);
 
                 const sourceWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(changeState.sourceIdentity.uuid,
                     changeState.sourceIdentity.name);
+
+                await runtimeProxyWindow.registerSingle(changeState.sourceIdentity);
                 const sourceGroupUuid = sourceWindow.groupUuid;
                 const payload = generatePayload('join', sourceWindow, runtimeProxyWindow.window,
                     changeState.sourceGroup, this.getGroup(sourceGroupUuid));
@@ -81,14 +79,8 @@ export class WindowGroups extends EventEmitter {
         const sourceGroupUuid = sourceWindow.groupUuid;
         //identify if either the target or the source belong to a different runtime:
         if (!targetWindow) {
-            //this try should be replaced by a general try here.
-            try {
-                runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
-                targetWindow = runtimeProxyWindow.window;
-
-            } catch (err) {
-                log.writeToLog('info', err);
-            }
+            runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
+            targetWindow = runtimeProxyWindow.window;
         }
         let targetGroupUuid = targetWindow.groupUuid;
         // cannot join a group with yourself
@@ -172,14 +164,8 @@ export class WindowGroups extends EventEmitter {
         let runtimeProxyWindow;
         //identify if either the target or the source belong to a different runtime:
         if (!targetWindow) {
-            //this try should be replaced by a general try here.
-            try {
-                runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
-                targetWindow = runtimeProxyWindow.window;
-
-            } catch (err) {
-                log.writeToLog('info', err);
-            }
+            runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
+            targetWindow = runtimeProxyWindow.window;
         }
         let targetGroupUuid = targetWindow.groupUuid;
 
