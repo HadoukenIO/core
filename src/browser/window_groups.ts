@@ -23,7 +23,7 @@ class WindowGroups extends EventEmitter {
 
     public joinGroup = (source: OpenFinWindow, target: OpenFinWindow): void => {
         const sourceGroupUuid = source.groupUuid;
-        let targetGroupUuid = target.groupUuid;
+        const targetGroupUuid = target.groupUuid;
 
         // cannot join a group with yourself
         if (source === target) {
@@ -45,7 +45,7 @@ class WindowGroups extends EventEmitter {
         // a brand new group and returns its uuid
         source.groupUuid = this._addWindowToGroup(targetGroupUuid, source);
         if (!targetGroupUuid) {
-            target.groupUuid = targetGroupUuid = this._addWindowToGroup(source.groupUuid, target);
+            target.groupUuid = this._addWindowToGroup(source.groupUuid, target);
         }
 
         const payload = generatePayload('join', source, target, this.getGroup(sourceGroupUuid), this.getGroup(targetGroupUuid));
@@ -143,14 +143,14 @@ class WindowGroups extends EventEmitter {
 
     private _addWindowToGroup = (uuid: string, win: OpenFinWindow): string => {
         const _uuid = uuid || generateUuid();
-        GroupTracker.getGroupTracker(uuid).addWindowToGroup(win);
+        GroupTracker.GET_GROUP_TRACKER(_uuid).addWindowToGroup(win);
         this._windowGroups[_uuid] = this._windowGroups[_uuid] || {};
         this._windowGroups[_uuid][win.name] = win;
         return _uuid;
     };
 
     private _removeWindowFromGroup = (uuid: string, win: OpenFinWindow): void => {
-        GroupTracker.getGroupTracker(uuid).removeWindowFromGroup(win);
+        GroupTracker.GET_GROUP_TRACKER(uuid).removeWindowFromGroup(win);
         delete this._windowGroups[uuid][win.name];
     };
 

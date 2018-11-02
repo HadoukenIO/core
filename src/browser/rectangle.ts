@@ -1,3 +1,5 @@
+import { BrowserWindow } from '../shapes';
+
 type SideName = 'top' | 'right' | 'bottom' | 'left';
 type SharedBounds = {
     hasSharedBounds: boolean;
@@ -7,6 +9,7 @@ type SharedBounds = {
     left: SideName;
 };
 type SharedBound = Array<SideName>;
+type BoundIdentifier = [Rectangle, SideName];
 type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
 export type SharedBoundsList = Array<SharedBound>;
 
@@ -32,9 +35,9 @@ class RectOptionsOpts {
 
     constructor(opts: Opts) {
         // when resizing, dont let the window get so small you cant see it / grab it
-        this.minWidth = Math.max(opts.minWidth || 10, 10);
+        this.minWidth = Math.max(opts.minWidth || 48, 48);
         this.maxWidth = opts.maxWidth || Number.MAX_SAFE_INTEGER;
-        this.minHeight = Math.max(opts.minHeight || 10, 10);
+        this.minHeight = Math.max(opts.minHeight || 38, 38);
         this.maxHeight = opts.maxHeight || Number.MAX_SAFE_INTEGER;
     }
 }
@@ -44,6 +47,9 @@ export class Rectangle {
         const { x, y, width, height } = rect;
         return new Rectangle(x, y, width, height, new RectOptionsOpts(opts));
     }
+    public static CREATE_FROM_BROWSER_WINDOW(win: BrowserWindow) {
+        return Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), win._options);
+    }
 
     public x: number;
     public y: number;
@@ -52,7 +58,7 @@ export class Rectangle {
     public opts: Opts;
     public boundShareThreshold = 5;
 
-    constructor (x: number, y: number, width: number, height: number, opts: Opts = {}) {
+    constructor(x: number, y: number, width: number, height: number, opts: Opts = {}) {
         this.x = x;
         this.y = y;
         this.width = width;
@@ -82,6 +88,14 @@ export class Rectangle {
             y: this.y,
             width: this.width,
             height: this.height
+        };
+    }
+    get transactionBounds() {
+        return {
+            x: this.x,
+            y: this.y,
+            w: this.width,
+            h: this.height
         };
     }
 
@@ -126,18 +140,18 @@ export class Rectangle {
             else if (height > Number.MAX_VALUE) height = Number.MAX_VALUE;
         }
 
-        return new Rectangle(x, y, width, height);
+        return new Rectangle(x, y, width, height, this.opts);
     }
     // ts-lint:enable
-    
-    public collidesWith (rect: RectangleBase) {
-        const {x, y, width, height } = rect;
+
+    public collidesWith(rect: RectangleBase) {
+        const { x, y, width, height } = rect;
         let collision = false;
-        
+
         if (this.x < x + width &&
-           this.x + this.width > x &&
-           this.y < y + height &&
-           this.y + this.height > y) {
+            this.x + this.width > x &&
+            this.y < y + height &&
+            this.y + this.height > y) {
             collision = true;
         }
 
@@ -186,7 +200,7 @@ export class Rectangle {
         let left: SideName = null;
 
         if (!intersection) {
-            return {hasSharedBounds, top, right, bottom, left};
+            return { hasSharedBounds, top, right, bottom, left };
         }
 
         top = this.sharedBound('top', rect);
@@ -196,7 +210,7 @@ export class Rectangle {
 
         hasSharedBounds = !!(top || right || bottom || left);
 
-        return {hasSharedBounds, top, right, bottom, left};
+        return { hasSharedBounds, top, right, bottom, left };
     }
 
     public sharedBoundsList(rect: Rectangle): SharedBoundsList {
@@ -215,7 +229,7 @@ export class Rectangle {
         }).filter(x => x);
     }
 
-    public delta(rect: Rectangle): RectangleBase {
+    public delta(rect: RectangleBase): RectangleBase {
         return {
             x: rect.x - this.x,
             y: rect.y - this.y,
@@ -223,10 +237,18 @@ export class Rectangle {
             height: rect.height - this.height
         }
     }
+    public outerBounds(rect: RectangleBase) {
+        return {
+            x: Math.min(rect.x, this.x),
+            y: Math.min(rect.y, this.y),
+            width: Math.max(rect.width, this.width),
+            height: Math.max(rect.height, this.height)
+        }
+    }
 
     // this is only for resize, move would be different
     private edgeMoved(pair: Array<SideName>, delta: RectangleBase): boolean {
-        const {x, y, width, height } = delta;
+        const { x, y, width, height } = delta;
         const [mySide, otherRectSharedSide] = pair;
 
         const movedSides: Set<SideName> = new Set();
@@ -239,43 +261,64 @@ export class Rectangle {
     }
 
 
-    public alignSide(mySide: SideName, rect: Rectangle , sideToAlign: SideName) {
-        switch (mySide){
-            case "left": {
-                const xInitial = this.x;
-                this.x = rect[sideToAlign];
-                this.width += (xInitial - this.x); 
-            } break;
-            case "right": {
-                this.width += (rect[sideToAlign] - (this.x + this.width));
-            } break;
-            case "top": {
-                const yInitial = this.y;
-                this.y = rect[sideToAlign];
-                this.height += (yInitial - this.y); 
-            } break;
-            case "bottom": {
-                this.height += (rect[sideToAlign] - (this.y + this.height));
-            } break;
-
+    public alignSide(mySide: SideName, rect: Rectangle, sideToAlign: SideName) {
+        const changes = this.bounds;
+        switch (mySide) {
+            case "left":
+                changes.width += (this.x - rect[sideToAlign]);
+                changes.x = rect[sideToAlign];
+                if (changes.width < this.opts.minWidth) {
+                    changes.width = this.opts.minWidth;
+                }
+                break;
+            case "right":
+                changes.width += (rect[sideToAlign] - (this.x + this.width));
+                if (changes.width < this.opts.minWidth) {
+                    changes.x = rect[sideToAlign] - this.opts.minWidth;
+                    changes.width = this.opts.minWidth;
+                }
+                break;
+            case "top":
+                changes.height += (this.y - rect[sideToAlign]);
+                changes.y = rect[sideToAlign];
+                if (changes.height < this.opts.minHeight) {
+                    changes.height = this.opts.minHeight;
+                }
+                break;
+            case "bottom":
+                changes.height += (rect[sideToAlign] - (this.y + this.height));
+                if (changes.height < this.opts.minHeight) {
+                    changes.y = rect[sideToAlign] - this.opts.minHeight;
+                    changes.height = this.opts.minHeight;
+                }
+                break;
+            default:
+                return null as never;
         }
+        return Rectangle.CREATE_FROM_BOUNDS(changes, this.opts)
+    }
+    public shift(delta: RectangleBase) {
+        return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts);
     }
 
     public move(cachedBounds: RectangleBase, currentBounds: RectangleBase) {
         const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(cachedBounds));
         const currLeader = Rectangle.CREATE_FROM_BOUNDS(currentBounds);
         const delta = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(currLeader);
-
+        let rect: Rectangle = this;
         for (let [thisRectSharedSide, otherRectSharedSide] of sharedBoundsList) {
-            if (this.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
-                this.alignSide(thisRectSharedSide, currLeader, otherRectSharedSide);
+            if (rect.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
+                rect = rect.alignSide(thisRectSharedSide, currLeader, otherRectSharedSide);
             }
         }
 
-        return this.bounds;
+        return rect;
+    }
+    public adjacent(rects: Rectangle[]) {
+        return Array.from(Rectangle.ADJACENCY_LIST([...rects, this as Rectangle]).values()).find(list => list.includes(this));
     }
 
-    public static ADJACENCY_LIST(rects: Rectangle[]) {
+    public static ADJACENCY_LIST(rects: Rectangle[]): Map<number, Rectangle[]> {
         const adjLists = new Map();
         const rectLen = rects.length;
 
