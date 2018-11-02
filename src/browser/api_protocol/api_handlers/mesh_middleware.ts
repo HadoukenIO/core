@@ -187,21 +187,21 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
                 aggregateData.action = 'get-all-channels';
             }
             Promise.all(filteredRuntimes.map(runtime => runtime.fin.System.executeOnRemote(identity, aggregateData)))
-                .then(externalResults => {
-                    const externalRuntimeData = externalResults.reduce((result, runtime) => {
-                        if (runtime && runtime.data) {
-                            if (Array.isArray(runtime.data)) {
-                                return [...result, ...runtime.data];
-                            } else {
-                                return [...result, runtime.data];
-                            }
+            .then(externalResults => {
+                const externalRuntimeData = externalResults.reduce((result, runtime) => {
+                    if (runtime && runtime.data) {
+                        if (Array.isArray(runtime.data)) {
+                            return [...result, ...runtime.data];
+                        } else {
+                            return [...result, runtime.data];
                         }
-                        return result;
-                    }, []);
-                    const locals = { aggregate: externalRuntimeData };
-                    next(locals);
-                })
-                .catch(nack);
+                    }
+                    return result;
+                }, []);
+                const locals = { aggregate: externalRuntimeData };
+                next(locals);
+            })
+            .catch(nack);
         } else {
             next();
         }
