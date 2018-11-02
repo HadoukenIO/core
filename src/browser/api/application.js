@@ -1101,8 +1101,10 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         // save the original value of autoShow, but set it false so we can
         // show only after the DOMContentLoaded event to prevent the flash
-        opts.toShowOnRun = eOpts['autoShow'];
-        eOpts.show = false;
+        if (!isChromePageUrl(opts.url)) { // no API injection for chrome pages
+            opts.toShowOnRun = eOpts['autoShow'];
+            eOpts.show = false;
+        }
 
         appObj.mainWindow = new BrowserWindow(eOpts);
         appObj.mainWindow.setFrameConnectStrategy(eOpts.frameConnect || 'last');
