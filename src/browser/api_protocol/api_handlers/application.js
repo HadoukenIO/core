@@ -78,11 +78,11 @@ module.exports.init = function() {
     apiProtocolBase.registerActionMap(module.exports.applicationApiMap, 'Application');
 };
 
-function sendAppLog(identity, message) {
+function sendAppLog(identity, message, ack) {
     const payload = message.payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-    return Application.sendAppLog(appIdentity);
+    return Application.sendAppLog(appIdentity).then(() => ack(successAck));
 }
 
 function setTrayIcon(identity, rawMessage, ack, nack) {
