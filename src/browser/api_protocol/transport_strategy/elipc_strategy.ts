@@ -1,9 +1,8 @@
-import { AckMessage, AckFunc, AckPayload } from './ack';
+import { AckMessage, AckFunc, AckPayload, NackPayload } from './ack';
 import { ApiTransportBase, MessagePackage, MessageConfiguration } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
 import { Identity } from '../../../shapes';
-import { writeToLog } from '../../log';
 declare var require: any;
 
 const coreState = require('../../core_state');
@@ -80,6 +79,10 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                         }).catch(err => {
                             nack(err);
                         });
+                } else {
+                    const runtimeVersion = system.getVersion();
+                    const message = `API call ${data.action} not implemented in runtime version: ${runtimeVersion}.`;
+                    ack(new NackPayload(message));
                 }
             }
         });

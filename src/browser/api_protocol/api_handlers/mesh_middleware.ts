@@ -4,7 +4,7 @@ import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
 import { isLocalUuid } from '../../core_state';
-import { IdentityAddress } from '../../runtime_p2p/peer_connection_manager';
+import { IdentityAddress, PeerRuntime } from '../../runtime_p2p/peer_connection_manager';
 
 const SUBSCRIBE_ACTION = 'subscribe';
 const PUBLISH_ACTION = 'publish-message';
@@ -22,20 +22,34 @@ const apiMessagesToIgnore: any = {
     'unsubscribe-to-desktop-event': true
 };
 
+// NEW AGGREGATE APIS: add the point version to the map so that previous runtime versions are not polled
 const apiMessagesToAggregate: any = {
-    'create-channel': true,
-    'connect-to-channel': true,
-    'get-all-applications': true,
-    'get-all-channels': true,
-    'get-all-external-applications': true,
-    'get-all-windows': true,
-    'process-snapshot': true
+    'create-channel': 35,
+    'connect-to-channel': 35,
+    'get-all-applications': 1,
+    'get-all-channels': 35,
+    'get-all-external-applications': 1,
+    'get-all-windows': 1,
+    'process-snapshot': 1
 };
 
 //TODO: This is a workaround for a circular dependency issue in the api handler modules.
 const subscriberTriggeredEvents: any = {
     'subscribe': true,
     'unsubscribe': true
+};
+
+
+const filterRuntimes = (action: string, runtimes: PeerRuntime[]): PeerRuntime[] => {
+    const minimumVersion = apiMessagesToAggregate[action];
+    if (minimumVersion) {
+        return runtimes.filter(runtime => {
+            const ofVersion = runtime.portInfo.version.split('.')[2];
+            return +ofVersion >= +minimumVersion;
+        });
+    } else {
+        return runtimes;
+    }
 };
 
 //on a InterAppBus subscribe/unsubscribe send a subscriber-added/subscriber-removed event.
@@ -164,29 +178,30 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
     const isAggregateAction = apiMessagesToAggregate[action];
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
     const isLocalAction = !identity.runtimeUuid;
+    const filteredRuntimes = filterRuntimes(action, connectionManager.connections);
 
     try {
-        if (connectionManager.connections.length && isAggregateAction && isLocalAction) {
+        if (isAggregateAction && isLocalAction && filteredRuntimes.length) {
             const aggregateData = JSON.parse(JSON.stringify(data));
             if (action === 'create-channel') {
                 aggregateData.action = 'get-all-channels';
             }
-            Promise.all(connectionManager.connections.map(runtime => runtime.fin.System.executeOnRemote(identity, aggregateData)))
-            .then(externalResults => {
-                const externalRuntimeData = externalResults.reduce((result, runtime) => {
-                    if (runtime && runtime.data) {
-                        if (Array.isArray(runtime.data)) {
-                            return [...result, ...runtime.data];
-                        } else {
-                            return [...result, runtime.data];
+            Promise.all(filteredRuntimes.map(runtime => runtime.fin.System.executeOnRemote(identity, aggregateData)))
+                .then(externalResults => {
+                    const externalRuntimeData = externalResults.reduce((result, runtime) => {
+                        if (runtime && runtime.data) {
+                            if (Array.isArray(runtime.data)) {
+                                return [...result, ...runtime.data];
+                            } else {
+                                return [...result, runtime.data];
+                            }
                         }
-                    }
-                    return result;
-                }, []);
-                const locals = { aggregate: externalRuntimeData };
-                next(locals);
-            })
-            .catch(nack);
+                        return result;
+                    }, []);
+                    const locals = { aggregate: externalRuntimeData };
+                    next(locals);
+                })
+                .catch(nack);
         } else {
             next();
         }
