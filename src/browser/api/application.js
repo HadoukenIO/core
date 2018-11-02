@@ -893,7 +893,7 @@ Application.setZoomLevel = function(identity, level) {
     }
 };
 
-Application.sendAppLog = function(identity) {
+Application.sendApplicationLog = function(identity) {
     let app = Application.wrap(identity.uuid);
 
     const options = {
