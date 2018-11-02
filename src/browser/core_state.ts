@@ -17,7 +17,7 @@ import * as Shapes from '../shapes';
 import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
-import { getIdentityFromObject } from '../common/main';
+import { getIdentityFromObject, isEnableChromiumBuild } from '../common/main';
 
 interface ProxySettingsArgs {
     proxyAddress?: string;
@@ -802,11 +802,13 @@ export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitia
         channels: electronIPC.channels
     };
     const socketServerState = <PortInfo>getSocketServerState();
+    const enableChromiumBuild = isEnableChromiumBuild();
 
     return {
         options,
         entityInfo,
         elIPCConfig,
+        enableChromiumBuild,
         socketServerState,
         frames: Array.from(ofWin.frames.values())
     };

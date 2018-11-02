@@ -99,7 +99,7 @@ export class Rectangle {
         };
     }
 
-    // tslint:disable 
+    // tslint:disable
     public grow(h: number, v: number): Rectangle {
         let x: number = this.x;
         let y: number = this.y;
@@ -116,28 +116,22 @@ export class Rectangle {
 
         if (width < x) {
             width -= x;
-            if (width < Number.MIN_SAFE_INTEGER) width = Number.MIN_SAFE_INTEGER;
-            if (x < Number.MIN_SAFE_INTEGER) x = Number.MIN_SAFE_INTEGER;
-            else if (x > Number.MAX_VALUE) x = Number.MAX_VALUE;
+            if (width < Number.MIN_SAFE_INTEGER) { width = Number.MIN_SAFE_INTEGER; }
+            if (x < Number.MIN_SAFE_INTEGER) { x = Number.MIN_SAFE_INTEGER; } else if (x > Number.MAX_VALUE) { x = Number.MAX_VALUE; }
         } else {
-            if (x < Number.MIN_SAFE_INTEGER) x = Number.MIN_SAFE_INTEGER;
-            else if (x > Number.MAX_VALUE) x = Number.MAX_VALUE;
+            if (x < Number.MIN_SAFE_INTEGER) { x = Number.MIN_SAFE_INTEGER; } else if (x > Number.MAX_VALUE) { x = Number.MAX_VALUE; }
             width -= x;
-            if (width < Number.MIN_SAFE_INTEGER) width = Number.MIN_SAFE_INTEGER;
-            else if (width > Number.MAX_VALUE) width = Number.MAX_VALUE;
+            if (width < Number.MIN_SAFE_INTEGER) { width = Number.MIN_SAFE_INTEGER; } else if (width > Number.MAX_VALUE) { width = Number.MAX_VALUE; }
         }
 
         if (height < y) {
             height -= y;
-            if (height < Number.MIN_SAFE_INTEGER) height = Number.MIN_SAFE_INTEGER;
-            if (y < Number.MIN_SAFE_INTEGER) y = Number.MIN_SAFE_INTEGER;
-            else if (y > Number.MAX_VALUE) y = Number.MAX_VALUE;
+            if (height < Number.MIN_SAFE_INTEGER) { height = Number.MIN_SAFE_INTEGER; }
+            if (y < Number.MIN_SAFE_INTEGER) { y = Number.MIN_SAFE_INTEGER; } else if (y > Number.MAX_VALUE) { y = Number.MAX_VALUE; }
         } else {
-            if (y < Number.MIN_SAFE_INTEGER) y = Number.MIN_SAFE_INTEGER;
-            else if (y > Number.MAX_VALUE) y = Number.MAX_VALUE;
+            if (y < Number.MIN_SAFE_INTEGER) { y = Number.MIN_SAFE_INTEGER; } else if (y > Number.MAX_VALUE) { y = Number.MAX_VALUE; }
             height -= y;
-            if (height < Number.MIN_SAFE_INTEGER) height = Number.MIN_SAFE_INTEGER;
-            else if (height > Number.MAX_VALUE) height = Number.MAX_VALUE;
+            if (height < Number.MIN_SAFE_INTEGER) { height = Number.MIN_SAFE_INTEGER; } else if (height > Number.MAX_VALUE) { height = Number.MAX_VALUE; }
         }
 
         return new Rectangle(x, y, width, height, this.opts);
@@ -164,13 +158,13 @@ export class Rectangle {
         let oppositeDelta: SideName;
 
         switch (side) {
-            case "top":
-            case "bottom": {
+            case 'top':
+            case 'bottom': {
                 delta = 'top';
-                oppositeDelta = 'bottom'
+                oppositeDelta = 'bottom';
             } break;
-            case "left":
-            case "right": {
+            case 'left':
+            case 'right': {
                 delta = 'left';
                 oppositeDelta = 'right';
             }
@@ -186,7 +180,6 @@ export class Rectangle {
 
         return null;
     }
-
 
 
     public sharedBounds(rect: Rectangle): SharedBounds {
@@ -222,7 +215,7 @@ export class Rectangle {
             let pair: SharedBound;
 
             if (correspondingSide) {
-                pair = [side, correspondingSide]
+                pair = [side, correspondingSide];
             }
 
             return pair;
@@ -235,7 +228,7 @@ export class Rectangle {
             y: rect.y - this.y,
             width: rect.width - this.width,
             height: rect.height - this.height
-        }
+        };
     }
     public outerBounds(rect: RectangleBase) {
         return {
@@ -243,7 +236,7 @@ export class Rectangle {
             y: Math.min(rect.y, this.y),
             width: Math.max(rect.width, this.width),
             height: Math.max(rect.height, this.height)
-        }
+        };
     }
 
     // this is only for resize, move would be different
@@ -264,28 +257,28 @@ export class Rectangle {
     public alignSide(mySide: SideName, rect: Rectangle, sideToAlign: SideName) {
         const changes = this.bounds;
         switch (mySide) {
-            case "left":
+            case 'left':
                 changes.width += (this.x - rect[sideToAlign]);
                 changes.x = rect[sideToAlign];
                 if (changes.width < this.opts.minWidth) {
                     changes.width = this.opts.minWidth;
                 }
                 break;
-            case "right":
+            case 'right':
                 changes.width += (rect[sideToAlign] - (this.x + this.width));
                 if (changes.width < this.opts.minWidth) {
                     changes.x = rect[sideToAlign] - this.opts.minWidth;
                     changes.width = this.opts.minWidth;
                 }
                 break;
-            case "top":
+            case 'top':
                 changes.height += (this.y - rect[sideToAlign]);
                 changes.y = rect[sideToAlign];
                 if (changes.height < this.opts.minHeight) {
                     changes.height = this.opts.minHeight;
                 }
                 break;
-            case "bottom":
+            case 'bottom':
                 changes.height += (rect[sideToAlign] - (this.y + this.height));
                 if (changes.height < this.opts.minHeight) {
                     changes.y = rect[sideToAlign] - this.opts.minHeight;
@@ -295,7 +288,7 @@ export class Rectangle {
             default:
                 return null as never;
         }
-        return Rectangle.CREATE_FROM_BOUNDS(changes, this.opts)
+        return Rectangle.CREATE_FROM_BOUNDS(changes, this.opts);
     }
     public shift(delta: RectangleBase) {
         return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts);
@@ -306,7 +299,7 @@ export class Rectangle {
         const currLeader = Rectangle.CREATE_FROM_BOUNDS(currentBounds);
         const delta = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(currLeader);
         let rect: Rectangle = this;
-        for (let [thisRectSharedSide, otherRectSharedSide] of sharedBoundsList) {
+        for (const [thisRectSharedSide, otherRectSharedSide] of sharedBoundsList) {
             if (rect.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
                 rect = rect.alignSide(thisRectSharedSide, currLeader, otherRectSharedSide);
             }

@@ -267,15 +267,13 @@ describe('Rectangle', () => {
         const rect1To = Rectangle.CREATE_FROM_BOUNDS({'x': 5104, 'y': -908, 'width': 306, 'height': 697});
         const rect = Rectangle.CREATE_FROM_BOUNDS({ 'x': 5104, 'y': -686, 'width': 340, 'height': 126 });
         const result = rect.move(rect1From, rect1To);
-        console.warn(result.bounds);
-        assert(result.height > 0);
+        assert(result.height === 38);
     });
     it('doesnt move to negative height2', () => {
         const rect1From = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': -100, 'width': 100, 'height': 100 });
         const rect1To = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': -200, 'width': 100, 'height': 200 });
         const rect = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': -150, 'width': 100, 'height': 50 });
         const result = rect.move(rect1From, rect1To);
-        console.warn(result.bounds);
-        assert(result.height > 0);
+        assert(result.height === 38);
     });
 });

@@ -257,7 +257,9 @@ export default class BoundsChangedStateTracker {
     private sharedBoundPixelDiff = 5;
 
     // TODO this needs to account for if the window boarder has been crossed over
-
+    private sharedBound = (boundOne: number, boundTwo: number): boolean => {
+        return Math.abs(boundOne - boundTwo) < this.sharedBoundPixelDiff;
+    };
 
     private handleGroupedResize = (windowToUpdate: OpenFinWindow, bounds: RectangleBase): RectangleBase => {
         if (!trackingResize) {
