@@ -236,7 +236,6 @@ export class WindowGroups extends EventEmitter {
         const windowGroup = this.getGroup(groupUuid);
         const windowGroupProxies = windowGroup.filter(w => w.isProxy);
         if (windowGroup.length < 2 || windowGroup.length === windowGroupProxies.length) {
-            //const lastWindow = this.getGroup(groupUuid)[0];
             await Promise.all(windowGroup.map(async (win) => {
                 await this._removeWindowFromGroup(groupUuid, win);
                 if (!win.isProxy) {

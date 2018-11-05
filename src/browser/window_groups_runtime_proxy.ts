@@ -10,6 +10,8 @@ import { _Window } from 'hadouken-js-adapter/out/types/src/api/window/window';
 import { EventEmitter } from 'events';
 import { writeToLog } from './log';
 
+//Only allow window proxies to >=.35 runtimes.
+const MIN_API_VER = 37;
 class MyEmitter extends EventEmitter {}
 const externalWindowsProxyList = new Map<string, RuntimeProxyWindow>();
 
@@ -28,7 +30,6 @@ export class RuntimeProxyWindow {
     public window: OpenFinWindow;
     public wrappedWindow: _Window;
     public isRegistered: boolean;
-    //TODO: this is a terrible name
     public sourceIdentity: Identity;
 
     constructor(hostRuntime: PeerRuntime, wrappedWindow: _Window, nativeId: string) {
@@ -107,9 +108,7 @@ export class RuntimeProxyWindow {
             writeToLog('info', 'Group changed event');
             writeToLog('info', evt);
 
-            //We only care for leave now so we look for target.
             if (this.window.uuid === evt.targetWindowAppUuid && this.window.name === evt.targetWindowName) {
-                //we will construct a state object here but now let's focus on leave group:
                 if (evt.reason === 'leave') {
                     this.raiseChangeEvents(this.sourceIdentity, {
                         uuid: evt.targetWindowAppUuid,
@@ -117,8 +116,6 @@ export class RuntimeProxyWindow {
                     }, 'remove', []);
                 }
                 if (evt.reason === 'join') {
-                    //TODO: handle the case where the window has joined another group
-                    //(check the memberOf and source/target groups properties)
                     this.raiseChangeEvents(this.sourceIdentity, {
                         uuid: evt.sourceWindowAppUuid,
                         name: evt.sourceWindowName
@@ -174,6 +171,10 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         return existingProxyWindow;
     } else {
         const { runtime: hostRuntime} = await connectionManager.resolveIdentity(identity);
+        const apiVersion = hostRuntime.portInfo.version.split('.')[2];
+        if (+apiVersion < MIN_API_VER) {
+            throw new Error(`Window belongs to an older version, cannot group with Windows on version ${ hostRuntime.portInfo.version }`);
+        }
         const wrappedWindow = hostRuntime.fin.Window.wrapSync(identity);
         const nativeId = await wrappedWindow.getNativeId();
         return new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId);
