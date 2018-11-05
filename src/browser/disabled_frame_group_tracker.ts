@@ -1,11 +1,20 @@
 import { OpenFinWindow } from '../shapes';
 import of_events from './of_events';
 import route from '../common/route';
-import { windowTransaction } from 'electron';
+import { windowTransaction, BrowserWindow } from 'electron';
 const WindowTransaction = require('electron').windowTransaction;
 import {Rectangle, RectangleBase} from './rectangle';
 import { writeToLog } from './log';
-
+const isWin32 = process.platform === 'win32';
+const getState = (browserWindow: BrowserWindow) => {
+    if (browserWindow && browserWindow.isMinimized()) {
+        return 'minimized';
+    } else if (browserWindow && browserWindow.isMaximized()) {
+        return 'maximized';
+    } else {
+        return 'normal';
+    }
+};
 /*
 Edge cases
 respect max
@@ -13,11 +22,11 @@ whether to restore frame on leave
 disabled window moving
 event propagation
 */
-
+type WinId = string;
 const groupTrackerCache = new Map<string, GroupTracker>();
 export class GroupTracker {
-    private windowMap: Map<string, OpenFinWindow>;
-    private listenerCache: Map<string, (...args: any[]) => void> = new Map();
+    private windowMap: Map<WinId, OpenFinWindow>;
+    private listenerCache: Map<WinId, (...args: any[]) => void> = new Map();
     private interval: any;
     private boundsChanging = false;
     private constructor(private groupId: string) {
@@ -29,7 +38,7 @@ export class GroupTracker {
     }
     private payloadCache: [string, any, RectangleBase, number][] = [];
     public addWindowToGroup(win: OpenFinWindow) {
-        const winId = win.browserWindow.nativeId;
+        const winId = <WinId>win.browserWindow.nativeId;
         win.browserWindow.setUserMovementEnabled(false);
         this.windowMap.set(winId, win);
         //Need to remove handler on leave
@@ -37,29 +46,89 @@ export class GroupTracker {
             if (this.boundsChanging) {
                 this.payloadCache.push([winId, e, newBounds, changeType]);
             } else {
+                const uuid = win.uuid;
+                const name = win.name;
+                const rect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+                const moved = new Set();
+                of_events.emit(route.window('begin-user-bounds-changing', uuid, name), {
+                    ...rect.eventBounds,
+                    uuid,
+                    name,
+                    topic: 'begin-user-bounds-changing',
+                    type: 'window',
+                    windowState: getState(win.browserWindow)
+                });
                 this.boundsChanging = true;
                 this.handleBoundsChanging(winId, e, newBounds, changeType);
                 this.interval = setInterval(() => {
                     if (this.payloadCache.length) {
-                       const [a, b, c, d] = this.payloadCache.pop();
-                       this.handleBoundsChanging(a, b, c, d);
+                        const [a, b, c, d] = this.payloadCache.pop();
+                        const moves = this.handleBoundsChanging(a, b, c, d);
+                        moves.forEach((pair) => {
+                            moved.add(pair[0].browserWindow.nativeId);
+                            this.emitChange(pair, d);
+                        });
                        this.payloadCache = [];
                     }
                 }, 16);
                 win.browserWindow.once('disabled-frame-bounds-changed', (e: any, newBounds: RectangleBase, changeType: number) => {
                     this.boundsChanging = false;
+                    clearInterval(this.interval);
                     this.payloadCache = [];
                     this.handleBoundsChanging(winId, e, newBounds, changeType);
-                    clearInterval(this.interval);
+                    moved.forEach((winId) => {
+                        const win = this.windowMap.get(winId);
+                        const rect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+                        this.emitChange([win, rect], changeType, 'changed');
+                    });
                 });
             }
         };
         this.listenerCache.set(winId, listener);
         win.browserWindow.on('disabled-frame-bounds-changing', listener);
     }
-
-    private handleBoundsChanging = (winId: string, e: any, newBounds: RectangleBase, changeType: number): any => {
+    private handleBatchedMove(moves: [OpenFinWindow, Rectangle][]) {
+        if (isWin32) {
+            const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
+            const flags = noZorder + noActivate;
+            const wt = new WindowTransaction.Transaction(0);
+            moves.forEach(([win, rect]) => {
+                const hwnd = parseInt(win.browserWindow.nativeId, 16);
+                wt.setWindowPos(hwnd, { ...rect.transactionBounds, flags });
+            });
+            wt.commit();
+        } else {
+            moves.forEach(([win, rect]) => {
+                win.browserWindow.setBounds(rect.bounds);
+            });
+        }
+    }
+    private emitChange = (
+        [win, rect] : [OpenFinWindow, Rectangle],
+        changeType: number,
+        eventType: 'changing' | 'changed' = 'changing'
+    ) => {
+        const topic = `bounds-${eventType}`;
+        const uuid = win.uuid;
+        const name = win.name;
+        of_events.emit(route.window(topic, uuid, name), {
+            ...rect.eventBounds,
+            changeType,
+            uuid,
+            name,
+            topic,
+            type: 'window',
+            deffered: true
+        });
+    }
+    private handleBoundsChanging = (
+        winId: WinId,
+        e: any,
+        newBounds: RectangleBase,
+        changeType: number
+    ) => {
         const win = this.windowMap.get(winId);
+        let moves: [OpenFinWindow, Rectangle][] = [];
         switch (changeType) {
             case 0: {
                 const thisBounds = this.windowMap.get(winId).browserWindow.getBounds();
@@ -67,51 +136,29 @@ export class GroupTracker {
                 const wt = new WindowTransaction.Transaction(0);
                 const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
                 const flags = noZorder + noSize + noActivate;
-
-                this.windowMap.forEach(win => {
+                moves = Array.from(this.windowMap, ([id, win]): [OpenFinWindow, Rectangle] => {
                     const bounds = win.browserWindow.getBounds();
-                    const hwnd = parseInt(win.browserWindow.nativeId, 16);
-                    const rect = Rectangle.CREATE_FROM_BOUNDS(bounds).shift(delta).transactionBounds;
-                    wt.setWindowPos(hwnd, { ...rect, flags });
+                    const rect = Rectangle.CREATE_FROM_BOUNDS(bounds).shift(delta);
+                    return [win, rect];
                 });
-                wt.commit();
             } break;
             default: {
                 const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(this.windowMap.get(winId).browserWindow);
                 const moveZone = thisRect.outerBounds(newBounds);
-                const wt = new WindowTransaction.Transaction(0);
-                const { flag: { noZorder, noActivate } } = WindowTransaction;
-                const flags = noZorder + noActivate;
                 const otherWindows = Array.from(this.windowMap.values()).filter(w => w !== win);
-                const otherRects = otherWindows.map(w => Rectangle.CREATE_FROM_BROWSER_WINDOW(w.browserWindow));
-                const adjacent = thisRect.adjacent(otherRects);
                 this.windowMap.forEach(win => {
-                    const bounds = win.browserWindow.getBounds();
-                    const hwnd = parseInt(win.browserWindow.nativeId, 16);
-                    const rect = Rectangle.CREATE_FROM_BOUNDS(bounds).move(thisRect, newBounds).transactionBounds;
-                    wt.setWindowPos(hwnd, { ...rect, flags });
+                    const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+                    const movedRect = baseRect.move(thisRect, newBounds);
+                    if (baseRect.moved(movedRect)) {
+                        moves.push([win, movedRect]);
+                    }
                 });
-                wt.commit();
             } break;
-            // default: {
-            //     const thisBounds = this.windowMap.get(winId).browserWindow.getBounds();
-            //     const delta = Rectangle.CREATE_FROM_BOUNDS(thisBounds).delta(newBounds);
-            //     const wt = new WindowTransaction.Transaction(0);
-            //     const { flag: { noZorder, noActivate } } = WindowTransaction;
-            //     const flags = noZorder + noActivate;
-
-            //     this.windowMap.forEach(win => {
-            //         const bounds = win.browserWindow.getBounds();
-            //         const hwnd = parseInt(win.browserWindow.nativeId, 16);
-            //         const rect = Rectangle.CREATE_FROM_BOUNDS(bounds).move(thisBounds, newBounds).transactionBounds;
-            //         wt.setWindowPos(hwnd, { ...rect, flags });
-            //     });
-            //     wt.commit();
-
-            // }break;
         }
-    }
-    public removeWindowFromGroup(win: OpenFinWindow) {
+        this.handleBatchedMove(moves);
+        return moves;
+    };
+    public removeWindowFromGroup = (win: OpenFinWindow) => {
         win.browserWindow.setUserMovementEnabled(true);
         const winId = win.browserWindow.nativeId;
         win.browserWindow.removeListener('disabled-frame-bounds-changing', this.listenerCache.get(winId));

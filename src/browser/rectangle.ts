@@ -90,6 +90,14 @@ export class Rectangle {
             height: this.height
         };
     }
+    get eventBounds() {
+        return {
+            left: this.x,
+            top: this.y,
+            width: this.width,
+            height: this.height
+        };
+    }
     get transactionBounds() {
         return {
             x: this.x,
@@ -221,7 +229,14 @@ export class Rectangle {
             return pair;
         }).filter(x => x);
     }
-
+    public moved(rect: RectangleBase) {
+        return !(
+            rect.x === this.x
+            && rect.y === this.y
+            && rect.height === this.height
+            && rect.width === this.width
+        )
+    }
     public delta(rect: RectangleBase): RectangleBase {
         return {
             x: rect.x - this.x,
