@@ -62,6 +62,9 @@ let Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
+    'api-injection-disabled': {
+        topic: 'api-injection-disabled'
+    },
     'api-injection-failed': {
         topic: 'api-injection-failed'
     },
@@ -795,6 +798,16 @@ Window.create = function(id, opts) {
                     if (_options.autoShow) {
                         browserWindow.show();
                     }
+                    constructorCallbackMessage.data = {
+                        httpResponseCode,
+                        apiInjected: false
+                    };
+                    observer.next(constructorCallbackMessage);
+                });
+                ofEvents.once(route.window('api-injection-disabled', uuid, name), () => {
+                    electronApp.vlog(1, `api-injection-disabled ${uuid}-${name}`);
+                    // can happen for chrome pages
+                    browserWindow.show();
                     constructorCallbackMessage.data = {
                         httpResponseCode,
                         apiInjected: false
