@@ -136,12 +136,7 @@ export class WindowGroups extends EventEmitter {
             return;
         }
 
-        if (win.isProxy) {
-            const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(win);
-            runtimeProxyWindow.deregister();
-        }
-
-        this._removeWindowFromGroup(groupUuid, win);
+        await this._removeWindowFromGroup(groupUuid, win);
 
         if (groupUuid) {
             this.emit('group-changed', {
@@ -153,7 +148,7 @@ export class WindowGroups extends EventEmitter {
         win.groupUuid = null;
 
         if (groupUuid) {
-            this._handleDisbandingGroup(groupUuid);
+            await this._handleDisbandingGroup(groupUuid);
         }
     };
 
@@ -229,24 +224,33 @@ export class WindowGroups extends EventEmitter {
         return _groupUuid;
     };
 
-    private _removeWindowFromGroup = (groupUuid: string, win: OpenFinWindow): void => {
+    private _removeWindowFromGroup = async (groupUuid: string, win: OpenFinWindow): Promise<void> => {
         delete this._windowGroups[groupUuid][win.name];
+        if (win.isProxy) {
+            const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(win);
+            runtimeProxyWindow.deregister();
+        }
     };
 
-    private _handleDisbandingGroup = (groupUuid: string): void => {
-        if (this.getGroup(groupUuid).length < 2) {
-            const lastWindow = this.getGroup(groupUuid)[0];
-            this._removeWindowFromGroup(groupUuid, lastWindow);
-            this.emit('group-changed', {
-                groupUuid,
-                payload: generatePayload('disband', lastWindow, lastWindow, [], [])
-            });
-            lastWindow.groupUuid = null;
+    private _handleDisbandingGroup = async (groupUuid: string): Promise<void> => {
+        const windowGroup = this.getGroup(groupUuid);
+        const windowGroupProxies = windowGroup.filter(w => w.isProxy);
+        if (windowGroup.length < 2 || windowGroup.length === windowGroupProxies.length) {
+            //const lastWindow = this.getGroup(groupUuid)[0];
+            await Promise.all(windowGroup.map(async (win) => {
+                await this._removeWindowFromGroup(groupUuid, win);
+                if (!win.isProxy) {
+                    this.emit('group-changed', {
+                        groupUuid,
+                        payload: generatePayload('disband', win, win, [], [])
+                    });
+                }
+                win.groupUuid = null;
+            }));
             delete this._windowGroups[groupUuid];
         }
     };
 }
-
 
 // Helpers
 
