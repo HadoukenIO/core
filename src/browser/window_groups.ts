@@ -2,6 +2,8 @@ import { EventEmitter } from 'events';
 
 import * as _ from 'underscore';
 import { OpenFinWindow } from '../shapes';
+import { GroupTracker } from './disabled_frame_group_tracker';
+import { argo } from './core_state';
 
 let uuidSeed = 0;
 
@@ -142,12 +144,18 @@ class WindowGroups extends EventEmitter {
 
     private _addWindowToGroup = (uuid: string, win: OpenFinWindow): string => {
         const _uuid = uuid || generateUuid();
+        if (argo['disabled-frame-groups']) {
+            GroupTracker.GET_GROUP_TRACKER(_uuid).addWindowToGroup(win);
+        }
         this._windowGroups[_uuid] = this._windowGroups[_uuid] || {};
         this._windowGroups[_uuid][win.name] = win;
         return _uuid;
     };
 
     private _removeWindowFromGroup = (uuid: string, win: OpenFinWindow): void => {
+        if (argo['disabled-frame-groups']) {
+            GroupTracker.GET_GROUP_TRACKER(uuid).removeWindowFromGroup(win);
+        }
         delete this._windowGroups[uuid][win.name];
     };
 

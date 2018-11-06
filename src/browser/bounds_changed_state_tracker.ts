@@ -101,7 +101,9 @@ export default class BoundsChangedStateTracker {
             'bounds-changed': (): void => {
                 const ofWindow = coreState.getWindowByUuidName(uuid, name);
                 const groupUuid = ofWindow ? ofWindow.groupUuid : null;
-
+                if (groupUuid && coreState.argo['disabled-frame-groups']) {
+                    return;
+                }
                 const dispatchedChange = this.handleBoundsChange(true);
 
                 if (dispatchedChange) {
