@@ -32,16 +32,13 @@ export class RuntimeProxyWindow {
     public isRegistered: boolean;
     public sourceIdentity: Identity;
 
-    constructor(hostRuntime: PeerRuntime, wrappedWindow: _Window, nativeId: string) {
+    constructor(hostRuntime: PeerRuntime, wrappedWindow: _Window, nativeId: string, windowOptions: any) {
         this.hostRuntime = hostRuntime;
         this.wrappedWindow = wrappedWindow;
         const { identity: { uuid, name } } = wrappedWindow;
 
         const proxyWindowOptions = {
-            hwnd: '' + nativeId,
-            uuid,
-            name,
-            url: ''
+            hwnd: '' + nativeId, ...windowOptions
         };
         const browserwindow: any = new BrowserWindowElectron(proxyWindowOptions);
 
@@ -184,7 +181,8 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         }
         const wrappedWindow = hostRuntime.fin.Window.wrapSync(identity);
         const nativeId = await wrappedWindow.getNativeId();
-        return new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId);
+        const windowOptions = await wrappedWindow.getOptions();
+        return new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId, windowOptions);
     }
 }
 
