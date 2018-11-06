@@ -1,10 +1,9 @@
 import { OpenFinWindow } from '../shapes';
 import of_events from './of_events';
 import route from '../common/route';
-import { windowTransaction, BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron';
 const WindowTransaction = require('electron').windowTransaction;
 import {Rectangle, RectangleBase} from './rectangle';
-import { writeToLog } from './log';
 const isWin32 = process.platform === 'win32';
 const getState = (browserWindow: BrowserWindow) => {
     if (browserWindow && browserWindow.isMinimized()) {
@@ -127,15 +126,11 @@ export class GroupTracker {
         newBounds: RectangleBase,
         changeType: number
     ) => {
-        const win = this.windowMap.get(winId);
         let moves: [OpenFinWindow, Rectangle][] = [];
         switch (changeType) {
             case 0: {
                 const thisBounds = this.windowMap.get(winId).browserWindow.getBounds();
                 const delta = Rectangle.CREATE_FROM_BOUNDS(thisBounds).delta(newBounds);
-                const wt = new WindowTransaction.Transaction(0);
-                const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
-                const flags = noZorder + noSize + noActivate;
                 moves = Array.from(this.windowMap, ([id, win]): [OpenFinWindow, Rectangle] => {
                     const bounds = win.browserWindow.getBounds();
                     const rect = Rectangle.CREATE_FROM_BOUNDS(bounds).shift(delta);
@@ -144,8 +139,6 @@ export class GroupTracker {
             } break;
             default: {
                 const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(this.windowMap.get(winId).browserWindow);
-                const moveZone = thisRect.outerBounds(newBounds);
-                const otherWindows = Array.from(this.windowMap.values()).filter(w => w !== win);
                 this.windowMap.forEach(win => {
                     const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
                     const movedRect = baseRect.move(thisRect, newBounds);

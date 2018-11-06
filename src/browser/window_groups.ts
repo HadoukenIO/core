@@ -24,7 +24,7 @@ class WindowGroups extends EventEmitter {
 
     public joinGroup = (source: OpenFinWindow, target: OpenFinWindow): void => {
         const sourceGroupUuid = source.groupUuid;
-        const targetGroupUuid = target.groupUuid;
+        let targetGroupUuid = target.groupUuid;
 
         // cannot join a group with yourself
         if (source === target) {
@@ -46,7 +46,7 @@ class WindowGroups extends EventEmitter {
         // a brand new group and returns its uuid
         source.groupUuid = this._addWindowToGroup(targetGroupUuid, source);
         if (!targetGroupUuid) {
-            target.groupUuid = this._addWindowToGroup(source.groupUuid, target);
+            target.groupUuid = targetGroupUuid = this._addWindowToGroup(source.groupUuid, target);
         }
 
         const payload = generatePayload('join', source, target, this.getGroup(sourceGroupUuid), this.getGroup(targetGroupUuid));
