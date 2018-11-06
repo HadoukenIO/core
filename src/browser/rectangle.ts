@@ -1,4 +1,6 @@
 import { BrowserWindow } from '../shapes';
+import { writeToLog } from './log';
+const l = (x: any) => writeToLog(1, x, true);
 
 type SideName = 'top' | 'right' | 'bottom' | 'left';
 type SharedBounds = {
@@ -12,6 +14,11 @@ type SharedBound = Array<SideName>;
 type BoundIdentifier = [Rectangle, SideName];
 type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
 export type SharedBoundsList = Array<SharedBound>;
+type Graph = [number[], number[][]];
+type GraphSet = {
+    vertices: Set<number>;
+    edges: Set<string>
+};
 
 interface Opts {
     minWidth?: number;
@@ -347,4 +354,178 @@ export class Rectangle {
 
         return adjLists;
     }
+
+    public static GRAPH(rects: Rectangle[]): Graph  {
+        const edges = [];
+        const vertices: Array<number> = [];
+        const rectLen = rects.length;
+
+        for (let i = 0; i < rectLen; i++) {
+            const rect = rects[i];
+            vertices.push(i);
+
+            for (let ii = 0; ii < rectLen; ii++) {
+                if (i !== ii) {
+                    // todo put this back to "intersection"
+                    if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
+                        edges.push([i, ii]);
+                    }
+                }
+            }
+        }
+
+        return [vertices, edges];
+    }
+
+    public static GRAPH_WITH_SIDE_DISTANCES(rects: Rectangle[])  {
+        const edges: Set<string> = new Set();
+        const edgeDistances: Map<string, number> = new Map();
+        
+        const vertices: Set<number> = new Set();
+        const rectLen = rects.length;
+
+        for (let i = 0; i < rectLen; i++) {
+            const rect = rects[i];
+            vertices.add(i);
+
+            for (let ii = 0; ii < rectLen; ii++) {
+                if (i !== ii) {
+                    // todo put this back to "intersection"
+                    if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
+                        const sharedBoundsList = rect.sharedBoundsList(rects[ii]);
+                        
+                        sharedBoundsList.forEach((sides) => {
+                            const [mySide, otherSide] = sides;
+                            const keyThing = [i, ii, Side[mySide], Side[otherSide]].toString();
+                            edges.add(keyThing)
+                            edgeDistances.set(keyThing, Math.abs(rect[mySide] - rects[ii][otherSide]));
+                            // return rect[mySide] - rects[ii][otherSide];
+                        });
+
+                        // diffs.forEach(diff => {
+                        //     edges.push([i, ii, diff]);
+                        // })
+                    }
+                }
+            }
+        }
+
+        return {vertices, edges, edgeDistances};
+    }
+
+    public static IS_SUBGRAPH_CLOSER (a: any, b: any) {
+        for (const v of a.vertices) {
+            if (!b.vertices.has(v)) {
+                writeToLog(1, `missing vert ${v}` , true);
+                return false;
+            }
+        }
+
+        for (const e of a.edges) {
+            if (!b.edges.has(e)) {
+                writeToLog(1, `missing edge ${e}` , true);
+                writeToLog(1, `the edge list ${JSON.stringify([...b.edges])}` , true);
+                return false;
+            } else if (b.edgeDistances.get(e) > a.edgeDistances.get(e)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static SETIFY_GRAPH (graph: Graph): GraphSet {
+
+        const vertices = new Set();
+        const edges = new Set();
+        graph[0].forEach(v => vertices.add(v));
+        graph[1].forEach(e => edges.add(e.toString()));
+        return {vertices, edges};
+    }
+
+    // is a a subgraph of b
+    public static IS_SUBGRAPH (a: GraphSet, b: GraphSet) {
+        for (const v of a.vertices) {
+            if (!b.vertices.has(v)) {
+                // writeToLog(1, `missing vert ${v}` , true);
+                return false;
+            }
+        }
+
+        for (const e of a.edges) {
+            if (!b.edges.has(e)) {
+                // writeToLog(1, `missing edge ${e}` , true);
+                // writeToLog(1, `the edge list ${JSON.stringify([...b.edges])}` , true);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static DISTANCES(graph: (number[] | number[][])[] , refV: number) {
+        const [vertices, edges] = graph;
+        const distances = new Map();
+
+        for (let v in vertices) {
+            distances.set(+v, Infinity);
+        }
+
+        distances.set(refV, 0);
+
+        const toVisit = [refV];
+
+        while (toVisit.length) {
+            const u = toVisit.shift();
+
+            const e = (<number [][]>edges).filter(([uu]): boolean => uu === u);
+            
+            e.forEach(([u, v]) => {
+                if (distances.get(v) === Infinity) {
+                    toVisit.push(v);
+                    distances.set(v, distances.get(u) + 1); 
+                }
+            });
+        }
+
+        return distances;
+    }
+
+    public static BREADTH_WALK(graph: (number[] | number[][])[] , refV: number) {
+        const [vertices, edges] = graph;
+        const distances = new Map();
+
+        for (let v in vertices) {
+            distances.set(+v, []);
+        }
+
+        distances.set(refV, [refV]);
+
+        const toVisit = [refV];
+
+        while (toVisit.length) {
+            const u = toVisit.shift();
+
+            const e = (<number [][]>edges).filter(([uu]): boolean => uu === u);
+            
+            e.forEach(([u, v]) => {
+                if (distances.get(v).slice(-1)[0] !== v) {
+                    toVisit.push(v);
+                    const d = distances.get(u).concat(distances.get(v));
+
+                    d.push(v);
+                    distances.set(v, d); 
+                }
+            });
+        }
+
+        return distances;
+    }
+}
+
+enum Side {
+    top,
+    right,
+    bottom,
+    left
 }
