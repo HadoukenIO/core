@@ -81,7 +81,7 @@ export class RuntimeProxyWindow {
         const remoteWindowGroup = await this.getRemoteWindowGroup();
         await Promise.all(remoteWindowGroup.map(async w => {
             if (!w.isRegistered) {
-                await w.wireUpEvents();
+                await w.registerSingle(sourceIdentity);
             }
         }));
         return remoteWindowGroup;
