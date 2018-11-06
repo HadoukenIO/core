@@ -26,7 +26,7 @@ let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 import WindowGroups from '../window_groups';
-import { sendToRVM } from '../rvm/utils';
+import { sendToRVM, stopRVMHeartbeatTimer, startRVMHeartbeatTimer } from '../rvm/utils';
 import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
@@ -610,6 +610,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         ofEvents.on(route.application(appEvent, uuid), sendAppsEventsToRVMListener);
     });
 
+    startRVMHeartbeatTimer(argo['rvm-heartbeat-interval']);
 
     //for backwards compatibility main window needs to have name === uuid
     mainWindowOpts = Object.assign({}, mainWindowOpts, { name: uuid }); //avoid mutating original object
@@ -708,6 +709,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                 // Unregister all shortcuts.
                 globalShortcut.unregisterAll();
 
+                stopRVMHeartbeatTimer();
             } catch (err) {
                 // comma separation seems to fail core side
                 console.error('Error shutting down runtime');

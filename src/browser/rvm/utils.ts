@@ -5,7 +5,7 @@ import { setTimeout } from 'timers';
  * Interface for [sendToRVM] method
  */
 interface SendToRVMOpts {
-    topic: 'application';
+    topic: 'application' | 'system';
     action: string;
     sourceUrl?: string;
     data?: any;
@@ -19,7 +19,8 @@ const maxBytes: number = 1000000;
 let consoleMessageQueue: ConsoleMessage[] = [];
 let isFlushScheduled: boolean = false;
 let totalBytes: number = 0;
-let timer: NodeJS.Timer = null;
+let consoleMessageTimer: NodeJS.Timer = null;
+let heartbeatTimer: NodeJS.Timer = null;
 
 function flushConsoleMessageQueue(): void {
     totalBytes = 0;
@@ -43,6 +44,36 @@ function flushConsoleMessageQueue(): void {
     sendToRVM(obj, true);
 }
 
+function sendRVMHeartbeat() {
+    const obj: SendToRVMOpts = {
+        topic: 'system',
+        action: 'heartbeat',
+        sourceUrl: '',
+        runtimeVersion: System.getVersion()
+    };
+
+    sendToRVM(obj);
+}
+
+export function startRVMHeartbeatTimer(interval: number) {
+    if (heartbeatTimer) {
+        return;
+    }
+    if (!interval) {
+        // Default interval to 5sec
+        interval = 5000;
+    }
+
+    heartbeatTimer = setInterval(sendRVMHeartbeat, interval);
+}
+
+export function stopRVMHeartbeatTimer() {
+    if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+    }
+}
+
 export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage): void {
     consoleMessageQueue.push(consoleMessage);
 
@@ -51,9 +82,9 @@ export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessag
 
     // If we have exceeded the byte threshold for messages, flush the queue immediately
     if (totalBytes >= maxBytes) {
-        if (timer !== null) {
-            clearTimeout(timer);
-            timer = null;
+        if (consoleMessageTimer !== null) {
+            clearTimeout(consoleMessageTimer);
+            consoleMessageTimer = null;
         }
 
         flushConsoleMessageQueue();
@@ -61,7 +92,7 @@ export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessag
     // Otherwise if no timer already set, set one to flush the queue in 10s
     } else if (!isFlushScheduled) {
         isFlushScheduled = true;
-        timer = setTimeout(flushConsoleMessageQueue, 10000);
+        consoleMessageTimer = setTimeout(flushConsoleMessageQueue, 10000);
     }
 }
 
