@@ -15,6 +15,7 @@ import { ArgMap, PortInfo } from './port_discovery';
 import * as log from './log';
 import * as  coreState from './core_state';
 import { PeerConnectionManager } from './runtime_p2p/peer_connection_manager';
+import { Fin } from '../../js-adapter/src/main';
 
 const enableMeshFlag = 'enable-mesh';
 const securityRealmFlag = 'security-realm';
@@ -87,7 +88,7 @@ function getMeshUuid(): string {
 
 interface PeerRuntime {
     portInfo: PortInfo;
-    fin: any;
+    fin: Fin;
     isDisconnected: boolean;
 }
 

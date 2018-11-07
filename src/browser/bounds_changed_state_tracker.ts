@@ -7,7 +7,6 @@ const WindowTransaction = require('electron').windowTransaction;
 import * as _ from 'underscore';
 import * as animations from './animations.js';
 import * as coreState from './core_state.js';
-import * as os from 'os';
 import * as Deferred from './deferred';
 import WindowGroups from './window_groups';
 import WindowGroupTransactionTracker, { ITransaction } from './window_group_transaction_tracker';
@@ -17,7 +16,6 @@ import route from '../common/route';
 import { clipBounds, windowSetBoundsToVisible } from './utils';
 import { OpenFinWindow, BrowserWindow } from '../shapes';
 import { windowTransaction } from 'electron';
-import * as log from '../browser/log';
 import {RectangleBase, Rectangle} from './rectangle';
 
 // change types
@@ -597,4 +595,3 @@ export default class BoundsChangedStateTracker {
     };
 
 }
-
