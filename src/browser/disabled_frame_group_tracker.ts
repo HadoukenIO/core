@@ -129,7 +129,6 @@ export class GroupTracker {
         newBounds: RectangleBase,
         changeType: number
     ) => {
-        let shouldMove = true;
         let moves: [OpenFinWindow, Rectangle][] = [];
         switch (changeType) {
             case 0: {
@@ -143,65 +142,38 @@ export class GroupTracker {
             } break;
             default: {
                 const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(this.windowMap.get(winId).browserWindow);
-
-                let leaderIdx: number;
                 const positions: Map<string, Rectangle> = new Map();
 
                 [...this.windowMap].forEach(([nativeId, win], index) => {
                     positions.set(nativeId, Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow));
-
-                    if (nativeId === winId) {
-                        leaderIdx = index;
-                    }
                 });
 
                 const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positions].map(([, b]) => b));
 
-                const graph = Rectangle.GRAPH([...positions].map(([, b]) => b));
-                const paths = Rectangle.BREADTH_WALK(graph, leaderIdx);
-
-                l([...paths]);
-
-                // this needs to be the order from the dist graph...
                 this.windowMap.forEach(win => {
                     const bounds = win.browserWindow.getBounds();
-
-
                     const rect = clipBounds(Rectangle.CREATE_FROM_BOUNDS(bounds).move(thisRect, newBounds), win.browserWindow);
 
                     positions.set(win.browserWindow.nativeId, rect);
-                    // moves.push(() => win.browserWindow.setBounds(rect));
                 });
 
                 positions.set(winId, Rectangle.CREATE_FROM_BOUNDS(newBounds));
 
                 const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positions].map(([, b]) => b));
 
-                if (!Rectangle.IS_SUBGRAPH_CLOSER(graphInitial, graphFinal)) {
-                    // shouldMove = false;
-
-                    shouldMove = false;
-                    l('nooooooo!!');
-                    l([...graphInitial.edges].join(' || '));
-                    l('---------');
-                    l([...graphFinal.edges].join(' || '));
-                    l('========');
+                if (Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
+                    this.windowMap.forEach(win => {
+                        const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+                        const movedRect = baseRect.move(thisRect, newBounds);
+                        if (baseRect.moved(movedRect)) {
+                            moves.push([win, movedRect]);
+                        }
+                    });
                 }
-
-                // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                this.windowMap.forEach(win => {
-                    const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
-                    const movedRect = baseRect.move(thisRect, newBounds);
-                    if (baseRect.moved(movedRect)) {
-                        moves.push([win, movedRect]);
-                    }
-                });
             } break;
         }
 
-        if (shouldMove) {
-            this.handleBatchedMove(moves);
-        }
+        this.handleBatchedMove(moves);
 
         // todo is this for the non-flag implementation?
         return moves;
@@ -233,23 +205,9 @@ function clipBounds(bounds: Rectangle, browserWindow: OpenFinWindow['browserWind
     const xclamp = clamp(bounds.width, minWidth, maxWidth);
     const yclamp = clamp(bounds.height, minHeight, maxHeight);
 
-    if (yclamp.clampedOffset || xclamp.clampedOffset) {
-      // here is where we can indicate a "pushed" window and may need to check all bounds
-    }
-
-    // return {
-    //   x: bounds.x + xclamp.clampedOffset,
-    //   y: bounds.y + yclamp.clampedOffset,
-    //   width: xclamp.value,
-    //   height: yclamp.value
-    // };
-
     return new Rectangle(bounds.x + xclamp.clampedOffset, bounds.y + yclamp.clampedOffset, xclamp.value, yclamp.value);
   }
 
-  /*
-    Adjust the number to be within the range of minimum and maximum values
-  */
   function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): Clamped {
     max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
     const value = Math.min(Math.max(num, min, 0), max);
@@ -258,12 +216,3 @@ function clipBounds(bounds: Rectangle, browserWindow: OpenFinWindow['browserWind
       clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
     };
   }
-
-  /**
-   *
-                    if (win.name === 'finj') {
-                        writeToLog(1, JSON.stringify(bounds), true);
-                        writeToLog(1, JSON.stringify(rect), true);
-                    }
-
-   */

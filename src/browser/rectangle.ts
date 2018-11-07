@@ -198,6 +198,17 @@ export class Rectangle {
 
 
     public sharedBounds(rect: Rectangle): SharedBounds {
+        let top = this.sharedBound('top', rect);
+        let right = this.sharedBound('right', rect);
+        let bottom = this.sharedBound('bottom', rect);
+        let left = this.sharedBound('left', rect);
+        let hasSharedBounds = !!(top || right || bottom || left);
+
+        return {hasSharedBounds, top, right, bottom, left};
+    }
+
+
+    public sharedBoundsOnIntersection(rect: Rectangle): SharedBounds {
         const intersectionRect = rect.grow(this.boundShareThreshold, this.boundShareThreshold);
         const intersection = this.collidesWith(intersectionRect);
 
@@ -208,17 +219,10 @@ export class Rectangle {
         let left: SideName = null;
 
         if (!intersection) {
-            return { hasSharedBounds, top, right, bottom, left };
+            return {hasSharedBounds, top, right, bottom, left};
+        } else {
+            return this.sharedBounds(rect);
         }
-
-        top = this.sharedBound('top', rect);
-        right = this.sharedBound('right', rect);
-        bottom = this.sharedBound('bottom', rect);
-        left = this.sharedBound('left', rect);
-
-        hasSharedBounds = !!(top || right || bottom || left);
-
-        return { hasSharedBounds, top, right, bottom, left };
     }
 
     public sharedBoundsList(rect: Rectangle): SharedBoundsList {
@@ -343,7 +347,7 @@ export class Rectangle {
 
             for (let ii = 0; ii < rectLen; ii++) {
                 if (i !== ii) {
-                    if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
+                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
                         adjacentRects.push(ii);
                     }
                 }
@@ -366,8 +370,7 @@ export class Rectangle {
 
             for (let ii = 0; ii < rectLen; ii++) {
                 if (i !== ii) {
-                    // todo put this back to "intersection"
-                    if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
+                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
                         edges.push([i, ii]);
                     }
                 }
@@ -380,7 +383,6 @@ export class Rectangle {
     public static GRAPH_WITH_SIDE_DISTANCES(rects: Rectangle[])  {
         const edges: Set<string> = new Set();
         const edgeDistances: Map<string, number> = new Map();
-        
         const vertices: Set<number> = new Set();
         const rectLen = rects.length;
 
@@ -390,8 +392,8 @@ export class Rectangle {
 
             for (let ii = 0; ii < rectLen; ii++) {
                 if (i !== ii) {
-                    // todo put this back to "intersection"
-                    if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
+
+                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
                         const sharedBoundsList = rect.sharedBoundsList(rects[ii]);
                         
                         sharedBoundsList.forEach((sides) => {
@@ -399,12 +401,7 @@ export class Rectangle {
                             const keyThing = [i, ii, Side[mySide], Side[otherSide]].toString();
                             edges.add(keyThing)
                             edgeDistances.set(keyThing, Math.abs(rect[mySide] - rects[ii][otherSide]));
-                            // return rect[mySide] - rects[ii][otherSide];
                         });
-
-                        // diffs.forEach(diff => {
-                        //     edges.push([i, ii, diff]);
-                        // })
                     }
                 }
             }
@@ -413,18 +410,19 @@ export class Rectangle {
         return {vertices, edges, edgeDistances};
     }
 
-    public static IS_SUBGRAPH_CLOSER (a: any, b: any) {
+    /**
+     * This indicates that not only is `a` a subgraph of `b` but that, if there was 
+     * any difference in distances that they are equal or closer
+     */
+    public static SUBGRAPH_AND_CLOSER (a: any, b: any) {
         for (const v of a.vertices) {
             if (!b.vertices.has(v)) {
-                writeToLog(1, `missing vert ${v}` , true);
                 return false;
             }
         }
 
         for (const e of a.edges) {
             if (!b.edges.has(e)) {
-                writeToLog(1, `missing edge ${e}` , true);
-                writeToLog(1, `the edge list ${JSON.stringify([...b.edges])}` , true);
                 return false;
             } else if (b.edgeDistances.get(e) > a.edgeDistances.get(e)) {
                 return false;
