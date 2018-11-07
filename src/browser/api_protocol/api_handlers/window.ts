@@ -324,19 +324,10 @@ function getAllFrames(identity: Identity, message: APIMessage): FrameInfo[] {
     return Window.getAllFrames(windowIdentity);
 }
 
-function getWindowSnapshot(identity: Identity, message: APIMessage, ack: Acker): void {
+function getWindowSnapshot(identity: Identity, message: APIMessage): Promise<string> {
     const { payload } = message;
-    const dataAck = Object.assign({}, successAck);
     const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.getSnapshot(windowIdentity, (err: Error, image: string) => {
-        if (err) {
-            throw err; // TODO: this should probably nack - investigate
-        } else {
-            dataAck.data = image;
-            ack(dataAck);
-        }
-    });
+    return Window.getSnapshot({ identity: windowIdentity, payload });
 }
 
 function getWindowState(identity: Identity, message: APIMessage, ack: Acker): void {

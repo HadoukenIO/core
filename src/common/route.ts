@@ -41,6 +41,8 @@ export interface Route {
 
     globalHotkey: SimpleRoute;
     'global-hotkey': SimpleRoute;
+
+    [key: string]: SimpleRoute;
 }
 
 interface Context { hyphenateUuidName: boolean; }

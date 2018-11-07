@@ -4,8 +4,9 @@ import { createHash } from 'crypto';
 import * as _ from 'underscore';
 import { OpenFinWindow, Identity } from '../shapes';
 import * as coreState from './core_state';
-import * as log from './log';
 import * as windowGroupsProxy from './window_groups_runtime_proxy';
+import * as groupTracker from './disabled_frame_group_tracker';
+import { argo } from './core_state';
 
 let uuidSeed = 0;
 
@@ -221,10 +222,16 @@ export class WindowGroups extends EventEmitter {
         this._windowGroups[_groupUuid] = this._windowGroups[_groupUuid] || {};
         this._windowGroups[_groupUuid][win.name] = win;
         win.groupUuid = groupUuid;
+        if (argo['disabled-frame-groups']) {
+            groupTracker.addWindowToGroup(win);
+        }
         return _groupUuid;
     };
 
     private _removeWindowFromGroup = async (groupUuid: string, win: OpenFinWindow): Promise<void> => {
+        if (argo['disabled-frame-groups']) {
+            groupTracker.removeWindowFromGroup(win);
+        }
         delete this._windowGroups[groupUuid][win.name];
         if (win.isProxy) {
             const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(win);
@@ -247,6 +254,10 @@ export class WindowGroups extends EventEmitter {
                 win.groupUuid = null;
             }));
             delete this._windowGroups[groupUuid];
+            if (argo['disabled-frame-groups']) {
+                groupTracker.deleteGroupInfoCache(groupUuid);
+            }
+
         }
     };
 }

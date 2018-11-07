@@ -13,6 +13,7 @@ import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
 import { Channel } from '../../api/channel';
 import { GlobalHotkey } from '../../api/global_hotkey';
+const ofEvents = require('../../of_events').default;
 
 const coreState = require('../../core_state');
 const addNoteListener = require('../../api/notifications/subscriptions').addEventListener;
@@ -221,50 +222,46 @@ function EventListenerApiHandler() {
     };
 
     function subToDesktopEvent(identity, message, ack) {
-        let topic = message.payload.topic;
-        let uuid = message.payload.uuid;
-        let type = message.payload.type;
-        let name = message.payload.name;
-        let subTopicProvider = subscriptionProvider[topic];
-        let unsubscribe;
+        const { payload } = message;
+        const { name, topic, type, uuid } = payload;
+        const subTopicProvider = subscriptionProvider[topic];
+
+        const listener = (emittedPayload) => {
+            const event = {
+                action: 'process-desktop-event',
+                payload: { topic, type, uuid }
+            };
+
+            if (name) {
+                event.payload.name = name; // name may exist in emittedPayload
+            }
+
+            if (!uuid && emittedPayload.uuid) {
+                event.payload.uuid = emittedPayload.uuid;
+            }
+
+            if (typeof emittedPayload === 'object') {
+                _.extend(event.payload, _.omit(emittedPayload, _.keys(event.payload)));
+            }
+
+            apiProtocolBase.sendToIdentity(identity, event);
+        };
 
         if (apiProtocolBase.subscriptionExists(identity, topic, uuid, type, name)) {
             apiProtocolBase.uppSubscriptionRefCount(identity, topic, uuid, type, name);
-
-        } else if (subTopicProvider && typeof(subTopicProvider.subscribe) === 'function') {
-
-            unsubscribe = subTopicProvider.subscribe(identity, type, message.payload, (emmitedPayload) => {
-                let eventObj = {
-                    action: 'process-desktop-event',
-                    payload: {
-                        topic: topic,
-                        type: type,
-                        uuid: uuid
-                    }
-                };
-                if (name) {
-                    eventObj.payload.name = name; // name may exist in emmitedPayload
-                }
-                if (!uuid && emmitedPayload.uuid) {
-                    eventObj.payload.uuid = emmitedPayload.uuid;
-                }
-                if (typeof(emmitedPayload) === 'object') {
-                    _.extend(eventObj.payload, _.omit(emmitedPayload, _.keys(eventObj.payload)));
-                }
-
-                apiProtocolBase.sendToIdentity(identity, eventObj);
-            });
-
+        } else if (subTopicProvider && typeof subTopicProvider.subscribe === 'function') {
+            const unsubscribe = subTopicProvider.subscribe(identity, type, payload, listener);
             apiProtocolBase.registerSubscription(unsubscribe, identity, topic, uuid, type, name);
         }
+
         ack(successAck);
+
+        ofEvents.checkMissedEvents(payload, listener);
     }
 
     function unSubToDesktopEvent(identity, message, ack) {
-        let topic = message.payload.topic;
-        let uuid = message.payload.uuid;
-        let type = message.payload.type;
-        let name = message.payload.name;
+        const { payload } = message;
+        const { name, topic, type, uuid } = payload;
 
         apiProtocolBase.removeSubscription(identity, topic, uuid, type, name);
         ack(successAck);

@@ -6,7 +6,7 @@ import { BrowserWindow as BrowserWindowElectron } from 'electron';
 import { OpenFinWindow, Identity, BrowserWindow, ChildFrameInfo, PreloadScriptState } from '../shapes';
 import { default as connectionManager, PeerRuntime } from './connection_manager';
 import * as coreState from './core_state';
-import { _Window } from 'hadouken-js-adapter/out/types/src/api/window/window';
+import { _Window } from '../../js-adapter/src/api/window/window';
 import { EventEmitter } from 'events';
 import { writeToLog } from './log';
 

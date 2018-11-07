@@ -28,6 +28,7 @@
 
     const {
         elIPCConfig,
+        enableChromiumBuild,
         options: initialOptions,
         options: { api: { iframe: { enableDeprecatedSharedName } } },
         socketServerState,
@@ -153,17 +154,7 @@
     }
     ////END.
 
-    function wireUpZoomEvents() {
-        // listen for zoom-in/out keyboard shortcut
-        // messages sent from the browser process
-        ipc.on(`zoom-${renderFrameId}`, (event, zoom) => {
-            if ('level' in zoom) {
-                webFrame.setZoomLevel(zoom.level);
-            } else if ('increment' in zoom) {
-                webFrame.setZoomLevel(zoom.increment ? Math.floor(webFrame.getZoomLevel()) + zoom.increment : 0);
-            }
-        });
-
+    function wireUpMouseWheelZoomEvents() {
         document.addEventListener('mousewheel', event => {
             if (!event.ctrlKey || !initialOptions.accelerator.zoom) {
                 return;
@@ -175,6 +166,9 @@
     }
 
     function wireUpMenu(global) {
+        if (enableChromiumBuild) {
+            return;
+        }
         global.addEventListener('contextmenu', e => {
             if (!e.defaultPrevented) {
                 e.preventDefault();
@@ -182,7 +176,7 @@
                 const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
 
                 fin.desktop.Window.getCurrent().getOptions(options => {
-                    if (options.contextMenu) {
+                    if (options.contextMenuSettings.enable) {
                         syncApiCall('show-menu', {
                             uuid: identity.uuid,
                             name: identity.name,
@@ -263,7 +257,7 @@
 
         wireUpMenu(glbl);
         disableModifiedClicks(glbl);
-        wireUpZoomEvents();
+        wireUpMouseWheelZoomEvents();
         raiseReadyEvents(entityInfo);
 
         //TODO:Notifications to be removed from this file.
@@ -528,6 +522,17 @@
 
         if (!isNotificationType(name)) {
             evalPreloadScripts(uuid, name);
+        }
+    });
+
+    /**
+     * zoom event: listen for zoom-in/out keyboard shortcut and messages sent from the browser process using 'send' method
+     */
+    ipc.on(`zoom-${renderFrameId}`, (event, zoom) => {
+        if ('level' in zoom) {
+            webFrame.setZoomLevel(zoom.level);
+        } else if ('increment' in zoom) {
+            webFrame.setZoomLevel(zoom.increment ? Math.floor(webFrame.getZoomLevel()) + zoom.increment : 0);
         }
     });
 
