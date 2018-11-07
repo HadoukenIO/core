@@ -15,7 +15,6 @@ const getState = (browserWindow: BrowserWindow) => {
         return 'normal';
     }
 };
-
 /*
 Edge cases
 respect max
