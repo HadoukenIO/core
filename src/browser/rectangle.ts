@@ -47,9 +47,6 @@ export class Rectangle {
         const { x, y, width, height } = rect;
         return new Rectangle(x, y, width, height, new RectOptionsOpts(opts), offset);
     }
-    public static CREATE_FROM_BROWSER_WINDOW(win: BrowserWindow) {
-        return Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), win._options);
-    }
 
     public x: number;
     public y: number;
@@ -89,15 +86,6 @@ export class Rectangle {
             height: this.height + this.readOffset.height
         };
     }
-
-    protected static negate(delta: RectangleBase) {
-        return {
-            x: -delta.x,
-            y: -delta.y,
-            height: -delta.height,
-            width: -delta.width
-        };
-    }
     get rawBounds() {
         return {
         x: this.x,
@@ -123,22 +111,6 @@ export class Rectangle {
             y: this.normalizedBounds.y,
             w: this.normalizedBounds.width,
             h: this.normalizedBounds.height
-        };
-    }
-    get eventBounds() {
-        return {
-            left: this.x,
-            top: this.y,
-            width: this.width,
-            height: this.height
-        };
-    }
-    get transactionBounds() {
-        return {
-            x: this.x,
-            y: this.y,
-            w: this.width,
-            h: this.height
         };
     }
 

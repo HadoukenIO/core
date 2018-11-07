@@ -4,8 +4,8 @@ import route from '../common/route';
 import { BrowserWindow } from 'electron';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
-import {RectangleBase} from './rectangle';
-import {NormalizedRectangle as Rectangle} from './normalized_rectangle';
+import {RectangleBase, Rectangle} from './rectangle';
+import {createRectangleFromBrowserWindow} from './normalized_rectangle';
 const isWin32 = process.platform === 'win32';
 const getState = (browserWindow: BrowserWindow) => {
     if (browserWindow && browserWindow.isMinimized()) {
@@ -76,7 +76,7 @@ function handleBoundsChanging(
     changeType: number
 ): Array<[OpenFinWindow, Rectangle]> {
     let moves: [OpenFinWindow, Rectangle][] = [];
-    const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+    const thisRect = createRectangleFromBrowserWindow(win.browserWindow);
     const newBounds = thisRect.applyOffset(payloadBounds);
     switch (changeType) {
         case 0: {
@@ -90,7 +90,7 @@ function handleBoundsChanging(
         } break;
         default: {
             WindowGroups.getGroup(win.groupUuid).forEach((win: OpenFinWindow) => {
-                const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+                const baseRect = createRectangleFromBrowserWindow(win.browserWindow);
                 const movedRect = baseRect.move(thisRect, newBounds);
                 if (baseRect.moved(movedRect)) {
                     moves.push([win, movedRect]);
@@ -126,7 +126,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
         } else {
             const uuid = win.uuid;
             const name = win.name;
-            const rect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+            const rect = createRectangleFromBrowserWindow(win.browserWindow);
             const moved = new Set();
             of_events.emit(route.window('begin-user-bounds-changing', uuid, name), {
                 ...rect.eventBounds,
@@ -155,7 +155,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
                 groupInfo.payloadCache = [];
                 handleBoundsChanging(win, e, newBounds, changeType);
                 moved.forEach((win) => {
-                    const rect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+                    const rect = createRectangleFromBrowserWindow(win.browserWindow);
                     emitChange([win, rect], changeType, 'changed');
                 });
             });
