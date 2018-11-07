@@ -654,12 +654,13 @@ Window.create = function(id, opts) {
             var _win = coreState.getWindowByUuidName(uuid, name) || {};
             var _groupUuid = _win.groupUuid || null;
 
-            if (event.groupUuid === _groupUuid) {
+            //if the groupUuid's match or the _win object has no uuid (the window has closed)
+            if (event.groupUuid === _groupUuid || _win.uuid === void 0) {
                 var payload = event.payload;
 
                 payload.name = name;
                 /* jshint ignore:start */
-                payload.uuid = _win.app_uuid;
+                payload.uuid = _win.app_uuid || event.uuid;
                 /* jshint ignore:end */
 
                 if (payload.reason === 'disband') {
@@ -1401,16 +1402,7 @@ Window.isShowing = function(identity) {
 
 
 Window.joinGroup = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
-
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
-    WindowGroups.joinGroup(identityOfWindow, groupingOfWindow);
+    return WindowGroups.joinGroup({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
@@ -1422,7 +1414,7 @@ Window.leaveGroup = function(identity) {
     }
 
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    WindowGroups.leaveGroup(openfinWindow);
+    return WindowGroups.leaveGroup(openfinWindow);
 };
 
 
@@ -1436,16 +1428,7 @@ Window.maximize = function(identity) {
 
 
 Window.mergeGroups = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
-
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
-    WindowGroups.mergeGroups(identityOfWindow, groupingOfWindow);
+    return WindowGroups.mergeGroups({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
@@ -1954,7 +1937,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
         coreState.removeChildById(id);
 
         // remove window from any groups it belongs to
-        WindowGroups.leaveGroup(ofWindow);
+        promises.push(WindowGroups.leaveGroup(ofWindow));
 
         promises.push(handleSaveStateAlwaysResolve());
 
