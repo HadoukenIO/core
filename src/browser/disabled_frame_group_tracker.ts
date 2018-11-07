@@ -3,7 +3,8 @@ import of_events from './of_events';
 import route from '../common/route';
 import { BrowserWindow } from 'electron';
 const WindowTransaction = require('electron').windowTransaction;
-import {Rectangle, RectangleBase} from './rectangle';
+import {RectangleBase} from './rectangle';
+import {NormalizedRectangle as Rectangle} from './normalized_rectangle';
 const isWin32 = process.platform === 'win32';
 const getState = (browserWindow: BrowserWindow) => {
     if (browserWindow && browserWindow.isMinimized()) {
@@ -14,6 +15,7 @@ const getState = (browserWindow: BrowserWindow) => {
         return 'normal';
     }
 };
+
 /*
 Edge cases
 respect max
@@ -123,22 +125,23 @@ export class GroupTracker {
     private handleBoundsChanging = (
         winId: WinId,
         e: any,
-        newBounds: RectangleBase,
+        payloadBounds: RectangleBase,
         changeType: number
     ) => {
         let moves: [OpenFinWindow, Rectangle][] = [];
+        const thisWin = this.windowMap.get(winId);
+        const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(thisWin.browserWindow);
+        const newBounds = thisRect.applyOffset(payloadBounds);
         switch (changeType) {
             case 0: {
-                const thisBounds = this.windowMap.get(winId).browserWindow.getBounds();
-                const delta = Rectangle.CREATE_FROM_BOUNDS(thisBounds).delta(newBounds);
+                const delta = thisRect.delta(newBounds);
                 moves = Array.from(this.windowMap, ([id, win]): [OpenFinWindow, Rectangle] => {
                     const bounds = win.browserWindow.getBounds();
-                    const rect = Rectangle.CREATE_FROM_BOUNDS(bounds).shift(delta);
+                    const rect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow).shift(delta);
                     return [win, rect];
                 });
             } break;
             default: {
-                const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(this.windowMap.get(winId).browserWindow);
                 this.windowMap.forEach(win => {
                     const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
                     const movedRect = baseRect.move(thisRect, newBounds);
