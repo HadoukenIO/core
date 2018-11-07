@@ -5,8 +5,6 @@ import { BrowserWindow } from 'electron';
 const WindowTransaction = require('electron').windowTransaction;
 import {Rectangle, RectangleBase} from './rectangle';
 const isWin32 = process.platform === 'win32';
-import { writeToLog } from './log';
-const l = (x: any) => writeToLog(1, x, true);
 const getState = (browserWindow: BrowserWindow) => {
     if (browserWindow && browserWindow.isMinimized()) {
         return 'minimized';
@@ -141,35 +139,7 @@ export class GroupTracker {
                 });
             } break;
             default: {
-                const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(this.windowMap.get(winId).browserWindow);
-                const positions: Map<string, Rectangle> = new Map();
-
-                [...this.windowMap].forEach(([nativeId, win], index) => {
-                    positions.set(nativeId, Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow));
-                });
-
-                const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positions].map(([, b]) => b));
-
-                this.windowMap.forEach(win => {
-                    const bounds = win.browserWindow.getBounds();
-                    const rect = clipBounds(Rectangle.CREATE_FROM_BOUNDS(bounds).move(thisRect, newBounds), win.browserWindow);
-
-                    positions.set(win.browserWindow.nativeId, rect);
-                });
-
-                positions.set(winId, Rectangle.CREATE_FROM_BOUNDS(newBounds));
-
-                const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positions].map(([, b]) => b));
-
-                if (Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
-                    this.windowMap.forEach(win => {
-                        const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
-                        const movedRect = baseRect.move(thisRect, newBounds);
-                        if (baseRect.moved(movedRect)) {
-                            moves.push([win, movedRect]);
-                        }
-                    });
-                }
+                this.handleResizeMove(winId, newBounds, moves);
             } break;
         }
 
@@ -186,6 +156,37 @@ export class GroupTracker {
         this.windowMap.delete(winId);
         if (this.windowMap.size === 0) {
             groupTrackerCache.delete(this.groupId);
+        }
+    }
+
+    private handleResizeMove(winId: string, newBounds: RectangleBase, moves: [OpenFinWindow, Rectangle][]) {
+        const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(this.windowMap.get(winId).browserWindow);
+        const positions: Map<string, Rectangle> = new Map();
+
+        [...this.windowMap].forEach(([nativeId, win], index) => {
+            positions.set(nativeId, Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow));
+        });
+
+        const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positions].map(([, b]) => b));
+
+        this.windowMap.forEach(win => {
+            const bounds = win.browserWindow.getBounds();
+            const rect = clipBounds(Rectangle.CREATE_FROM_BOUNDS(bounds).move(thisRect, newBounds), win.browserWindow);
+            positions.set(win.browserWindow.nativeId, rect);
+        });
+
+        positions.set(winId, Rectangle.CREATE_FROM_BOUNDS(newBounds));
+
+        const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positions].map(([, b]) => b));
+
+        if (Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
+            this.windowMap.forEach(win => {
+                const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+                const movedRect = baseRect.move(thisRect, newBounds);
+                if (baseRect.moved(movedRect)) {
+                    moves.push([win, movedRect]);
+                }
+            });
         }
     }
 }
