@@ -87,19 +87,40 @@ function handleBoundsChanging(
             });
         } break;
         default: {
-            const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
-            WindowGroups.getGroup(win.groupUuid).forEach((win: OpenFinWindow) => {
-                const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
-                const movedRect = baseRect.move(thisRect, newBounds);
-                if (baseRect.moved(movedRect)) {
-                    moves.push([win, movedRect]);
-                }
-            });
+            handleResizeMove(win, newBounds, moves);
         } break;
     }
     handleBatchedMove(moves);
     return moves;
 }
+
+function handleResizeMove(win: OpenFinWindow, newBounds: RectangleBase, moves: [OpenFinWindow, Rectangle][]) {
+    const thisRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+    const positionsInitial: Map<string, Rectangle> = new Map();
+    const positionsFinal: Map<string, Rectangle> = new Map();
+    const windowGroup = WindowGroups.getGroup(win.groupUuid);
+
+    windowGroup.forEach(win => {
+        const baseRect = Rectangle.CREATE_FROM_BROWSER_WINDOW(win.browserWindow);
+        positionsInitial.set(win.browserWindow.nativeId, baseRect);
+        const bounds = win.browserWindow.getBounds();
+        const movedRect = clipBounds(Rectangle.CREATE_FROM_BOUNDS(bounds).move(thisRect, newBounds), win.browserWindow);
+        positionsFinal.set(win.browserWindow.nativeId, movedRect);
+
+        if (baseRect.moved(movedRect)) {
+            moves.push([win, movedRect]);
+        }
+    });
+
+    positionsFinal.set(win.browserWindow.nativeId, Rectangle.CREATE_FROM_BOUNDS(newBounds));
+    const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positionsInitial].map(([, rect]) => rect));
+    const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positionsFinal].map(([, rect]) => rect));
+
+    if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
+        moves.length = 0;
+    }
+}
+
 function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
     let groupInfo: GroupInfo = groupInfoCache.get(win.groupUuid);
     if (!groupInfo) {
@@ -175,3 +196,30 @@ export function removeWindowFromGroup(win: OpenFinWindow) {
 export function deleteGroupInfoCache(groupUuid: string) {
     groupInfoCache.delete(groupUuid);
 }
+
+interface Clamped {
+    value: number;
+    clampedOffset: number;
+}
+
+function clipBounds(bounds: Rectangle, browserWindow: OpenFinWindow['browserWindow']): Rectangle {
+    if (!('_options' in browserWindow)) {
+      return bounds;
+    }
+
+    const { minWidth, minHeight, maxWidth, maxHeight } = browserWindow._options;
+
+    const xclamp = clamp(bounds.width, minWidth, maxWidth);
+    const yclamp = clamp(bounds.height, minHeight, maxHeight);
+
+    return new Rectangle(bounds.x + xclamp.clampedOffset, bounds.y + yclamp.clampedOffset, xclamp.value, yclamp.value);
+  }
+
+  function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): Clamped {
+    max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
+    const value = Math.min(Math.max(num, min, 0), max);
+    return {
+      value,
+      clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
+    };
+  }

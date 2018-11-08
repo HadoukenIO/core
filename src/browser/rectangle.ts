@@ -12,6 +12,11 @@ type SharedBound = Array<SideName>;
 type BoundIdentifier = [Rectangle, SideName];
 type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
 export type SharedBoundsList = Array<SharedBound>;
+type Graph = [number[], number[][]];
+type GraphSet = {
+    vertices: Set<number>;
+    edges: Set<string>
+};
 
 interface Opts {
     minWidth?: number;
@@ -191,6 +196,17 @@ export class Rectangle {
 
 
     public sharedBounds(rect: Rectangle): SharedBounds {
+        let top = this.sharedBound('top', rect);
+        let right = this.sharedBound('right', rect);
+        let bottom = this.sharedBound('bottom', rect);
+        let left = this.sharedBound('left', rect);
+        let hasSharedBounds = !!(top || right || bottom || left);
+
+        return {hasSharedBounds, top, right, bottom, left};
+    }
+
+
+    public sharedBoundsOnIntersection(rect: Rectangle): SharedBounds {
         const intersectionRect = rect.grow(this.boundShareThreshold, this.boundShareThreshold);
         const intersection = this.collidesWith(intersectionRect);
 
@@ -201,17 +217,10 @@ export class Rectangle {
         let left: SideName = null;
 
         if (!intersection) {
-            return { hasSharedBounds, top, right, bottom, left };
+            return {hasSharedBounds, top, right, bottom, left};
+        } else {
+            return this.sharedBounds(rect);
         }
-
-        top = this.sharedBound('top', rect);
-        right = this.sharedBound('right', rect);
-        bottom = this.sharedBound('bottom', rect);
-        left = this.sharedBound('left', rect);
-
-        hasSharedBounds = !!(top || right || bottom || left);
-
-        return { hasSharedBounds, top, right, bottom, left };
     }
 
     public sharedBoundsList(rect: Rectangle): SharedBoundsList {
@@ -336,7 +345,7 @@ export class Rectangle {
 
             for (let ii = 0; ii < rectLen; ii++) {
                 if (i !== ii) {
-                    if (rect.sharedBounds(rects[ii]).hasSharedBounds) {
+                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
                         adjacentRects.push(ii);
                     }
                 }
@@ -347,4 +356,63 @@ export class Rectangle {
 
         return adjLists;
     }
+
+    public static GRAPH_WITH_SIDE_DISTANCES(rects: Rectangle[])  {
+        const edges: Set<string> = new Set();
+        const edgeDistances: Map<string, number> = new Map();
+        const vertices: Set<number> = new Set();
+        const rectLen = rects.length;
+
+        for (let i = 0; i < rectLen; i++) {
+            const rect = rects[i];
+            vertices.add(i);
+
+            for (let ii = 0; ii < rectLen; ii++) {
+                if (i !== ii) {
+
+                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
+                        const sharedBoundsList = rect.sharedBoundsList(rects[ii]);
+                        
+                        sharedBoundsList.forEach((sides) => {
+                            const [mySide, otherSide] = sides;
+                            const key = [i, ii, Side[mySide], Side[otherSide]].toString();
+                            edges.add(key)
+                            edgeDistances.set(key, Math.abs(rect[mySide] - rects[ii][otherSide]));
+                        });
+                    }
+                }
+            }
+        }
+
+        return {vertices, edges, edgeDistances};
+    }
+
+    /**
+     * This indicates that not only is `a` a subgraph of `b` but that, if there was 
+     * any difference in distances that they are equal or closer
+     */
+    public static SUBGRAPH_AND_CLOSER (a: any, b: any) {
+        for (const v of a.vertices) {
+            if (!b.vertices.has(v)) {
+                return false;
+            }
+        }
+
+        for (const e of a.edges) {
+            if (!b.edges.has(e)) {
+                return false;
+            } else if (b.edgeDistances.get(e) > a.edgeDistances.get(e)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+enum Side {
+    top,
+    right,
+    bottom,
+    left
 }

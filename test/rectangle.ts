@@ -20,7 +20,7 @@ describe('Rectangle', () => {
     it('should return the shared bounds within threshold, above', () => {
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 97, 100, 100);
-        const sharedBounds = rect1.sharedBounds(rect2);
+        const sharedBounds = rect1.sharedBoundsOnIntersection(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
 
         assert(hasSharedBounds, 'should have had shared bounds');
@@ -33,7 +33,7 @@ describe('Rectangle', () => {
     it('should return the shared bounds within threshold, below', () => {
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 104, 100, 100);
-        const sharedBounds = rect1.sharedBounds(rect2);
+        const sharedBounds = rect1.sharedBoundsOnIntersection(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
 
         assert(hasSharedBounds, 'should have had shared bounds');
@@ -47,7 +47,7 @@ describe('Rectangle', () => {
 
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 100, 100, 100);
-        const sharedBounds = rect1.sharedBounds(rect2);
+        const sharedBounds = rect1.sharedBoundsOnIntersection(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
 
         assert(hasSharedBounds, 'should have had shared bounds');
@@ -61,7 +61,7 @@ describe('Rectangle', () => {
 
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 106, 100, 100);
-        const sharedBounds = rect1.sharedBounds(rect2);
+        const sharedBounds = rect1.sharedBoundsOnIntersection(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
 
         assert(hasSharedBounds === false, 'should have had shared bounds');
@@ -76,7 +76,7 @@ describe('Rectangle', () => {
 
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 0, 100, 100);
-        const sharedBounds = rect1.sharedBounds(rect2);
+        const sharedBounds = rect1.sharedBoundsOnIntersection(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
 
         assert(hasSharedBounds, 'should have had shared bounds');
@@ -89,7 +89,7 @@ describe('Rectangle', () => {
     it('should return true for all if directly on top, matching left bounds', () => {
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 10, 90, 80);
-        const sharedBounds = rect1.sharedBounds(rect2);
+        const sharedBounds = rect1.sharedBoundsOnIntersection(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
 
         assert(hasSharedBounds, 'should have had shared bounds');
@@ -102,7 +102,7 @@ describe('Rectangle', () => {
     it('should return true for all if directly on top, matching top, left bounds', () => {
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(0, 0, 90, 90);
-        const sharedBounds = rect1.sharedBounds(rect2);
+        const sharedBounds = rect1.sharedBoundsOnIntersection(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
 
         assert(hasSharedBounds, 'should have had shared bounds');
@@ -116,7 +116,7 @@ describe('Rectangle', () => {
         // bottom
         const rect1 = new Rectangle(0, 0, 100, 100);
         const rect2 = new Rectangle(10, 0, 80, 90);
-        const sharedBounds = rect1.sharedBounds(rect2);
+        const sharedBounds = rect1.sharedBoundsOnIntersection(rect2);
         const {hasSharedBounds, top, right, bottom, left} = sharedBounds;
 
         assert(hasSharedBounds, 'should have had shared bounds');
