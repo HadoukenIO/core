@@ -98,6 +98,9 @@ export default class BoundsChangedStateTracker {
                 ofEvents.emit(route.window('end-user-bounds-changing', uuid, name), Object.assign(payload, bounds));
                 this.handleBoundsChange(false, true);
             },
+            'bounds-changing': (event: any, bounds: Rectangle): void => {
+                this.handleBoundsChange(true, false, bounds);
+            },
             'bounds-changed': (): void => {
                 const ofWindow = coreState.getWindowByUuidName(uuid, name);
                 const groupUuid = ofWindow ? ofWindow.groupUuid : null;
@@ -281,11 +284,29 @@ export default class BoundsChangedStateTracker {
         : true;
 
     //tslint:disable-next-line
-    private handleBoundsChange = (isAdditionalChangeExpected: boolean, force = false): boolean => {
+    private handleBoundsChange = (isAdditionalChangeExpected: boolean, force = false, bounds: Rectangle = null): boolean => {
 
         let dispatchedChange = false;
 
-        const currentBounds = this.getCurrentBounds();
+        let currentBounds;
+        if (bounds) {
+            let windowState = WindowState.Normal;
+            if (this.browserWindow.isMaximized()) {
+                windowState = WindowState.Maximized;
+            }
+            if (this.browserWindow.isMinimized()) {
+                windowState = WindowState.Minimized;
+            }
+            const frame = this.browserWindow._options.frame;
+
+            currentBounds = {
+              ...bounds,
+              frame,
+              windowState
+            };
+        } else {
+            currentBounds = this.getCurrentBounds();
+        }
         const cachedBounds = this.getCachedBounds();
         const boundsCompare = this.compareBoundsResult(currentBounds, cachedBounds);
         const stateMin = boundsCompare.state && currentBounds.windowState === 'minimized';
