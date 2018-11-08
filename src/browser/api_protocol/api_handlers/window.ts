@@ -15,6 +15,8 @@ import {
     Nacker,
     SavedDiskBounds
 } from '../../../shapes';
+import { ActionSpecMap } from '../shapes';
+import { getWindowByUuidName } from '../../core_state';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -76,7 +78,15 @@ export const windowApiMap = {
 
 export function init() {
     registerActionMap(windowApiMap, 'Window');
+)
 }
+
+// function decorateActionMapForGroups(actionMap: ActionSpecMap): ActionSpecMap {
+//     const hijackOnGroup = {
+//         'set-window-bounds':
+//     }
+// actionMap.keys().
+// }
 
 function windowAuthenticate(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
@@ -121,8 +131,11 @@ function stopFlashWindow(identity: Identity, message: APIMessage, ack: Acker): v
 function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const { top, left, width, height } = payload;
-    const windowIdentity = getTargetWindowIdentity(payload);
+    const {uuid, name} = getTargetWindowIdentity(payload);
+    const wrapped = getWindowByUuidName(uuid, name);
+    if (wrapped && wrapped.groupUuid) {
 
+    }
     Window.setBounds(windowIdentity, left, top, width, height);
     ack(successAck);
 }

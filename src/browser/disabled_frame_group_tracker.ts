@@ -51,6 +51,22 @@ function emitChange(
         deffered: true
     });
 }
+export function setNewWindowWindowBounds(win: OpenFinWindow, bounds: RectangleBase) {
+    const rect = createRectangleFromBrowserWindow(win.browserWindow);
+    const newBounds = rect.applyOffset(bounds);
+    if (!rect.moved(newBounds)) {
+        return;
+    }
+    const delta = rect.delta(newBounds);
+    const moved = delta.x || delta.y;
+    const resized = delta.width || delta.height;
+    const changeType = moved
+        ? resized
+           ? 2
+           : 0
+        : 1;
+    return handleBoundsChanging(win, {}, bounds, changeType);
+}
 
 function handleBatchedMove(moves: [OpenFinWindow, Rectangle][]) {
     if (isWin32) {
