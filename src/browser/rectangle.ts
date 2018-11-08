@@ -1,4 +1,3 @@
-import { BrowserWindow } from '../shapes';
 
 type SideName = 'top' | 'right' | 'bottom' | 'left';
 type SharedBounds = {
@@ -18,7 +17,7 @@ type GraphSet = {
     edges: Set<string>
 };
 
-interface Opts {
+export interface Opts {
     minWidth?: number;
     maxWidth?: number;
     minHeight?: number;
@@ -46,14 +45,12 @@ class RectOptionsOpts {
         this.maxHeight = opts.maxHeight || Number.MAX_SAFE_INTEGER;
     }
 }
+const zeroDelta = { x: 0, y: 0, height: 0, width: 0 };
 
 export class Rectangle {
-    public static CREATE_FROM_BOUNDS(rect: RectangleBase, opts: Opts = {}): Rectangle {
+    public static CREATE_FROM_BOUNDS(rect: RectangleBase, opts: Opts = {}, offset?: RectangleBase): Rectangle {
         const { x, y, width, height } = rect;
-        return new Rectangle(x, y, width, height, new RectOptionsOpts(opts));
-    }
-    public static CREATE_FROM_BROWSER_WINDOW(win: BrowserWindow) {
-        return Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), win._options);
+        return new Rectangle(x, y, width, height, new RectOptionsOpts(opts), offset);
     }
 
     public x: number;
@@ -63,7 +60,7 @@ export class Rectangle {
     public opts: Opts;
     public boundShareThreshold = 5;
 
-    constructor(x: number, y: number, width: number, height: number, opts: Opts = {}) {
+    constructor(x: number, y: number, width: number, height: number, opts: Opts = {}, private readOffset: RectangleBase = zeroDelta) {
         this.x = x;
         this.y = y;
         this.width = width;
@@ -86,29 +83,39 @@ export class Rectangle {
     get left() {
         return this.x;
     }
-
-    get bounds(): RectangleBase {
+    private get normalizedBounds () {
         return {
-            x: this.x,
-            y: this.y,
-            width: this.width,
-            height: this.height
+            x: this.x + this.readOffset.x,
+            y: this.y + this.readOffset.y,
+            width: this.width + this.readOffset.width,
+            height: this.height + this.readOffset.height
         };
+    }
+    get rawBounds() {
+        return {
+        x: this.x,
+        y: this.y,
+        width: this.width,
+        height: this.height
+        };
+    }
+    get bounds(): RectangleBase {
+        return this.normalizedBounds;
     }
     get eventBounds() {
         return {
-            left: this.x,
-            top: this.y,
-            width: this.width,
-            height: this.height
+            left: this.normalizedBounds.x,
+            top: this.normalizedBounds.y,
+            width: this.normalizedBounds.width,
+            height: this.normalizedBounds.height
         };
     }
     get transactionBounds() {
         return {
-            x: this.x,
-            y: this.y,
-            w: this.width,
-            h: this.height
+            x: this.normalizedBounds.x,
+            y: this.normalizedBounds.y,
+            w: this.normalizedBounds.width,
+            h: this.normalizedBounds.height
         };
     }
 
@@ -147,9 +154,17 @@ export class Rectangle {
             if (height < Number.MIN_SAFE_INTEGER) { height = Number.MIN_SAFE_INTEGER; } else if (height > Number.MAX_VALUE) { height = Number.MAX_VALUE; }
         }
 
-        return new Rectangle(x, y, width, height, this.opts);
+        return new Rectangle(x, y, width, height, this.opts, this.readOffset);
     }
     // ts-lint:enable
+    public applyOffset (bounds: RectangleBase) {
+        return {
+            x: bounds.x - this.readOffset.x,
+            y: bounds.y - this.readOffset.y,
+            width: bounds.width - this.readOffset.width,
+            height: bounds.height - this.readOffset.height
+        }
+    }
 
     public collidesWith(rect: RectangleBase) {
         const { x, y, width, height } = rect;
@@ -279,7 +294,7 @@ export class Rectangle {
 
 
     public alignSide(mySide: SideName, rect: Rectangle, sideToAlign: SideName) {
-        const changes = this.bounds;
+        const changes = this.rawBounds;
         switch (mySide) {
             case 'left':
                 changes.width += (this.x - rect[sideToAlign]);
@@ -312,10 +327,10 @@ export class Rectangle {
             default:
                 return null as never;
         }
-        return Rectangle.CREATE_FROM_BOUNDS(changes, this.opts);
+        return Rectangle.CREATE_FROM_BOUNDS(changes, this.opts, this.readOffset);
     }
     public shift(delta: RectangleBase) {
-        return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts);
+        return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts, this.readOffset);
     }
 
     public move(cachedBounds: RectangleBase, currentBounds: RectangleBase) {
