@@ -11,11 +11,6 @@ type SharedBound = Array<SideName>;
 type BoundIdentifier = [Rectangle, SideName];
 type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
 export type SharedBoundsList = Array<SharedBound>;
-type Graph = [number[], number[][]];
-type GraphSet = {
-    vertices: Set<number>;
-    edges: Set<string>
-};
 
 export interface Opts {
     minWidth?: number;
