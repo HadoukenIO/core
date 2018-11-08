@@ -17,6 +17,7 @@ import {
 } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
 import { getWindowByUuidName } from '../../core_state';
+import { setNewWindowWindowBounds } from '../../disabled_frame_group_tracker';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -78,7 +79,6 @@ export const windowApiMap = {
 
 export function init() {
     registerActionMap(windowApiMap, 'Window');
-)
 }
 
 // function decorateActionMapForGroups(actionMap: ActionSpecMap): ActionSpecMap {
@@ -134,9 +134,10 @@ function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker): v
     const {uuid, name} = getTargetWindowIdentity(payload);
     const wrapped = getWindowByUuidName(uuid, name);
     if (wrapped && wrapped.groupUuid) {
-
+        setNewWindowWindowBounds(wrapped, {x: left, y: top, width, height});
+        return ack(successAck);
     }
-    Window.setBounds(windowIdentity, left, top, width, height);
+    Window.setBounds({uuid, name}, left, top, width, height);
     ack(successAck);
 }
 

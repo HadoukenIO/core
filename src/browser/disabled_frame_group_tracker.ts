@@ -51,6 +51,7 @@ function emitChange(
         deffered: true
     });
 }
+
 export function setNewWindowWindowBounds(win: OpenFinWindow, bounds: RectangleBase) {
     const rect = createRectangleFromBrowserWindow(win.browserWindow);
     const newBounds = rect.applyOffset(bounds);
@@ -58,13 +59,13 @@ export function setNewWindowWindowBounds(win: OpenFinWindow, bounds: RectangleBa
         return;
     }
     const delta = rect.delta(newBounds);
-    const moved = delta.x || delta.y;
+    const moved = (delta.x && delta.x + delta.width) || (delta.y && delta.y + delta.height);
     const resized = delta.width || delta.height;
-    const changeType = moved
-        ? resized
+    const changeType = resized
+        ? moved
            ? 2
-           : 0
-        : 1;
+           : 1
+        : 0;
     return handleBoundsChanging(win, {}, bounds, changeType);
 }
 
@@ -97,20 +98,32 @@ function handleBoundsChanging(
     switch (changeType) {
         case 0: {
             const delta = thisRect.delta(newBounds);
-            moves = [];
             WindowGroups.getGroup(win.groupUuid).forEach((win: OpenFinWindow) => {
                 const bounds = win.browserWindow.getBounds();
                 const rect = Rectangle.CREATE_FROM_BOUNDS(bounds).shift(delta);
                 moves.push([win, rect]);
             });
         } break;
-        default: {
+        case 1: {
             WindowGroups.getGroup(win.groupUuid).forEach((win: OpenFinWindow) => {
                 const baseRect = createRectangleFromBrowserWindow(win.browserWindow);
                 const movedRect = baseRect.move(thisRect, newBounds);
                 if (baseRect.moved(movedRect)) {
                     moves.push([win, movedRect]);
                 }
+            });
+        } break;
+        case 2: {
+            const wins = Array.from(WindowGroups.getGroup(win.groupUuid));
+            const delta = thisRect.delta(newBounds);
+            const xShift = delta.x + delta.width;
+            const yShift = delta.y + delta.height;
+            const shift = { x: xShift, y: yShift, width: 0, height: 0 };
+            const originMoved = thisRect.shift(shift);
+            moves = wins.map(win => {
+                const moved = createRectangleFromBrowserWindow(win.browserWindow)
+                    .shift(shift);
+                return <[OpenFinWindow, Rectangle]>[win, moved.move(originMoved, newBounds)];
             });
         } break;
     }
