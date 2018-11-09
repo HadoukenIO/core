@@ -5,7 +5,7 @@ import { BrowserWindow } from 'electron';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
 import {RectangleBase, Rectangle} from './rectangle';
-import {createRectangleFromBrowserWindow} from './normalized_rectangle';
+import {createRectangleFromBrowserWindow, zeroDelta} from './normalized_rectangle';
 const isWin32 = process.platform === 'win32';
 const getState = (browserWindow: BrowserWindow) => {
     if (browserWindow && browserWindow.isMinimized()) {
@@ -51,20 +51,31 @@ function emitChange(
         deffered: true
     });
 }
-
-export function setNewWindowWindowBounds(win: OpenFinWindow, bounds: RectangleBase) {
+export function updateGroupedWindowBounds(win: OpenFinWindow, delta: Partial<RectangleBase>) {
+    const shift = {...zeroDelta, ...delta};
+    return convertActionToMockEvent(win, shift);
+}
+export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Partial<RectangleBase>) {
     const rect = createRectangleFromBrowserWindow(win.browserWindow);
+    const bounds = {...rect.rawBounds, ...partialBounds};
+    const newBounds = rect.applyOffset(bounds);
+    const delta = rect.delta(newBounds);
+    return convertActionToMockEvent(win, delta);
+}
+
+function convertActionToMockEvent(win: OpenFinWindow, delta: RectangleBase) {
+    const rect = createRectangleFromBrowserWindow(win.browserWindow);
+    const bounds = rect.shift(delta);
     const newBounds = rect.applyOffset(bounds);
     if (!rect.moved(newBounds)) {
         return;
     }
-    const delta = rect.delta(newBounds);
     const moved = (delta.x && delta.x + delta.width) || (delta.y && delta.y + delta.height);
     const resized = delta.width || delta.height;
     const changeType = resized
         ? moved
-           ? 2
-           : 1
+            ? 2
+            : 1
         : 0;
     return handleBoundsChanging(win, {}, bounds, changeType);
 }

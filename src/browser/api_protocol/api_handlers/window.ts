@@ -16,8 +16,8 @@ import {
     SavedDiskBounds
 } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
-import { getWindowByUuidName } from '../../core_state';
-import { setNewWindowWindowBounds } from '../../disabled_frame_group_tracker';
+import {hijackMovesForGroupedWindows} from './grouped_window_moves';
+import { argo } from '../../core_state';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -78,7 +78,10 @@ export const windowApiMap = {
 };
 
 export function init() {
-    registerActionMap(windowApiMap, 'Window');
+    const registerThis = argo['disabled-frame-groups']
+       ? hijackMovesForGroupedWindows(windowApiMap)
+       : windowApiMap;
+    registerActionMap(registerThis, 'Window');
 }
 
 // function decorateActionMapForGroups(actionMap: ActionSpecMap): ActionSpecMap {
@@ -132,11 +135,6 @@ function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker): v
     const { payload } = message;
     const { top, left, width, height } = payload;
     const {uuid, name} = getTargetWindowIdentity(payload);
-    const wrapped = getWindowByUuidName(uuid, name);
-    if (wrapped && wrapped.groupUuid) {
-        setNewWindowWindowBounds(wrapped, {x: left, y: top, width, height});
-        return ack(successAck);
-    }
     Window.setBounds({uuid, name}, left, top, width, height);
     ack(successAck);
 }
