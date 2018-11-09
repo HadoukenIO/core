@@ -32,7 +32,7 @@ interface GroupInfo {
 //const groupTrackerCache = new Map<string, GroupTracker>();
 const listenerCache: Map<WinId, (...args: any[]) => void> = new Map();
 const groupInfoCache: Map<string, GroupInfo> = new Map();
-
+type Move = [OpenFinWindow, Rectangle];
 function emitChange(
     [win, rect] : [OpenFinWindow, Rectangle],
     changeType: number,
@@ -85,51 +85,64 @@ function handleBatchedMove(moves: [OpenFinWindow, Rectangle][]) {
         });
     }
 }
-
+const makeTranslate = (delta: RectangleBase) => ([win, rect]: Move): Move => [win, rect.shift(delta)];
 function handleBoundsChanging(
     win: OpenFinWindow,
     e: any,
     payloadBounds: RectangleBase,
     changeType: number
 ): Array<[OpenFinWindow, Rectangle]> {
-    let moves: [OpenFinWindow, Rectangle][] = [];
+    let moves: [OpenFinWindow, Rectangle][];
     const thisRect = createRectangleFromBrowserWindow(win.browserWindow);
     const newBounds = thisRect.applyOffset(payloadBounds);
+    const initialPositions = WindowGroups
+        .getGroup(win.groupUuid)
+        .map((win) : Move => [win, createRectangleFromBrowserWindow(win.browserWindow)]);
     switch (changeType) {
         case 0: {
             const delta = thisRect.delta(newBounds);
-            WindowGroups.getGroup(win.groupUuid).forEach((win: OpenFinWindow) => {
-                const bounds = win.browserWindow.getBounds();
-                const rect = Rectangle.CREATE_FROM_BOUNDS(bounds).shift(delta);
-                moves.push([win, rect]);
-            });
+            moves = initialPositions
+                .map(makeTranslate(delta));
         } break;
         case 1: {
-            WindowGroups.getGroup(win.groupUuid).forEach((win: OpenFinWindow) => {
-                const baseRect = createRectangleFromBrowserWindow(win.browserWindow);
-                const movedRect = baseRect.move(thisRect, newBounds);
-                if (baseRect.moved(movedRect)) {
-                    moves.push([win, movedRect]);
-                }
-            });
+            moves = handleResizeMove(thisRect, newBounds, initialPositions);
         } break;
         case 2: {
-            const wins = Array.from(WindowGroups.getGroup(win.groupUuid));
             const delta = thisRect.delta(newBounds);
             const xShift = delta.x + delta.width;
             const yShift = delta.y + delta.height;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
-            const originMoved = thisRect.shift(shift);
-            moves = wins.map(win => {
-                const moved = createRectangleFromBrowserWindow(win.browserWindow)
-                    .shift(shift);
-                return <[OpenFinWindow, Rectangle]>[win, moved.move(originMoved, newBounds)];
-            });
+            const resizeBounds = {...newBounds, x: newBounds.x - xShift, y: newBounds.y - yShift};
+            // Need to consider case where resize fails, is it better to set x-y to what they want
+            // or shift by the amount it would have been in case of a succesful resize
+            moves = handleResizeMove(thisRect, resizeBounds, initialPositions).map(makeTranslate(shift));
         } break;
     }
-    handleBatchedMove(moves);
-    return moves;
+    const changed = moves.filter(([win, rect], i) => rect.moved(initialPositions[i][1]));
+    handleBatchedMove(changed);
+    return changed;
 }
+const moveToRect = ([, rect]: Move) => rect;
+
+function handleResizeMove(start: Rectangle, end: RectangleBase, positions: [OpenFinWindow, Rectangle][]): Move[] {
+
+
+    const moved = positions.map(([win, baseRect]): Move => {
+        const movedRect = clipBounds(baseRect.move(start, end), win.browserWindow);
+        return [win, movedRect];
+
+    });
+
+    const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES(positions.map(moveToRect));
+    const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES(moved.map(moveToRect));
+
+    if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
+        return positions;
+    } else {
+        return moved;
+    }
+}
+
 function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
     let groupInfo: GroupInfo = groupInfoCache.get(win.groupUuid);
     if (!groupInfo) {
@@ -205,3 +218,30 @@ export function removeWindowFromGroup(win: OpenFinWindow) {
 export function deleteGroupInfoCache(groupUuid: string) {
     groupInfoCache.delete(groupUuid);
 }
+
+interface Clamped {
+    value: number;
+    clampedOffset: number;
+}
+
+function clipBounds(bounds: Rectangle, browserWindow: OpenFinWindow['browserWindow']): Rectangle {
+    if (!('_options' in browserWindow)) {
+      return bounds;
+    }
+
+    const { minWidth, minHeight, maxWidth, maxHeight } = browserWindow._options;
+
+    const xclamp = clamp(bounds.width, minWidth, maxWidth);
+    const yclamp = clamp(bounds.height, minHeight, maxHeight);
+
+    return new Rectangle(bounds.x + xclamp.clampedOffset, bounds.y + yclamp.clampedOffset, xclamp.value, yclamp.value);
+  }
+
+  function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): Clamped {
+    max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
+    const value = Math.min(Math.max(num, min, 0), max);
+    return {
+      value,
+      clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
+    };
+  }
