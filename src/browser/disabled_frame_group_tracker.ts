@@ -97,16 +97,44 @@ function handleBoundsChanging(
 }
 
 function handleResizeMove(win: OpenFinWindow, newBounds: RectangleBase, moves: [OpenFinWindow, Rectangle][]) {
-    const thisRect = createRectangleFromBrowserWindow(win.browserWindow);
+    // const thisRect = createRectangleFromBrowserWindow(win.browserWindow);
+    let thisRect = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
+    thisRect = thisRect.shift({
+        x: 7,
+        y: 0,
+        width: -14,
+        height: -7
+    });
     const positionsInitial: Map<string, Rectangle> = new Map();
     const positionsFinal: Map<string, Rectangle> = new Map();
     const windowGroup = WindowGroups.getGroup(win.groupUuid);
 
+    // todo rename win here and .move
     windowGroup.forEach(win => {
-        const baseRect = createRectangleFromBrowserWindow(win.browserWindow);
+        let baseRect = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
+        baseRect = thisRect.shift({
+            x: 7,
+            y: 0,
+            width: -14,
+            height: -7
+        });
         positionsInitial.set(win.browserWindow.nativeId, baseRect);
         const bounds = win.browserWindow.getBounds();
-        const movedRect = clipBounds(Rectangle.CREATE_FROM_BOUNDS(bounds).move(thisRect, newBounds), win.browserWindow);
+
+        const movedRect = clipBounds(Rectangle.CREATE_FROM_BOUNDS(bounds)
+            .shift({
+                x: 7,
+                y: 0,
+                width: -14,
+                height: -7
+            })
+            .move(thisRect, newBounds)
+            .shift({
+                x: -7,
+                y: 0,
+                width: 14,
+                height: 7
+            }), win.browserWindow);
         positionsFinal.set(win.browserWindow.nativeId, movedRect);
 
         if (baseRect.moved(movedRect)) {
@@ -119,7 +147,8 @@ function handleResizeMove(win: OpenFinWindow, newBounds: RectangleBase, moves: [
     const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positionsFinal].map(([, rect]) => rect));
 
     if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
-        moves.length = 0;
+        //moves.length = 0;
+        moves.length = moves.length;
     }
 }
 
