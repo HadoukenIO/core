@@ -288,24 +288,13 @@ export default class BoundsChangedStateTracker {
 
         let dispatchedChange = false;
 
-        let currentBounds;
+        let currentBounds = this.getCurrentBounds();
         if (bounds) {
-            let windowState = WindowState.Normal;
-            if (this.browserWindow.isMaximized()) {
-                windowState = WindowState.Maximized;
-            }
-            if (this.browserWindow.isMinimized()) {
-                windowState = WindowState.Minimized;
-            }
-            const frame = this.browserWindow._options.frame;
-
             currentBounds = {
               ...bounds,
-              frame,
-              windowState
+              frame: currentBounds.frame,
+              windowState: currentBounds.windowState
             };
-        } else {
-            currentBounds = this.getCurrentBounds();
         }
         const cachedBounds = this.getCachedBounds();
         const boundsCompare = this.compareBoundsResult(currentBounds, cachedBounds);
