@@ -19,7 +19,7 @@ import * as Rx from 'rx';
 // local modules
 let animations = require('../animations.js');
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
-let BoundsChangedStateTracker = require('../bounds_changed_state_tracker.js');
+import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 import { clipBounds, windowSetBoundsToVisible } from '../utils';
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
@@ -578,7 +578,6 @@ Window.create = function(id, opts) {
                     `application with the UUID "${uuid}"`;
                 const title = ERROR_TITLE_RENDERER_CRASH;
                 const type = ERROR_BOX_TYPES.RENDERER_CRASH;
-                log.writeToLog('info', '==========> ' + type);
                 const args = { message, title, type };
                 showErrorBox(args);
             }
@@ -2426,11 +2425,7 @@ function restoreWindowPosition(identity, cb) {
 
         // set zoom level
         const { zoomLevel } = savedBounds;
-        if (zoomLevel) {
-            const browserWindow = getElectronBrowserWindow(identity);
-            browserWindow.webContents.setZoomLevel(zoomLevel);
-        }
-
+        Window.setZoomLevel(identity, zoomLevel);
         cb();
     }, (err) => {
         //We care about errors but lets keep window creation going.

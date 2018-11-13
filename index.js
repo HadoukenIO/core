@@ -249,7 +249,8 @@ app.on('ready', function() {
     app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
 
     if (process.platform === 'win32') {
-        log.writeToLog('info', `group-policy build: ${app.isGroupPolicyBuild()}`);
+        log.writeToLog('info', `group-policy build: ${process.buildFlags.groupPolicy}`);
+        log.writeToLog('info', `enable-chromium build: ${process.buildFlags.enableChromium}`);
     }
     log.writeToLog('info', `build architecture: ${process.arch}`);
     app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
@@ -367,12 +368,9 @@ app.on('ready', function() {
         electron.session.defaultSession.on('will-download', (event, item, webContents) => {
             try {
                 const { uuid, name } = webContents.browserWindowOptions;
-                const { experimental } = coreState.getAppObjByUuid(uuid)._options;
-                //Experimental flag for the download events.
-                if (experimental && experimental.api && experimental.api.fileDownloadApi) {
-                    const downloadListener = createWillDownloadEventListener({ uuid, name });
-                    downloadListener(event, item, webContents);
-                }
+
+                const downloadListener = createWillDownloadEventListener({ uuid, name });
+                downloadListener(event, item, webContents);
             } catch (err) {
                 log.writeToLog('info', 'Error while processing will-download event.');
                 log.writeToLog('info', err);
@@ -415,6 +413,9 @@ function includeFlashPlugin() {
 
     if (pluginName) {
         app.commandLine.appendSwitch('ppapi-flash-path', path.join(process.resourcesPath, 'plugins', 'flash', pluginName));
+        // Currently for enable_chromium build the flash version need to be
+        // specified. See RUN-4510 and RUN-4580.
+        app.commandLine.appendSwitch('ppapi-flash-version', '30.0.0.154');
     }
 }
 
@@ -546,7 +547,7 @@ function launchApp(argo, startExternalAdapterServer) {
         const {
             configUrl,
             configObject,
-            configObject: { licenseKey }
+            configObject: { licenseKey, shortcut = {} }
         } = configuration;
 
         coreState.setManifest(configUrl, configObject);
@@ -559,9 +560,24 @@ function launchApp(argo, startExternalAdapterServer) {
 
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
         const uuid = startupAppOptions && startupAppOptions.uuid;
+        const name = startupAppOptions && startupAppOptions.name;
         const ofApp = Application.wrap(uuid);
         const ofManifestUrl = ofApp && ofApp._configUrl;
         const isRunning = Application.isRunning(ofApp);
+
+        const { company, name: shortcutName } = shortcut;
+        let appUserModelId;
+        let namePart;
+
+        if (company) {
+            namePart = shortcutName ? `.${shortcutName}` : '';
+            appUserModelId = `${company}${namePart}`;
+        } else {
+            namePart = name ? `.${name}` : '';
+            appUserModelId = `${uuid}${namePart}`;
+        }
+
+        app.setAppUserModelId(appUserModelId);
 
         // this ensures that external connections that start the runtime can do so without a main window
         let successfulInitialLaunch = true;
@@ -720,13 +736,14 @@ function registerMacMenu() {
 function handleMacSingleTenant() {
     if (process.platform === 'darwin') {
         const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
-        let pathPost = encodeURIComponent(configUrl);
+        let cachePath = encodeURIComponent(configUrl);
         if (coreState.argo['security-realm']) {
-            pathPost = pathPost.concat(coreState.argo['security-realm']);
+            cachePath = path.join(cachePath, coreState.argo['security-realm']);
         }
         const userData = app.getPath('userData');
-        app.setPath('userData', path.join(userData, pathPost));
-        app.setPath('userCache', path.join(userData, pathPost));
+        cachePath = path.join(userData, 'cache', cachePath, process.versions['openfin']);
+        app.setPath('userData', cachePath);
+        app.setPath('userCache', cachePath);
     }
 }
 

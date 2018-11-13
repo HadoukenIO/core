@@ -3,8 +3,31 @@ const errors = require('../../../common/errors');
 
 export class AckMessage {
     public readonly action: string = 'ack';
+    public breadcrumbs?: Array<any>;
     public correlationId: number;
+    public readonly originalAction?: string;
     public payload: AckPayload | NackPayload;
+
+    constructor(breadcrumbs?: Array<any>, originalAction?: string) {
+        if (breadcrumbs) {
+            this.breadcrumbs = breadcrumbs;
+        }
+
+        if (originalAction) {
+            this.originalAction = originalAction;
+        }
+    }
+
+    public addBreadcrumb(name: string, time?: number, messageId?: number): void {
+        this.breadcrumbs = this.breadcrumbs || [];
+
+        this.breadcrumbs.push({
+            action: this.originalAction,
+            messageId: messageId || this.correlationId,
+            name,
+            time: time || Date.now()
+        });
+    }
 }
 
 // ToDo following duplicated in src/shapes.ts

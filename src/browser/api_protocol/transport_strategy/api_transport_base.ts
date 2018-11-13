@@ -18,6 +18,12 @@ export interface MessagePackage {
     strategyName: any; // ws / elipc
 }
 
+// To Do: Refactor api_transport_base.ts and construct implementations per type, per endpoint.
+//        Configuration can then be stored per instance.
+/* tslint:disable:no-empty-interface*/
+export interface MessageConfiguration {}
+/* tslint:enable:no-empty-interface*/
+
 export abstract class ApiTransportBase<T> {
 
     protected requestHandler: RequestHandler<T>;
@@ -36,9 +42,9 @@ export abstract class ApiTransportBase<T> {
 
     public abstract onClientDisconnect(cb: Function): void;
 
-    protected abstract onMessage(id: number, data: any): void;
+    protected abstract onMessage(id: number, data: any, ackDelegate: any): void;
 
-    protected abstract ackDecorator(id: number, messageId: number): AckFunc;
+    protected abstract ackDecorator(id: number, messageId: number, originalPayload: any, configuration: MessageConfiguration): AckFunc;
 
     protected abstract ackDecoratorSync(e: any, messageId: number): AckFunc;
 
