@@ -17,6 +17,10 @@ const externalWindowsProxyList = new Map<string, RuntimeProxyWindow>();
 
 export const groupProxyEvents = new MyEmitter();
 
+function getWindowKey(identity: Identity) {
+    return `${identity.uuid}${identity.name}`;
+}
+
 export interface GroupProxyChange {
     action: 'add' | 'remove';
     targetIdentity: Identity;
@@ -30,11 +34,12 @@ export class RuntimeProxyWindow {
     public window: OpenFinWindow;
     public wrappedWindow: _Window;
     public isRegistered: boolean;
-    public sourceIdentity: Identity;
+    private boundLocalWindows: Map<string, Identity>;
 
     constructor(hostRuntime: PeerRuntime, wrappedWindow: _Window, nativeId: string, windowOptions: any) {
         this.hostRuntime = hostRuntime;
         this.wrappedWindow = wrappedWindow;
+        this.boundLocalWindows = new Map();
         const { identity: { uuid, name } } = wrappedWindow;
 
         const proxyWindowOptions = {
@@ -60,19 +65,22 @@ export class RuntimeProxyWindow {
             mainFrameRoutingId: 0,
             isProxy: true
         };
-        const windowKey = `${uuid}${name}`;
+        const windowKey = getWindowKey(wrappedWindow.identity);
         externalWindowsProxyList.set(windowKey, this);
     }
 
     public registerSingle = async (sourceIdentity: Identity): Promise<RuntimeProxyWindow> => {
-        this.sourceIdentity = sourceIdentity;
-        await this.wireUpEvents();
-        await this.remoteMerge();
+        if (this.boundLocalWindows.has(getWindowKey(sourceIdentity))) {
+            return this;
+        }
+        this.boundLocalWindows.set(getWindowKey(sourceIdentity), sourceIdentity);
+        await this.remoteMerge(sourceIdentity);
 
         return this;
     }
 
     public register = async (sourceIdentity: Identity): Promise<Array<RuntimeProxyWindow>> => {
+
         this.registerSingle(sourceIdentity);
 
         const remoteWindowGroup = await this.getRemoteWindowGroup();
@@ -85,52 +93,60 @@ export class RuntimeProxyWindow {
     }
 
     //https://english.stackexchange.com/questions/25931/unregister-vs-deregister
-    public deregister = async () => {
-        const { identity: { uuid, name } } = this.wrappedWindow;
-        const windowKey = `${uuid}${name}`;
+    public deregister = async (boundIdentity?: Identity) => {
+        //TODO: Change this....
+        if (boundIdentity) {
+            this.boundLocalWindows.delete(getWindowKey(boundIdentity));
+        } else {
+            this.boundLocalWindows.clear();
+        }
 
-        externalWindowsProxyList.delete(windowKey);
-        this.window.browserWindow.setExternalWindowNativeId('0x0');
-        this.window.browserWindow.close();
-        await this.wrappedWindow.removeAllListeners();
+        if (this.boundLocalWindows.size < 1) {
+            const { identity: { uuid, name } } = this.wrappedWindow;
+            const windowKey = `${uuid}${name}`;
+
+            externalWindowsProxyList.delete(windowKey);
+            this.window.browserWindow.setExternalWindowNativeId('0x0');
+            this.window.browserWindow.close();
+            await this.wrappedWindow.removeAllListeners();
+        }
     }
 
-    private remoteMerge = async (): Promise<void> => {
-        const source = this.hostRuntime.fin.Window.wrapSync(this.sourceIdentity);
+    private remoteMerge = async (boundIdentity: Identity): Promise<void> => {
+        const source = this.hostRuntime.fin.Window.wrapSync(boundIdentity);
         await this.wrappedWindow.mergeGroups(source);
     }
 
-    private wireUpEvents = async (): Promise<void> => {
+    public wireUpEvents = async (): Promise<void> => {
         await this.wrappedWindow.on('group-changed', (evt) => {
             writeToLog('info', 'Group changed event');
             writeToLog('info', evt);
 
             if (this.window.uuid === evt.targetWindowAppUuid && this.window.name === evt.targetWindowName) {
                 if (evt.reason === 'leave') {
-                    this.raiseChangeEvents(this.sourceIdentity, {
+                    this.raiseChangeEvents({
                         uuid: evt.targetWindowAppUuid,
                         name: evt.targetWindowName
                     }, 'remove', []);
                 }
                 if (evt.reason === 'join') {
-                    this.raiseChangeEvents(this.sourceIdentity, {
+                    this.raiseChangeEvents( {
                         uuid: evt.sourceWindowAppUuid,
                         name: evt.sourceWindowName
                     }, 'add', evt.sourceGroup);
                 }
             } else if (this.window.uuid === evt.sourceWindowAppUuid && this.window.name === evt.sourceWindowName) {
                 if (evt.reason === 'merge') {
-                    this.raiseChangeEvents(this.sourceIdentity, {
+                    this.raiseChangeEvents( {
                         uuid: evt.targetWindowAppUuid,
                         name: evt.targetWindowName
                     }, 'add', []);
                 }
-            }
+            } //else if (this.sourceIdentity.uuid === evt.targetWindowAppUuid && this.sourceIdentity.name === evt.target)
         });
         await this.hostRuntime.fin.once('disconnected', () => {
-            this.raiseChangeEvents(this.sourceIdentity, this.wrappedWindow.identity, 'remove', []);
+            this.raiseChangeEvents(this.wrappedWindow.identity, 'remove', []);
         });
-        this.isRegistered = true;
     };
 
     private getRemoteWindowGroup = async(): Promise<Array<RuntimeProxyWindow>> => {
@@ -153,17 +169,21 @@ export class RuntimeProxyWindow {
         return existingWindowGroup;
     }
 
-    private raiseChangeEvents = async(sourceIdentity: Identity, targetIdentity: Identity,
+    private raiseChangeEvents = async(targetIdentity: Identity,
         action: 'add' | 'remove', sourceGroup: Array<any>) => {
-        const groupStateChange: GroupProxyChange = {
-            action,
-            targetIdentity,
-            window: this.window,
-            sourceIdentity,
-            sourceGroup
-        };
-        groupProxyEvents.emit('process-change', groupStateChange);
+            this.boundLocalWindows.forEach(sourceIdentity => {
+
+                const groupStateChange: GroupProxyChange = {
+                    action,
+                    targetIdentity,
+                    window: this.window,
+                    sourceIdentity,
+                    sourceGroup
+                };
+                groupProxyEvents.emit('process-change', groupStateChange);
+            });
     }
+
 }
 
 export async function getRuntimeProxyWindow(identity: Identity): Promise<RuntimeProxyWindow> {
@@ -182,7 +202,9 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         const wrappedWindow = hostRuntime.fin.Window.wrapSync(identity);
         const nativeId = await wrappedWindow.getNativeId();
         const windowOptions = await wrappedWindow.getOptions();
-        return new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId, windowOptions);
+        const win = new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId, windowOptions);
+        win.wireUpEvents();
+        return win;
     }
 }
 
