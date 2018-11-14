@@ -16,6 +16,8 @@ const getState = (browserWindow: BrowserWindow) => {
         return 'normal';
     }
 };
+const moveToRect = ([, rect]: Move) => rect;
+
 /*
 Edge cases
 respect max
@@ -36,6 +38,7 @@ type Move = [OpenFinWindow, Rectangle];
 function emitChange(
     [win, rect] : [OpenFinWindow, Rectangle],
     changeType: number,
+    reason: string,
     eventType: 'changing' | 'changed' = 'changing'
 ) {
     const topic = `bounds-${eventType}`;
@@ -47,23 +50,24 @@ function emitChange(
         uuid,
         name,
         topic,
+        reason,
         type: 'window',
         deffered: true
     });
 }
 export function updateGroupedWindowBounds(win: OpenFinWindow, delta: Partial<RectangleBase>) {
     const shift = {...zeroDelta, ...delta};
-    return convertActionToMockEvent(win, shift);
+    return handleApiMove(win, shift);
 }
 export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Partial<RectangleBase>) {
     const rect = createRectangleFromBrowserWindow(win.browserWindow);
     const bounds = {...rect.rawBounds, ...partialBounds};
     const newBounds = rect.applyOffset(bounds);
     const delta = rect.delta(newBounds);
-    return convertActionToMockEvent(win, delta);
+    return handleApiMove(win, delta);
 }
 
-function convertActionToMockEvent(win: OpenFinWindow, delta: RectangleBase) {
+function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     const rect = createRectangleFromBrowserWindow(win.browserWindow);
     const bounds = rect.shift(delta);
     const newBounds = rect.applyOffset(bounds);
@@ -77,7 +81,17 @@ function convertActionToMockEvent(win: OpenFinWindow, delta: RectangleBase) {
             ? 2
             : 1
         : 0;
-    return handleBoundsChanging(win, {}, bounds, changeType);
+    const moves = handleBoundsChanging(win, {}, bounds, changeType);
+    const leader = moves.find(([w]) => w === win);
+    if (!leader || leader[1].moved(newBounds)) {
+        //Propsed move differs from requested move
+        throw new Error('Attempted move violates group constraints');
+    }
+    handleBatchedMove(moves);
+    emitChange(leader, changeType, 'self', 'changed');
+    const otherWindows = moves.filter(([w]) => w !== win);
+    otherWindows.forEach(move => emitChange(move, changeType, 'group', 'changed'));
+    return leader[1].eventBounds;
 }
 
 function handleBatchedMove(moves: [OpenFinWindow, Rectangle][]) {
@@ -120,38 +134,42 @@ function handleBoundsChanging(
         } break;
         case 2: {
             const delta = thisRect.delta(newBounds);
-            const xShift = delta.x + delta.width;
-            const yShift = delta.y + delta.height;
+            const xShift = delta.x && delta.x + delta.width;
+            const yShift = delta.y && delta.y + delta.height;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
             const resizeBounds = {...newBounds, x: newBounds.x - xShift, y: newBounds.y - yShift};
             // Need to consider case where resize fails, is it better to set x-y to what they want
             // or shift by the amount it would have been in case of a succesful resize
             moves = handleResizeMove(thisRect, resizeBounds, initialPositions).map(makeTranslate(shift));
         } break;
+        default: {
+            moves = [];
+        } break;
     }
-    const changed = moves.filter(([win, rect], i) => rect.moved(initialPositions[i][1]));
-    handleBatchedMove(changed);
-    return changed;
+    const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES(initialPositions.map(moveToRect));
+    const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES(moves.map(moveToRect));
+
+    return Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)
+        ? moves.filter(([win, rect], i) => rect.moved(initialPositions[i][1]))
+        : [];
 }
-const moveToRect = ([, rect]: Move) => rect;
 
 function handleResizeMove(start: Rectangle, end: RectangleBase, positions: [OpenFinWindow, Rectangle][]): Move[] {
 
 
-    const moved = positions.map(([win, baseRect]): Move => {
-        const movedRect = clipBounds(baseRect.move(start, end), win.browserWindow);
+    return positions.map(([win, baseRect]): Move => {
+        const movedRect = baseRect.move(start, end);
         return [win, movedRect];
-
     });
 
-    const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES(positions.map(moveToRect));
-    const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES(moved.map(moveToRect));
+    // const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES(positions.map(moveToRect));
+    // const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES(moved.map(moveToRect));
 
-    if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
-        return positions;
-    } else {
-        return moved;
-    }
+    // if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
+    //     return positions;
+    // } else {
+    //     return moved;
+    // }
 }
 
 function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
@@ -180,7 +198,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
             const uuid = win.uuid;
             const name = win.name;
             const rect = createRectangleFromBrowserWindow(win.browserWindow);
-            const moved = new Set();
+            const moved = new Set<OpenFinWindow>();
             of_events.emit(route.window('begin-user-bounds-changing', uuid, name), {
                 ...rect.eventBounds,
                 uuid,
@@ -190,26 +208,32 @@ export function addWindowToGroup(win: OpenFinWindow) {
                 windowState: getState(win.browserWindow)
             });
             groupInfo.boundsChanging = true;
-            handleBoundsChanging(win, e, newBounds, changeType);
+            const initialMoves = handleBoundsChanging(win, e, newBounds, changeType);
+            handleBatchedMove(initialMoves);
+            initialMoves.forEach((pair) => {
+                emitChange(pair, changeType, pair[0] === win ? 'self' : 'group');
+            });
             groupInfo.interval = setInterval(() => {
                 if (groupInfo.payloadCache.length) {
                     const [a, b, c, d] = groupInfo.payloadCache.pop();
                     const moves = handleBoundsChanging(a, b, c, d);
+                    groupInfo.payloadCache = [];
+                    handleBatchedMove(moves);
                     moves.forEach((pair) => {
                         moved.add(pair[0]);
-                        emitChange(pair, d);
+                        emitChange(pair, d, pair[0] === win ? 'self' : 'group');
                     });
-                groupInfo.payloadCache = [];
                 }
             }, 16);
             win.browserWindow.once('disabled-frame-bounds-changed', (e: any, newBounds: RectangleBase, changeType: number) => {
                 groupInfo.boundsChanging = false;
                 clearInterval(groupInfo.interval);
                 groupInfo.payloadCache = [];
-                handleBoundsChanging(win, e, newBounds, changeType);
-                moved.forEach((win) => {
-                    const rect = createRectangleFromBrowserWindow(win.browserWindow);
-                    emitChange([win, rect], changeType, 'changed');
+                const moves = handleBoundsChanging(win, e, newBounds, changeType);
+                handleBatchedMove(moves);
+                moved.forEach((movedWin) => {
+                    const rect = createRectangleFromBrowserWindow(movedWin.browserWindow);
+                    emitChange([movedWin, rect], changeType, movedWin === win ? 'self' : 'group', 'changed');
                 });
             });
         }
@@ -235,24 +259,25 @@ interface Clamped {
     clampedOffset: number;
 }
 
-function clipBounds(bounds: Rectangle, browserWindow: OpenFinWindow['browserWindow']): Rectangle {
-    if (!('_options' in browserWindow)) {
-      return bounds;
-    }
+// function clipBounds(bounds: Rectangle, browserWindow: OpenFinWindow['browserWindow']): Rectangle {
+//     if (!('_options' in browserWindow)) {
+//       return bounds;
+//     }
 
-    const { minWidth, minHeight, maxWidth, maxHeight } = browserWindow._options;
+//     const { minWidth, minHeight, maxWidth, maxHeight } = browserWindow._options;
 
-    const xclamp = clamp(bounds.width, minWidth, maxWidth);
-    const yclamp = clamp(bounds.height, minHeight, maxHeight);
+//     const xclamp = clamp(bounds.width, minWidth, maxWidth);
+//     const yclamp = clamp(bounds.height, minHeight, maxHeight);
 
-    return new Rectangle(bounds.x + xclamp.clampedOffset, bounds.y + yclamp.clampedOffset, xclamp.value, yclamp.value);
-  }
+//     return new Rectangle(bounds.x + xclamp.clampedOffset,
+//         bounds.y + yclamp.clampedOffset, xclamp.value, yclamp.value, bounds.opts, bounds.readOffset);
+//   }
 
-  function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): Clamped {
-    max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
-    const value = Math.min(Math.max(num, min, 0), max);
-    return {
-      value,
-      clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
-    };
-  }
+//   function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): Clamped {
+//     max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
+//     const value = Math.min(Math.max(num, min, 0), max);
+//     return {
+//       value,
+//       clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
+//     };
+//   }

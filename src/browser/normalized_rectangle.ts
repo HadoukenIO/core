@@ -23,5 +23,12 @@ export function createRectangleFromBrowserWindow(win: BrowserWindow) {
     const delta = isWin10 && win._options.frame
         ? framedOffset
         : zeroDelta;
-    return Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), win._options, negate(delta)).shift(delta);
+    const normalizedOptions = {...win._options};
+    if (normalizedOptions.maxHeight === -1) {
+        normalizedOptions.maxHeight = Number.MAX_SAFE_INTEGER;
+    }
+    if (normalizedOptions.maxWidth === -1) {
+        normalizedOptions.maxWidth = Number.MAX_SAFE_INTEGER;
+    }
+    return Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), normalizedOptions, negate(delta)).shift(delta);
 }

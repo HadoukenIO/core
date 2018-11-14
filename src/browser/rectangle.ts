@@ -55,7 +55,7 @@ export class Rectangle {
     public opts: Opts;
     public boundShareThreshold = 5;
 
-    constructor(x: number, y: number, width: number, height: number, opts: Opts = {}, private readOffset: RectangleBase = zeroDelta) {
+    constructor(x: number, y: number, width: number, height: number, opts: Opts = {}, public readOffset: RectangleBase = zeroDelta) {
         this.x = x;
         this.y = y;
         this.width = width;
@@ -78,7 +78,7 @@ export class Rectangle {
     get left() {
         return this.x;
     }
-    private get normalizedBounds () {
+    private get normalizedBounds() {
         return {
             x: this.x + this.readOffset.x,
             y: this.y + this.readOffset.y,
@@ -88,10 +88,10 @@ export class Rectangle {
     }
     get rawBounds() {
         return {
-        x: this.x,
-        y: this.y,
-        width: this.width,
-        height: this.height
+            x: this.x,
+            y: this.y,
+            width: this.width,
+            height: this.height
         };
     }
     get bounds(): RectangleBase {
@@ -152,7 +152,7 @@ export class Rectangle {
         return new Rectangle(x, y, width, height, this.opts, this.readOffset);
     }
     // ts-lint:enable
-    public applyOffset (bounds: RectangleBase) {
+    public applyOffset(bounds: RectangleBase) {
         return {
             x: bounds.x - this.readOffset.x,
             y: bounds.y - this.readOffset.y,
@@ -212,7 +212,7 @@ export class Rectangle {
         let left = this.sharedBound('left', rect);
         let hasSharedBounds = !!(top || right || bottom || left);
 
-        return {hasSharedBounds, top, right, bottom, left};
+        return { hasSharedBounds, top, right, bottom, left };
     }
 
 
@@ -227,7 +227,7 @@ export class Rectangle {
         let left: SideName = null;
 
         if (!intersection) {
-            return {hasSharedBounds, top, right, bottom, left};
+            return { hasSharedBounds, top, right, bottom, left };
         } else {
             return this.sharedBounds(rect);
         }
@@ -296,6 +296,8 @@ export class Rectangle {
                 changes.x = rect[sideToAlign];
                 if (changes.width < this.opts.minWidth) {
                     changes.width = this.opts.minWidth;
+                } else if (changes.width > this.opts.maxWidth) {
+                    changes.width = this.opts.maxWidth;
                 }
                 break;
             case 'right':
@@ -303,6 +305,9 @@ export class Rectangle {
                 if (changes.width < this.opts.minWidth) {
                     changes.x = rect[sideToAlign] - this.opts.minWidth;
                     changes.width = this.opts.minWidth;
+                } else if (changes.width > this.opts.maxWidth) {
+                    changes.x = rect[sideToAlign] - this.opts.maxWidth;
+                    changes.width = this.opts.maxWidth;
                 }
                 break;
             case 'top':
@@ -310,6 +315,8 @@ export class Rectangle {
                 changes.y = rect[sideToAlign];
                 if (changes.height < this.opts.minHeight) {
                     changes.height = this.opts.minHeight;
+                } else if (changes.height > this.opts.maxHeight) {
+                    changes.height = this.opts.maxHeight;
                 }
                 break;
             case 'bottom':
@@ -317,6 +324,9 @@ export class Rectangle {
                 if (changes.height < this.opts.minHeight) {
                     changes.y = rect[sideToAlign] - this.opts.minHeight;
                     changes.height = this.opts.minHeight;
+                } else if (changes.height > this.opts.maxHeight) {
+                    changes.y = rect[sideToAlign] - this.opts.maxHeight;
+                    changes.height = this.opts.maxHeight;
                 }
                 break;
             default:
@@ -367,7 +377,7 @@ export class Rectangle {
         return adjLists;
     }
 
-    public static GRAPH_WITH_SIDE_DISTANCES(rects: Rectangle[])  {
+    public static GRAPH_WITH_SIDE_DISTANCES(rects: Rectangle[]) {
         const edges: Set<string> = new Set();
         const edgeDistances: Map<string, number> = new Map();
         const vertices: Set<number> = new Set();
@@ -382,7 +392,7 @@ export class Rectangle {
 
                     if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
                         const sharedBoundsList = rect.sharedBoundsList(rects[ii]);
-                        
+
                         sharedBoundsList.forEach((sides) => {
                             const [mySide, otherSide] = sides;
                             const key = [i, ii, Side[mySide], Side[otherSide]].toString();
@@ -394,14 +404,14 @@ export class Rectangle {
             }
         }
 
-        return {vertices, edges, edgeDistances};
+        return { vertices, edges, edgeDistances };
     }
 
     /**
      * This indicates that not only is `a` a subgraph of `b` but that, if there was 
      * any difference in distances that they are equal or closer
      */
-    public static SUBGRAPH_AND_CLOSER (a: any, b: any) {
+    public static SUBGRAPH_AND_CLOSER(a: any, b: any) {
         for (const v of a.vertices) {
             if (!b.vertices.has(v)) {
                 return false;
