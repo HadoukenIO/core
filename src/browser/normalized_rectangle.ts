@@ -4,7 +4,7 @@ import { System } from './api/system';
 
 const osName: string = System.getHostSpecs().name;
 const isWin10 = /Windows 10/.test(osName);
-function negate(delta: RectangleBase) {
+export function negate(delta: RectangleBase) {
     return {
         x: -delta.x,
         y: -delta.y,
@@ -12,7 +12,7 @@ function negate(delta: RectangleBase) {
         width: -delta.width
     };
 }
-const framedOffset: Readonly<RectangleBase> = {
+export const framedOffset: Readonly<RectangleBase> = {
     x: 7,
     y: 0,
     height: -7,

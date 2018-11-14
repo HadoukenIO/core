@@ -5,7 +5,8 @@ import { BrowserWindow } from 'electron';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
 import {RectangleBase, Rectangle} from './rectangle';
-import {createRectangleFromBrowserWindow} from './normalized_rectangle';
+import {createRectangleFromBrowserWindow, negate, framedOffset} from './normalized_rectangle';
+import { System } from './api/system';
 const isWin32 = process.platform === 'win32';
 const getState = (browserWindow: BrowserWindow) => {
     if (browserWindow && browserWindow.isMinimized()) {
@@ -89,66 +90,57 @@ function handleBoundsChanging(
             });
         } break;
         default: {
-            handleResizeMove(win, newBounds, moves);
+            handleResizeMove(win, payloadBounds, moves);
         } break;
     }
     handleBatchedMove(moves);
     return moves;
 }
 
-function handleResizeMove(win: OpenFinWindow, newBounds: RectangleBase, moves: [OpenFinWindow, Rectangle][]) {
-    // const thisRect = createRectangleFromBrowserWindow(win.browserWindow);
-    let thisRect = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
-    thisRect = thisRect.shift({
-        x: 7,
-        y: 0,
-        width: -14,
-        height: -7
-    });
+const osName: string = System.getHostSpecs().name;
+const isWin10 = /Windows 10/.test(osName);
+const writeShift = negate(framedOffset);
+
+const win10readShift = (rect: Rectangle, win: OpenFinWindow) => win._options.frame === true ? rect.shift(framedOffset) : rect;
+const win10writeShift = (rect: Rectangle, win: OpenFinWindow) => win._options.frame === true ? rect.shift(writeShift) : rect;
+const identity = (rect: Rectangle) => rect;
+
+const readShiftIfWin10 = isWin10 ? win10readShift : identity;
+const writeShiftIfWin10 = isWin10 ? win10writeShift : identity;
+
+function handleResizeMove(movingWindow: OpenFinWindow, newBounds: RectangleBase, moves: [OpenFinWindow, Rectangle][]) {
     const positionsInitial: Map<string, Rectangle> = new Map();
     const positionsFinal: Map<string, Rectangle> = new Map();
-    const windowGroup = WindowGroups.getGroup(win.groupUuid);
+    const windowGroup = WindowGroups.getGroup(movingWindow.groupUuid);
+    const movingWindowBounds = movingWindow.browserWindow.getBounds();
+    const movingRect = Rectangle.CREATE_FROM_BOUNDS(movingWindowBounds);
+    const movingWindowRect = readShiftIfWin10(movingRect, movingWindow);
+    newBounds = readShiftIfWin10(Rectangle.CREATE_FROM_BOUNDS(newBounds), movingWindow);
 
     // todo rename win here and .move
     windowGroup.forEach(win => {
-        let baseRect = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
-        baseRect = thisRect.shift({
-            x: 7,
-            y: 0,
-            width: -14,
-            height: -7
-        });
-        positionsInitial.set(win.browserWindow.nativeId, baseRect);
         const bounds = win.browserWindow.getBounds();
+        const rect = Rectangle.CREATE_FROM_BOUNDS(bounds);
+        const baseRect = readShiftIfWin10(rect, win);
+        positionsInitial.set(win.browserWindow.nativeId, baseRect);
 
-        const movedRect = clipBounds(Rectangle.CREATE_FROM_BOUNDS(bounds)
-            .shift({
-                x: 7,
-                y: 0,
-                width: -14,
-                height: -7
-            })
-            .move(thisRect, newBounds)
-            .shift({
-                x: -7,
-                y: 0,
-                width: 14,
-                height: 7
-            }), win.browserWindow);
-        positionsFinal.set(win.browserWindow.nativeId, movedRect);
+        const readShiftedMoved = clipBounds(baseRect.move(movingWindowRect, newBounds), win.browserWindow);
+        const movedRect = writeShiftIfWin10(readShiftedMoved, win);
+
+        positionsFinal.set(win.browserWindow.nativeId, readShiftedMoved);
 
         if (baseRect.moved(movedRect)) {
             moves.push([win, movedRect]);
         }
     });
 
-    positionsFinal.set(win.browserWindow.nativeId, Rectangle.CREATE_FROM_BOUNDS(newBounds));
+    // positionsFinal.set(win.browserWindow.nativeId, Rectangle.CREATE_FROM_BOUNDS(newBounds));
+
     const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positionsInitial].map(([, rect]) => rect));
     const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES([...positionsFinal].map(([, rect]) => rect));
 
     if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
-        //moves.length = 0;
-        moves.length = moves.length;
+        moves.length = 0;
     }
 }
 

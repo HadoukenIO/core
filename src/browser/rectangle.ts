@@ -421,8 +421,8 @@ export class Rectangle {
 }
 
 enum Side {
-    top,
-    right,
-    bottom,
-    left
+    top = "top",
+    right = "right",
+    bottom = "bottom",
+    left = "left"
 }
