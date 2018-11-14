@@ -226,12 +226,14 @@ export class WindowGroups extends EventEmitter {
         if (argo['disabled-frame-groups']) {
             groupTracker.addWindowToGroup(win);
         }
-        await Promise.all(group.map(async w => {
-            if (w.isProxy) {
-                const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(w);
-                await runtimeProxyWindow.registerSingle(win);
-            }
-        }));
+        if (!win.isProxy) {
+            await Promise.all(group.map(async w => {
+                if (w.isProxy) {
+                    const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(w);
+                    await runtimeProxyWindow.registerSingle(win);
+                }
+            }));
+        }
         return _groupUuid;
     };
 
@@ -251,7 +253,9 @@ export class WindowGroups extends EventEmitter {
         }));
         if (win.isProxy) {
             const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(win);
-            await runtimeProxyWindow.deregister();
+            if (runtimeProxyWindow) {
+                await runtimeProxyWindow.destroy();
+            }
         }
     };
 

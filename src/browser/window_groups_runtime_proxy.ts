@@ -37,10 +37,16 @@ export class RuntimeProxyWindow {
     private boundLocalWindows: Map<string, Identity>;
 
     constructor(hostRuntime: PeerRuntime, wrappedWindow: _Window, nativeId: string, windowOptions: any) {
+        const { identity: { uuid, name } } = wrappedWindow;
+        const windowKey = `${uuid}${name}`;
+        const existingProxyWindow = externalWindowsProxyList.get(windowKey);
+        //ensure we return an existing object if we have one.
+        if (existingProxyWindow) {
+            return existingProxyWindow;
+        }
         this.hostRuntime = hostRuntime;
         this.wrappedWindow = wrappedWindow;
         this.boundLocalWindows = new Map();
-        const { identity: { uuid, name } } = wrappedWindow;
 
         const proxyWindowOptions = {
             hwnd: '' + nativeId, ...windowOptions
@@ -65,7 +71,6 @@ export class RuntimeProxyWindow {
             mainFrameRoutingId: 0,
             isProxy: true
         };
-        const windowKey = getWindowKey(wrappedWindow.identity);
         externalWindowsProxyList.set(windowKey, this);
     }
 
@@ -93,22 +98,24 @@ export class RuntimeProxyWindow {
     }
 
     //https://english.stackexchange.com/questions/25931/unregister-vs-deregister
-    public deregister = async (boundIdentity?: Identity) => {
-        //TODO: Change this....
-        if (boundIdentity) {
-            this.boundLocalWindows.delete(getWindowKey(boundIdentity));
-        } else {
-            this.boundLocalWindows.clear();
-        }
+    public deregister = async (boundIdentity: Identity): Promise<void> => {
+        this.boundLocalWindows.delete(getWindowKey(boundIdentity));
+    }
 
-        if (this.boundLocalWindows.size < 1) {
-            const { identity: { uuid, name } } = this.wrappedWindow;
-            const windowKey = `${uuid}${name}`;
+    public destroy = async (): Promise<void> => {
+        const { identity: { uuid, name } } = this.wrappedWindow;
+        const windowKey = `${uuid}${name}`;
 
-            externalWindowsProxyList.delete(windowKey);
-            this.window.browserWindow.setExternalWindowNativeId('0x0');
-            this.window.browserWindow.close();
+        this.window.browserWindow.setExternalWindowNativeId('0x0');
+        this.window.browserWindow.close();
+        this.boundLocalWindows.clear();
+        externalWindowsProxyList.delete(windowKey);
+
+        try {
             await this.wrappedWindow.removeAllListeners();
+        } catch (err) {
+            writeToLog('info', 'Non Fatal error: remove all listeners failed for proxy window');
+            writeToLog('info', err);
         }
     }
 
@@ -210,6 +217,6 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
 
 export function deregisterAllRuntimeProxyWindows(): void {
     externalWindowsProxyList.forEach(runtimeProxyWindow => {
-        runtimeProxyWindow.deregister();
+        runtimeProxyWindow.destroy();
     });
 }
