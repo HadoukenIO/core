@@ -90,6 +90,7 @@ function five0BaseOptions() {
             },
             'disableInitialReload': false,
             'node': false,
+            'shadowApplication': false,
             'v2Api': true
         },
         'frame': true,

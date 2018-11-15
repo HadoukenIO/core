@@ -51,6 +51,7 @@ declare module 'electron' {
         isDestroyed(): boolean;
         on(event: string, callback: (...args: any[]) => any): void;
         sendbyname(classname: string, windowname: string, message: string, maskPayload?: boolean): boolean;
+        sendbyid(id: number, message: string, maskPayload?: boolean): boolean;
         setmessagetimeout(timeout: number): void;
     }
 

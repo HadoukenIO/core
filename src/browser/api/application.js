@@ -721,7 +721,10 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
     const { preloadScripts } = mainWindowOpts;
     const loadUrl = () => {
-        app.mainWindow.loadURL(app._options.url);
+        if (!mainWindowOpts.experimental.shadowApplication) {
+            app.mainWindow.loadURL(app._options.url);
+        }
+
         coreState.setAppRunningState(uuid, true);
         ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
     };

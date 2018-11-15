@@ -58,6 +58,23 @@ class WMCopyDataTransport extends BaseTransport {
         return sent;
     }
 
+    public send(id: number, data: any, maskPayload?: boolean): boolean {
+        if (!this._messageWindow || this._messageWindow.isDestroyed()) {
+            this.initMessageWindow();
+        }
+
+        let sent = false;
+        let i = 0;
+        for (i = 0; i < this.messageRetry && !sent; i++) {
+            sent = this._messageWindow.sendbyid(id, JSON.stringify(data), !!maskPayload);
+            if (!sent) {
+                log.writeToLog(1, `${this.senderClass}: error sending message to ${id}', retry=${i}`, true);
+            }
+        }
+
+        return sent;
+    }
+
 }
 
 export default WMCopyDataTransport;

@@ -53,7 +53,10 @@ import route from './src/common/route';
 
 import { createWillDownloadEventListener } from './src/browser/api/file_download';
 
+import { WMCopyData } from './src/browser/transport';
+
 // locals
+let cbtListener;
 let firstApp = null;
 let rvmBus;
 let otherInstanceRunning = false;
@@ -381,6 +384,97 @@ app.on('ready', function() {
         log.writeToLog('info', err);
     }
     handleDeferredLaunches();
+
+
+
+
+    cbtListener = new WMCopyData('OpenFinCBTListener', '');
+
+    const setExternalWindowDisabledFrame = (hwndStr, disabled) => {
+        cbtListener.send(parseInt(hwndStr), {
+            type: 'external-window-action',
+            hwnd: hwndStr,
+            payload: {
+                type: `${disabled? 'disable' : 'enable'}-window-frame`
+            }
+        });
+    };
+
+    cbtListener.on('message', (hwnd, strData) => {
+        // 'next tick' so to free the Windows event loop
+        setTimeout(() => {
+            try {
+                const data = JSON.parse(strData);
+
+                // Ignore all but the correct type
+                if (data.type !== 'external-window-event') {
+                    return;
+                }
+
+                const pId = app.getProcessIdForNativeHandle(data.hwnd);
+                app.vlog(1, `CBT listener: pid=${pId} h=${data.hwnd} d=${strData}`);
+
+                const appUuid = `shadow-application-${pId}`;
+                const windowName = data.hwnd;
+
+                // Register app if it does not exist
+                const cApp = coreState.getAppByUuid(appUuid);
+                if (!cApp) {
+                    app.vlog(1, `Creating shadow application for process ${pId}`);
+                    const Application = require('./src/browser/api/application.js').Application;
+                    Application.create({
+                        uuid: appUuid,
+                        name: appUuid,
+                        nonPersistant: true,
+                        experimental: {
+                            shadowApplication: true
+                        },
+                        autoShow: false,
+                        saveWindowState: false
+                    });
+
+                    Application.run({ uuid: appUuid });
+                }
+
+                const appApiHandlers = require('./src/browser/api_protocol/api_handlers/application.js').applicationApiMap;
+
+                // Create Window if it does not exist
+                const wnd = coreState.getWindowByUuidName(appUuid, windowName);
+                if (!wnd) {
+                    app.vlog(1, `Creating shadow window ${windowName} for process ${pId}`);
+                    const registerExternalWindow = appApiHandlers['register-external-window'];
+                    registerExternalWindow({}, {
+                        payload: {
+                            uuid: appUuid,
+                            name: windowName,
+                            hwnd: windowName,
+                            options: {
+                                nonPersistant: true,
+                                experimental: {
+                                    shadowApplication: true
+                                },
+                                autoShow: false,
+                                saveWindowState: false
+                            },
+                            externalWindowDisabledFrameDelegate: setExternalWindowDisabledFrame
+                        }
+                    }, () => {});
+                }
+
+                // Route the action
+                const externalWindowAction = appApiHandlers['external-window-action'];
+                data.payload = data.payload || {};
+                data.payload.uuid = appUuid;
+                data.payload.name = windowName;
+                externalWindowAction({}, data, () => {});
+
+            } catch (e) {
+                app.vlog(1, `CBT listener: err: ${e}`);
+            }
+        }, 0);
+    });
+
+
 }); // end app.ready
 
 function staggerPortBroadcast(myPortInfo) {

@@ -350,14 +350,20 @@ function runApplication(identity, message, ack, nack) {
 
 function registerExternalWindow(identity, message, ack) {
     let payload = message.payload;
-    let childWindowOptions = {
+    const childWindowOptions = Object.assign({
         name: payload.name,
         uuid: payload.uuid,
-        hwnd: payload.hwnd
-    };
+        hwnd: payload.hwnd,
+    }, payload.options);
+
     let parent = coreState.getWindowByUuidName(payload.uuid, payload.uuid);
     let parentBw = parent && parent.browserWindow;
     let childBw = new BrowserWindow(childWindowOptions);
+
+
+    // Hack in the external message window
+    childBw._externalWindowDisabledFrameDelegate = payload.externalWindowDisabledFrameDelegate;
+    childBw._options = childWindowOptions;
 
     electronApp.emit('child-window-created', parentBw.id, childBw.id, childWindowOptions);
     ack(successAck);

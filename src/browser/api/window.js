@@ -1051,7 +1051,10 @@ Window.close = function(identity, force, callback = () => {}) {
     };
 
     let defaultAction = () => {
-        if (!browserWindow.isDestroyed()) {
+        if (!browserWindow.isDestroyed() && (!browserWindow.isExternalWindow()
+                /* ||
+                                (browserWindow.isExternalWindow() && !browserWindow._options.experimental.shadowApplication)*/
+            )) {
             let openfinWindow = Window.wrap(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
             browserWindow.close();
@@ -1089,6 +1092,10 @@ Window.disableFrame = function(requestorIdentity, windowIdentity) {
     disabledFrameRef.set(windowKey, ++dframeRefCount);
     subscriptionManager.registerSubscription(disabledFrameUnsubDecorator(windowIdentity), requestorIdentity, `disable-frame-${windowKey}`);
     browserWindow.setUserMovementEnabled(false);
+
+    if (browserWindow._externalWindowDisabledFrameDelegate) {
+        browserWindow._externalWindowDisabledFrameDelegate(browserWindow.nativeId, true);
+    }
 };
 
 Window.embed = function(identity, parentHwnd) {
@@ -1123,6 +1130,10 @@ Window.enableFrame = function(identity) {
     let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
     disabledFrameRef.set(windowKey, --dframeRefCount);
     browserWindow.setUserMovementEnabled(true);
+
+    if (browserWindow._externalWindowDisabledFrameDelegate) {
+        browserWindow._externalWindowDisabledFrameDelegate(browserWindow.nativeId, false);
+    }
 };
 
 Window.executeJavascript = function(identity, code, callback = () => {}) {
