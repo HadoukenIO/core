@@ -102,13 +102,13 @@ export class WindowGroups extends EventEmitter {
         // _addWindowToGroup returns the group's uuid that source was added to. in
         // the case where target doesn't belong to a group either, it generates
         // a brand new group and returns its uuid
-        sourceWindow.groupUuid = this._addWindowToGroup(targetGroupUuid, sourceWindow);
+        sourceWindow.groupUuid = await this._addWindowToGroup(targetGroupUuid, sourceWindow);
         if (!targetGroupUuid) {
-            targetWindow.groupUuid = targetGroupUuid = this._addWindowToGroup(sourceWindow.groupUuid, targetWindow);
+            targetWindow.groupUuid = targetGroupUuid = await this._addWindowToGroup(sourceWindow.groupUuid, targetWindow);
         }
 
         //we just added a proxy window, we need to take some additional actions.
-        if (runtimeProxyWindow && !runtimeProxyWindow.isRegistered) {
+        if (runtimeProxyWindow) {
             const windowGroup = await runtimeProxyWindow.register(source);
             windowGroup.forEach(pWin => this._addWindowToGroup(sourceWindow.groupUuid, pWin.window));
         }
@@ -177,12 +177,12 @@ export class WindowGroups extends EventEmitter {
 
         // create a group if target doesn't already belong to one
         if (!targetGroupUuid) {
-            targetWindow.groupUuid = targetGroupUuid = this._addWindowToGroup(targetGroupUuid, targetWindow);
+            targetWindow.groupUuid = targetGroupUuid = await this._addWindowToGroup(targetGroupUuid, targetWindow);
         }
 
         // create a temporary group if source doesn't already belong to one
         if (!sourceGroupUuid) {
-            sourceGroupUuid = this._addWindowToGroup(sourceGroupUuid, sourceWindow);
+            sourceGroupUuid = await this._addWindowToGroup(sourceGroupUuid, sourceWindow);
         }
 
         // update each of the windows from source's group to point
@@ -196,7 +196,7 @@ export class WindowGroups extends EventEmitter {
         delete this._windowGroups[sourceGroupUuid];
 
         //we just added a proxy window, we need to take some additional actions.
-        if (runtimeProxyWindow && !runtimeProxyWindow.isRegistered) {
+        if (runtimeProxyWindow) {
             const windowGroup = await runtimeProxyWindow.register(source);
             windowGroup.forEach(pWin => this._addWindowToGroup(sourceWindow.groupUuid, pWin.window));
         }
@@ -217,13 +217,22 @@ export class WindowGroups extends EventEmitter {
         }
     };
 
-    private _addWindowToGroup = (groupUuid: string, win: OpenFinWindow): string => {
+    private _addWindowToGroup = async (groupUuid: string, win: OpenFinWindow): Promise<string> => {
         const _groupUuid = groupUuid || generateUuid();
         this._windowGroups[_groupUuid] = this._windowGroups[_groupUuid] || {};
+        const group = this.getGroup(_groupUuid);
         this._windowGroups[_groupUuid][win.name] = win;
-        win.groupUuid = groupUuid;
+        win.groupUuid = _groupUuid;
         if (argo['disabled-frame-groups']) {
             groupTracker.addWindowToGroup(win);
+        }
+        if (!win.isProxy) {
+            await Promise.all(group.map(async w => {
+                if (w.isProxy) {
+                    const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(w);
+                    await runtimeProxyWindow.registerSingle(win);
+                }
+            }));
         }
         return _groupUuid;
     };
@@ -233,9 +242,20 @@ export class WindowGroups extends EventEmitter {
             groupTracker.removeWindowFromGroup(win);
         }
         delete this._windowGroups[groupUuid][win.name];
+
+        //update proxy windows to no longer be bound to this specific window.
+        const group = this.getGroup(groupUuid);
+        await Promise.all(group.map(async w => {
+            if (w.isProxy) {
+                const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(w);
+                await runtimeProxyWindow.deregister(win);
+            }
+        }));
         if (win.isProxy) {
             const runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(win);
-            runtimeProxyWindow.deregister();
+            if (runtimeProxyWindow) {
+                await runtimeProxyWindow.destroy();
+            }
         }
     };
 
