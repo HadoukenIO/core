@@ -99,11 +99,11 @@ export default class BoundsChangedStateTracker {
             'bounds-changed': (): void => {
                 const ofWindow = coreState.getWindowByUuidName(uuid, name);
                 const groupUuid = ofWindow ? ofWindow.groupUuid : null;
+
+                const dispatchedChange = this.handleBoundsChange(true);
                 if (groupUuid && coreState.argo['disabled-frame-groups']) {
                     return;
                 }
-                const dispatchedChange = this.handleBoundsChange(true);
-
                 if (dispatchedChange) {
                     if (groupUuid) {
                         const groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid);
@@ -338,7 +338,7 @@ export default class BoundsChangedStateTracker {
             const reason = this.boundsChangeReason(this.name, groupUuid);
 
             // handle window group movements
-            if (groupUuid) {
+            if (groupUuid && !coreState.argo['disabled-frame-groups']) {
                 let groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid);
 
                 if (force) {
