@@ -150,9 +150,9 @@ let optionSetters = {
     },
     contextMenuSettings: function(newVal, browserWin) {
         if (!newVal ||
-            typeof newVal.enable !== 'undefined' && typeof newVal.enable !== 'boolean' ||
-            typeof newVal.devtools !== 'undefined' && typeof newVal.devtools !== 'boolean' ||
-            typeof newVal.reload !== 'undefined' && typeof newVal.reload !== 'boolean') {
+            (typeof newVal.enable !== 'undefined' && typeof newVal.enable !== 'boolean') ||
+            (typeof newVal.devtools !== 'undefined' && typeof newVal.devtools !== 'boolean') ||
+            (typeof newVal.reload !== 'undefined' && typeof newVal.reload !== 'boolean')) {
             return;
         }
         const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
