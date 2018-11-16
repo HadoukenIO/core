@@ -94,7 +94,7 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     return leader[1].eventBounds;
 }
 
-function handleBatchedMove(moves: [OpenFinWindow, Rectangle][]) {
+function handleBatchedMove(moves: [OpenFinWindow, Rectangle][], bringWinsToFront: boolean = false) {
     if (isWin32) {
         const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
         const flags = noZorder + noActivate;
@@ -102,11 +102,13 @@ function handleBatchedMove(moves: [OpenFinWindow, Rectangle][]) {
         moves.forEach(([win, rect]) => {
             const hwnd = parseInt(win.browserWindow.nativeId, 16);
             wt.setWindowPos(hwnd, { ...rect.transactionBounds, flags });
+            if (bringWinsToFront) { win.browserWindow.bringToFront(); }
         });
         wt.commit();
     } else {
         moves.forEach(([win, rect]) => {
             win.browserWindow.setBounds(rect.bounds);
+            if (bringWinsToFront) { win.browserWindow.bringToFront(); }
         });
     }
 }
@@ -209,7 +211,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
             });
             groupInfo.boundsChanging = true;
             const initialMoves = handleBoundsChanging(win, e, newBounds, changeType);
-            handleBatchedMove(initialMoves);
+            handleBatchedMove(initialMoves, true);
             initialMoves.forEach((pair) => {
                 emitChange(pair, changeType, pair[0] === win ? 'self' : 'group');
             });
