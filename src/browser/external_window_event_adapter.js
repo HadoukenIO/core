@@ -57,6 +57,10 @@ class ExternalWindowEventAdapter {
             browserWindow.emit('bounds-changed');
         });
 
+        ofEvents.on(route.externalWindow('bounds-changing', uuid, name), (bounds) => {
+            browserWindow.emit('bounds-changing', bounds);
+        });
+
         ofEvents.on(route.externalWindow('visibility-changed', uuid, name), (visibility) => {
             browserWindow.emit('visibility-changed', {}, visibility);
         });
