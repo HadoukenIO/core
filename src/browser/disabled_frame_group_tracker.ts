@@ -4,6 +4,7 @@ import route from '../common/route';
 import { BrowserWindow } from 'electron';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
+import {getRuntimeProxyWindow} from './window_groups_runtime_proxy';
 import {RectangleBase, Rectangle} from './rectangle';
 import {createRectangleFromBrowserWindow, zeroDelta} from './normalized_rectangle';
 const isWin32 = process.platform === 'win32';
@@ -35,7 +36,7 @@ interface GroupInfo {
 const listenerCache: Map<WinId, (...args: any[]) => void> = new Map();
 const groupInfoCache: Map<string, GroupInfo> = new Map();
 type Move = [OpenFinWindow, Rectangle];
-function emitChange(
+async function emitChange(
     [win, rect] : [OpenFinWindow, Rectangle],
     changeType: number,
     reason: string,
@@ -44,7 +45,9 @@ function emitChange(
     const topic = `bounds-${eventType}`;
     const uuid = win.uuid;
     const name = win.name;
-    of_events.emit(route.window(topic, uuid, name), {
+    const id = {uuid, name};
+    const eventName = route.window(topic, uuid, name);
+    const eventArgs = {
         ...rect.eventBounds,
         changeType,
         uuid,
@@ -53,7 +56,15 @@ function emitChange(
         reason,
         type: 'window',
         deffered: true
-    });
+    };
+    if (win.isProxy) {
+       const rt = await getRuntimeProxyWindow(id);
+       const fin = rt.hostRuntime.fin;
+       await fin.System.executeOnRemote(id, {action: 'raise-event', payload: {eventName, eventArgs}} );
+    } else {
+        of_events.emit(eventName, eventArgs);
+    }
+
 }
 export function updateGroupedWindowBounds(win: OpenFinWindow, delta: Partial<RectangleBase>) {
     const shift = {...zeroDelta, ...delta};
@@ -172,7 +183,7 @@ function handleResizeMove(start: Rectangle, end: RectangleBase, positions: [Open
     // }
 }
 
-function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
+export function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
     let groupInfo: GroupInfo = groupInfoCache.get(win.groupUuid);
     if (!groupInfo) {
         groupInfo = {
@@ -221,7 +232,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
                     handleBatchedMove(moves);
                     moves.forEach((pair) => {
                         moved.add(pair[0]);
-                        emitChange(pair, d, pair[0] === win ? 'self' : 'group');
+                        // emitChange(pair, d, pair[0] === win ? 'self' : 'group');
                     });
                 }
             }, 16);
