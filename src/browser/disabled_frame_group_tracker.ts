@@ -66,6 +66,7 @@ async function emitChange(
     }
 
 }
+
 export function updateGroupedWindowBounds(win: OpenFinWindow, delta: Partial<RectangleBase>) {
     const shift = {...zeroDelta, ...delta};
     return handleApiMove(win, shift);
