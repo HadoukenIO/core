@@ -291,7 +291,10 @@ export default class BoundsChangedStateTracker {
         let currentBounds = this.getCurrentBounds();
         if (bounds) {
             currentBounds = {
-              ...bounds,
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: bounds.height,
               frame: currentBounds.frame,
               windowState: currentBounds.windowState
             };
