@@ -11,7 +11,7 @@ type SharedBound = Array<SideName>;
 type BoundIdentifier = [Rectangle, SideName];
 type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
 export type SharedBoundsList = Array<SharedBound>;
-
+type Graph = [number[], number[][]];
 export interface Opts {
     minWidth?: number;
     maxWidth?: number;
@@ -427,6 +427,87 @@ export class Rectangle {
         }
 
         return true;
+    }
+
+    public static GRAPH(rects: Rectangle[]): Graph  {
+        const edges = [];
+        const vertices: Array<number> = [];
+        const rectLen = rects.length;
+
+        for (let i = 0; i < rectLen; i++) {
+            const rect = rects[i];
+            vertices.push(i);
+
+            for (let ii = 0; ii < rectLen; ii++) {
+                if (i !== ii) {
+                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
+                        edges.push([i, ii]);
+                    }
+                }
+            }
+        }
+
+        return [vertices, edges];
+    }
+
+    public static DISTANCES(graph: (number[] | number[][])[] , refV: number) {
+        const [vertices, edges] = graph;
+        const distances = new Map();
+
+        for (let v in vertices) {
+            distances.set(+v, Infinity);
+        }
+
+        distances.set(refV, 0);
+
+        const toVisit = [refV];
+
+        while (toVisit.length) {
+            const u = toVisit.shift();
+
+            const e = (<number [][]>edges).filter(([uu]): boolean => uu === u);
+
+            e.forEach(([u, v]) => {
+                if (distances.get(v) === Infinity) {
+                    toVisit.push(v);
+                    distances.set(v, distances.get(u) + 1);
+                }
+            });
+        }
+
+        return distances;
+    }
+
+    // todo change with recursive walk
+    public static BREADTH_WALK(graph: (number[] | number[][])[] , refV: number) {
+        const [vertices, edges] = graph;
+        const distances = new Map();
+
+        for (let v in vertices) {
+            distances.set(+v, []);
+        }
+
+        distances.set(refV, [refV]);
+
+        const toVisit = [refV];
+
+        while (toVisit.length) {
+            const u = toVisit.shift();
+
+            const e = (<number [][]>edges).filter(([uu]): boolean => uu === u);
+
+            e.forEach(([u, v]) => {
+                if (distances.get(v).slice(-1)[0] !== v) {
+                    toVisit.push(v);
+                    const d = distances.get(u).concat(distances.get(v));
+
+                    d.push(v);
+                    distances.set(v, d);
+                }
+            });
+        }
+
+        return distances;
     }
 }
 
