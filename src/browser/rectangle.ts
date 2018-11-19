@@ -291,42 +291,64 @@ export class Rectangle {
     public alignSide(mySide: SideName, rect: Rectangle, sideToAlign: SideName) {
         const changes = this.rawBounds;
         switch (mySide) {
-            case 'left':
-                changes.width += (this.x - rect[sideToAlign]);
-                changes.x = rect[sideToAlign];
-                if (changes.width < this.opts.minWidth) {
-                    changes.width = this.opts.minWidth;
-                } else if (changes.width > this.opts.maxWidth) {
-                    changes.width = this.opts.maxWidth;
+            case 'left': {
+                    changes.width += (this.x - rect[sideToAlign]);
+
+                    const tooSmall = changes.width < this.opts.minWidth;
+                    const tooBig = changes.width > this.opts.maxWidth;
+                    const justRight = !tooSmall && !tooBig;
+
+                    if (justRight) {
+                        changes.x = rect[sideToAlign];
+                    }
+                    else if (tooSmall) {
+                        changes.width = this.opts.minWidth;
+                    } else if (tooBig) {
+                        changes.width = this.opts.maxWidth;
+                    }
                 }
                 break;
-            case 'right':
-                changes.width += (rect[sideToAlign] - (this.x + this.width));
-                if (changes.width < this.opts.minWidth) {
-                    changes.x = rect[sideToAlign] - this.opts.minWidth;
-                    changes.width = this.opts.minWidth;
-                } else if (changes.width > this.opts.maxWidth) {
-                    changes.x = rect[sideToAlign] - this.opts.maxWidth;
-                    changes.width = this.opts.maxWidth;
+            case 'right': {
+                    changes.width += (rect[sideToAlign] - (this.x + this.width));
+                    if (changes.width < this.opts.minWidth) {
+                        // prevent "pushing" a window via the resizing of another
+                        // changes.x = rect[sideToAlign] - this.opts.minWidth;
+                        changes.width = this.opts.minWidth;
+                    } else if (changes.width > this.opts.maxWidth) {
+                        // prevent "pulling" a window via the resizing of another
+                        // changes.x = rect[sideToAlign] - this.opts.maxWidth;
+                        changes.width = this.opts.maxWidth;
+                    }
                 }
                 break;
-            case 'top':
-                changes.height += (this.y - rect[sideToAlign]);
-                changes.y = rect[sideToAlign];
-                if (changes.height < this.opts.minHeight) {
-                    changes.height = this.opts.minHeight;
-                } else if (changes.height > this.opts.maxHeight) {
-                    changes.height = this.opts.maxHeight;
+            case 'top': {
+                    changes.height += (this.y - rect[sideToAlign]);
+
+                    const tooSmall = changes.height < this.opts.minHeight;
+                    const tooBig = changes.height > this.opts.maxHeight;
+                    const justRight = !tooSmall && !tooBig;
+
+                    if (justRight) {
+                        changes.y = rect[sideToAlign];
+                    }
+                    else if (tooSmall) {
+                        changes.height = this.opts.minHeight;
+                    } else if (tooBig) {
+                        changes.height = this.opts.maxHeight;
+                    }
                 }
                 break;
-            case 'bottom':
-                changes.height += (rect[sideToAlign] - (this.y + this.height));
-                if (changes.height < this.opts.minHeight) {
-                    changes.y = rect[sideToAlign] - this.opts.minHeight;
-                    changes.height = this.opts.minHeight;
-                } else if (changes.height > this.opts.maxHeight) {
-                    changes.y = rect[sideToAlign] - this.opts.maxHeight;
-                    changes.height = this.opts.maxHeight;
+            case 'bottom': {
+                    changes.height += (rect[sideToAlign] - (this.y + this.height));
+                    if (changes.height < this.opts.minHeight) {
+                        // prevent "pushing" a window via the resizing of another
+                        // changes.y = rect[sideToAlign] - this.opts.minHeight;
+                        changes.height = this.opts.minHeight;
+                    } else if (changes.height > this.opts.maxHeight) {
+                        // prevent "pulling" a window via the resizing of another
+                        // changes.y = rect[sideToAlign] - this.opts.maxHeight;
+                        changes.height = this.opts.maxHeight;
+                    }
                 }
                 break;
             default:
