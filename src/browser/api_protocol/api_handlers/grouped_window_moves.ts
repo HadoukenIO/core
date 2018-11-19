@@ -31,7 +31,7 @@ function makeGetChangeType(from: string[], to: (keyof ChangeType)[], change: 'de
 export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
     const specMap: ActionSpecMap = {};
     Object.entries(actions).forEach(([action, endpoint]) => {
-    if (!hijackThese[action]) {
+        if (!hijackThese[action]) {
             specMap[action] = endpoint;
         } else {
             if (typeof endpoint === 'function') {
