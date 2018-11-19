@@ -5,9 +5,13 @@ import { getTargetWindowIdentity } from './api_protocol_base';
 import { RectangleBase } from '../../rectangle';
 import { APIMessage } from '../../../shapes';
 import { AckFunc } from '../transport_strategy/ack';
+
+const unsupported = (payload: any) => {
+    throw new Error('This action is not supported while grouped');
+};
 const hijackThese: { [key: string]: (payload: any) => ChangeType } = {
-    // TODO  'disable-window-frame': disableWindowFrame,
-    // TODO  'enable-window-frame': enableWindowFrame,
+    'disable-window-frame': unsupported,
+    'enable-window-frame': unsupported,
     'move-window': makeGetChangeType(['left', 'top'], ['x', 'y'], 'absolute'),
     'move-window-by': makeGetChangeType(['deltaLeft', 'deltaTop'], ['x', 'y'], 'delta'),
     'resize-window': makeGetChangeType(['height', 'width'], ['height', 'width'], 'absolute'),
@@ -15,7 +19,6 @@ const hijackThese: { [key: string]: (payload: any) => ChangeType } = {
     'set-window-bounds': makeGetChangeType(['left', 'top', 'height', 'width'], ['x', 'y', 'height', 'width'], 'absolute'),
     'show-at-window': makeGetChangeType(['left', 'top'], ['x', 'y'], 'absolute')
 };
-
 interface ChangeType extends Partial<RectangleBase> {
     change: 'delta' | 'absolute';
 }
@@ -28,7 +31,7 @@ function makeGetChangeType(from: string[], to: (keyof ChangeType)[], change: 'de
 export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
     const specMap: ActionSpecMap = {};
     Object.entries(actions).forEach(([action, endpoint]) => {
-        if (!hijackThese[action]) {
+    if (!hijackThese[action]) {
             specMap[action] = endpoint;
         } else {
             if (typeof endpoint === 'function') {
