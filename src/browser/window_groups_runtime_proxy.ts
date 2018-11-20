@@ -9,6 +9,7 @@ import * as coreState from './core_state';
 import { _Window } from '../../js-adapter/src/api/window/window';
 import { EventEmitter } from 'events';
 import { writeToLog } from './log';
+import { WindowGroupChanged } from '../../js-adapter/src/api/events/window';
 
 //Only allow window proxies to >=.35 runtimes.
 const MIN_API_VER = 37;
@@ -112,7 +113,7 @@ export class RuntimeProxyWindow {
         externalWindowsProxyList.delete(windowKey);
 
         try {
-            await this.wrappedWindow.removeAllListeners();
+            await this.wrappedWindow.removeListener('group-changed', this.onGroupChanged);
         } catch (err) {
             writeToLog('info', 'Non Fatal error: remove all listeners failed for proxy window');
             writeToLog('info', err);
@@ -125,32 +126,7 @@ export class RuntimeProxyWindow {
     }
 
     public wireUpEvents = async (): Promise<void> => {
-        await this.wrappedWindow.on('group-changed', (evt) => {
-            writeToLog('info', 'Group changed event');
-            writeToLog('info', evt);
-
-            if (this.window.uuid === evt.targetWindowAppUuid && this.window.name === evt.targetWindowName) {
-                if (evt.reason === 'leave') {
-                    this.raiseChangeEvents({
-                        uuid: evt.targetWindowAppUuid,
-                        name: evt.targetWindowName
-                    }, 'remove', []);
-                }
-                if (evt.reason === 'join') {
-                    this.raiseChangeEvents( {
-                        uuid: evt.sourceWindowAppUuid,
-                        name: evt.sourceWindowName
-                    }, 'add', evt.sourceGroup);
-                }
-            } else if (this.window.uuid === evt.sourceWindowAppUuid && this.window.name === evt.sourceWindowName) {
-                if (evt.reason === 'merge') {
-                    this.raiseChangeEvents( {
-                        uuid: evt.targetWindowAppUuid,
-                        name: evt.targetWindowName
-                    }, 'add', []);
-                }
-            } //else if (this.sourceIdentity.uuid === evt.targetWindowAppUuid && this.sourceIdentity.name === evt.target)
-        });
+        await this.wrappedWindow.on('group-changed', this.onGroupChanged);
         await this.hostRuntime.fin.once('disconnected', () => {
             this.raiseChangeEvents(this.wrappedWindow.identity, 'remove', []);
         });
@@ -191,7 +167,32 @@ export class RuntimeProxyWindow {
             });
     }
 
-}
+    private onGroupChanged = (evt: WindowGroupChanged<'window', 'group-changed'>) => {
+            writeToLog('info', 'Group changed event');
+            writeToLog('info', evt);
+            if (this.window.uuid === evt.targetWindowAppUuid && this.window.name === evt.targetWindowName) {
+                if (evt.reason === 'leave') {
+                    this.raiseChangeEvents({
+                        uuid: evt.targetWindowAppUuid,
+                        name: evt.targetWindowName
+                    }, 'remove', []);
+                }
+                if (evt.reason === 'join') {
+                    this.raiseChangeEvents({
+                        uuid: evt.sourceWindowAppUuid,
+                        name: evt.sourceWindowName
+                    }, 'add', evt.sourceGroup);
+                }
+            } else if (this.window.uuid === evt.sourceWindowAppUuid && this.window.name === evt.sourceWindowName) {
+                if (evt.reason === 'merge') {
+                    this.raiseChangeEvents({
+                        uuid: evt.targetWindowAppUuid,
+                        name: evt.targetWindowName
+                    }, 'add', []);
+                }
+            }
+        };
+    }
 
 export async function getRuntimeProxyWindow(identity: Identity): Promise<RuntimeProxyWindow> {
     const { uuid, name } = identity;
