@@ -30,5 +30,8 @@ export function createRectangleFromBrowserWindow(win: BrowserWindow) {
     if (normalizedOptions.maxWidth === -1) {
         normalizedOptions.maxWidth = Number.MAX_SAFE_INTEGER;
     }
+    if (win._options.frame) {
+        normalizedOptions.minWidth = Math.max(win._options.minWidth, 150);
+    }
     return Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), normalizedOptions, negate(delta)).shift(delta);
 }
