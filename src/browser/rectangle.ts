@@ -11,7 +11,7 @@ type SharedBound = Array<SideName>;
 type BoundIdentifier = [Rectangle, SideName];
 type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
 export type SharedBoundsList = Array<SharedBound>;
-
+type Graph = [number[], number[][]];
 export interface Opts {
     minWidth?: number;
     maxWidth?: number;
@@ -291,42 +291,64 @@ export class Rectangle {
     public alignSide(mySide: SideName, rect: Rectangle, sideToAlign: SideName) {
         const changes = this.rawBounds;
         switch (mySide) {
-            case 'left':
-                changes.width += (this.x - rect[sideToAlign]);
-                changes.x = rect[sideToAlign];
-                if (changes.width < this.opts.minWidth) {
-                    changes.width = this.opts.minWidth;
-                } else if (changes.width > this.opts.maxWidth) {
-                    changes.width = this.opts.maxWidth;
+            case 'left': {
+                    changes.width += (this.x - rect[sideToAlign]);
+
+                    const tooSmall = changes.width < this.opts.minWidth;
+                    const tooBig = changes.width > this.opts.maxWidth;
+                    const justRight = !tooSmall && !tooBig;
+
+                    if (justRight) {
+                        changes.x = rect[sideToAlign];
+                    }
+                    else if (tooSmall) {
+                        changes.width = this.opts.minWidth;
+                    } else if (tooBig) {
+                        changes.width = this.opts.maxWidth;
+                    }
                 }
                 break;
-            case 'right':
-                changes.width += (rect[sideToAlign] - (this.x + this.width));
-                if (changes.width < this.opts.minWidth) {
-                    changes.x = rect[sideToAlign] - this.opts.minWidth;
-                    changes.width = this.opts.minWidth;
-                } else if (changes.width > this.opts.maxWidth) {
-                    changes.x = rect[sideToAlign] - this.opts.maxWidth;
-                    changes.width = this.opts.maxWidth;
+            case 'right': {
+                    changes.width += (rect[sideToAlign] - (this.x + this.width));
+                    if (changes.width < this.opts.minWidth) {
+                        // prevent "pushing" a window via the resizing of another
+                        // changes.x = rect[sideToAlign] - this.opts.minWidth;
+                        changes.width = this.opts.minWidth;
+                    } else if (changes.width > this.opts.maxWidth) {
+                        // prevent "pulling" a window via the resizing of another
+                        // changes.x = rect[sideToAlign] - this.opts.maxWidth;
+                        changes.width = this.opts.maxWidth;
+                    }
                 }
                 break;
-            case 'top':
-                changes.height += (this.y - rect[sideToAlign]);
-                changes.y = rect[sideToAlign];
-                if (changes.height < this.opts.minHeight) {
-                    changes.height = this.opts.minHeight;
-                } else if (changes.height > this.opts.maxHeight) {
-                    changes.height = this.opts.maxHeight;
+            case 'top': {
+                    changes.height += (this.y - rect[sideToAlign]);
+
+                    const tooSmall = changes.height < this.opts.minHeight;
+                    const tooBig = changes.height > this.opts.maxHeight;
+                    const justRight = !tooSmall && !tooBig;
+
+                    if (justRight) {
+                        changes.y = rect[sideToAlign];
+                    }
+                    else if (tooSmall) {
+                        changes.height = this.opts.minHeight;
+                    } else if (tooBig) {
+                        changes.height = this.opts.maxHeight;
+                    }
                 }
                 break;
-            case 'bottom':
-                changes.height += (rect[sideToAlign] - (this.y + this.height));
-                if (changes.height < this.opts.minHeight) {
-                    changes.y = rect[sideToAlign] - this.opts.minHeight;
-                    changes.height = this.opts.minHeight;
-                } else if (changes.height > this.opts.maxHeight) {
-                    changes.y = rect[sideToAlign] - this.opts.maxHeight;
-                    changes.height = this.opts.maxHeight;
+            case 'bottom': {
+                    changes.height += (rect[sideToAlign] - (this.y + this.height));
+                    if (changes.height < this.opts.minHeight) {
+                        // prevent "pushing" a window via the resizing of another
+                        // changes.y = rect[sideToAlign] - this.opts.minHeight;
+                        changes.height = this.opts.minHeight;
+                    } else if (changes.height > this.opts.maxHeight) {
+                        // prevent "pulling" a window via the resizing of another
+                        // changes.y = rect[sideToAlign] - this.opts.maxHeight;
+                        changes.height = this.opts.maxHeight;
+                    }
                 }
                 break;
             default:
@@ -427,6 +449,87 @@ export class Rectangle {
         }
 
         return true;
+    }
+
+    public static GRAPH(rects: Rectangle[]): Graph  {
+        const edges = [];
+        const vertices: Array<number> = [];
+        const rectLen = rects.length;
+
+        for (let i = 0; i < rectLen; i++) {
+            const rect = rects[i];
+            vertices.push(i);
+
+            for (let ii = 0; ii < rectLen; ii++) {
+                if (i !== ii) {
+                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
+                        edges.push([i, ii]);
+                    }
+                }
+            }
+        }
+
+        return [vertices, edges];
+    }
+
+    public static DISTANCES(graph: (number[] | number[][])[] , refV: number) {
+        const [vertices, edges] = graph;
+        const distances = new Map();
+
+        for (let v in vertices) {
+            distances.set(+v, Infinity);
+        }
+
+        distances.set(refV, 0);
+
+        const toVisit = [refV];
+
+        while (toVisit.length) {
+            const u = toVisit.shift();
+
+            const e = (<number [][]>edges).filter(([uu]): boolean => uu === u);
+
+            e.forEach(([u, v]) => {
+                if (distances.get(v) === Infinity) {
+                    toVisit.push(v);
+                    distances.set(v, distances.get(u) + 1);
+                }
+            });
+        }
+
+        return distances;
+    }
+
+    // todo change with recursive walk
+    public static BREADTH_WALK(graph: (number[] | number[][])[] , refV: number) {
+        const [vertices, edges] = graph;
+        const distances = new Map();
+
+        for (let v in vertices) {
+            distances.set(+v, []);
+        }
+
+        distances.set(refV, [refV]);
+
+        const toVisit = [refV];
+
+        while (toVisit.length) {
+            const u = toVisit.shift();
+
+            const e = (<number [][]>edges).filter(([uu]): boolean => uu === u);
+
+            e.forEach(([u, v]) => {
+                if (distances.get(v).slice(-1)[0] !== v) {
+                    toVisit.push(v);
+                    const d = distances.get(u).concat(distances.get(v));
+
+                    d.push(v);
+                    distances.set(v, d);
+                }
+            });
+        }
+
+        return distances;
     }
 }
 
