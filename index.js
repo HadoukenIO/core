@@ -152,8 +152,8 @@ portDiscovery.on(route.runtime('launched'), (portInfo) => {
 
 includeFlashPlugin();
 
-// Enable Single tenant for MAC
-handleMacSingleTenant();
+// set cache path for Windows and MAC_OS
+handleCachePath();
 
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
@@ -732,18 +732,36 @@ function registerMacMenu() {
     }
 }
 
-// Set usrData & userCache path specifically for each application for MAC_OS
-function handleMacSingleTenant() {
+// Set usrData & userCache path specifically for each application for MAC_OS and Windows
+function handleCachePath() {
+    const openfinVersion = process.versions.openfin;
+    const securityRealm = coreState.argo['security-realm'];
+    const userData = app.getPath('userData');
     if (process.platform === 'darwin') {
         const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
         let cachePath = encodeURIComponent(configUrl);
-        if (coreState.argo['security-realm']) {
-            cachePath = path.join(cachePath, coreState.argo['security-realm']);
+        if (securityRealm) {
+            cachePath = path.join(cachePath, securityRealm);
         }
-        const userData = app.getPath('userData');
-        cachePath = path.join(userData, 'cache', cachePath, process.versions['openfin']);
+
+        cachePath = path.join(userData, 'cache', cachePath, openfinVersion);
         app.setPath('userData', cachePath);
         app.setPath('userCache', cachePath);
+    } else {
+        log.writeToLog('info', `[user data before] [${userData}] `);
+        let cachePath = userData.replace('Roaming', 'Local');
+        cachePath = path.join(cachePath, 'cache');
+        log.writeToLog('info', 'security realm------');
+        log.writeToLog('info', coreState.argo['security-realm']);
+        if (securityRealm) {
+            cachePath = path.join(cachePath, securityRealm);
+        }
+
+        cachePath = path.join(cachePath, openfinVersion);
+        app.setPath('userData', cachePath);
+        app.setPath('userCache', cachePath);
+
+        log.writeToLog('info', `[user data after] [${app.getPath('userData')}] `);
     }
 }
 
