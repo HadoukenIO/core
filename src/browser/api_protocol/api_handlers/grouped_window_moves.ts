@@ -10,6 +10,7 @@ const unsupported = (payload: any) => {
     throw new Error('This action is not supported while grouped');
 };
 const hijackThese: { [key: string]: (payload: any) => ChangeType } = {
+    'animate-window': unsupported,
     'disable-window-frame': unsupported,
     'enable-window-frame': unsupported,
     'move-window': makeGetChangeType(['left', 'top'], ['x', 'y'], 'absolute'),
