@@ -81,8 +81,7 @@ export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Par
 
 function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     const rect = createRectangleFromBrowserWindow(win.browserWindow);
-    const bounds = rect.shift(delta);
-    const newBounds = rect.applyOffset(bounds);
+    const newBounds = rect.shift(delta);
     if (!rect.moved(newBounds)) {
         return;
     }
@@ -93,7 +92,7 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
             ? 2
             : 1
         : 0;
-    const moves = handleBoundsChanging(win, {}, bounds, changeType);
+    const moves = handleBoundsChanging(win, {}, newBounds.bounds, changeType);
     const leader = moves.find(([w]) => w === win);
     if (!leader || leader[1].moved(newBounds)) {
         //Propsed move differs from requested move
