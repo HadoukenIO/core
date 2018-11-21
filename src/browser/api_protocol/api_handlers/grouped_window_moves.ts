@@ -35,7 +35,7 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
             specMap[action] = endpoint;
         } else {
             if (typeof endpoint === 'function') {
-                specMap[action] = async (identity, message: APIMessage, ack: AckFunc, nack) => {
+                specMap[action] = (identity, message: APIMessage, ack: AckFunc, nack) => {
                     const { payload } = message;
                     const { uuid, name } = getTargetWindowIdentity(payload);
                     const wrapped = getWindowByUuidName(uuid, name);
