@@ -16,8 +16,14 @@ import ofEvents from './of_events';
 import route from '../common/route';
 import { clipBounds, windowSetBoundsToVisible } from './utils';
 import { OpenFinWindow, BrowserWindow } from '../shapes';
-import { Rectangle, windowTransaction } from 'electron';
+import { windowTransaction } from 'electron';
+import * as log from '../browser/log';
+import {RectangleBase, Rectangle} from './rectangle';
 
+// change types
+const POSITION = 0;
+const SIZE = 1;
+const POSITION_AND_SIZE = 2;
 
 const isWin32 = process.platform === 'win32';
 
@@ -36,7 +42,7 @@ const shouldTrack = (action: string): boolean => {
 const trackingResize = shouldTrack('resize');
 const trackingAPI = shouldTrack('api');
 
-interface DecoratedBounds extends Rectangle {
+interface DecoratedBounds extends RectangleBase {
     frame: boolean;
     windowState: WindowState;
 }
@@ -224,7 +230,7 @@ export default class BoundsChangedStateTracker {
         };
     };
 
-    private getBoundsDelta = (current: Rectangle, cached: Rectangle): Delta => {
+    private getBoundsDelta = (current: RectangleBase, cached: RectangleBase): Delta => {
         return {
             x: current.x - cached.x,
             x2: (current.x + current.width) - (cached.x + cached.width),
@@ -253,67 +259,21 @@ export default class BoundsChangedStateTracker {
     };
 
     private sharedBoundPixelDiff = 5;
+
+    // TODO this needs to account for if the window boarder has been crossed over
     private sharedBound = (boundOne: number, boundTwo: number): boolean => {
         return Math.abs(boundOne - boundTwo) < this.sharedBoundPixelDiff;
     };
 
-    // tslint:disable-next-line:max-line-length
-    private handleGroupedResize = (resizeChangeType: BoundChanged, delta: any, originalWindowCachedBounds: DecoratedBounds, windowToUpdate: OpenFinWindow): Rectangle => {
+    private handleGroupedResize = (windowToUpdate: OpenFinWindow, bounds: RectangleBase): RectangleBase => {
         if (!trackingResize) {
-            return windowToUpdate.browserWindow.getBounds();
+            return bounds;
         }
-        let { x, y, width, height } = windowToUpdate.browserWindow.getBounds();
-        if (resizeChangeType.height) {
-            if (delta.y) {
-                if (this.sharedBound(y, originalWindowCachedBounds.y)) {
-                    // resize windows with matching top bound
-                    y = toSafeInt(y + delta.y, y);
-                    height = height + delta.height;
-                }
-                if (this.sharedBound(y + height, originalWindowCachedBounds.y)) {
-                    // resize windows with matching bottom bound
-                    height = height - delta.height;
-                }
-            }
-            if (delta.y2) {
-                if (this.sharedBound(y + height, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                    // resize windows with matching bottom bound
-                    height = height + delta.height;
-                }
-                if (this.sharedBound(y, originalWindowCachedBounds.y + originalWindowCachedBounds.height)) {
-                    // resize windows with matching top bound
-                    y = toSafeInt(y + delta.height, y);
-                    height = height - delta.height;
-                }
-            }
-        }
-
-        if (resizeChangeType.width) {
-            if (delta.x) {
-                if (this.sharedBound(x, originalWindowCachedBounds.x)) {
-                    // resize windows with matching left bound
-                    x = toSafeInt(x + delta.x, x);
-                    width = width + delta.width;
-                }
-                if (this.sharedBound(x + width, originalWindowCachedBounds.x)) {
-                    // resize windows with matching right bound
-                    width = width - delta.width;
-                }
-            }
-            if (delta.x2) {
-                if (this.sharedBound(x + width, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                    // resize windows with matching right bound
-                    width = width + delta.width;
-                }
-                if (this.sharedBound(x, originalWindowCachedBounds.x + originalWindowCachedBounds.width)) {
-                    // resize windows with matching left bound
-                    x = toSafeInt(x + delta.width, x);
-                    width = width - delta.width;
-                }
-            }
-        }
-        const newWindowBounds = { x, y, width, height };
-        return clipBounds(newWindowBounds, windowToUpdate.browserWindow);
+        const thisRect = Rectangle.CREATE_FROM_BOUNDS(bounds);
+        const currentBounds = this.getCurrentBounds();
+        const cachedBounds = this.getCachedBounds();
+        const moved = thisRect.move(cachedBounds, currentBounds);
+        return clipBounds(moved, windowToUpdate.browserWindow);
     };
 
     private checkTrackingApi = (groupLeader: ITransaction): boolean => groupLeader.type === 'api'
@@ -369,7 +329,7 @@ export default class BoundsChangedStateTracker {
             //1 means a change in size.
             //2 means a change in position and size.
             // Default to change in position when there is no change
-            const changeType = (sizeChange ? (posChange ? 2 : 1) : 0);
+            const changeType = (sizeChange ? (posChange ? POSITION_AND_SIZE : SIZE) : POSITION);
 
             const ofWindow = coreState.getWindowByUuidName(this.uuid, this.name);
             const groupUuid = ofWindow ? ofWindow.groupUuid : null;
@@ -409,25 +369,42 @@ export default class BoundsChangedStateTracker {
 
                     const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
                     let flags: number;
-                    if (changeType === 1) {
+
+                    if (changeType === SIZE) {
                         // this may need to change to 1 or 2 if we fix functionality for changeType 2
                         flags = noZorder + noActivate;
                     } else {
                         flags = noZorder + noSize + noActivate;
                     }
 
-                    WindowGroups.getGroup(groupUuid).filter((win): boolean => {
-                        win.browserWindow.bringToFront();
-                        return win.name !== this.name;
-                    }).forEach((win): void => {
-                        const winBounds = win.browserWindow.getBounds();
-                        const bounds = (changeType === 1)
-                            ? this.handleGroupedResize(boundsCompare, delta, cachedBounds, win)
+                    const windowGroup = WindowGroups.getGroup(groupUuid);
+                    const winsToMove = [];
+                    const positions: Map<string, RectangleBase> = new Map();
+                    const setPositions: Array<() => void> = [];
+
+                    for (let i = 0; i < windowGroup.length; i++) {
+                        if (windowGroup[i].name !== this.name) {
+                            winsToMove.push(windowGroup[i]);
+                        }
+                        positions.set(windowGroup[i].name, windowGroup[i].browserWindow.getBounds());
+                    }
+
+                    for (let i = 0; i < winsToMove.length; i++) {
+                        const win = winsToMove[i];
+
+                        win.browserWindow.bringToFront(); // maybe just do this once?
+                        const winBounds = positions.get(win.name);
+
+                        const bounds = (changeType === SIZE)
+                            // here bounds compare and delta are from the window that is resizing
+                            ? this.handleGroupedResize(win, winBounds)
                             : winBounds;
+
                         let { x, y } = bounds;
                         const { width, height } = bounds;
+
                         // If it is a change in position (working correctly) or a change in position and size (not yet implemented)
-                        if (changeType === 0 || changeType === 2) {
+                        if (changeType === POSITION || changeType === POSITION_AND_SIZE) {
                             x = toSafeInt(x + delta.x, x);
                             y = toSafeInt(y + delta.y, y);
                         }
@@ -449,19 +426,45 @@ export default class BoundsChangedStateTracker {
                             if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             }
+
+                            /*
+                                Leave this in here (commented out) for now. The idea is to only actually move the
+                                windows after all window positions are known in order to detect if any min/max
+                                restriction has been violated. The reason it is not included here is that it changes
+                                the .deferred and .reason values on the event payloads in a way that breaks tests,
+                                though it may be the desired behavior. This will be revisited as we evaluate making
+                                the entire transaction happen deferred window bounds.
+
+
+                                setPositions.push(() => {
+                                    const myBounds = positions.get(win.name);
+                                    const { x, y, width, height } = myBounds;
+                                    const [w, h] = [width, height];
+                                    wt.setWindowPos(hwnd, { x, y, w, h, flags });
+                                });
+                             */
                             const [w, h] = [width, height];
                             wt.setWindowPos(hwnd, { x, y, w, h, flags });
+
                         } else {
                             if (win.browserWindow.isFullScreen()) {
                                 win.browserWindow.setFullScreen(false);
                             } else if (win.browserWindow.isMaximized()) {
                                 win.browserWindow.unmaximize();
                             } else {
-                                // no need to call clipBounds here because called earlier
-                                win.browserWindow.setBounds({ x, y, width, height });
+                                positions.set(win.name, { x, y, width, height });
+
+                                // see note above about deferred moves
+                                // setPositions.push(() => {
+                                //     win.browserWindow.setBounds(positions.get(win.name));
+                                // });
+                                win.browserWindow.setBounds(positions.get(win.name));
                             }
                         }
-                    });
+                    }
+
+                    // see note above about deferred moves
+                    // setPositions.forEach(boundsSet => boundsSet());
 
                     if (wt) {
                         wt.commit();
@@ -520,9 +523,9 @@ export default class BoundsChangedStateTracker {
             let posChange = false;
 
             group.forEach((event): void => {
-                if (event.changeType === 0) {
+                if (event.changeType === POSITION) {
                     posChange = true;
-                } else if (event.changeType === 1) {
+                } else if (event.changeType === SIZE) {
                     sizeChange = true;
                 } else {
                     sizeChange = true;
@@ -531,7 +534,7 @@ export default class BoundsChangedStateTracker {
             });
 
             const lastEvent = _.last(group);
-            lastEvent.changeType = (sizeChange ? (posChange ? 2 : 1) : 0);
+            lastEvent.changeType = (sizeChange ? (posChange ? POSITION_AND_SIZE : SIZE) : POSITION);
 
             return lastEvent;
         });
