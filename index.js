@@ -779,8 +779,6 @@ function handleCachePath() {
         log.writeToLog('info', `[user data before] [${userData}] `);
         let cachePath = userData.replace('Roaming', 'Local');
         cachePath = path.join(cachePath, 'cache');
-        log.writeToLog('info', 'security realm------');
-        log.writeToLog('info', coreState.argo['security-realm']);
         if (securityRealm) {
             cachePath = path.join(cachePath, securityRealm);
         }
