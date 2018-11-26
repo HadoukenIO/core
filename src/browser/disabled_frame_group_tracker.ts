@@ -5,7 +5,7 @@ import { BrowserWindow } from 'electron';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
 import {getRuntimeProxyWindow} from './window_groups_runtime_proxy';
-import {RectangleBase, Rectangle} from './rectangle';
+import {RectangleBase, Rectangle, CorrectedBounds} from './rectangle';
 import {createRectangleFromBrowserWindow, zeroDelta} from './normalized_rectangle';
 const isWin32 = process.platform === 'win32';
 const getState = (browserWindow: BrowserWindow) => {
@@ -79,7 +79,7 @@ export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Par
     return handleApiMove(win, delta);
 }
 
-function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
+function handleApiMove(win: OpenFinWindow, delta: CorrectedBounds) {
     const rect = createRectangleFromBrowserWindow(win.browserWindow);
     const newBounds = rect.shift(delta);
     if (!rect.moved(newBounds)) {
@@ -94,7 +94,7 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
         : 0;
     const moves = handleBoundsChanging(win, {}, newBounds.bounds, changeType);
     const leader = moves.find(([w]) => w === win);
-    if (!leader || leader[1].moved(newBounds)) {
+    if (!leader || leader[1].moved(newBounds.bounds)) {
         //Propsed move differs from requested move
         throw new Error('Attempted move violates group constraints');
     }
@@ -147,8 +147,8 @@ function handleBoundsChanging(
         } break;
         case 2: {
             const delta = thisRect.delta(newBounds);
-            const xShift = delta.x && delta.x + delta.width;
-            const yShift = delta.y && delta.y + delta.height;
+            const xShift = delta.x ? delta.x + delta.width : 0;
+            const yShift = delta.y ? delta.y + delta.height : 0;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
             const resizeBounds = {...newBounds, x: newBounds.x - xShift, y: newBounds.y - yShift};
             // Need to consider case where resize fails, is it better to set x-y to what they want

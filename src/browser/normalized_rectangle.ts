@@ -18,7 +18,7 @@ const framedOffset: Readonly<RectangleBase> = {
     height: -7,
     width: -14
 };
-export const zeroDelta: Readonly<RectangleBase> = { x: 0, y: 0, height: 0, width: 0 };
+export const zeroDelta: Readonly<RectangleBase> = {x: 0, y: 0, height: 0, width: 0 };
 export function createRectangleFromBrowserWindow(win: BrowserWindow) {
     const delta = isWin10 && win._options.frame
         ? framedOffset
