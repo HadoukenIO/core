@@ -46,9 +46,6 @@ export const args = app.getCommandLineArguments(); // arguments as a string
 export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
-// THIS IS ONLY FOR TESTING
-argo['disabled-frame-groups'] = true;
-
 let apps: Shapes.App[] = [];
 
 let startManifest = {};

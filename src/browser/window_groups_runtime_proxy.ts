@@ -10,6 +10,7 @@ import { _Window } from '../../js-adapter/src/api/window/window';
 import { EventEmitter } from 'events';
 import { writeToLog } from './log';
 import { WindowGroupChanged } from '../../js-adapter/src/api/events/window';
+import { argo } from './core_state';
 
 //Only allow window proxies to >=.35 runtimes.
 const MIN_API_VER = 37;
@@ -206,6 +207,10 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         const apiVersion = hostRuntime.portInfo.version.split('.')[2];
         if (+apiVersion < MIN_API_VER) {
             throw new Error(`Window belongs to an older version, cannot group with Windows on version ${ hostRuntime.portInfo.version }`);
+        }
+        if (!argo['disabled-frame-groups']) {
+            // tslint:disable-next-line:max-line-length
+            throw new Error('Window belongs to another instance of OpenFin, experimental feature only enabled by setting the "disabled-frame-groups" flag');
         }
         const wrappedWindow = hostRuntime.fin.Window.wrapSync(identity);
         const nativeId = await wrappedWindow.getNativeId();

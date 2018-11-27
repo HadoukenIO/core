@@ -174,15 +174,6 @@ function handleResizeMove(start: Rectangle, end: RectangleBase, positions: [Open
         const movedRect = baseRect.move(start, end);
         return [win, movedRect];
     });
-
-    // const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES(positions.map(moveToRect));
-    // const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES(moved.map(moveToRect));
-
-    // if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
-    //     return positions;
-    // } else {
-    //     return moved;
-    // }
 }
 
 export function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
@@ -271,26 +262,3 @@ interface Clamped {
     value: number;
     clampedOffset: number;
 }
-
-// function clipBounds(bounds: Rectangle, browserWindow: OpenFinWindow['browserWindow']): Rectangle {
-//     if (!('_options' in browserWindow)) {
-//       return bounds;
-//     }
-
-//     const { minWidth, minHeight, maxWidth, maxHeight } = browserWindow._options;
-
-//     const xclamp = clamp(bounds.width, minWidth, maxWidth);
-//     const yclamp = clamp(bounds.height, minHeight, maxHeight);
-
-//     return new Rectangle(bounds.x + xclamp.clampedOffset,
-//         bounds.y + yclamp.clampedOffset, xclamp.value, yclamp.value, bounds.opts, bounds.readOffset);
-//   }
-
-//   function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEGER): Clamped {
-//     max = max < 0 ? Number.MAX_SAFE_INTEGER : max;
-//     const value = Math.min(Math.max(num, min, 0), max);
-//     return {
-//       value,
-//       clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
-//     };
-//   }
