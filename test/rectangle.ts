@@ -276,4 +276,50 @@ describe('Rectangle', () => {
         const result = rect.move(rect1From, rect1To);
         assert(result.height === 38);
     });
+
+    it('should recognize if another window shares the same bounds', () => {
+        const rect1 = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': 0, 'width': 100, 'height': 100 });
+        const rect2 = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': 0, 'width': 100, 'height': 100 });
+
+        assert(rect1.hasIdenticalBounds(rect2), 'these windows share bounds');
+    });
+
+    it('should recognize if another window does not shares the same bounds', () => {
+        const rect1 = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': 0, 'width': 100, 'height': 100 });
+        const rect2 = Rectangle.CREATE_FROM_BOUNDS({ 'x': 1, 'y': 0, 'width': 100, 'height': 100 });
+
+        assert(!(rect1.hasIdenticalBounds(rect2)), 'these windows do not share bounds');
+    });
+
+    it('should produce a graph of the window list', () => {
+        const [vertices, edges] = Rectangle.GRAPH(rectList());
+        const correctVertices = [0, 1, 2, 3, 4, 5];
+        const correctEdges = [
+            [0, 1], [0, 3],
+            [1, 0], [1, 2], [1, 3], [1, 5],
+            [2, 1], [2, 5],
+            [3, 0], [3, 1],
+            [5, 1], [5, 2]];
+
+        assert.deepStrictEqual(vertices, correctVertices, 'vertices should match');
+        assert.deepStrictEqual(edges, correctEdges, 'edges should match');
+    });
+
+    it('should produce a distance set given a graph and a reference vertex', () => {
+        const distances = Rectangle.DISTANCES(Rectangle.GRAPH(rectList()), 0);
+        const correctDistances = [[0, 0], [1, 1], [2, 2], [3, 1], [4, Infinity], [5, 2]];
+
+        assert.deepEqual([...distances], correctDistances, 'reported distances are incorrect');
+    });
 });
+
+function rectList (): Rectangle[] {
+    return [
+        new Rectangle(0, 0, 100, 100),
+        new Rectangle(4, 4, 100, 100),
+        new Rectangle(8, 8, 100, 100),
+        new Rectangle(50, 0, 100, 100),
+        new Rectangle(400, 400, 100, 100),
+        new Rectangle(6, 6, 100, 100)
+    ];
+}

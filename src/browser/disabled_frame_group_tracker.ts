@@ -169,10 +169,26 @@ function handleBoundsChanging(
 
 function handleResizeMove(start: Rectangle, end: RectangleBase, positions: [OpenFinWindow, Rectangle][]): Move[] {
 
+    let leaderRect: number;
+    const numRects = positions.length;
+    const rectPositions: Rectangle[] = [];
 
-    return positions.map(([win, baseRect]): Move => {
-        const movedRect = baseRect.move(start, end);
-        return [win, movedRect];
+    for (let i = 0; i < numRects; i++) {
+        const [_, rect] = positions[i];
+        if (rect.hasIdenticalBounds(start)) { leaderRect = i; }
+        rectPositions.push(rect);
+    }
+
+    const windowGraph = Rectangle.GRAPH(rectPositions);
+    const distances = Rectangle.DISTANCES(windowGraph, leaderRect);
+
+    return positions.map(([win, baseRect], index): Move => {
+        let rectFinalPosition = baseRect;
+        if (distances.get(index) < Infinity) {
+            rectFinalPosition = baseRect.move(start, end);
+        }
+
+        return [win, rectFinalPosition];
     });
 }
 
