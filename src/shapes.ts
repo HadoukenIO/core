@@ -146,7 +146,6 @@ export interface WindowOptions {
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
     applicationIcon?: string;
-    appLogFlushInterval?: number;
     aspectRatio?: number;
     autoShow?: boolean;
     backgroundColor?: string;

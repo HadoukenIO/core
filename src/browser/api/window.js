@@ -919,7 +919,7 @@ Window.create = function(id, opts) {
             // Format timestamp to match debug.log
             const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
 
-            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp });
 
         }, 1);
     };

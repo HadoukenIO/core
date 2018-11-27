@@ -13,8 +13,8 @@ interface SendToRVMOpts {
     payload?: any;
 }
 
-const maxBytes: number = 1000000;  // 1 MB
-const defaultFlushInterval: number = 10000;  // 10 seconds
+// 1 MB
+const maxBytes: number = 1000000;
 
 let consoleMessageQueue: ConsoleMessage[] = [];
 let isFlushScheduled: boolean = false;
@@ -43,7 +43,7 @@ function flushConsoleMessageQueue(): void {
     sendToRVM(obj, true);
 }
 
-export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage, flushInterval?: number): void {
+export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessage): void {
     consoleMessageQueue.push(consoleMessage);
 
     const byteLength = Buffer.byteLength(consoleMessage.message, 'utf8');
@@ -61,7 +61,7 @@ export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessag
     // Otherwise if no timer already set, set one to flush the queue in 10s
     } else if (!isFlushScheduled) {
         isFlushScheduled = true;
-        timer = setTimeout(flushConsoleMessageQueue, flushInterval ? flushInterval : defaultFlushInterval);
+        timer = setTimeout(flushConsoleMessageQueue, 10000);
     }
 }
 
