@@ -5,7 +5,7 @@ import { BrowserWindow } from 'electron';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
 import {getRuntimeProxyWindow} from './window_groups_runtime_proxy';
-import {RectangleBase, Rectangle, CorrectedBounds} from './rectangle';
+import {RectangleBase, Rectangle} from './rectangle';
 import {createRectangleFromBrowserWindow, zeroDelta} from './normalized_rectangle';
 const isWin32 = process.platform === 'win32';
 const getState = (browserWindow: BrowserWindow) => {
@@ -79,7 +79,7 @@ export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Par
     return handleApiMove(win, delta);
 }
 
-function handleApiMove(win: OpenFinWindow, delta: CorrectedBounds) {
+function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     const rect = createRectangleFromBrowserWindow(win.browserWindow);
     const newBounds = rect.shift(delta);
     if (!rect.moved(newBounds)) {
