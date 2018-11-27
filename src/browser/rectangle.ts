@@ -296,12 +296,10 @@ export class Rectangle {
 
                     const tooSmall = changes.width < this.opts.minWidth;
                     const tooBig = changes.width > this.opts.maxWidth;
-                    const justRight = !tooSmall && !tooBig;
 
-                    if (justRight) {
-                        changes.x = rect[sideToAlign];
-                    }
-                    else if (tooSmall) {
+                    changes.x = rect[sideToAlign];
+
+                    if (tooSmall) {
                         changes.width = this.opts.minWidth;
                     } else if (tooBig) {
                         changes.width = this.opts.maxWidth;
@@ -312,11 +310,11 @@ export class Rectangle {
                     changes.width += (rect[sideToAlign] - (this.x + this.width));
                     if (changes.width < this.opts.minWidth) {
                         // prevent "pushing" a window via the resizing of another
-                        // changes.x = rect[sideToAlign] - this.opts.minWidth;
+                        changes.x = rect[sideToAlign] - this.opts.minWidth;
                         changes.width = this.opts.minWidth;
                     } else if (changes.width > this.opts.maxWidth) {
                         // prevent "pulling" a window via the resizing of another
-                        // changes.x = rect[sideToAlign] - this.opts.maxWidth;
+                        changes.x = rect[sideToAlign] - this.opts.maxWidth;
                         changes.width = this.opts.maxWidth;
                     }
                 }
@@ -326,12 +324,10 @@ export class Rectangle {
 
                     const tooSmall = changes.height < this.opts.minHeight;
                     const tooBig = changes.height > this.opts.maxHeight;
-                    const justRight = !tooSmall && !tooBig;
 
-                    if (justRight) {
-                        changes.y = rect[sideToAlign];
-                    }
-                    else if (tooSmall) {
+                    changes.y = rect[sideToAlign];      
+
+                    if (tooSmall) {
                         changes.height = this.opts.minHeight;
                     } else if (tooBig) {
                         changes.height = this.opts.maxHeight;
@@ -342,11 +338,11 @@ export class Rectangle {
                     changes.height += (rect[sideToAlign] - (this.y + this.height));
                     if (changes.height < this.opts.minHeight) {
                         // prevent "pushing" a window via the resizing of another
-                        // changes.y = rect[sideToAlign] - this.opts.minHeight;
+                        changes.y = rect[sideToAlign] - this.opts.minHeight;
                         changes.height = this.opts.minHeight;
                     } else if (changes.height > this.opts.maxHeight) {
                         // prevent "pulling" a window via the resizing of another
-                        // changes.y = rect[sideToAlign] - this.opts.maxHeight;
+                        changes.y = rect[sideToAlign] - this.opts.maxHeight;
                         changes.height = this.opts.maxHeight;
                     }
                 }

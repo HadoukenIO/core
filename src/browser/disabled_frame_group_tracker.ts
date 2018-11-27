@@ -94,7 +94,7 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
         : 0;
     const moves = handleBoundsChanging(win, {}, newBounds.bounds, changeType);
     const leader = moves.find(([w]) => w === win);
-    if (!leader || leader[1].moved(newBounds)) {
+    if (!leader || leader[1].moved(newBounds.bounds)) {
         //Propsed move differs from requested move
         throw new Error('Attempted move violates group constraints');
     }
@@ -147,8 +147,8 @@ function handleBoundsChanging(
         } break;
         case 2: {
             const delta = thisRect.delta(newBounds);
-            const xShift = delta.x && delta.x + delta.width;
-            const yShift = delta.y && delta.y + delta.height;
+            const xShift = delta.x ? delta.x + delta.width : 0;
+            const yShift = delta.y ? delta.y + delta.height : 0;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
             const resizeBounds = {...newBounds, x: newBounds.x - xShift, y: newBounds.y - yShift};
             // Need to consider case where resize fails, is it better to set x-y to what they want
