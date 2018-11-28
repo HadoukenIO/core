@@ -20,12 +20,8 @@ const framedOffset: Readonly<RectangleBase> = {
     width: -14
 };
 export const zeroDelta: Readonly<RectangleBase> = {x: 0, y: 0, height: 0, width: 0 };
-<<<<<<< HEAD
 export function moveFromOpenFinWindow(ofWin: OpenFinWindow): Move {
     const win = ofWin.browserWindow;
-=======
-export function createRectangleFromBrowserWindow(win: BrowserWindow) {
->>>>>>> upstream/develop
     const delta = isWin10 && win._options.frame
         ? framedOffset
         : zeroDelta;

@@ -101,18 +101,12 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
             ? 2
             : 1
         : 0;
-<<<<<<< HEAD
     const moves = handleBoundsChanging(win, {}, applyOffset(newBounds, offset), changeType);
     const {leader, otherWindows} = moves.reduce((accum: MoveAccumulator , move) => {
         move[0] === win ? accum.leader = move : accum.otherWindows.push(move);
         return accum;
     }, <MoveAccumulator>{otherWindows: []});
     if (!leader || leader[1].moved(newBounds)) {
-=======
-    const moves = handleBoundsChanging(win, {}, newBounds.bounds, changeType);
-    const leader = moves.find(([w]) => w === win);
-    if (!leader || leader[1].moved(newBounds.bounds)) {
->>>>>>> upstream/develop
         //Propsed move differs from requested move
         throw new Error('Attempted move violates group constraints');
     }
@@ -187,11 +181,7 @@ function handleBoundsChanging(
             }
         } break;
         case 2: {
-<<<<<<< HEAD
             const delta = start.delta(end);
-=======
-            const delta = thisRect.delta(newBounds);
->>>>>>> upstream/develop
             const xShift = delta.x ? delta.x + delta.width : 0;
             const yShift = delta.y ? delta.y + delta.height : 0;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
