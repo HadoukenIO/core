@@ -897,6 +897,17 @@ Application.setZoomLevel = function(identity, level) {
     }
 };
 
+Application.sendApplicationLog = function(identity) {
+    let app = Application.wrap(identity.uuid);
+
+    const options = {
+        topic: 'application',
+        action: 'application-log-send',
+        sourceUrl: app._configUrl
+    };
+
+    return sendToRVM(options);
+};
 
 Application.getTrayIconInfo = function(identity, callback, errorCallback) {
     const app = Application.wrap(identity.uuid);
