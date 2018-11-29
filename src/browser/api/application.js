@@ -726,12 +726,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
     };
 
-    if (isValidChromePageUrl(app._options.url)) {
+    if (isValidChromePageUrl(app._options.url) || appWasAlreadyRunning) {
         loadUrl();
         // no API injection for chrome pages, so call .show here
-        app.mainWindow.show();
-    } else if (appWasAlreadyRunning) {
-        loadUrl();
         app.mainWindow.show();
     } else {
         System.downloadPreloadScripts(windowIdentity, preloadScripts)
