@@ -865,14 +865,18 @@ Window.create = function(id, opts) {
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
         /*
+            DEBUG:     -1
             INFO:      0
             WARNING:   1
             ERROR:     2
             FATAL:     3
         */
-        if (level === /* INFO */ 0 ||
+        const printDebugLogs = (coreState.argo['v'] >= 1);
+        if ((level === /* DEBUG */ -1 && !printDebugLogs) ||
+            level === /* INFO */ 0 ||
             level === /* WARNING */ 1) {
             // Prevent INFO and WARNING messages from writing to debug.log
+            // DEBUG messages are also prevented if --v=1 or higher isn't specified
             event.preventDefault();
         }
 
