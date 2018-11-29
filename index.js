@@ -510,10 +510,12 @@ function rvmCleanup(argo) {
 function migrateLocalStorage(argo) {
     const oldLocalStoragePath = argo['old-local-storage-path'] || false;
     const newLocalStoragePath = argo['new-local-storage-path'] || false;
+    const startupUrl = argo['startup-url'] || false;
 
-    if (oldLocalStoragePath && newLocalStoragePath) {
+    if (oldLocalStoragePath && newLocalStoragePath && startupUrl) {
         try {
-            app.migrateLocalStorage(oldLocalStoragePath, newLocalStoragePath);
+            System.log('info', 'Migrating from ' + oldLocalStoragePath + ' to ' + newLocalStoragePath);
+            app.migrateLocalStorage(oldLocalStoragePath, newLocalStoragePath, startupUrl);
         } catch (e) {
             System.log('error', `Couldn't migrate cache from ${oldLocalStoragePath} to ${newLocalStoragePath}`);
         }
