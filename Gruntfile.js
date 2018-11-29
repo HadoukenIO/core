@@ -313,7 +313,7 @@ module.exports = (grunt) => {
         }
     });
 
-    /* 
+    /*
         Task that updates submodules and installs their dependencies
     */
     grunt.registerTask('submodules-update', () => {
@@ -323,8 +323,8 @@ module.exports = (grunt) => {
         grunt.log.subhead('Installing js-adapter dependencies...');
         childProcess.execSync('cd js-adapter && npm install');
     });
-    
-    /* 
+
+    /*
         Build webpack'ed js-adapter
     */
    grunt.registerTask('js-adapter', () => {
