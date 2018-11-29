@@ -518,6 +518,7 @@ function migrateLocalStorage(argo) {
             app.migrateLocalStorage(oldLocalStoragePath, newLocalStoragePath, startupUrl);
         } catch (e) {
             System.log('error', `Couldn't migrate cache from ${oldLocalStoragePath} to ${newLocalStoragePath}`);
+            System.log('error', e);
         }
     }
 }
