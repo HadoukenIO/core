@@ -267,8 +267,6 @@ app.on('ready', function() {
 
     rotateLogs(coreState.argo);
 
-    migrateLocalStorage(coreState.argo);
-
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
@@ -504,19 +502,6 @@ function rvmCleanup(argo) {
         }, (err) => {
             console.log(err);
         });
-    }
-}
-
-function migrateLocalStorage(argo) {
-    const oldLocalStoragePath = argo['old-local-storage-path'] || false;
-    const newLocalStoragePath = argo['new-local-storage-path'] || false;
-
-    if (oldLocalStoragePath && newLocalStoragePath) {
-        try {
-            app.migrateLocalStorage(oldLocalStoragePath, newLocalStoragePath);
-        } catch (e) {
-            System.log('error', `Couldn't migrate cache from ${oldLocalStoragePath} to ${newLocalStoragePath}`);
-        }
     }
 }
 
