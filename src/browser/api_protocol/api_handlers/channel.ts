@@ -14,6 +14,8 @@ export class ChannelApiHandler {
     private readonly actionMap: ActionSpecMap = {
         'connect-to-channel': this.connectToChannel,
         'create-channel': this.createChannel,
+        'destroy-channel': this.destroyChannel,
+        'disconnect-from-channel': this.disconnectFromChannel,
         'get-all-channels': this.getAllChannels,
         'send-channel-message': this.sendChannelMessage,
         'send-channel-result': this.sendChannelResult
@@ -46,7 +48,7 @@ export class ChannelApiHandler {
         return undefined;
     }
 
-    private createChannel(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): void {
+    private createChannel(identity: Identity, message: APIMessage, ack: AckFunc): void {
         const { payload, locals } = message;
         const { channelName } = payload;
 
@@ -63,7 +65,21 @@ export class ChannelApiHandler {
         ack(dataAck);
     }
 
-    private getAllChannels(identity: Identity, message: APIMessage, ack: AckFunc, nack: NackFunc): ProviderIdentity[] {
+    private destroyChannel(identity: Identity, message: APIMessage, ack: AckFunc): void {
+        const { payload: { channelName } } = message;
+
+        Channel.destroyChannel(identity, channelName);
+        ack(successAck);
+    }
+
+    private disconnectFromChannel(identity: Identity, message: APIMessage, ack: AckFunc): void {
+        const { payload: { channelName } } = message;
+
+        Channel.disconnectFromChannel(identity, channelName);
+        ack(successAck);
+    }
+
+    private getAllChannels(identity: Identity, message: APIMessage, ack: AckFunc): ProviderIdentity[] {
         const { locals } = message;
 
         let allChannels = Channel.getAllChannels();
