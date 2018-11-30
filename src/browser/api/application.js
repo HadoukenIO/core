@@ -31,7 +31,7 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { isAboutPageUrl, isChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
+import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 
@@ -730,8 +730,10 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
     };
 
-    if (appWasAlreadyRunning) {
+    if (isValidChromePageUrl(app._options.url) || appWasAlreadyRunning) {
         loadUrl();
+        // no API injection for chrome pages, so call .show here
+        app.mainWindow.show();
     } else {
         System.downloadPreloadScripts(windowIdentity, preloadScripts)
             .catch((error) => {
@@ -1118,7 +1120,7 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         opts.url = opts.url || 'about:blank';
 
-        const isValidUrl = isChromePageUrl(opts.url) || isHttpUrl(opts.url) || isFileUrl(opts.url) ||
+        const isValidUrl = isValidChromePageUrl(opts.url) || isHttpUrl(opts.url) || isFileUrl(opts.url) ||
             isAboutPageUrl(opts.url) || path.isAbsolute(opts.url);
         if (!isValidUrl || !isURLAllowed(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
@@ -1128,12 +1130,8 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         // save the original value of autoShow, but set it false so we can
         // show only after the DOMContentLoaded event to prevent the flash
-        if (isChromePageUrl(opts.url)) { // no API injection for chrome pages
-            eOpts.show = true;
-        } else {
-            opts.toShowOnRun = eOpts['autoShow'];
-            eOpts.show = false;
-        }
+        opts.toShowOnRun = eOpts['autoShow'];
+        eOpts.show = false;
 
         appObj.mainWindow = new BrowserWindow(eOpts);
         appObj.mainWindow.setFrameConnectStrategy(eOpts.frameConnect || 'last');
