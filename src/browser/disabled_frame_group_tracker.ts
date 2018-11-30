@@ -103,9 +103,9 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     const resized = delta.width || delta.height;
     const changeType = resized
         ? moved
-            ? 2
-            : 1
-        : 0;
+            ? ChangeType.POSITION_AND_SIZE
+            : ChangeType.SIZE
+        : ChangeType.POSITION;
     const moves = handleBoundsChanging(win, {}, applyOffset(newBounds, offset), changeType);
     const {leader, otherWindows} = moves.reduce((accum: MoveAccumulator , move) => {
         move.ofWin === win ? accum.leader = move : accum.otherWindows.push(move);
@@ -117,7 +117,6 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     }
     handleBatchedMove(moves);
     emitChange(leader, changeType, 'self', 'changed');
-    // const otherWindows = moves.filter(([w]) => w !== win);
     otherWindows.forEach(move => emitChange(move, changeType, 'group', 'changed'));
     return leader.rect;
 }
