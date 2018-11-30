@@ -904,9 +904,9 @@ Window.create = function(id, opts) {
                 return;
             }
 
-            function checkPrependLeadingZero(num) {
+            function checkPrependLeadingZero(num, length) {
                 let str = String(num);
-                if (str.length === 1) {
+                while (str.length < length) {
                     str = '0' + str;
                 }
 
@@ -914,15 +914,16 @@ Window.create = function(id, opts) {
             }
 
             const date = new Date();
-            const month = checkPrependLeadingZero(date.getMonth() + 1);
-            const day = checkPrependLeadingZero(date.getDate());
-            const year = String(date.getFullYear()).slice(2);
-            const hour = checkPrependLeadingZero(date.getHours());
-            const minute = checkPrependLeadingZero(date.getMinutes());
-            const second = checkPrependLeadingZero(date.getSeconds());
+            const year = String(date.getFullYear());
+            const month = checkPrependLeadingZero(date.getMonth() + 1, 2);
+            const day = checkPrependLeadingZero(date.getDate(), 2);
+            const hour = checkPrependLeadingZero(date.getHours(), 2);
+            const minute = checkPrependLeadingZero(date.getMinutes(), 2);
+            const second = checkPrependLeadingZero(date.getSeconds(), 2);
+            const millisecond = checkPrependLeadingZero(date.getMilliseconds(), 3);
 
             // Format timestamp to match debug.log
-            const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
+            const timeStamp = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
 
             addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
 
