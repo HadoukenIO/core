@@ -30,6 +30,7 @@ const apiMessagesToAggregate: any = {
     'get-all-channels': 35,
     'get-all-external-applications': 1,
     'get-all-windows': 1,
+    'get-focused-window': 1,
     'process-snapshot': 1
 };
 
