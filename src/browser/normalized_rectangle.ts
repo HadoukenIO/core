@@ -1,5 +1,5 @@
 import { Rectangle, RectangleBase } from './rectangle';
-import { BrowserWindow, OpenFinWindow } from '../shapes';
+import { OpenFinWindow } from '../shapes';
 import { System } from './api/system';
 import { Move } from './disabled_frame_group_tracker';
 
@@ -35,7 +35,11 @@ export function moveFromOpenFinWindow(ofWin: OpenFinWindow): Move {
     if (win._options.frame) {
         normalizedOptions.minWidth = Math.max(win._options.minWidth, 150);
     }
-    return [ofWin, Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), normalizedOptions).shift(delta), negate(delta)];
+    return {
+        ofWin,
+        rect: Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), normalizedOptions).shift(delta),
+        offset: negate(delta)
+    };
 }
 export function applyOffset(rect: RectangleBase, offset: RectangleBase = zeroDelta) {
     return {
@@ -48,14 +52,6 @@ export function applyOffset(rect: RectangleBase, offset: RectangleBase = zeroDel
 export function normalizeExternalBounds(rect: RectangleBase, offset: RectangleBase) {
     return applyOffset(rect, negate(offset));
 }
-// export function rawBounds(rect: RectangleBase, offset: RectangleBase) {
-//     return {
-//         x: rect.x,
-//         y: rect.y,
-//         width: rect.width,
-//         height: rect.height
-//     };
-// }
 export function getEventBounds(rect: RectangleBase, offset?: RectangleBase) {
     const normalizedBounds = applyOffset(rect, offset);
     return {
