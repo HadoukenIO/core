@@ -94,6 +94,7 @@ declare module 'electron' {
 
         close(): void;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
+        once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         getWindowsByClassName(className: string): any;
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
@@ -112,6 +113,7 @@ declare module 'electron' {
         setWindowPlacement(bounds: Rectangle): void;
         devToolsWebContents: null;
         webContents: webContents;
+        setUserMovementEnabled(enabled: boolean): void;
 
         _eventsCount: number;
         _events: {

@@ -33,6 +33,7 @@ import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
 import { isAboutPageUrl, isChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
+import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -700,6 +701,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                     }
                 }
 
+                //deregister all proxy windows
+                deregisterAllRuntimeProxyWindows();
+
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {
                     window.close();
@@ -775,6 +779,18 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     } else {
         errorCallback(new Error('App must be started from a manifest to be able to change its shortcut configuration'));
     }
+};
+
+Application.setAppLogUsername = function(identity, username) {
+    let app = Application.wrap(identity.uuid);
+
+    const options = {
+        topic: 'application',
+        action: 'application-log-username',
+        sourceUrl: app._configUrl,
+        data: { 'userName': username }
+    };
+    return sendToRVM(options);
 };
 
 
@@ -881,6 +897,17 @@ Application.setZoomLevel = function(identity, level) {
     }
 };
 
+Application.sendApplicationLog = function(identity) {
+    let app = Application.wrap(identity.uuid);
+
+    const options = {
+        topic: 'application',
+        action: 'application-log-send',
+        sourceUrl: app._configUrl
+    };
+
+    return sendToRVM(options);
+};
 
 Application.getTrayIconInfo = function(identity, callback, errorCallback) {
     const app = Application.wrap(identity.uuid);

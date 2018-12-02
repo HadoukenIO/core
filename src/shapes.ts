@@ -104,10 +104,12 @@ export interface OpenFinWindow {
     preloadScripts: PreloadScriptState[];
     uuid: string;
     mainFrameRoutingId: number;
+    isProxy?: boolean;
 }
 
 export interface BrowserWindow extends BrowserWindowElectron {
     _options: WindowOptions;
+    setExternalWindowNativeId?: Function;
 }
 
 export interface AppObj {

@@ -15,6 +15,9 @@ import {
     Nacker,
     SavedDiskBounds
 } from '../../../shapes';
+import { ActionSpecMap } from '../shapes';
+import {hijackMovesForGroupedWindows} from './grouped_window_moves';
+import { argo } from '../../core_state';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -75,8 +78,18 @@ export const windowApiMap = {
 };
 
 export function init() {
-    registerActionMap(windowApiMap, 'Window');
+    const registerThis = argo['disabled-frame-groups']
+       ? hijackMovesForGroupedWindows(windowApiMap)
+       : windowApiMap;
+    registerActionMap(registerThis, 'Window');
 }
+
+// function decorateActionMapForGroups(actionMap: ActionSpecMap): ActionSpecMap {
+//     const hijackOnGroup = {
+//         'set-window-bounds':
+//     }
+// actionMap.keys().
+// }
 
 function windowAuthenticate(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
@@ -121,9 +134,8 @@ function stopFlashWindow(identity: Identity, message: APIMessage, ack: Acker): v
 function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const { top, left, width, height } = payload;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.setBounds(windowIdentity, left, top, width, height);
+    const {uuid, name} = getTargetWindowIdentity(payload);
+    Window.setBounds({uuid, name}, left, top, width, height);
     ack(successAck);
 }
 
@@ -269,13 +281,12 @@ function minimizeWindow(identity: Identity, message: APIMessage, ack: Acker): vo
     ack(successAck);
 }
 
-function mergeWindowGroups(identity: Identity, message: APIMessage, ack: Acker): void {
+function mergeWindowGroups(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const groupingIdentity = getGroupingWindowIdentity(payload);
 
-    Window.mergeGroups(windowIdentity, groupingIdentity);
-    ack(successAck);
+    return Window.mergeGroups(windowIdentity, groupingIdentity).then(() => ack(successAck));
 }
 
 function maximizeWindow(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -286,21 +297,19 @@ function maximizeWindow(identity: Identity, message: APIMessage, ack: Acker): vo
     ack(successAck);
 }
 
-function leaveWindowGroup(identity: Identity, message: APIMessage, ack: Acker): void {
+function leaveWindowGroup(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.leaveGroup(windowIdentity);
-    ack(successAck);
+    return Window.leaveGroup(windowIdentity).then(() => ack(successAck));
 }
 
-function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker): void {
+function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const groupingIdentity = getGroupingWindowIdentity(payload);
 
-    Window.joinGroup(windowIdentity, groupingIdentity);
-    ack(successAck);
+    return Window.joinGroup(windowIdentity, groupingIdentity).then(() => ack(successAck));
 }
 
 function isWindowShowing(identity: Identity, message: APIMessage, ack: Acker): void {
