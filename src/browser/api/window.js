@@ -810,8 +810,8 @@ Window.create = function(id, opts) {
 
         });
 
-        //Restoring window possitioning from disk cache.
-        //We treat this as a check point event, either succes or failure will raise the event.
+        //Restoring window positioning from disk cache.
+        //We treat this as a check point event, either success or failure will raise the event.
         const windowPositioningObserver = Rx.Observable.create(observer => {
             if (!_options.saveWindowState) {
                 observer.next();

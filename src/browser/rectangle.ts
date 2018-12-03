@@ -373,6 +373,13 @@ export class Rectangle {
         return Array.from(Rectangle.ADJACENCY_LIST([...rects, this as Rectangle]).values()).find(list => list.includes(this));
     }
 
+    public hasIdenticalBounds(rect: RectangleBase): boolean {
+        return this.x === rect.x &&
+            this.y === rect.y &&
+            this.width === rect.width &&
+            this.height === rect.height;
+    }
+
     public static ADJACENCY_LIST(rects: Rectangle[]): Map<number, Rectangle[]> {
         const adjLists = new Map();
         const rectLen = rects.length;
