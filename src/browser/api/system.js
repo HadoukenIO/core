@@ -178,8 +178,12 @@ exports.System = {
 
         defaultSession.clearCache(() => {
             defaultSession.clearStorageData(cacheOptions, () => {
-                rimraf(join(electronApp.getPath('userData'), 'Cache'));
-                resolve();
+                try {
+                    rimraf(join(electronApp.getPath('userData'), 'Cache'));
+                    resolve();
+                } catch (err) {
+                    resolve(err);
+                }
             });
         });
 
