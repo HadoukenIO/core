@@ -130,7 +130,7 @@ async function prepDownloadLocation(appCacheDir: string) {
 
 
 function getRootCachePath () {
-    return join(app.getPath('userData') , 'Cache');
+    return join(app.getPath('userData') , 'Default', 'Cache');
 }
 
 /**
