@@ -9,7 +9,7 @@ const shell = electron.shell;
 const { crashReporter, idleState } = electron;
 
 // npm modules
-const path = require('path');
+const { path, join } = require('path');
 const crypto = require('crypto');
 const _ = require('underscore');
 
@@ -61,6 +61,20 @@ const defaultProc = {
         return 0;
     }
 };
+
+function rimraf(path) {
+    if (fs.existsSync(path)) {
+        fs.readdirSync(path).forEach(function(file, index) {
+            var curPath = join(path, file);
+            if (fs.lstatSync(curPath).isDirectory()) { // recurse
+                rimraf(curPath);
+            } else { // delete file
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+}
 
 let MonitorInfo;
 let Session;
@@ -164,6 +178,7 @@ exports.System = {
 
         defaultSession.clearCache(() => {
             defaultSession.clearStorageData(cacheOptions, () => {
+                rimraf(join(electronApp.getPath('userData'), 'Cache'));
                 resolve();
             });
         });
