@@ -33,6 +33,7 @@ import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
 import { isAboutPageUrl, isChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
+import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -700,6 +701,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                     }
                 }
 
+                //deregister all proxy windows
+                deregisterAllRuntimeProxyWindows();
+
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {
                     window.close();
@@ -778,6 +782,18 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     } else {
         errorCallback(new Error('App must be started from a manifest to be able to change its shortcut configuration'));
     }
+};
+
+Application.setAppLogUsername = function(identity, username) {
+    let app = Application.wrap(identity.uuid);
+
+    const options = {
+        topic: 'application',
+        action: 'application-log-username',
+        sourceUrl: app._configUrl,
+        data: { 'userName': username }
+    };
+    return sendToRVM(options);
 };
 
 
@@ -1104,8 +1120,12 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         // save the original value of autoShow, but set it false so we can
         // show only after the DOMContentLoaded event to prevent the flash
-        opts.toShowOnRun = eOpts['autoShow'];
-        eOpts.show = false;
+        if (isChromePageUrl(opts.url)) { // no API injection for chrome pages
+            eOpts.show = true;
+        } else {
+            opts.toShowOnRun = eOpts['autoShow'];
+            eOpts.show = false;
+        }
 
         appObj.mainWindow = new BrowserWindow(eOpts);
         appObj.mainWindow.setFrameConnectStrategy(eOpts.frameConnect || 'last');

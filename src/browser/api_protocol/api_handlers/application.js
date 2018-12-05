@@ -65,6 +65,7 @@ module.exports.applicationApiMap = {
     'remove-tray-icon': removeTrayIcon,
     'restart-application': restartApplication,
     'run-application': runApplication,
+    'set-app-log-username': setAppLogUsername,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
     'set-tray-icon': setTrayIcon,
     'set-application-zoom-level': setApplicationZoomLevel,
@@ -266,6 +267,13 @@ function setShortcuts(identity, message, ack, nack) {
         dataAck.data = response;
         ack(dataAck);
     }, nack);
+}
+
+function setAppLogUsername(identity, message, ack) {
+    const payload = message.payload;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+
+    return Application.setAppLogUsername(appIdentity, payload.data).then(() => ack(successAck));
 }
 
 function closeApplication(identity, message, ack) {
