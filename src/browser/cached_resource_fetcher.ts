@@ -59,7 +59,7 @@ export async function cachedFetch(identity: Identity, url: string, callback: (er
         const p = new Promise( async (resolve, reject) => {
             try {
                 await prepDownloadLocation(appCacheDir);
-                await download(identity, url, filePath);
+                await download(identity, url, filePath, appCacheDir);
                 callback(null, filePath);
                 resolve(filePath);
             } catch (e) {
@@ -178,10 +178,13 @@ function authRequest(url: string, authInfo: any, authCallback: AuthCallback): vo
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(identity: Identity, url: string, saveToPath: string): Promise<any> {
-    return new Promise((resolve, reject) => {
+async function download(identity: Identity, url: string, saveToPath: string, appCacheDir: string): Promise<any> {
+    return new Promise(async (resolve, reject) => {
         const session = getSession(identity);
         const request = net.request(url);
+        // need to check download location again in case users call system.clearCache during the startup
+        await prepDownloadLocation(appCacheDir);
+
         const binaryWriteStream = createWriteStream(saveToPath, {
             encoding: 'binary'
         });
