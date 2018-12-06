@@ -10,6 +10,7 @@ import { AuthCallback, Identity } from '../shapes';
 import { getSession } from './core_state';
 
 let appQuiting: Boolean = false;
+let clearCache: boolean = false;
 
 const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 const fetchMap: Map<string, Promise<any>> = new Map();
@@ -182,8 +183,11 @@ async function download(identity: Identity, url: string, saveToPath: string, app
     return new Promise(async (resolve, reject) => {
         const session = getSession(identity);
         const request = net.request(url);
-        // need to check download location again in case users call system.clearCache during the startup
-        await prepDownloadLocation(appCacheDir);
+        // need to check download location again in case apps call system.clearCache during the startup
+        if (clearCache) {
+            app.vlog(1, 'prepare download location again after clear cache');
+            await prepDownloadLocation(appCacheDir);
+        }
 
         const binaryWriteStream = createWriteStream(saveToPath, {
             encoding: 'binary'
@@ -333,4 +337,8 @@ export function authenticateFetch(uuid: string, username: string, password: stri
     } else {
         log.writeToLog(1, `Missing resource auth uuid ${uuid}`, true);
     }
+}
+
+export function setClearCacheStatus(clear: boolean): void {
+    clearCache = clear;
 }

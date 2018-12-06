@@ -27,7 +27,7 @@ import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
-import { authenticateFetch } from '../cached_resource_fetcher';
+import { authenticateFetch, setClearCacheStatus } from '../cached_resource_fetcher';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -161,6 +161,7 @@ exports.System = {
         };
 
         electronApp.vlog(1, `clearCache ${JSON.stringify(storages)}`);
+        setClearCacheStatus(true);
 
         defaultSession.clearCache(() => {
             defaultSession.clearStorageData(cacheOptions, () => {
