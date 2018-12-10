@@ -8,6 +8,7 @@ const {app} = mockElectron;
 const messageId = app.generateGUID();
 const processId = 9999;
 const runtimeVersion = 'runtimeVersion';
+const securityRealm = 'securityRealm';
 
 class WMCopyData {
     public on(x: any): any { return x; }
@@ -45,11 +46,12 @@ describe('rvm message bus', () => {
                 messageId,
                 payload: {
                     processId,
-                    runtimeVersion
+                    runtimeVersion,
+                    securityRealm
                 }
             };
 
-            const sentVal = (<any> rvmMessageBus).publish({ topic, processId, runtimeVersion});
+            const sentVal = (<any> rvmMessageBus).publish({ topic, processId, runtimeVersion, securityRealm});
             assert.deepEqual(expectedResult, sentVal, 'should have sent the base payload');
         });
     });
@@ -61,6 +63,7 @@ describe('rvm message bus', () => {
                 payload: {
                     processId,
                     runtimeVersion,
+                    securityRealm,
                     type: 'started',
                     sourceUrl: null,
                     sessionId: RVMMessageBus.sessionId,
@@ -82,7 +85,8 @@ describe('rvm message bus', () => {
         it('should send the correct base payload', () => {
             const  payload  = (<any>rvmMessageBus).registerLicenseInfo({
                 processId,
-                runtimeVersion
+                runtimeVersion,
+                securityRealm
             });
 
             assert.deepEqual(baseStartedShape, payload, 'shapes should match');
@@ -107,7 +111,7 @@ describe('rvm message bus', () => {
 
             expectedPayload.payload.data = startedMsgData;
 
-            const  payload = (<any>rvmMessageBus).registerLicenseInfo({data: startedMsgData, processId, runtimeVersion});
+            const  payload = (<any>rvmMessageBus).registerLicenseInfo({data: startedMsgData, processId, runtimeVersion, securityRealm});
 
             assert.deepEqual(expectedPayload, payload, 'shapes should match');
         });

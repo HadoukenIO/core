@@ -658,12 +658,13 @@ Window.create = function(id, opts) {
             var _win = coreState.getWindowByUuidName(uuid, name) || {};
             var _groupUuid = _win.groupUuid || null;
 
-            if (event.groupUuid === _groupUuid) {
+            //if the groupUuid's match or the _win object has no uuid (the window has closed)
+            if (event.groupUuid === _groupUuid || _win.uuid === void 0) {
                 var payload = event.payload;
 
                 payload.name = name;
                 /* jshint ignore:start */
-                payload.uuid = _win.app_uuid;
+                payload.uuid = _win.app_uuid || event.uuid;
                 /* jshint ignore:end */
 
                 if (payload.reason === 'disband') {
@@ -864,14 +865,18 @@ Window.create = function(id, opts) {
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
         /*
+            DEBUG:     -1
             INFO:      0
             WARNING:   1
             ERROR:     2
             FATAL:     3
         */
-        if (level === /* INFO */ 0 ||
+        const printDebugLogs = (coreState.argo['v'] >= 1);
+        if ((level === /* DEBUG */ -1 && !printDebugLogs) ||
+            level === /* INFO */ 0 ||
             level === /* WARNING */ 1) {
             // Prevent INFO and WARNING messages from writing to debug.log
+            // DEBUG messages are also prevented if --v=1 or higher isn't specified
             event.preventDefault();
         }
 
@@ -899,9 +904,9 @@ Window.create = function(id, opts) {
                 return;
             }
 
-            function checkPrependLeadingZero(num) {
+            function checkPrependLeadingZero(num, length) {
                 let str = String(num);
-                if (str.length === 1) {
+                while (str.length < length) {
                     str = '0' + str;
                 }
 
@@ -909,17 +914,18 @@ Window.create = function(id, opts) {
             }
 
             const date = new Date();
-            const month = checkPrependLeadingZero(date.getMonth() + 1);
-            const day = checkPrependLeadingZero(date.getDate());
-            const year = String(date.getFullYear()).slice(2);
-            const hour = checkPrependLeadingZero(date.getHours());
-            const minute = checkPrependLeadingZero(date.getMinutes());
-            const second = checkPrependLeadingZero(date.getSeconds());
+            const year = String(date.getFullYear());
+            const month = checkPrependLeadingZero(date.getMonth() + 1, 2);
+            const day = checkPrependLeadingZero(date.getDate(), 2);
+            const hour = checkPrependLeadingZero(date.getHours(), 2);
+            const minute = checkPrependLeadingZero(date.getMinutes(), 2);
+            const second = checkPrependLeadingZero(date.getSeconds(), 2);
+            const millisecond = checkPrependLeadingZero(date.getMilliseconds(), 3);
 
             // Format timestamp to match debug.log
-            const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
+            const timeStamp = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
 
-            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp });
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
 
         }, 1);
     };
@@ -1405,16 +1411,7 @@ Window.isShowing = function(identity) {
 
 
 Window.joinGroup = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
-
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
-    WindowGroups.joinGroup(identityOfWindow, groupingOfWindow);
+    return WindowGroups.joinGroup({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
@@ -1426,7 +1423,7 @@ Window.leaveGroup = function(identity) {
     }
 
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    WindowGroups.leaveGroup(openfinWindow);
+    return WindowGroups.leaveGroup(openfinWindow);
 };
 
 
@@ -1440,16 +1437,7 @@ Window.maximize = function(identity) {
 
 
 Window.mergeGroups = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
-
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
-    WindowGroups.mergeGroups(identityOfWindow, groupingOfWindow);
+    return WindowGroups.mergeGroups({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
@@ -1958,7 +1946,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
         coreState.removeChildById(id);
 
         // remove window from any groups it belongs to
-        WindowGroups.leaveGroup(ofWindow);
+        promises.push(WindowGroups.leaveGroup(ofWindow));
 
         promises.push(handleSaveStateAlwaysResolve());
 

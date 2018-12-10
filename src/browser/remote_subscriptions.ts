@@ -141,7 +141,8 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
         unSubscriptions.set(runtimeKey, []);
     }
     unSubscriptions.get(runtimeKey).push(() => {
-        classEventEmitter.removeListener(eventName, listener);
+        const unsub = <Function>classEventEmitter.removeListener;
+        unsub(eventName, listener);
     });
 }
 
