@@ -865,14 +865,18 @@ Window.create = function(id, opts) {
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
         /*
+            DEBUG:     -1
             INFO:      0
             WARNING:   1
             ERROR:     2
             FATAL:     3
         */
-        if (level === /* INFO */ 0 ||
+        const printDebugLogs = (coreState.argo['v'] >= 1);
+        if ((level === /* DEBUG */ -1 && !printDebugLogs) ||
+            level === /* INFO */ 0 ||
             level === /* WARNING */ 1) {
             // Prevent INFO and WARNING messages from writing to debug.log
+            // DEBUG messages are also prevented if --v=1 or higher isn't specified
             event.preventDefault();
         }
 
@@ -900,9 +904,9 @@ Window.create = function(id, opts) {
                 return;
             }
 
-            function checkPrependLeadingZero(num) {
+            function checkPrependLeadingZero(num, length) {
                 let str = String(num);
-                if (str.length === 1) {
+                while (str.length < length) {
                     str = '0' + str;
                 }
 
@@ -910,17 +914,18 @@ Window.create = function(id, opts) {
             }
 
             const date = new Date();
-            const month = checkPrependLeadingZero(date.getMonth() + 1);
-            const day = checkPrependLeadingZero(date.getDate());
-            const year = String(date.getFullYear()).slice(2);
-            const hour = checkPrependLeadingZero(date.getHours());
-            const minute = checkPrependLeadingZero(date.getMinutes());
-            const second = checkPrependLeadingZero(date.getSeconds());
+            const year = String(date.getFullYear());
+            const month = checkPrependLeadingZero(date.getMonth() + 1, 2);
+            const day = checkPrependLeadingZero(date.getDate(), 2);
+            const hour = checkPrependLeadingZero(date.getHours(), 2);
+            const minute = checkPrependLeadingZero(date.getMinutes(), 2);
+            const second = checkPrependLeadingZero(date.getSeconds(), 2);
+            const millisecond = checkPrependLeadingZero(date.getMilliseconds(), 3);
 
             // Format timestamp to match debug.log
-            const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
+            const timeStamp = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
 
-            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp });
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
 
         }, 1);
     };

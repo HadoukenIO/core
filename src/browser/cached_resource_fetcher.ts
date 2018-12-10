@@ -130,7 +130,13 @@ async function prepDownloadLocation(appCacheDir: string) {
 
 
 function getRootCachePath () {
-    return join(app.getPath('userData') , 'Cache');
+    const p: any = process;
+    if (p.buildFlags.enableChromium) {
+        return join(app.getPath('userData') , 'Default', 'Cache');
+    } else {
+        return join(app.getPath('userData') , 'Cache');
+    }
+
 }
 
 /**

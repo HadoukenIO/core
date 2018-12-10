@@ -308,6 +308,14 @@ function getEntityInfo(identity: Identity, message: APIMessage, ack: Acker, nack
 
 function getFocusedWindow(identity: Identity, message: APIMessage, ack: Acker): void {
     const dataAck = Object.assign({}, successAck);
+    const {locals} = message;
+    if (locals && locals.aggregate) {
+       const found = locals.aggregate.find((x: any) => !!x);
+       if (found) {
+           dataAck.data = found;
+           return ack(dataAck);
+       }
+    }
     dataAck.data = System.getFocusedWindow();
     ack(dataAck);
 }
