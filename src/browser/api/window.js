@@ -149,13 +149,17 @@ let optionSetters = {
         optionSetters['contextMenuSettings']({ enable: contextMenuBool }, browserWin);
     },
     contextMenuSettings: function(newVal, browserWin) {
-        if (!newVal || typeof newVal.enable !== 'boolean') {
+        if (!newVal ||
+            (typeof newVal.enable !== 'undefined' && typeof newVal.enable !== 'boolean') ||
+            (typeof newVal.devtools !== 'undefined' && typeof newVal.devtools !== 'boolean') ||
+            (typeof newVal.reload !== 'undefined' && typeof newVal.reload !== 'boolean')) {
             return;
         }
         const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
             newVal);
         setOptOnBrowserWin('contextMenuSettings', val, browserWin);
         browserWin.setMenu(null);
+        browserWin.webContents.updateContextMenuSettings(val);
     },
     customData: function(newVal, browserWin) {
         setOptOnBrowserWin('customData', newVal, browserWin);
@@ -915,7 +919,7 @@ Window.create = function(id, opts) {
             // Format timestamp to match debug.log
             const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
 
-            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp });
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
 
         }, 1);
     };
