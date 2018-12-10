@@ -687,7 +687,8 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             app._options._type !== ERROR_BOX_TYPES.RENDERER_CRASH &&
             !app._options._runtimeAuthDialog &&
             !runtimeIsClosing &&
-            coreState.shouldCloseRuntime();
+            coreState.shouldCloseRuntime() &&
+            process.platform !== 'darwin';
 
         if (shouldCloseRuntime) {
             try {
