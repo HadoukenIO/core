@@ -635,6 +635,12 @@ Window.create = function(id, opts) {
                     if (decoratorFn(payload, arguments)) {
                         // Let the decorator apply changes to the type
                         ofEvents.emit(route.window(payload.type, uuid, name), payload);
+                        // handle 'user-movement-disabled' or 'user-movement-enabled' events used in v2API
+                        if (evnt === 'user-movement-disabled' || evnt === 'user-movement-enabled') {
+                            let newPayload = _.clone(payload);
+                            newPayload.type = evnt;
+                            ofEvents.emit(route.window(newPayload.type, uuid, name), newPayload);
+                        }
                     }
                 };
 
@@ -1082,12 +1088,12 @@ function disabledFrameUnsubDecorator(identity) {
         if (refCount > 1) {
             disabledFrameRef.set(windowKey, --refCount);
         } else {
-            Window.enableFrame(identity);
+            Window.enableUserMovement(identity);
         }
     };
 }
 
-Window.disableFrame = function(requestorIdentity, windowIdentity) {
+Window.disableUserMovement = function(requestorIdentity, windowIdentity) {
     const browserWindow = getElectronBrowserWindow(windowIdentity);
     const windowKey = genWindowKey(windowIdentity);
 
@@ -1123,7 +1129,7 @@ Window.embed = function(identity, parentHwnd) {
     });
 };
 
-Window.enableFrame = function(identity) {
+Window.enableUserMovement = function(identity) {
     const windowKey = genWindowKey(identity);
     let browserWindow = getElectronBrowserWindow(identity);
 

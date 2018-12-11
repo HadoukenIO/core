@@ -26,9 +26,9 @@ export const windowApiMap = {
     'blur-window': blurWindow,
     'bring-window-to-front': bringWindowToFront,
     'close-window': closeWindow,
-    'disable-window-frame': disableWindowFrame,
+    'disable-window-frame': disableUserMovement,
     'dock-window': dockWindow,
-    'enable-window-frame': enableWindowFrame,
+    'enable-window-frame': enableUserMovement,
     'execute-javascript-in-window': { apiFunc: executeJavascript, apiPath: '.executeJavaScript' },
     'flash-window': flashWindow,
     'focus-window': focusWindow,
@@ -429,11 +429,11 @@ function flashWindow(identity: Identity, message: APIMessage, ack: Acker): void 
     ack(successAck);
 }
 
-function enableWindowFrame(identity: Identity, message: APIMessage, ack: Acker): void {
+function enableUserMovement(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.enableFrame(windowIdentity);
+    Window.enableUserMovement(windowIdentity);
     ack(successAck);
 }
 
@@ -463,11 +463,11 @@ function executeJavascript(identity: Identity, message: APIMessage, ack: Acker, 
     return nack(new Error('Rejected, target window is not owned by requesting identity'));
 }
 
-function disableWindowFrame(identity: Identity, message: APIMessage, ack: Acker): void {
+function disableUserMovement(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.disableFrame(identity, windowIdentity);
+    Window.disableUserMovement(identity, windowIdentity);
     ack(successAck);
 }
 
