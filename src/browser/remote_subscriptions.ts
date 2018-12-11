@@ -16,9 +16,9 @@
  * then may come back up again in the future.
  */
 
-import ofEvents from './of_events';
+import { noop } from '../common/main';
 import connectionManager, { PeerRuntime, keyFromPortInfo, getMeshUuid } from './connection_manager';
-import { Identity } from '../shapes';
+import ofEvents from './of_events';
 import route from '../common/route';
 
 // id count to generate IDs for subscriptions
@@ -29,10 +29,12 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
 /**
  * Shape of remote subscription props
  */
-interface RemoteSubscriptionProps extends Identity {
-    className: 'application'|'window'|'system'|'channel'; // names of the class event emitters, used for subscriptions
+export interface RemoteSubscriptionProps {
+    className: 'application'|'window'|'system'|'channel'|'frame'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
+    name?: string;
+    uuid?: string;
 }
 
 /**
@@ -234,7 +236,7 @@ export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
 export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
     return new Promise(resolve => {
         if (systemEventsToIgnore[subscriptionProps.eventName]) {
-            return resolve();
+            return resolve(noop);
         }
 
         const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
