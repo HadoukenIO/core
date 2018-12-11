@@ -1,4 +1,3 @@
-
 type SideName = 'top' | 'right' | 'bottom' | 'left';
 type SharedBounds = {
     hasSharedBounds: boolean;
@@ -26,6 +25,8 @@ export interface RectangleBase {
     width: number;
     height: number;
 }
+type EdgeCrossing = { mine: SideName, other: SideName, distance: number };
+type EdgeCrossings = {xCrossing: EdgeCrossing, yCrossing: EdgeCrossing, hasCrossedEdges: boolean};
 
 class RectOptionsOpts {
     public minWidth?: number;
@@ -282,11 +283,11 @@ export class Rectangle {
             case 'right': {
                     changes.width += (rect[sideToAlign] - (this.x + this.width));
                     if (changes.width < this.opts.minWidth) {
-                        // prevent "pushing" a window via the resizing of another
+                        // prevent 'pushing' a window via the resizing of another
                         changes.x = rect[sideToAlign] - this.opts.minWidth;
                         changes.width = this.opts.minWidth;
                     } else if (changes.width > this.opts.maxWidth) {
-                        // prevent "pulling" a window via the resizing of another
+                        // prevent 'pulling' a window via the resizing of another
                         changes.x = rect[sideToAlign] - this.opts.maxWidth;
                         changes.width = this.opts.maxWidth;
                     }
@@ -310,7 +311,7 @@ export class Rectangle {
             case 'bottom': {
                     changes.height += (rect[sideToAlign] - (this.y + this.height));
                     if (changes.height < this.opts.minHeight) {
-                        // prevent "pushing" a window via the resizing of another
+                        // prevent 'pushing' a window via the resizing of another
                         changes.y = rect[sideToAlign] - this.opts.minHeight;
                         changes.height = this.opts.minHeight;
                     } else if (changes.height > this.opts.maxHeight) {
@@ -325,11 +326,83 @@ export class Rectangle {
         }
         return Rectangle.CREATE_FROM_BOUNDS(changes, this.opts);
     }
+
     public shift(delta: RectangleBase) {
         return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts);
     }
 
-    public move(cachedBounds: RectangleBase, currentBounds: RectangleBase) {
+    public crossedEdges(initialBounds: Rectangle, finalBounds: Rectangle): EdgeCrossings {
+        const positionsInitial = this.relativePositions(initialBounds);
+        const positionsFinal = this.relativePositions(finalBounds);
+        const crossedBounds: SideName[][] = []
+        const currentBoundsCollide = this.collidesWith(finalBounds);
+        const resizedOutOfContainingRect = (!currentBoundsCollide && this.collidesWith(initialBounds));
+        const adjacentOnAtLeastOneSide = this.sharedBoundsOnIntersection(finalBounds).hasSharedBounds;
+
+        if (currentBoundsCollide 
+            || resizedOutOfContainingRect
+            || adjacentOnAtLeastOneSide) {
+
+            for (let i = 0; i < Rectangle.EDGE_CROSSINGS.length; i++) {
+                if (positionsInitial[i] !== positionsFinal[i]) {
+                    crossedBounds.push(Rectangle.EDGE_CROSSINGS[i])
+                }
+            }
+        }
+        
+        let xCrossing: EdgeCrossing;
+        let yCrossing: EdgeCrossing;
+
+        for (let [mine, other] of crossedBounds) {
+            const distance = Math.abs(this[mine] - finalBounds[other]);
+
+            if (mine === 'left' || mine === 'right') {
+                if (!xCrossing || distance > xCrossing.distance) {
+                    xCrossing = {mine, other, distance};
+                }
+            } else {
+                if (!yCrossing || distance > yCrossing.distance) {
+                    yCrossing = {mine, other, distance};
+                }
+            }
+        }
+
+        return {
+            xCrossing, yCrossing,
+            hasCrossedEdges: !!(xCrossing || yCrossing)
+        };
+    }
+
+    public alignCrossedEdges(edgeCrossings: EdgeCrossings, finalOtherBounds: Rectangle) {
+        let rect: Rectangle = this;
+        const {xCrossing, yCrossing} = edgeCrossings;
+
+        if (xCrossing) {
+            rect = rect.alignSide(xCrossing.mine, finalOtherBounds, xCrossing.other)
+        }
+        if (yCrossing) {
+            rect = rect.alignSide(yCrossing.mine, finalOtherBounds, yCrossing.other)
+        }
+        return rect;
+    }
+
+    private static readonly EDGE_CROSSINGS: SideName[][] = [
+        ['top', 'top'],
+        ['top', 'bottom'],
+        ['bottom', 'top'],
+        ['bottom', 'bottom'],
+        ['right', 'left'],
+        ['right', 'right'],
+        ['left', 'left'],
+        ['left', 'right']
+    ];
+ 
+    private relativePositions(rect: Rectangle) {
+        return Rectangle.EDGE_CROSSINGS.map(([mySide, otherSide]) => this[mySide] > rect[otherSide]);
+    }
+
+    public move(cachedBounds: RectangleBase, currentBounds: RectangleBase): Rectangle {//todo declare ret types always
+        
         const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(cachedBounds));
         const currLeader = Rectangle.CREATE_FROM_BOUNDS(currentBounds);
         const delta = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(currLeader);
@@ -342,8 +415,16 @@ export class Rectangle {
 
         return rect;
     }
+
     public adjacent(rects: Rectangle[]) {
         return Array.from(Rectangle.ADJACENCY_LIST([...rects, this as Rectangle]).values()).find(list => list.includes(this));
+    }
+
+    public hasIdenticalBounds(rect: RectangleBase): boolean {
+        return this.x === rect.x &&
+            this.y === rect.y &&
+            this.width === rect.width &&
+            this.height === rect.height;
     }
 
     public static ADJACENCY_LIST(rects: Rectangle[]): Map<number, Rectangle[]> {
@@ -420,7 +501,15 @@ export class Rectangle {
         return true;
     }
 
-    public static GRAPH(rects: Rectangle[]): Graph  {
+    public static sharedBoundValidator(rect1: Rectangle, rect2: Rectangle): boolean {
+        return rect1.sharedBoundsOnIntersection(rect2).hasSharedBounds
+    }
+
+    public static collisionsValidator(rect1: Rectangle, rect2: Rectangle): boolean  {
+        return rect1.collidesWith(rect2);
+    } 
+
+    public static GRAPH(rects: Rectangle[], validator = Rectangle.sharedBoundValidator): Graph  {
         const edges = [];
         const vertices: Array<number> = [];
         const rectLen = rects.length;
@@ -431,7 +520,7 @@ export class Rectangle {
 
             for (let ii = 0; ii < rectLen; ii++) {
                 if (i !== ii) {
-                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
+                    if (validator(rects[i], rects[ii])) {
                         edges.push([i, ii]);
                     }
                 }
