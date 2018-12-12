@@ -230,8 +230,6 @@ app.on('chrome-browser-process-created', function() {
         app.exit(0);
 
         return;
-    } else {
-        migrateCookies(); // not doing this for delegated launches
     }
 });
 
@@ -269,6 +267,8 @@ app.on('ready', function() {
     }
 
     rotateLogs(coreState.argo);
+
+    migrateCookies();
 
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
