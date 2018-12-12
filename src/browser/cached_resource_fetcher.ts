@@ -9,8 +9,8 @@ import { addPendingAuthRequests, createAuthUI } from './authentication_delegate'
 import { AuthCallback, Identity } from '../shapes';
 import { getSession } from './core_state';
 
-let appQuiting: Boolean = false;
-let clearCache: boolean = false;
+let appQuiting: boolean = false;
+let cacheCleared: boolean = false;
 
 const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 const fetchMap: Map<string, Promise<any>> = new Map();
@@ -184,7 +184,7 @@ async function download(identity: Identity, url: string, saveToPath: string, app
         const session = getSession(identity);
         const request = net.request(url);
         // need to check download location again in case apps call system.clearCache during the startup
-        if (clearCache) {
+        if (cacheCleared) {
             app.vlog(1, 'prepare download location again after clear cache');
             await prepDownloadLocation(appCacheDir);
         }
@@ -339,6 +339,6 @@ export function authenticateFetch(uuid: string, username: string, password: stri
     }
 }
 
-export function setClearCacheStatus(clear: boolean): void {
-    clearCache = clear;
+export function clearCacheInvoked(cleared: boolean): void {
+    cacheCleared = cleared;
 }
