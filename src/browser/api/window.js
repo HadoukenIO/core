@@ -635,10 +635,18 @@ Window.create = function(id, opts) {
                     if (decoratorFn(payload, arguments)) {
                         // Let the decorator apply changes to the type
                         ofEvents.emit(route.window(payload.type, uuid, name), payload);
-                        // handle 'user-movement-disabled' or 'user-movement-enabled' events used in v2API
+                        // emit new 'user-movement-disabled' or 'user-movement-enabled' events in v2API
                         if (evnt === 'user-movement-disabled' || evnt === 'user-movement-enabled') {
                             let newPayload = _.clone(payload);
                             newPayload.type = evnt;
+                            ofEvents.emit(route.window(newPayload.type, uuid, name), newPayload);
+                        }
+
+                        // emit new 'disabled-movement-bounds-changed' or 'disabled-movement-bounds-changing' events in v2API
+                        if (evnt === 'disabled-frame-bounds-changed' || evnt === 'disabled-frame-bounds-changing') {
+                            const newEventType = evnt === 'disabled-frame-bounds-changed' ? 'disabled-movement-bounds-changed' : 'disabled-movement-bounds-changing';
+                            let newPayload = _.clone(payload);
+                            newPayload.type = newEventType;
                             ofEvents.emit(route.window(newPayload.type, uuid, name), newPayload);
                         }
                     }
