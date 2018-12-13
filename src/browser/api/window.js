@@ -638,6 +638,20 @@ Window.create = function(id, opts) {
                     if (decoratorFn(payload, arguments)) {
                         // Let the decorator apply changes to the type
                         ofEvents.emit(route.window(payload.type, uuid, name), payload);
+                        // emit new 'user-movement-disabled' or 'user-movement-enabled' events in v2API
+                        if (evnt === 'user-movement-disabled' || evnt === 'user-movement-enabled') {
+                            let newPayload = _.clone(payload);
+                            newPayload.type = evnt;
+                            ofEvents.emit(route.window(newPayload.type, uuid, name), newPayload);
+                        }
+
+                        // emit new 'disabled-movement-bounds-changed' or 'disabled-movement-bounds-changing' events in v2API
+                        if (evnt === 'disabled-frame-bounds-changed' || evnt === 'disabled-frame-bounds-changing') {
+                            const newEventType = evnt === 'disabled-frame-bounds-changed' ? 'disabled-movement-bounds-changed' : 'disabled-movement-bounds-changing';
+                            let newPayload = _.clone(payload);
+                            newPayload.type = newEventType;
+                            ofEvents.emit(route.window(newPayload.type, uuid, name), newPayload);
+                        }
                     }
                 };
 
@@ -1095,12 +1109,12 @@ function disabledFrameUnsubDecorator(identity) {
         if (refCount > 1) {
             disabledFrameRef.set(windowKey, --refCount);
         } else {
-            Window.enableFrame(identity);
+            Window.enableUserMovement(identity);
         }
     };
 }
 
-Window.disableFrame = function(requestorIdentity, windowIdentity) {
+Window.disableUserMovement = function(requestorIdentity, windowIdentity) {
     const browserWindow = getElectronBrowserWindow(windowIdentity);
     const windowKey = genWindowKey(windowIdentity);
 
@@ -1136,7 +1150,7 @@ Window.embed = function(identity, parentHwnd) {
     });
 };
 
-Window.enableFrame = function(identity) {
+Window.enableUserMovement = function(identity) {
     const windowKey = genWindowKey(identity);
     let browserWindow = getElectronBrowserWindow(identity);
 
