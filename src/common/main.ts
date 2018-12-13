@@ -99,3 +99,7 @@ export function isEnableChromiumBuild(): boolean {
     const { buildFlags } = <any> process;
     return buildFlags && buildFlags.enableChromium;
 }
+
+// tslint:disable
+export function noop() { }
+// tslint:enable

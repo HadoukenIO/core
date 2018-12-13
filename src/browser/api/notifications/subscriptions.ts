@@ -500,7 +500,7 @@ function handleNoteCreated(msg: NotificationMessage): void {
     seqs.createdNotes.onNext({ identity, options });
 }
 
-function routeRequest(id: any, msg: NotificationMessage, ack: any) {
+export function routeRequest(id: any, msg: NotificationMessage, ack: any) {
     const {action, data} = msg;
 
     data.ack = ack;
@@ -757,12 +757,10 @@ function invokeCreateAck(ack: any): void {
 }
 
 // TODO doc this, general ...
-function addEventListener (identity: Identity, type: string, payload: any, cb: any) {
+export function addEventListener (identity: Identity, type: string, payload: any, listener: any): () => void {
     const {uuid, name} = identity;
     const isGeneral = type === 'general';
-    const sub = noteTopicStr(uuid, name, isGeneral);
-    return ofEvents.on(sub, cb);
+    const eventName = noteTopicStr(uuid, name, isGeneral);
+    ofEvents.on(eventName, listener);
+    return () => ofEvents.removeListener(eventName, listener);
 }
-
-export {addEventListener};
-export {routeRequest};
