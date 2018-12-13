@@ -1,3 +1,4 @@
+import { app } from 'electron';
 import { EventEmitter } from 'events';
 import route from '../common/route';
 
@@ -17,7 +18,7 @@ class OFEvents extends EventEmitter {
     }
 
     public emit(routeString: string, ...data: any[]) {
-        const timestamp = Date.now();
+        const timestamp = app.nowFromSystemTime();
         const tokenizedRoute = routeString.split('/');
         const eventPropagations = new Map<string, any>();
         const [payload, ...extraArgs] = data;

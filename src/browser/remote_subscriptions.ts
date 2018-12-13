@@ -16,6 +16,7 @@
  * then may come back up again in the future.
  */
 
+import { app } from 'electron';
 import { noop } from '../common/main';
 import connectionManager, { PeerRuntime, keyFromPortInfo, getMeshUuid } from './connection_manager';
 import ofEvents from './of_events';
@@ -67,7 +68,7 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
         const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
         const subscription: RemoteSubscription = Object.assign(clonedProps, {
             isCleaned: false,
-            timestamp: Date.now()
+            timestamp: app.nowFromSystemTime()
         });
 
         // Only generate an ID for new subscriptions
