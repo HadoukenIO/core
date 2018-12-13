@@ -74,7 +74,10 @@ export class WindowGroups extends EventEmitter {
 
     //cannot rely on nativeId as windows might leave a group after they are closed.
     private getWindowGroupId = (identity: Identity): string => {
-        return `${identity.uuid}:${identity.name}`;
+        const { uuid, name } = identity;
+        return [uuid, name]
+            .map((value: string) =>  Buffer.from(value).toString('base64'))
+            .join('/');
     }
 
     public joinGroup = async (source: Identity, target: Identity): Promise<void> => {
