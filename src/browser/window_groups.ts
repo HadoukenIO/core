@@ -232,7 +232,7 @@ export class WindowGroups extends EventEmitter {
         const group = this.getGroup(_groupUuid);
         this._windowGroups[_groupUuid][windowGroupId] = win;
         win.groupUuid = _groupUuid;
-        if (argo['disabled-frame-groups']) {
+        if (!argo['use-legacy-window-groups']) {
             groupTracker.addWindowToGroup(win);
         }
         if (!win.isProxy) {
@@ -248,7 +248,7 @@ export class WindowGroups extends EventEmitter {
 
     private _removeWindowFromGroup = async (groupUuid: string, win: OpenFinWindow): Promise<void> => {
         const windowGroupId = this.getWindowGroupId(win);
-        if (argo['disabled-frame-groups']) {
+        if (!argo['use-legacy-window-groups']) {
             groupTracker.removeWindowFromGroup(win);
         }
         delete this._windowGroups[groupUuid][windowGroupId];
@@ -284,7 +284,7 @@ export class WindowGroups extends EventEmitter {
                 win.groupUuid = null;
             }));
             delete this._windowGroups[groupUuid];
-            if (argo['disabled-frame-groups']) {
+            if (!argo['use-legacy-window-groups']) {
                 groupTracker.deleteGroupInfoCache(groupUuid);
             }
 

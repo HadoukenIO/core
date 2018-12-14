@@ -78,18 +78,11 @@ export const windowApiMap = {
 };
 
 export function init() {
-    const registerThis = argo['disabled-frame-groups']
+    const registerThis = !argo['use-legacy-window-groups']
        ? hijackMovesForGroupedWindows(windowApiMap)
        : windowApiMap;
     registerActionMap(registerThis, 'Window');
 }
-
-// function decorateActionMapForGroups(actionMap: ActionSpecMap): ActionSpecMap {
-//     const hijackOnGroup = {
-//         'set-window-bounds':
-//     }
-// actionMap.keys().
-// }
 
 function windowAuthenticate(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
