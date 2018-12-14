@@ -100,6 +100,10 @@ export function isEnableChromiumBuild(): boolean {
     return buildFlags && buildFlags.enableChromium;
 }
 
-// tslint:disable
-export function noop() { }
-// tslint:enable
+export function noop(): void {
+    // empty
+}
+
+export function isFloat(n: any): boolean {
+    return Number(n) === n && n % 1 !== 0;
+}

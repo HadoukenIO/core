@@ -1,11 +1,13 @@
 import { app } from 'electron';
 import { EventEmitter } from 'events';
+import { isFloat } from '../common/main';
 import route from '../common/route';
 
 interface PastEvent {
     payload: any;
     routeString: string;
-    timestamp: number;
+    timestampJs: number;
+    timestampNative: number;
 }
 
 class OFEvents extends EventEmitter {
@@ -18,13 +20,14 @@ class OFEvents extends EventEmitter {
     }
 
     public emit(routeString: string, ...data: any[]) {
-        const timestamp = app.nowFromSystemTime();
         const tokenizedRoute = routeString.split('/');
         const eventPropagations = new Map<string, any>();
         const [payload, ...extraArgs] = data;
 
         if (this.isSavingEvents) {
-            this.history.push({ payload, routeString, timestamp });
+            const timestampJs = Date.now();
+            const timestampNative = app.nowFromSystemTime();
+            this.history.push({ payload, routeString, timestampJs, timestampNative });
         }
 
         if (tokenizedRoute.length >= 2) {
@@ -101,10 +104,19 @@ class OFEvents extends EventEmitter {
 
         this.history.forEach((pastEvent) => {
             const routeMatches = pastEvent.routeString === routeString;
-            const missedEvent = pastEvent.timestamp >= timestamp;
 
-            if (routeMatches && missedEvent) {
-                listener(pastEvent.payload);
+            if (routeMatches) {
+                let missedEvent = false;
+
+                if (Number.isInteger(timestamp)) {
+                    missedEvent = pastEvent.timestampJs >= timestamp;
+                } else if (isFloat(timestamp)) {
+                    missedEvent = pastEvent.timestampNative >= timestamp;
+                }
+
+                if (missedEvent) {
+                    listener(pastEvent.payload);
+                }
             }
         });
     }
