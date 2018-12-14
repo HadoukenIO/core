@@ -59,7 +59,7 @@ async function emitChange(
         ...eventBounds,
         changeType,
         reason,
-        deffered: true
+        deferred: true
     };
     raiseEvent(ofWin, 'bounds-changed', eventArgs);
 
