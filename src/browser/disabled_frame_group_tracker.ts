@@ -201,20 +201,37 @@ function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions:
             let rectFinalPosition = rect;
             const cachedBounds = Rectangle.CREATE_FROM_BOUNDS(start);
             const currentBounds = Rectangle.CREATE_FROM_BOUNDS(end);
-            let crossedEdges = rect.crossedEdges(cachedBounds, currentBounds);
+            let crossedEdges = rect.crossedEdgesBeyondThreshold(cachedBounds, currentBounds);
+            const hasCrossedEdges = crossedEdges.length > 0;
             const endRect = Rectangle.CREATE_FROM_BOUNDS(end);
+            const initiallyReachable = distances.get(index) < Infinity;
+
 
             if (rectFinalPosition.hasIdenticalBounds(cachedBounds)) {
                 rectFinalPosition = currentBounds;
-            } else if (distances.get(index) < Infinity && crossedEdges.hasCrossedEdges) {
-                rectFinalPosition = rect.move(start, end);
-                crossedEdges = rectFinalPosition.crossedEdges(cachedBounds, currentBounds);
-                rectFinalPosition = rectFinalPosition.alignCrossedEdges(crossedEdges, endRect);
-            } else if (distances.get(index) < Infinity) {
-                rectFinalPosition = rect.move(start, end);
-            } else if (crossedEdges.hasCrossedEdges) {
-                rectFinalPosition = rect.alignCrossedEdges(crossedEdges, endRect);
+            } else {
+
+                if (initiallyReachable) {
+                    rectFinalPosition = rect.move(start, end);
+
+                    // This is how one could detect if a bound was broken via a move "pushing" or "pulling" a
+                    // window as a result of breaking a min size constraint. Leave as a reference for now.
+                    // const brokeByMove = currentBounds.crossedEdgesBeyondThreshold(rect, rectFinalPosition);
+                    // if (brokeByMove.length > 0) {
+                    //     // handle pushed broken edges
+                    // }
+
+                    crossedEdges = rectFinalPosition.crossedEdgesBeyondThreshold(cachedBounds, currentBounds);
+
+                    if (crossedEdges.length > 0) {
+                        rectFinalPosition = rectFinalPosition.alignCrossedEdges(crossedEdges, endRect);
+                    }
+
+                } else if (hasCrossedEdges) {
+                    rectFinalPosition = rect.alignCrossedEdges(crossedEdges, endRect);
+                }
             }
+
             return {ofWin, rect: rectFinalPosition, offset};
         });
     const moves = allMoves.filter((move, i) => initialPositions[i].rect.moved(move.rect));

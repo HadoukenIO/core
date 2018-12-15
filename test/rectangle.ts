@@ -8,7 +8,7 @@ mockery.enable({
     warnOnReplace: false,
     warnOnUnregistered: false
 });
-import { Rectangle, SharedBoundsList } from '../src/browser/rectangle';
+import { Rectangle, SharedBoundsList, EdgeCrossings } from '../src/browser/rectangle';
 
 describe('Rectangle', () => {
     it('should provide the correct sizes', () => {
@@ -238,21 +238,21 @@ describe('Rectangle', () => {
         const rect = Rectangle.CREATE_FROM_BOUNDS({'x': 1206, 'y': -540, 'width': 491, 'height': 253});
         const grownUp = rect.grow(5, 5);
 
-        assert.deepStrictEqual(grownUp, Rectangle.CREATE_FROM_BOUNDS({'x': 1201, 'y': -545, 'width': 501, 'height': 263}));
+        assert.deepStrictEqual(grownUp.bounds, Rectangle.CREATE_FROM_BOUNDS({'x': 1201, 'y': -545, 'width': 501, 'height': 263}).bounds);
     });
 
     it ('should grow correctly on external monitors with negative x', () => {
         const rect = Rectangle.CREATE_FROM_BOUNDS({'x': -1206, 'y': 540, 'width': 491, 'height': 253});
         const grownUp = rect.grow(5, 5);
 
-        assert.deepStrictEqual(grownUp, Rectangle.CREATE_FROM_BOUNDS({'x': -1211, 'y': 535, 'width': 501, 'height': 263}));
+        assert.deepStrictEqual(grownUp.bounds, Rectangle.CREATE_FROM_BOUNDS({'x': -1211, 'y': 535, 'width': 501, 'height': 263}).bounds);
     });
 
     it ('should grow correctly on external monitors with negative x, y', () => {
         const rect = Rectangle.CREATE_FROM_BOUNDS({'x': -1206, 'y': -540, 'width': 491, 'height': 253});
         const grownUp = rect.grow(5, 5);
 
-        assert.deepStrictEqual(grownUp, Rectangle.CREATE_FROM_BOUNDS({'x': -1211, 'y': -545, 'width': 501, 'height': 263}));
+        assert.deepStrictEqual(grownUp.bounds, Rectangle.CREATE_FROM_BOUNDS({'x': -1211, 'y': -545, 'width': 501, 'height': 263}).bounds);
     });
 
     it('should collide', () => {
@@ -317,16 +317,13 @@ describe('Rectangle', () => {
         const leaderRectFinal = Rectangle.CREATE_FROM_BOUNDS({ 'x': 50, 'y': 0, 'width': 200, 'height': 100 });
 
         const crossedEdges = baseRect.crossedEdges(leaderRectInitial, leaderRectFinal);
-        const yCrossing: undefined = undefined;
-        const correctCrossedEdges = {
-            yCrossing,
-            xCrossing: {
+        const correctCrossedEdges = [
+            {
                 mine: 'right',
                 other: 'left',
                 distance: 50
-            },
-            hasCrossedEdges: true
-        };
+            }
+        ];
 
         assert.deepStrictEqual(crossedEdges, correctCrossedEdges, 'reported bound crossing is incorrect');
     });
@@ -337,16 +334,13 @@ describe('Rectangle', () => {
         const leaderRectFinal = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': 50, 'width': 100, 'height': 200 });
 
         const crossedEdges = baseRect.crossedEdges(leaderRectInitial, leaderRectFinal);
-        const xCrossing: undefined = undefined;
-        const correctCrossedEdges = {
-            xCrossing,
-            yCrossing: {
+        const correctCrossedEdges = [
+            {
                 mine: 'bottom',
                 other: 'top',
                 distance: 50
-            },
-            hasCrossedEdges: true
-        };
+            }
+        ];
 
         assert.deepStrictEqual(crossedEdges, correctCrossedEdges, 'reported bound crossing is incorrect');
     });
@@ -357,16 +351,13 @@ describe('Rectangle', () => {
         const leaderRectFinal = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': 0, 'width': 150, 'height': 100 });
 
         const crossedEdges = baseRect.crossedEdges(leaderRectInitial, leaderRectFinal);
-        const yCrossing: undefined = undefined;
-        const correctCrossedEdges = {
-            yCrossing,
-            xCrossing: {
+        const correctCrossedEdges = [
+            {
                 mine: 'right',
                 other: 'right',
                 distance: 50
-            },
-            hasCrossedEdges: true
-        };
+            }
+        ];
 
         assert.deepStrictEqual(crossedEdges, correctCrossedEdges, 'reported bound crossing is incorrect');
     });
@@ -377,16 +368,13 @@ describe('Rectangle', () => {
         const leaderRectFinal = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': 50, 'width': 100, 'height': 200 });
 
         const crossedEdges = baseRect.crossedEdges(leaderRectInitial, leaderRectFinal);
-        const xCrossing: undefined = undefined;
-        const correctCrossedEdges = {
-            xCrossing,
-            yCrossing: {
+        const correctCrossedEdges = [
+            {
                 mine: 'top',
                 other: 'top',
                 distance: 50
-            },
-            hasCrossedEdges: true
-        };
+            }
+        ];
 
         assert.deepStrictEqual(crossedEdges, correctCrossedEdges, 'reported bound crossing is incorrect');
     });
@@ -399,11 +387,7 @@ describe('Rectangle', () => {
         const crossedEdges = baseRect.crossedEdges(leaderRectInitial, leaderRectFinal);
         const xCrossing: undefined = undefined;
         const yCrossing: undefined = undefined;
-        const correctCrossedEdges = {
-            xCrossing,
-            yCrossing,
-            hasCrossedEdges: false
-        };
+        const correctCrossedEdges: EdgeCrossings = [];
 
         assert.deepStrictEqual(crossedEdges, correctCrossedEdges, 'reported bound crossing is incorrect');
     });

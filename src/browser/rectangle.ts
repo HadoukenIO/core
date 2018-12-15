@@ -9,7 +9,6 @@ type SharedBounds = {
 type SharedBound = Array<SideName>;
 type BoundIdentifier = [Rectangle, SideName];
 type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
-
 export type SharedBoundsList = Array<SharedBound>;
 type Graph = [number[], number[][]];
 export interface Opts {
@@ -18,7 +17,6 @@ export interface Opts {
     minHeight?: number;
     maxHeight?: number;
 }
-
 export interface RectangleBase {
     x: number;
     y: number;
@@ -26,7 +24,7 @@ export interface RectangleBase {
     height: number;
 }
 type EdgeCrossing = { mine: SideName, other: SideName, distance: number };
-type EdgeCrossings = {xCrossing: EdgeCrossing, yCrossing: EdgeCrossing, hasCrossedEdges: boolean};
+export type EdgeCrossings = EdgeCrossing[];
 
 class RectOptionsOpts {
     public minWidth?: number;
@@ -49,13 +47,24 @@ export class Rectangle {
         const { x, y, width, height } = rect;
         return new Rectangle(x, y, width, height, new RectOptionsOpts(opts));
     }
+    public static BOUND_SHARE_THRESHOLD = 5;
+
+    private static readonly EDGE_CROSSINGS: SideName[][] = [
+        ['top', 'top'],
+        ['top', 'bottom'],
+        ['bottom', 'top'],
+        ['bottom', 'bottom'],
+        ['right', 'left'],
+        ['right', 'right'],
+        ['left', 'left'],
+        ['left', 'right']
+    ];
 
     public x: number;
     public y: number;
     public width: number;
     public height: number;
     public opts: Opts;
-    public boundShareThreshold = 5;
 
     constructor(x: number, y: number, width: number, height: number, opts: Opts = {}) {
         this.x = x;
@@ -89,7 +98,7 @@ export class Rectangle {
         };
     }
     // tslint:disable
-    public grow(h: number, v: number): Rectangle {
+    public grow = (h: number, v: number): Rectangle => {
         let x: number = this.x;
         let y: number = this.y;
         let width: number = this.width;
@@ -127,7 +136,7 @@ export class Rectangle {
     }
     // ts-lint:enable
 
-    public collidesWith(rect: RectangleBase) {
+    public collidesWith = (rect: RectangleBase) => {
         const { x, y, width, height } = rect;
         let collision = false;
 
@@ -142,7 +151,7 @@ export class Rectangle {
     }
 
     // note this does not match both... just note it
-    private sharedBound(side: SideName, rect: Rectangle): SideName {
+    private sharedBound = (side: SideName, rect: Rectangle): SideName => {
         let delta: SideName;
         let oppositeDelta: SideName;
 
@@ -159,11 +168,11 @@ export class Rectangle {
             }
         }
 
-        if (Math.abs(this[side] - rect[delta]) <= this.boundShareThreshold) {
+        if (Math.abs(this[side] - rect[delta]) <= Rectangle.BOUND_SHARE_THRESHOLD) {
             return delta;
         }
 
-        if (Math.abs(this[side] - rect[oppositeDelta]) <= this.boundShareThreshold) {
+        if (Math.abs(this[side] - rect[oppositeDelta]) <= Rectangle.BOUND_SHARE_THRESHOLD) {
             return oppositeDelta;
         }
 
@@ -171,7 +180,7 @@ export class Rectangle {
     }
 
 
-    public sharedBounds(rect: Rectangle): SharedBounds {
+    public sharedBounds = (rect: Rectangle): SharedBounds => {
         let top = this.sharedBound('top', rect);
         let right = this.sharedBound('right', rect);
         let bottom = this.sharedBound('bottom', rect);
@@ -182,8 +191,9 @@ export class Rectangle {
     }
 
 
-    public sharedBoundsOnIntersection(rect: Rectangle): SharedBounds {
-        const intersectionRect = rect.grow(this.boundShareThreshold, this.boundShareThreshold);
+    public sharedBoundsOnIntersection = (rect: Rectangle): SharedBounds => {
+        const growth = Rectangle.BOUND_SHARE_THRESHOLD;
+        const intersectionRect = rect.grow(growth, growth);
         const intersection = this.collidesWith(intersectionRect);
 
         let hasSharedBounds = false;
@@ -199,7 +209,7 @@ export class Rectangle {
         }
     }
 
-    public sharedBoundsList(rect: Rectangle): SharedBoundsList {
+    public sharedBoundsList = (rect: Rectangle): SharedBoundsList => {
         const sides: Array<SideName> = ['top', 'right', 'left', 'bottom'];
         const sharedBounds = this.sharedBounds(rect);
 
@@ -214,7 +224,8 @@ export class Rectangle {
             return pair;
         }).filter(x => x);
     }
-    public moved(rect: RectangleBase) {
+
+    public moved = (rect: RectangleBase) => {
         return !(
             rect.x === this.x
             && rect.y === this.y
@@ -222,7 +233,8 @@ export class Rectangle {
             && rect.width === this.width
         )
     }
-    public delta(rect: RectangleBase): RectangleBase {
+
+    public delta = (rect: RectangleBase): RectangleBase => {
         return {
             x: rect.x - this.x,
             y: rect.y - this.y,
@@ -230,7 +242,8 @@ export class Rectangle {
             height: rect.height - this.height
         };
     }
-    public outerBounds(rect: RectangleBase) {
+
+    public outerBounds = (rect: RectangleBase) => {
         return {
             x: Math.min(rect.x, this.x),
             y: Math.min(rect.y, this.y),
@@ -240,7 +253,7 @@ export class Rectangle {
     }
 
     // this is only for resize, move would be different
-    private edgeMoved(pair: Array<SideName>, delta: RectangleBase): boolean {
+    private edgeMoved = (pair: Array<SideName>, delta: RectangleBase): boolean => {
         const { x, y, width, height } = delta;
         const [mySide, otherRectSharedSide] = pair;
 
@@ -262,7 +275,7 @@ export class Rectangle {
     }
 
 
-    public alignSide(mySide: SideName, rect: Rectangle, sideToAlign: SideName) {
+    public alignSide = (mySide: SideName, rect: Rectangle, sideToAlign: SideName) => {
         const changes = this.bounds;
         switch (mySide) {
             case 'left': {
@@ -327,11 +340,11 @@ export class Rectangle {
         return Rectangle.CREATE_FROM_BOUNDS(changes, this.opts);
     }
 
-    public shift(delta: RectangleBase) {
+    public shift = (delta: RectangleBase) => {
         return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts);
     }
 
-    public crossedEdges(initialBounds: Rectangle, finalBounds: Rectangle): EdgeCrossings {
+    public crossedEdges = (initialBounds: Rectangle, finalBounds: Rectangle): EdgeCrossings => {
         const positionsInitial = this.relativePositions(initialBounds);
         const positionsFinal = this.relativePositions(finalBounds);
         const crossedBounds: SideName[][] = []
@@ -367,41 +380,29 @@ export class Rectangle {
             }
         }
 
-        return {
-            xCrossing, yCrossing,
-            hasCrossedEdges: !!(xCrossing || yCrossing)
-        };
+        return [xCrossing, yCrossing].filter(x => x);
     }
 
-    public alignCrossedEdges(edgeCrossings: EdgeCrossings, finalOtherBounds: Rectangle) {
-        let rect: Rectangle = this;
-        const {xCrossing, yCrossing} = edgeCrossings;
+    public crossedEdgesBeyondThreshold = (initialBounds: Rectangle, finalBounds: Rectangle): EdgeCrossings => {
+        const crossedEdges = this.crossedEdges(initialBounds, finalBounds);
+        return crossedEdges.filter(({distance}) => distance > Rectangle.BOUND_SHARE_THRESHOLD);
+    }
 
-        if (xCrossing) {
-            rect = rect.alignSide(xCrossing.mine, finalOtherBounds, xCrossing.other)
+    public alignCrossedEdges = (edgeCrossings: EdgeCrossings, finalOtherBounds: Rectangle) => {
+        let rect: Rectangle = this;
+
+        for (const crossing of edgeCrossings) {
+            rect = rect.alignSide(crossing.mine, finalOtherBounds, crossing.other)
         }
-        if (yCrossing) {
-            rect = rect.alignSide(yCrossing.mine, finalOtherBounds, yCrossing.other)
-        }
+
         return rect;
     }
-
-    private static readonly EDGE_CROSSINGS: SideName[][] = [
-        ['top', 'top'],
-        ['top', 'bottom'],
-        ['bottom', 'top'],
-        ['bottom', 'bottom'],
-        ['right', 'left'],
-        ['right', 'right'],
-        ['left', 'left'],
-        ['left', 'right']
-    ];
  
-    private relativePositions(rect: Rectangle) {
+    private relativePositions = (rect: Rectangle) => {
         return Rectangle.EDGE_CROSSINGS.map(([mySide, otherSide]) => this[mySide] > rect[otherSide]);
     }
 
-    public move(cachedBounds: RectangleBase, currentBounds: RectangleBase): Rectangle {//todo declare ret types always
+    public move = (cachedBounds: RectangleBase, currentBounds: RectangleBase): Rectangle => {
         
         const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(cachedBounds));
         const currLeader = Rectangle.CREATE_FROM_BOUNDS(currentBounds);
@@ -416,11 +417,11 @@ export class Rectangle {
         return rect;
     }
 
-    public adjacent(rects: Rectangle[]) {
+    public adjacent = (rects: Rectangle[]) => {
         return Array.from(Rectangle.ADJACENCY_LIST([...rects, this as Rectangle]).values()).find(list => list.includes(this));
     }
 
-    public hasIdenticalBounds(rect: RectangleBase): boolean {
+    public hasIdenticalBounds = (rect: RectangleBase): boolean => {
         return this.x === rect.x &&
             this.y === rect.y &&
             this.width === rect.width &&
