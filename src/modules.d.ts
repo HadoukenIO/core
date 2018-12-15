@@ -14,13 +14,13 @@ declare module 'electron' {
         export function getTickCount(): number;
         export function isAeroGlassEnabled(): boolean;
         export function log(level: string, message: any): any;
+        export function matchesURL(url: string, patterns: [string]): boolean;
+        export function now(): number;
+        export function nowFromSystemTime(): number;
         export function on(event: string, callback: () => void): void;
+        export function readRegistryValue(root: string, key: string, value: string): any;
         export function setMinLogLevel(level: number): void;
         export function vlog(level: number, message: any): any;
-
-        export function readRegistryValue(root: string, key: string, value: string): any;
-
-        export function matchesURL(url: string, patterns: [string]): boolean;
     }
     namespace windowTransaction {
         export class Transaction {

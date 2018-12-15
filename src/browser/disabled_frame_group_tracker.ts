@@ -4,8 +4,8 @@ import route from '../common/route';
 import { BrowserWindow } from 'electron';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
-import {getRuntimeProxyWindow} from './window_groups_runtime_proxy';
-import {RectangleBase, Rectangle} from './rectangle';
+import { getRuntimeProxyWindow } from './window_groups_runtime_proxy';
+import { RectangleBase, Rectangle } from './rectangle';
 import {
     moveFromOpenFinWindow,
     zeroDelta,
@@ -25,7 +25,7 @@ const getState = (browserWindow: BrowserWindow) => {
         return 'normal';
     }
 };
-const moveToRect = ({rect}: Move) => rect;
+const moveToRect = ({ rect }: Move) => rect;
 enum ChangeType {
     POSITION = 0,
     SIZE = 1,
@@ -50,51 +50,55 @@ export interface Move {
     ofWin: OpenFinWindow; rect: Rectangle; offset: RectangleBase;
 }
 async function emitChange(
-    {ofWin, rect, offset} : Move,
+    { ofWin, rect, offset }: Move,
     changeType: ChangeType,
-    reason: string,
-    eventType: 'changing' | 'changed' = 'changing'
+    reason: string
 ) {
-    const topic = `bounds-${eventType}`;
-    const uuid = ofWin.uuid;
-    const name = ofWin.name;
-    const id = {uuid, name};
-    const eventName = route.window(topic, uuid, name);
     const eventBounds = getEventBounds(rect, offset);
     const eventArgs = {
         ...eventBounds,
         changeType,
+        reason,
+        deferred: true
+    };
+    raiseEvent(ofWin, 'bounds-changed', eventArgs);
+
+}
+async function raiseEvent(ofWin: OpenFinWindow, topic: string, payload: any) {
+    const uuid = ofWin.uuid;
+    const name = ofWin.name;
+    const id = { uuid, name };
+    const eventName = route.window(topic, uuid, name);
+    const eventArgs = {
+        ...payload,
         uuid,
         name,
         topic,
-        reason,
-        type: 'window',
-        deffered: true
+        type: 'window'
     };
     if (ofWin.isProxy) {
-       const rt = await getRuntimeProxyWindow(id);
-       const fin = rt.hostRuntime.fin;
-       await fin.System.executeOnRemote(id, {action: 'raise-event', payload: {eventName, eventArgs}} );
+        const rt = await getRuntimeProxyWindow(id);
+        const fin = rt.hostRuntime.fin;
+        await fin.System.executeOnRemote(id, { action: 'raise-event', payload: { eventName, eventArgs } });
     } else {
         of_events.emit(eventName, eventArgs);
     }
-
 }
 
 export function updateGroupedWindowBounds(win: OpenFinWindow, delta: Partial<RectangleBase>) {
-    const shift = {...zeroDelta, ...delta};
+    const shift = { ...zeroDelta, ...delta };
     return handleApiMove(win, shift);
 }
 export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Partial<RectangleBase>) {
-    const {rect, offset} = moveFromOpenFinWindow(win);
-    const bounds = {...applyOffset(rect, offset), ...partialBounds};
+    const { rect, offset } = moveFromOpenFinWindow(win);
+    const bounds = { ...applyOffset(rect, offset), ...partialBounds };
     const newBounds = normalizeExternalBounds(bounds, offset);
     const delta = rect.delta(newBounds);
     return handleApiMove(win, delta);
 }
 type MoveAccumulator = { otherWindows: Move[], leader?: Move };
 function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
-    const {rect, offset} = moveFromOpenFinWindow(win);
+    const { rect, offset } = moveFromOpenFinWindow(win);
     const newBounds = rect.shift(delta);
     if (!rect.moved(newBounds)) {
         return;
@@ -107,17 +111,17 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
             : ChangeType.SIZE
         : ChangeType.POSITION;
     const moves = handleBoundsChanging(win, {}, applyOffset(newBounds, offset), changeType);
-    const {leader, otherWindows} = moves.reduce((accum: MoveAccumulator , move) => {
+    const { leader, otherWindows } = moves.reduce((accum: MoveAccumulator, move) => {
         move.ofWin === win ? accum.leader = move : accum.otherWindows.push(move);
         return accum;
-    }, <MoveAccumulator>{otherWindows: []});
+    }, <MoveAccumulator>{ otherWindows: [] });
     if (!leader || leader.rect.moved(newBounds)) {
         //Proposed move differs from requested move
         throw new Error('Attempted move violates group constraints');
     }
     handleBatchedMove(moves);
-    emitChange(leader, changeType, 'self', 'changed');
-    otherWindows.forEach(move => emitChange(move, changeType, 'group', 'changed'));
+    emitChange(leader, changeType, 'self');
+    otherWindows.forEach(move => emitChange(move, changeType, 'group'));
     return leader.rect;
 }
 
@@ -126,21 +130,21 @@ function handleBatchedMove(moves: Move[], bringWinsToFront: boolean = false) {
         const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
         const flags = noZorder + noActivate;
         const wt = new WindowTransaction.Transaction(0);
-        moves.forEach(({ofWin, rect, offset}) => {
+        moves.forEach(({ ofWin, rect, offset }) => {
             const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
             wt.setWindowPos(hwnd, { ...getTransactionBounds(rect, offset), flags });
             if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
         wt.commit();
     } else {
-        moves.forEach(({ofWin, rect, offset}) => {
+        moves.forEach(({ ofWin, rect, offset }) => {
             ofWin.browserWindow.setBounds(applyOffset(rect, offset));
             if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
     }
 }
-const makeTranslate = (delta: RectangleBase) => ({ofWin, rect, offset}: Move): Move => {
-    return {ofWin, rect: rect.shift(delta), offset};
+const makeTranslate = (delta: RectangleBase) => ({ ofWin, rect, offset }: Move): Move => {
+    return { ofWin, rect: rect.shift(delta), offset };
 };
 function getInitialPositions(win: OpenFinWindow) {
     return WindowGroups.getGroup(win.groupUuid).map(moveFromOpenFinWindow);
@@ -155,7 +159,7 @@ function handleBoundsChanging(
     let moves: Move[];
     const startMove = moveFromOpenFinWindow(win); //Corrected
     const start = startMove.rect;
-    const {offset} = startMove;
+    const { offset } = startMove;
     const end = normalizeExternalBounds(rawPayloadBounds, offset); //Corrected
     switch (changeType) {
         case ChangeType.POSITION:
@@ -241,7 +245,7 @@ function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions:
     if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
         return [];
     }
-    const endMove = moves.find(({ofWin}) => ofWin === win);
+    const endMove = moves.find(({ ofWin }) => ofWin === win);
     if (!endMove) {
         return [];
     }
@@ -290,20 +294,10 @@ export function addWindowToGroup(win: OpenFinWindow) {
             const name = win.name;
             const eventBounds = getEventBounds(win.browserWindow.getBounds());
             const moved = new Set<OpenFinWindow>();
-            of_events.emit(route.window('begin-user-bounds-changing', uuid, name), {
-                eventBounds,
-                uuid,
-                name,
-                topic: 'begin-user-bounds-changing',
-                type: 'window',
-                windowState: getState(win.browserWindow)
-            });
+            raiseEvent(win, 'begin-user-bounds-changing', { ...eventBounds, windowState: getState(win.browserWindow) });
             groupInfo.boundsChanging = true;
             const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
             handleBatchedMove(initialMoves, true);
-            initialMoves.forEach((move) => {
-                emitChange(move, changeType, move.ofWin === win ? 'self' : 'group');
-            });
             groupInfo.interval = setInterval(() => {
                 if (groupInfo.payloadCache.length) {
                     const [a, b, c, d] = groupInfo.payloadCache.pop();
@@ -322,7 +316,15 @@ export function addWindowToGroup(win: OpenFinWindow) {
                 const moves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
                 handleBatchedMove(moves);
                 moved.forEach((movedWin) => {
-                    emitChange(moveFromOpenFinWindow(movedWin), changeType, movedWin === win ? 'self' : 'group', 'changed');
+                    const endPosition = moveFromOpenFinWindow(movedWin);
+                    const isLeader = movedWin === win;
+                    emitChange(endPosition, changeType, isLeader ? 'self' : 'group');
+                    if (isLeader) {
+                        raiseEvent(movedWin, 'end-user-bounds-changing', {
+                            ...getEventBounds(endPosition.rect, endPosition.offset),
+                            windowState: getState(win.browserWindow)
+                        });
+                    }
                 });
             });
         }
