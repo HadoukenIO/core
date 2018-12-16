@@ -195,7 +195,10 @@ function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions:
     const rectPositions: Rectangle[] = [];
     for (let i = 0; i < numRects; i++) {
         const {rect} = initialPositions[i];
-        if (rect.hasIdenticalBounds(start)) { leaderRect = i; }
+
+        if (rect.hasIdenticalBounds(start)) {
+            leaderRect = i;
+        }
         rectPositions.push(rect);
     }
     const windowGraph = Rectangle.GRAPH(rectPositions);
