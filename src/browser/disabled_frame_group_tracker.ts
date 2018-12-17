@@ -116,7 +116,7 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
         return accum;
     }, <MoveAccumulator>{ otherWindows: [] });
     if (!leader || leader.rect.moved(newBounds)) {
-        //Propsed move differs from requested move
+        //Proposed move differs from requested move
         throw new Error('Attempted move violates group constraints');
     }
     handleBatchedMove(moves);
@@ -190,10 +190,56 @@ function handleBoundsChanging(
 function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions: Move[]) {
     const start = startMove.rect;
     const win = startMove.ofWin;
+    let leaderRect: number;
+    const numRects = initialPositions.length;
+    const rectPositions: Rectangle[] = [];
+    for (let i = 0; i < numRects; i++) {
+        const {rect} = initialPositions[i];
+
+        if (rect.hasIdenticalBounds(start)) {
+            leaderRect = i;
+        }
+        rectPositions.push(rect);
+    }
+    const windowGraph = Rectangle.GRAPH(rectPositions);
+    const distances = Rectangle.DISTANCES(windowGraph, leaderRect);
     const allMoves = initialPositions
-        .map(({ ofWin, rect, offset }): Move => {
-            const movedRect = rect.move(start, end);
-            return { ofWin, rect: movedRect, offset };
+        .map(({ofWin, rect, offset}, index): Move => {
+            let rectFinalPosition = rect;
+            const cachedBounds = Rectangle.CREATE_FROM_BOUNDS(start);
+            const currentBounds = Rectangle.CREATE_FROM_BOUNDS(end);
+            let crossedEdges = rect.crossedEdgesBeyondThreshold(cachedBounds, currentBounds);
+            const hasCrossedEdges = crossedEdges.length > 0;
+            const endRect = Rectangle.CREATE_FROM_BOUNDS(end);
+            const initiallyReachable = distances.get(index) < Infinity;
+
+
+            if (rectFinalPosition.hasIdenticalBounds(cachedBounds)) {
+                rectFinalPosition = currentBounds;
+            } else {
+
+                if (initiallyReachable) {
+                    rectFinalPosition = rect.move(start, end);
+
+                    // This is how one could detect if a bound was broken via a move "pushing" or "pulling" a
+                    // window as a result of breaking a min size constraint. Leave as a reference for now.
+                    // const brokeByMove = currentBounds.crossedEdgesBeyondThreshold(rect, rectFinalPosition);
+                    // if (brokeByMove.length > 0) {
+                    //     // handle pushed broken edges
+                    // }
+
+                    crossedEdges = rectFinalPosition.crossedEdgesBeyondThreshold(cachedBounds, currentBounds);
+
+                    if (crossedEdges.length > 0) {
+                        rectFinalPosition = rectFinalPosition.alignCrossedEdges(crossedEdges, endRect);
+                    }
+
+                } else if (hasCrossedEdges) {
+                    rectFinalPosition = rect.alignCrossedEdges(crossedEdges, endRect);
+                }
+            }
+
+            return {ofWin, rect: rectFinalPosition, offset};
         });
     const moves = allMoves.filter((move, i) => initialPositions[i].rect.moved(move.rect));
 
