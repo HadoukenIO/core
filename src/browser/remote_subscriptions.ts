@@ -125,7 +125,7 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
     const listener = (data: any) => {
         if (!data.runtimeUuid) {
             data.runtimeUuid = getMeshUuid();
-            ofEvents.emit(fullEventName, data);
+            ofEvents.emit(fullEventName, data, {isMultiRuntime: true});
         }
 
         // As soon as the event listener fires, we know which runtime is a true
@@ -286,7 +286,7 @@ function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtim
     const listener = (data: any) => {
         if (!data.runtimeUuid) {
             data.runtimeUuid = getMeshUuid();
-            ofEvents.emit(fullEventName, data);
+            ofEvents.emit(fullEventName, data, {isMultiRuntime: true});
         }
     };
 

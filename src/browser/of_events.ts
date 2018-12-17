@@ -21,8 +21,7 @@ class OFEvents extends EventEmitter {
         const timestamp = app.nowFromSystemTime();
         const tokenizedRoute = routeString.split('/');
         const eventPropagations = new Map<string, any>();
-        const [payload, ...extraArgs] = data;
-
+        const [payload, maybeOpts, ...extraArgs] = data;
         if (this.isSavingEvents) {
             this.history.push({ payload, routeString, timestamp });
         }
@@ -44,7 +43,9 @@ class OFEvents extends EventEmitter {
                 // Wildcard on any channel/topic of a specified source (ex: 'window/*/myUUID-myWindow')
                 super.emit(route(channel, '*', source), envelope);
             }
-            if (channel === 'window' || channel === 'application') {
+            const isMultiRuntimeEvent = maybeOpts && maybeOpts.isMultiRuntime;
+            const shouldPropagate = (channel === 'window' || channel === 'application') && !isMultiRuntimeEvent;
+            if (shouldPropagate) {
                 const checkedPayload = typeof payload === 'object' ? payload : { payload };
                 if (channel === 'window') {
                     const propTopic = `window-${topic}`;
@@ -62,7 +63,7 @@ class OFEvents extends EventEmitter {
                         }
                     }
                     //Don't propagate -requested events to System
-                } else if (propagateToSystem) {
+                } else if (channel === 'application' && propagateToSystem) {
                     const propTopic = `application-${topic}`;
                     const appWindowEventsNotOnWindow = [
                         'window-alert-requested',
