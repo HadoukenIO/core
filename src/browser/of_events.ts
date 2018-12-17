@@ -21,11 +21,12 @@ class OFEvents extends EventEmitter {
         const timestamp = app.nowFromSystemTime();
         const tokenizedRoute = routeString.split('/');
         const eventPropagations = new Map<string, any>();
-        const [payload, maybeOpts, ...extraArgs] = data;
+        const [payload, maybeOpts, ...otherExtraArgs] = data;
         if (this.isSavingEvents) {
             this.history.push({ payload, routeString, timestamp });
         }
-
+        const isMultiRuntimeEvent = maybeOpts && maybeOpts.isMultiRuntime;
+        const extraArgs = isMultiRuntimeEvent ? otherExtraArgs : [maybeOpts, ...otherExtraArgs];
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
             const uuid: string = (payload && payload.uuid) || tokenizedRoute[2] || '*';
@@ -43,7 +44,6 @@ class OFEvents extends EventEmitter {
                 // Wildcard on any channel/topic of a specified source (ex: 'window/*/myUUID-myWindow')
                 super.emit(route(channel, '*', source), envelope);
             }
-            const isMultiRuntimeEvent = maybeOpts && maybeOpts.isMultiRuntime;
             const shouldPropagate = (channel === 'window' || channel === 'application') && !isMultiRuntimeEvent;
             if (shouldPropagate) {
                 const checkedPayload = typeof payload === 'object' ? payload : { payload };
