@@ -241,7 +241,10 @@ export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProp
         }
 
         const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
-        const subscription: RemoteSubscription = Object.assign(clonedProps, {isSystemEvent: true});
+        const subscription: RemoteSubscription = Object.assign(clonedProps, {
+            isSystemEvent: true,
+            timestamp: app.nowFromSystemTime()
+        });
 
         // Generate a subscription ID for pending subscriptions
         subscription._id = getId();
@@ -279,7 +282,7 @@ function systemUnsubscribe(subscription: any) {
  * Subscribe to a system event in a remote runtime
  */
 function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtime: PeerRuntime) {
-    const { className, eventName, listenType } = subscription;
+    const { className, eventName, listenType, timestamp } = subscription;
     const fullEventName = route(className, eventName);
     const runtimeKey = keyFromPortInfo(runtime.portInfo);
 
@@ -292,9 +295,9 @@ function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtim
 
     // Subscribe to an event on a remote runtime
     if (className === 'system') {
-        runtime.fin.System[listenType](eventName, listener);
+        runtime.fin.System[listenType](eventName, listener, { timestamp });
     } else if (className === 'channel') {
-        runtime.fin.InterApplicationBus.Channel[listenType](eventName, listener);
+        runtime.fin.InterApplicationBus.Channel[listenType](eventName, listener, { timestamp });
     }
 
     // When runtime disconnects, remove the subscription for that runtime
