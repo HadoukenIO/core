@@ -194,7 +194,10 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             /* tslint:disable: max-line-length */
             //message payload might contain sensitive data, mask it.
             const disableIabSecureLogging = coreState.getAppObjByUuid(opts.uuid)._options.disableIabSecureLogging;
-            const replacer = (!disableIabSecureLogging && (data.action === 'publish-message' || data.action === 'send-message')) ? this.payloadReplacer : null;
+            let replacer = (!disableIabSecureLogging && (data.action === 'publish-message' || data.action === 'send-message')) ? this.payloadReplacer : null;
+            if (data.action === 'window-authenticate') { // not log password
+                replacer = this.passwordReplacer;
+            }
             system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, replacer)}`);
             /* tslint:enable: max-line-length */
 

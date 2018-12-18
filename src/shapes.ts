@@ -104,10 +104,12 @@ export interface OpenFinWindow {
     preloadScripts: PreloadScriptState[];
     uuid: string;
     mainFrameRoutingId: number;
+    isProxy?: boolean;
 }
 
 export interface BrowserWindow extends BrowserWindowElectron {
     _options: WindowOptions;
+    setExternalWindowNativeId?: Function;
 }
 
 export interface AppObj {
@@ -156,6 +158,11 @@ export interface WindowOptions {
         blacklist?: string[];
     };
     contextMenu?: boolean;
+    contextMenuSettings?: {
+        enable: boolean,
+        devtools?: boolean,
+        reload?: boolean
+    };
     cornerRounding?: {
         height: number;
         width: number;
@@ -313,6 +320,7 @@ export interface ElectronIpcChannels {
 export interface WindowInitialOptionSet {
     options: WindowOptions;
     entityInfo: FrameInfo;
+    enableChromiumBuild: boolean;
     socketServerState: PortInfo;
     frames: ChildFrameInfo[];
     elIPCConfig: {

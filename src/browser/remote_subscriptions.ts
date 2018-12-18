@@ -20,7 +20,6 @@ import ofEvents from './of_events';
 import connectionManager, { PeerRuntime, keyFromPortInfo, getMeshUuid } from './connection_manager';
 import { Identity } from '../shapes';
 import route from '../common/route';
-import { EventEmitter } from 'events';
 
 // id count to generate IDs for subscriptions
 let subscriptionIdCount = 0;
@@ -43,6 +42,7 @@ interface RemoteSubscription extends RemoteSubscriptionProps {
     _id: number; // ID of the subscription
     isCleaned: boolean; // helps prevents repetitive un-subscriptions and other cleanup
     isSystemEvent?: boolean; // helps point applyAllRemoteSubscriptions to the correct function
+    timestamp: number; // records the time the subscription is requested, helps with missed events
     unSubscriptions: Map<string, (() => void)[]>; // a map of un-subscriptions assigned to runtime versions
 }
 
@@ -63,7 +63,10 @@ const systemEventsToIgnore: {[index: string]: boolean} = {
 export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
     return new Promise(resolve => {
         const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
-        const subscription: RemoteSubscription = Object.assign(clonedProps, {isCleaned: false});
+        const subscription: RemoteSubscription = Object.assign(clonedProps, {
+            isCleaned: false,
+            timestamp: Date.now()
+        });
 
         // Only generate an ID for new subscriptions
         if (!subscription._id) {
@@ -105,7 +108,7 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
 async function applyRemoteSubscription(subscription: RemoteSubscription, runtime: PeerRuntime) {
     const classEventEmitter = await getClassEventEmitter(subscription, runtime);
     const runtimeKey = keyFromPortInfo(runtime.portInfo);
-    const { uuid, name, className, eventName, listenType } = subscription;
+    const { uuid, name, className, eventName, listenType, timestamp } = subscription;
     let { unSubscriptions } = subscription;
     const fullEventName = (typeof name === 'string')
         ? route(className, eventName, uuid, name, true)
@@ -129,7 +132,7 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
 
 
     // Subscribe to an event on a remote runtime
-    classEventEmitter[listenType](eventName, listener);
+    classEventEmitter[listenType](eventName, listener, { timestamp });
 
 
     // Store a cleanup function for the added listener in
@@ -138,7 +141,8 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
         unSubscriptions.set(runtimeKey, []);
     }
     unSubscriptions.get(runtimeKey).push(() => {
-        classEventEmitter.removeListener(eventName, listener);
+        const unsub = <Function>classEventEmitter.removeListener;
+        unsub(eventName, listener);
     });
 }
 
@@ -230,7 +234,7 @@ export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
 export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
     return new Promise(resolve => {
         if (systemEventsToIgnore[subscriptionProps.eventName]) {
-            resolve();
+            return resolve();
         }
 
         const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
@@ -321,7 +325,7 @@ function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtim
 /**
  * Get event emitter of the class
  */
-async function getClassEventEmitter(subscription: RemoteSubscription, runtime: PeerRuntime): Promise<EventEmitter> {
+async function getClassEventEmitter(subscription: RemoteSubscription, runtime: PeerRuntime): Promise<any> {
     let classEventEmitter;
     const { uuid, name, className } = subscription;
 

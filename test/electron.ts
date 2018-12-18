@@ -5,6 +5,17 @@ export let lastLogValue = '';
 
 const hotkeyEmitter = new EventEmitter();
 
+class BrowserWindow  {
+    // tslint:disable-next-line
+    static fromWebContents(id: any): BrowserWindow {
+        return new BrowserWindow();
+    }
+
+    public id = 2;
+
+    public close(): void { return; }
+}
+
 export const mockElectron = {
     app: {
         generateGUID: () => 'some unique value',
@@ -44,5 +55,6 @@ export const mockElectron = {
             hotkeyEmitter.emit(accelerator);
         },
         failNextRegisterCall : false
-    }
+    },
+    BrowserWindow: BrowserWindow
 };

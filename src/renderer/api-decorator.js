@@ -28,6 +28,7 @@
 
     const {
         elIPCConfig,
+        enableChromiumBuild,
         options: initialOptions,
         options: { api: { iframe: { enableDeprecatedSharedName } } },
         socketServerState,
@@ -165,6 +166,9 @@
     }
 
     function wireUpMenu(global) {
+        if (enableChromiumBuild) {
+            return;
+        }
         global.addEventListener('contextmenu', e => {
             if (!e.defaultPrevented) {
                 e.preventDefault();
@@ -172,7 +176,7 @@
                 const identity = entityInfo.entityType === 'iframe' ? entityInfo.parent : entityInfo;
 
                 fin.desktop.Window.getCurrent().getOptions(options => {
-                    if (options.contextMenu) {
+                    if (options.contextMenuSettings.enable) {
                         syncApiCall('show-menu', {
                             uuid: identity.uuid,
                             name: identity.name,

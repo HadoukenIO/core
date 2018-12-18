@@ -65,6 +65,7 @@ module.exports.applicationApiMap = {
     'remove-tray-icon': removeTrayIcon,
     'restart-application': restartApplication,
     'run-application': runApplication,
+    'set-app-log-username': setAppLogUsername,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
     'set-tray-icon': setTrayIcon,
     'set-application-zoom-level': setApplicationZoomLevel,
@@ -268,6 +269,13 @@ function setShortcuts(identity, message, ack, nack) {
     }, nack);
 }
 
+function setAppLogUsername(identity, message, ack) {
+    const payload = message.payload;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+
+    return Application.setAppLogUsername(appIdentity, payload.data).then(() => ack(successAck));
+}
+
 function closeApplication(identity, message, ack) {
     const payload = message.payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
@@ -315,6 +323,12 @@ function runApplication(identity, message, ack, nack) {
         className: 'window',
         eventName: 'fire-constructor-callback'
     };
+
+    if (coreState.getAppRunningState(uuid)) {
+        Application.emitRunRequested(appIdentity);
+        nack(`Application with specified UUID is already running: ${uuid}`);
+        return;
+    }
 
     ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
         if (loadInfo.success) {
