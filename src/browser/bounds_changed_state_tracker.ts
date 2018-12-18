@@ -7,7 +7,6 @@ const WindowTransaction = require('electron').windowTransaction;
 import * as _ from 'underscore';
 import * as animations from './animations.js';
 import * as coreState from './core_state.js';
-import * as os from 'os';
 import * as Deferred from './deferred';
 import WindowGroups from './window_groups';
 import WindowGroupTransactionTracker, { ITransaction } from './window_group_transaction_tracker';
@@ -17,7 +16,6 @@ import route from '../common/route';
 import { clipBounds, windowSetBoundsToVisible } from './utils';
 import { OpenFinWindow, BrowserWindow } from '../shapes';
 import { windowTransaction } from 'electron';
-import * as log from '../browser/log';
 import {RectangleBase, Rectangle} from './rectangle';
 
 // change types
@@ -98,12 +96,17 @@ export default class BoundsChangedStateTracker {
                 ofEvents.emit(route.window('end-user-bounds-changing', uuid, name), Object.assign(payload, bounds));
                 this.handleBoundsChange(false, true);
             },
+            'bounds-changing': (event: any, bounds: Rectangle): void => {
+                this.handleBoundsChange(true, false, bounds);
+            },
             'bounds-changed': (): void => {
                 const ofWindow = coreState.getWindowByUuidName(uuid, name);
                 const groupUuid = ofWindow ? ofWindow.groupUuid : null;
 
                 const dispatchedChange = this.handleBoundsChange(true);
-
+                if (groupUuid && !coreState.argo['use-legacy-window-groups']) {
+                    return;
+                }
                 if (dispatchedChange) {
                     if (groupUuid) {
                         const groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid);
@@ -281,11 +284,21 @@ export default class BoundsChangedStateTracker {
         : true;
 
     //tslint:disable-next-line
-    private handleBoundsChange = (isAdditionalChangeExpected: boolean, force = false): boolean => {
+    private handleBoundsChange = (isAdditionalChangeExpected: boolean, force = false, bounds: Rectangle = null): boolean => {
 
         let dispatchedChange = false;
 
-        const currentBounds = this.getCurrentBounds();
+        let currentBounds = this.getCurrentBounds();
+        if (bounds) {
+            currentBounds = {
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: bounds.height,
+              frame: currentBounds.frame,
+              windowState: currentBounds.windowState
+            };
+        }
         const cachedBounds = this.getCachedBounds();
         const boundsCompare = this.compareBoundsResult(currentBounds, cachedBounds);
         const stateMin = boundsCompare.state && currentBounds.windowState === 'minimized';
@@ -338,7 +351,7 @@ export default class BoundsChangedStateTracker {
             const reason = this.boundsChangeReason(this.name, groupUuid);
 
             // handle window group movements
-            if (groupUuid) {
+            if (groupUuid && coreState.argo['use-legacy-window-groups']) {
                 let groupLeader = WindowGroupTransactionTracker.getGroupLeader(groupUuid);
 
                 if (force) {
@@ -595,4 +608,3 @@ export default class BoundsChangedStateTracker {
     };
 
 }
-

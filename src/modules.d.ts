@@ -14,13 +14,13 @@ declare module 'electron' {
         export function getTickCount(): number;
         export function isAeroGlassEnabled(): boolean;
         export function log(level: string, message: any): any;
+        export function matchesURL(url: string, patterns: [string]): boolean;
+        export function now(): number;
+        export function nowFromSystemTime(): number;
         export function on(event: string, callback: () => void): void;
+        export function readRegistryValue(root: string, key: string, value: string): any;
         export function setMinLogLevel(level: number): void;
         export function vlog(level: number, message: any): any;
-
-        export function readRegistryValue(root: string, key: string, value: string): any;
-
-        export function matchesURL(url: string, patterns: [string]): boolean;
     }
     namespace windowTransaction {
         export class Transaction {
@@ -94,6 +94,7 @@ declare module 'electron' {
 
         close(): void;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
+        once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         getWindowsByClassName(className: string): any;
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
@@ -112,6 +113,7 @@ declare module 'electron' {
         setWindowPlacement(bounds: Rectangle): void;
         devToolsWebContents: null;
         webContents: webContents;
+        setUserMovementEnabled(enabled: boolean): void;
 
         _eventsCount: number;
         _events: {

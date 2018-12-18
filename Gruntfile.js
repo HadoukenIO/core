@@ -313,7 +313,7 @@ module.exports = (grunt) => {
         }
     });
 
-    /* 
+    /*
         Task that updates submodules and installs their dependencies
     */
     grunt.registerTask('submodules-update', () => {
@@ -323,12 +323,13 @@ module.exports = (grunt) => {
         grunt.log.subhead('Installing js-adapter dependencies...');
         childProcess.execSync('cd js-adapter && npm install');
     });
-    
-    /* 
+
+    /*
         Build webpack'ed js-adapter
     */
-   grunt.registerTask('js-adapter', () => {
+    grunt.registerTask('js-adapter', () => {
+        const gruntSubmodPath = path.resolve('./js-adapter/node_modules/.bin/grunt');
         grunt.log.subhead('Building js-adapter...');
-        childProcess.execSync('cd js-adapter && npm run build');
+        childProcess.execSync(`cd js-adapter && ${gruntSubmodPath} webpack`);
     });
 };
