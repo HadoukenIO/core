@@ -136,7 +136,7 @@ export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes
     }
 }
 
-export function isLocalUuid(uuid: string): Boolean {
+export function isLocalUuid(uuid: string): boolean {
     const externalConn = getExternalAppObjByUuid(uuid);
     const app = getAppObjByUuid(uuid);
 

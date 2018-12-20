@@ -15,6 +15,9 @@ import {
     Nacker,
     SavedDiskBounds
 } from '../../../shapes';
+import { ActionSpecMap } from '../shapes';
+import {hijackMovesForGroupedWindows} from './grouped_window_moves';
+import { argo } from '../../core_state';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -23,9 +26,9 @@ export const windowApiMap = {
     'blur-window': blurWindow,
     'bring-window-to-front': bringWindowToFront,
     'close-window': closeWindow,
-    'disable-window-frame': disableWindowFrame,
+    'disable-window-frame': disableUserMovement,
     'dock-window': dockWindow,
-    'enable-window-frame': enableWindowFrame,
+    'enable-window-frame': enableUserMovement,
     'execute-javascript-in-window': { apiFunc: executeJavascript, apiPath: '.executeJavaScript' },
     'flash-window': flashWindow,
     'focus-window': focusWindow,
@@ -75,7 +78,10 @@ export const windowApiMap = {
 };
 
 export function init() {
-    registerActionMap(windowApiMap, 'Window');
+    const registerThis = !argo['use-legacy-window-groups']
+       ? hijackMovesForGroupedWindows(windowApiMap)
+       : windowApiMap;
+    registerActionMap(registerThis, 'Window');
 }
 
 function windowAuthenticate(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
@@ -121,9 +127,8 @@ function stopFlashWindow(identity: Identity, message: APIMessage, ack: Acker): v
 function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const { top, left, width, height } = payload;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.setBounds(windowIdentity, left, top, width, height);
+    const {uuid, name} = getTargetWindowIdentity(payload);
+    Window.setBounds({uuid, name}, left, top, width, height);
     ack(successAck);
 }
 
@@ -269,13 +274,12 @@ function minimizeWindow(identity: Identity, message: APIMessage, ack: Acker): vo
     ack(successAck);
 }
 
-function mergeWindowGroups(identity: Identity, message: APIMessage, ack: Acker): void {
+function mergeWindowGroups(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const groupingIdentity = getGroupingWindowIdentity(payload);
 
-    Window.mergeGroups(windowIdentity, groupingIdentity);
-    ack(successAck);
+    return Window.mergeGroups(windowIdentity, groupingIdentity).then(() => ack(successAck));
 }
 
 function maximizeWindow(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -286,21 +290,19 @@ function maximizeWindow(identity: Identity, message: APIMessage, ack: Acker): vo
     ack(successAck);
 }
 
-function leaveWindowGroup(identity: Identity, message: APIMessage, ack: Acker): void {
+function leaveWindowGroup(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.leaveGroup(windowIdentity);
-    ack(successAck);
+    return Window.leaveGroup(windowIdentity).then(() => ack(successAck));
 }
 
-function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker): void {
+function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const groupingIdentity = getGroupingWindowIdentity(payload);
 
-    Window.joinGroup(windowIdentity, groupingIdentity);
-    ack(successAck);
+    return Window.joinGroup(windowIdentity, groupingIdentity).then(() => ack(successAck));
 }
 
 function isWindowShowing(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -420,11 +422,11 @@ function flashWindow(identity: Identity, message: APIMessage, ack: Acker): void 
     ack(successAck);
 }
 
-function enableWindowFrame(identity: Identity, message: APIMessage, ack: Acker): void {
+function enableUserMovement(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.enableFrame(windowIdentity);
+    Window.enableUserMovement(windowIdentity);
     ack(successAck);
 }
 
@@ -454,11 +456,11 @@ function executeJavascript(identity: Identity, message: APIMessage, ack: Acker, 
     return nack(new Error('Rejected, target window is not owned by requesting identity'));
 }
 
-function disableWindowFrame(identity: Identity, message: APIMessage, ack: Acker): void {
+function disableUserMovement(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.disableFrame(identity, windowIdentity);
+    Window.disableUserMovement(identity, windowIdentity);
     ack(successAck);
 }
 

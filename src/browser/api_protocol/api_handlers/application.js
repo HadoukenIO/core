@@ -82,7 +82,11 @@ function sendApplicationLog(identity, message, ack) {
     const payload = message.payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
 
-    return Application.sendApplicationLog(appIdentity).then(() => ack(successAck));
+    return Application.sendApplicationLog(appIdentity).then((logId) => {
+        const dataAck = _.clone(successAck);
+        dataAck.data = logId;
+        ack(dataAck);
+    });
 }
 
 function setTrayIcon(identity, rawMessage, ack, nack) {

@@ -30,6 +30,9 @@ export const mockElectron = {
         },
         getCommandLineArgv: (): any => {
             return [];
+        },
+        nowFromSystemTime: (): number => {
+            return Date.now();
         }
 
     },

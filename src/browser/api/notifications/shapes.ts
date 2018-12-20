@@ -1,8 +1,5 @@
+import { noop } from '../../../common/main';
 import NoteAction from './note_action';
-
-// tslint:disable
-const noop = function(){};
-// tslint:enable
 
 export interface Identity {
     name: string;

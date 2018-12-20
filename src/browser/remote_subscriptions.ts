@@ -16,9 +16,10 @@
  * then may come back up again in the future.
  */
 
-import ofEvents from './of_events';
+import { app } from 'electron';
+import { noop } from '../common/main';
 import connectionManager, { PeerRuntime, keyFromPortInfo, getMeshUuid } from './connection_manager';
-import { Identity } from '../shapes';
+import ofEvents from './of_events';
 import route from '../common/route';
 
 // id count to generate IDs for subscriptions
@@ -29,10 +30,12 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
 /**
  * Shape of remote subscription props
  */
-interface RemoteSubscriptionProps extends Identity {
-    className: 'application'|'window'|'system'|'channel'; // names of the class event emitters, used for subscriptions
+export interface RemoteSubscriptionProps {
+    className: 'application'|'window'|'system'|'channel'|'frame'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
+    name?: string;
+    uuid?: string;
 }
 
 /**
@@ -65,7 +68,7 @@ export function addRemoteSubscription(subscriptionProps: RemoteSubscriptionProps
         const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
         const subscription: RemoteSubscription = Object.assign(clonedProps, {
             isCleaned: false,
-            timestamp: Date.now()
+            timestamp: app.nowFromSystemTime()
         });
 
         // Only generate an ID for new subscriptions
@@ -122,7 +125,7 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
     const listener = (data: any) => {
         if (!data.runtimeUuid) {
             data.runtimeUuid = getMeshUuid();
-            ofEvents.emit(fullEventName, data);
+            ofEvents.emit(fullEventName, data, {isMultiRuntime: true});
         }
 
         // As soon as the event listener fires, we know which runtime is a true
@@ -141,7 +144,8 @@ async function applyRemoteSubscription(subscription: RemoteSubscription, runtime
         unSubscriptions.set(runtimeKey, []);
     }
     unSubscriptions.get(runtimeKey).push(() => {
-        classEventEmitter.removeListener(eventName, listener);
+        const unsub = <Function>classEventEmitter.removeListener;
+        unsub(eventName, listener);
     });
 }
 
@@ -233,11 +237,14 @@ export function applyAllRemoteSubscriptions(runtime: PeerRuntime) {
 export function subscribeToAllRuntimes(subscriptionProps: RemoteSubscriptionProps|RemoteSubscription): Promise<() => void> {
     return new Promise(resolve => {
         if (systemEventsToIgnore[subscriptionProps.eventName]) {
-            return resolve();
+            return resolve(noop);
         }
 
         const clonedProps = JSON.parse(JSON.stringify(subscriptionProps));
-        const subscription: RemoteSubscription = Object.assign(clonedProps, {isSystemEvent: true});
+        const subscription: RemoteSubscription = Object.assign(clonedProps, {
+            isSystemEvent: true,
+            timestamp: app.nowFromSystemTime()
+        });
 
         // Generate a subscription ID for pending subscriptions
         subscription._id = getId();
@@ -275,22 +282,22 @@ function systemUnsubscribe(subscription: any) {
  * Subscribe to a system event in a remote runtime
  */
 function applySubscriptionToAllRuntimes(subscription: RemoteSubscription, runtime: PeerRuntime) {
-    const { className, eventName, listenType } = subscription;
+    const { className, eventName, listenType, timestamp } = subscription;
     const fullEventName = route(className, eventName);
     const runtimeKey = keyFromPortInfo(runtime.portInfo);
 
     const listener = (data: any) => {
         if (!data.runtimeUuid) {
             data.runtimeUuid = getMeshUuid();
-            ofEvents.emit(fullEventName, data);
+            ofEvents.emit(fullEventName, data, {isMultiRuntime: true});
         }
     };
 
     // Subscribe to an event on a remote runtime
     if (className === 'system') {
-        runtime.fin.System[listenType](eventName, listener);
+        runtime.fin.System[listenType](eventName, listener, { timestamp });
     } else if (className === 'channel') {
-        runtime.fin.InterApplicationBus.Channel[listenType](eventName, listener);
+        runtime.fin.InterApplicationBus.Channel[listenType](eventName, listener, { timestamp });
     }
 
     // When runtime disconnects, remove the subscription for that runtime
