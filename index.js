@@ -270,6 +270,8 @@ app.on('ready', function() {
 
     migrateCookies();
 
+    migrateLocalStorage(coreState.argo);
+
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
@@ -511,6 +513,23 @@ function rvmCleanup(argo) {
         }, (err) => {
             console.log(err);
         });
+    }
+}
+
+function migrateLocalStorage(argo) {
+    const oldLocalStoragePath = argo['old-local-storage-path'] || false;
+    const newLocalStoragePath = argo['new-local-storage-path'] || false;
+    const localStorageUrl = argo['local-storage-url'] || false;
+
+     if (oldLocalStoragePath && newLocalStoragePath && localStorageUrl) {
+        try {
+            System.log('info', 'Migrating Local Storage from ' + oldLocalStoragePath + ' to ' + newLocalStoragePath);
+            app.migrateLocalStorage(oldLocalStoragePath, newLocalStoragePath, localStorageUrl);
+            System.log('info', 'Migrated Local Storage');
+        } catch (e) {
+            System.log('error', `Couldn't migrate cache from ${oldLocalStoragePath} to ${newLocalStoragePath}`);
+            System.log('error', e);
+        }
     }
 }
 
