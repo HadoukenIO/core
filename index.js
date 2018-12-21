@@ -517,9 +517,9 @@ function rvmCleanup(argo) {
 }
 
 function migrateLocalStorage(argo) {
-    const oldLocalStoragePath = argo['old-local-storage-path'] || false;
-    const newLocalStoragePath = argo['new-local-storage-path'] || false;
-    const localStorageUrl = argo['local-storage-url'] || false;
+    const oldLocalStoragePath = argo['old-local-storage-path'] || '';
+    const newLocalStoragePath = argo['new-local-storage-path'] || '';
+    const localStorageUrl = argo['local-storage-url'] || '';
 
      if (oldLocalStoragePath && newLocalStoragePath && localStorageUrl) {
         try {
