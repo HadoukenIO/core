@@ -173,12 +173,16 @@ function handleBoundsChanging(
             const xShift = delta.x ? delta.x + delta.width : 0;
             const yShift = delta.y ? delta.y + delta.height : 0;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
-            const shifted = (xShift || yShift)
-                ? handleMoveOnly(start, start.shift(shift), initialPositions)
-                : initialPositions;
+            const resizeDelta = {x: delta.x - xShift, y: delta.y - yShift, width: delta.width, height: delta.height};
+
             moves = (delta.width || delta.height)
-                ? handleResizeOnly(startMove, end, shifted)
-                : shifted;
+                ? handleResizeOnly(startMove, start.shift(resizeDelta), initialPositions, !!(xShift || yShift))
+                : initialPositions;
+
+            moves = (xShift || yShift)
+                ? handleMoveOnly(start, start.shift(shift), moves)
+                : moves;
+
             break;
         default: {
             moves = [];
@@ -187,7 +191,7 @@ function handleBoundsChanging(
     return moves;
 }
 
-function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions: Move[]) {
+function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions: Move[], willShift: boolean = false) {
     const start = startMove.rect;
     const win = startMove.ofWin;
     let leaderRect: number;
@@ -241,7 +245,7 @@ function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions:
 
             return {ofWin, rect: rectFinalPosition, offset};
         });
-    const moves = allMoves.filter((move, i) => initialPositions[i].rect.moved(move.rect));
+    const moves = allMoves.filter((move, i) => initialPositions[i].rect.moved(move.rect) || willShift);
 
     const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES(initialPositions.map(moveToRect));
     const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES(allMoves.map(moveToRect));
