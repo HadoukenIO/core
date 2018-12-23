@@ -72,6 +72,14 @@ export class WindowGroups extends EventEmitter {
         return hash.digest('hex');
     }
 
+    //cannot rely on nativeId as windows might leave a group after they are closed.
+    private getWindowGroupId = (identity: Identity): string => {
+        const { uuid, name } = identity;
+        return [uuid, name]
+            .map((value: string) =>  Buffer.from(value).toString('base64'))
+            .join('/');
+    }
+
     public joinGroup = async (source: Identity, target: Identity): Promise<void> => {
         const sourceWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
         let targetWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
@@ -218,12 +226,13 @@ export class WindowGroups extends EventEmitter {
     };
 
     private _addWindowToGroup = async (groupUuid: string, win: OpenFinWindow): Promise<string> => {
+        const windowGroupId = this.getWindowGroupId(win);
         const _groupUuid = groupUuid || generateUuid();
         this._windowGroups[_groupUuid] = this._windowGroups[_groupUuid] || {};
         const group = this.getGroup(_groupUuid);
-        this._windowGroups[_groupUuid][win.name] = win;
+        this._windowGroups[_groupUuid][windowGroupId] = win;
         win.groupUuid = _groupUuid;
-        if (argo['disabled-frame-groups']) {
+        if (!argo['use-legacy-window-groups']) {
             groupTracker.addWindowToGroup(win);
         }
         if (!win.isProxy) {
@@ -238,10 +247,11 @@ export class WindowGroups extends EventEmitter {
     };
 
     private _removeWindowFromGroup = async (groupUuid: string, win: OpenFinWindow): Promise<void> => {
-        if (argo['disabled-frame-groups']) {
+        const windowGroupId = this.getWindowGroupId(win);
+        if (!argo['use-legacy-window-groups']) {
             groupTracker.removeWindowFromGroup(win);
         }
-        delete this._windowGroups[groupUuid][win.name];
+        delete this._windowGroups[groupUuid][windowGroupId];
 
         //update proxy windows to no longer be bound to this specific window.
         const group = this.getGroup(groupUuid);
@@ -274,7 +284,7 @@ export class WindowGroups extends EventEmitter {
                 win.groupUuid = null;
             }));
             delete this._windowGroups[groupUuid];
-            if (argo['disabled-frame-groups']) {
+            if (!argo['use-legacy-window-groups']) {
                 groupTracker.deleteGroupInfoCache(groupUuid);
             }
 

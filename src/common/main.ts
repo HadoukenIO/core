@@ -99,3 +99,11 @@ export function isEnableChromiumBuild(): boolean {
     const { buildFlags } = <any> process;
     return buildFlags && buildFlags.enableChromium;
 }
+
+export function noop(): void {
+    // empty
+}
+
+export function isFloat(n: any): boolean {
+    return Number(n) === n && n % 1 !== 0;
+}

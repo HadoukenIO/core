@@ -41,7 +41,7 @@ class UnixDomainSocket extends BaseTransport {
         });
         this.server.bind(this.serverName);
 
-        app.on('window-all-closed', this.cleanUpServer);
+        app.on('quit', this.cleanUpServer);
 
         // Clean up abandoned file descriptors
         Promise.all([this.getAllFileDescriptors(), this.getOpenFileDescriptors()]).then((values: [FileDescriptor[], FileDescriptor[]]) => {

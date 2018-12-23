@@ -138,6 +138,9 @@ class ExternalWindowEventAdapter {
 
         ofEvents.on(route.externalWindow('close', uuid, name), () => {
             browserWindow.emit('close');
+            browserWindow.emit('will-close');
+
+            // ToDo: Determine if 'closed' is emitted twice on the external BrowserWindows
             browserWindow.close();
             browserWindow.emit('closed');
         });
