@@ -14,6 +14,7 @@ import {
     getTransactionBounds,
     applyOffset
 } from './normalized_rectangle';
+import { writeToLog } from './log';
 
 const isWin32 = process.platform === 'win32';
 const getState = (browserWindow: BrowserWindow) => {
@@ -97,7 +98,7 @@ export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Par
     return handleApiMove(win, delta);
 }
 type MoveAccumulator = { otherWindows: Move[], leader?: Move };
-function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
+async function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     const { rect, offset } = moveFromOpenFinWindow(win);
     const newBounds = rect.shift(delta);
     if (!rect.moved(newBounds)) {
@@ -120,8 +121,10 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
         throw new Error('Attempted move violates group constraints');
     }
     handleBatchedMove(moves);
-    emitChange(leader, changeType, 'self');
-    otherWindows.forEach(move => emitChange(move, changeType, 'group'));
+    await Promise.all([
+        emitChange(leader, changeType, 'self'),
+        ...otherWindows.map(move => emitChange(move, changeType, 'group'))
+    ]);
     return leader.rect;
 }
 
@@ -198,7 +201,7 @@ function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions:
     const numRects = initialPositions.length;
     const rectPositions: Rectangle[] = [];
     for (let i = 0; i < numRects; i++) {
-        const {rect} = initialPositions[i];
+        const { rect } = initialPositions[i];
 
         if (rect.hasIdenticalBounds(start)) {
             leaderRect = i;
@@ -208,7 +211,7 @@ function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions:
     const windowGraph = Rectangle.GRAPH(rectPositions);
     const distances = Rectangle.DISTANCES(windowGraph, leaderRect);
     const allMoves = initialPositions
-        .map(({ofWin, rect, offset}, index): Move => {
+        .map(({ ofWin, rect, offset }, index): Move => {
             let rectFinalPosition = rect;
             const cachedBounds = Rectangle.CREATE_FROM_BOUNDS(start);
             const currentBounds = Rectangle.CREATE_FROM_BOUNDS(end);
@@ -243,7 +246,7 @@ function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions:
                 }
             }
 
-            return {ofWin, rect: rectFinalPosition, offset};
+            return { ofWin, rect: rectFinalPosition, offset };
         });
     const moves = allMoves.filter((move, i) => initialPositions[i].rect.moved(move.rect) || willShift);
 
@@ -292,48 +295,63 @@ export function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
 
 export function addWindowToGroup(win: OpenFinWindow) {
     win.browserWindow.setUserMovementEnabled(false);
-    const listener = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
-        const groupInfo = getGroupInfoCacheForWindow(win);
-        if (groupInfo.boundsChanging) {
-            groupInfo.payloadCache.push([win, e, rawPayloadBounds, changeType]);
-        } else {
-            const uuid = win.uuid;
-            const name = win.name;
-            const eventBounds = getEventBounds(win.browserWindow.getBounds());
-            const moved = new Set<OpenFinWindow>();
-            raiseEvent(win, 'begin-user-bounds-changing', { ...eventBounds, windowState: getState(win.browserWindow) });
-            groupInfo.boundsChanging = true;
-            const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
-            handleBatchedMove(initialMoves, true);
-            groupInfo.interval = setInterval(() => {
-                if (groupInfo.payloadCache.length) {
-                    const [a, b, c, d] = groupInfo.payloadCache.pop();
-                    const moves = handleBoundsChanging(a, b, c, d);
-                    groupInfo.payloadCache = [];
-                    handleBatchedMove(moves);
-                    moves.forEach((move) => {
-                        moved.add(move.ofWin);
-                    });
-                }
-            }, 16);
-            win.browserWindow.once('disabled-frame-bounds-changed', (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
-                groupInfo.boundsChanging = false;
-                clearInterval(groupInfo.interval);
-                groupInfo.payloadCache = [];
-                const moves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
-                handleBatchedMove(moves);
-                moved.forEach((movedWin) => {
-                    const endPosition = moveFromOpenFinWindow(movedWin);
-                    const isLeader = movedWin === win;
-                    emitChange(endPosition, changeType, isLeader ? 'self' : 'group');
-                    if (isLeader) {
-                        raiseEvent(movedWin, 'end-user-bounds-changing', {
-                            ...getEventBounds(endPosition.rect, endPosition.offset),
-                            windowState: getState(win.browserWindow)
+    const listener = async (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
+        try {
+            const groupInfo = getGroupInfoCacheForWindow(win);
+            if (groupInfo.boundsChanging) {
+                groupInfo.payloadCache.push([win, e, rawPayloadBounds, changeType]);
+            } else {
+                const uuid = win.uuid;
+                const name = win.name;
+                const eventBounds = getEventBounds(win.browserWindow.getBounds());
+                const moved = new Set<OpenFinWindow>();
+                groupInfo.boundsChanging = true;
+                await raiseEvent(win, 'begin-user-bounds-changing', { ...eventBounds, windowState: getState(win.browserWindow) });
+                const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
+                handleBatchedMove(initialMoves, true);
+                groupInfo.interval = setInterval(() => {
+                    try {
+                        if (groupInfo.payloadCache.length) {
+                            const [a, b, c, d] = groupInfo.payloadCache.pop();
+                            const moves = handleBoundsChanging(a, b, c, d);
+                            groupInfo.payloadCache = [];
+                            handleBatchedMove(moves);
+                            moves.forEach((move) => {
+                                moved.add(move.ofWin);
+                            });
+                        }
+                    } catch (error) {
+                        writeToLog('error', error);
+                    }
+                }, 16);
+                win.browserWindow
+                .once('disabled-frame-bounds-changed', async (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
+                    try {
+                        groupInfo.boundsChanging = false;
+                        clearInterval(groupInfo.interval);
+                        groupInfo.payloadCache = [];
+                        const moves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
+                        handleBatchedMove(moves);
+                        const promises: Promise<void>[] = [];
+                        moved.forEach((movedWin) => {
+                            const endPosition = moveFromOpenFinWindow(movedWin);
+                            const isLeader = movedWin === win;
+                            promises.push(emitChange(endPosition, changeType, isLeader ? 'self' : 'group'));
+                            if (isLeader) {
+                                promises.push(raiseEvent(movedWin, 'end-user-bounds-changing', {
+                                    ...getEventBounds(endPosition.rect, endPosition.offset),
+                                    windowState: getState(win.browserWindow)
+                                }));
+                            }
                         });
+                        await promises;
+                    } catch (error) {
+                        writeToLog('error', error);
                     }
                 });
-            });
+            }
+        } catch (error) {
+            writeToLog('error', error);
         }
     };
 
@@ -342,10 +360,15 @@ export function addWindowToGroup(win: OpenFinWindow) {
 }
 
 export function removeWindowFromGroup(win: OpenFinWindow) {
-    win.browserWindow.setUserMovementEnabled(true);
-    const winId = win.browserWindow.nativeId;
-    win.browserWindow.removeListener('disabled-frame-bounds-changing', listenerCache.get(winId));
-    listenerCache.delete(winId);
+    if (!win.browserWindow.isDestroyed()) {
+        win.browserWindow.setUserMovementEnabled(true);
+        const winId = win.browserWindow.nativeId;
+        const listener = listenerCache.get(winId);
+        if (listener) {
+            win.browserWindow.removeListener('disabled-frame-bounds-changing', listener);
+        }
+        listenerCache.delete(winId);
+    }
 }
 
 export function deleteGroupInfoCache(groupUuid: string) {
