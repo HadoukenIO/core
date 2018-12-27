@@ -278,7 +278,7 @@ export class RVMMessageBus extends EventEmitter  {
         const payload: any = Object.assign({
             processId: process.pid,
             runtimeVersion: processVersions.openfin,
-            securityRealm: argo ? argo['security-realm'] : ''
+            securityRealm: argo ? (argo['security-realm'] || '') : ''
         }, msg);
 
         delete payload.topic; // ensure original payload that lacked the topic
