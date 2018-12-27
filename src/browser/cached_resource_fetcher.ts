@@ -9,7 +9,8 @@ import { addPendingAuthRequests, createAuthUI } from './authentication_delegate'
 import { AuthCallback, Identity } from '../shapes';
 import { getSession } from './core_state';
 
-let appQuiting: Boolean = false;
+let appQuiting: boolean = false;
+let cacheCleared: boolean = false;
 
 const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 const fetchMap: Map<string, Promise<any>> = new Map();
@@ -59,7 +60,7 @@ export async function cachedFetch(identity: Identity, url: string, callback: (er
         const p = new Promise( async (resolve, reject) => {
             try {
                 await prepDownloadLocation(appCacheDir);
-                await download(identity, url, filePath);
+                await download(identity, url, filePath, appCacheDir);
                 callback(null, filePath);
                 resolve(filePath);
             } catch (e) {
@@ -130,7 +131,13 @@ async function prepDownloadLocation(appCacheDir: string) {
 
 
 function getRootCachePath () {
-    return join(app.getPath('userData') , 'Cache');
+    const p: any = process;
+    if (p.buildFlags.enableChromium) {
+        return join(app.getPath('userData') , 'Default', 'Cache');
+    } else {
+        return join(app.getPath('userData') , 'Cache');
+    }
+
 }
 
 /**
@@ -178,10 +185,16 @@ function authRequest(url: string, authInfo: any, authCallback: AuthCallback): vo
 /**
  * Downloads the file from given url using Resource Fetcher and saves it into specified path
  */
-function download(identity: Identity, url: string, saveToPath: string): Promise<any> {
-    return new Promise((resolve, reject) => {
+async function download(identity: Identity, url: string, saveToPath: string, appCacheDir: string): Promise<any> {
+    return new Promise(async (resolve, reject) => {
         const session = getSession(identity);
         const request = net.request(url);
+        // need to check download location again in case apps call system.clearCache during the startup
+        if (cacheCleared) {
+            app.vlog(1, 'prepare download location again after clear cache');
+            await prepDownloadLocation(appCacheDir);
+        }
+
         const binaryWriteStream = createWriteStream(saveToPath, {
             encoding: 'binary'
         });
@@ -330,4 +343,8 @@ export function authenticateFetch(uuid: string, username: string, password: stri
     } else {
         log.writeToLog(1, `Missing resource auth uuid ${uuid}`, true);
     }
+}
+
+export function clearCacheInvoked(cleared: boolean): void {
+    cacheCleared = cleared;
 }

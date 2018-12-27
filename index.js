@@ -210,6 +210,7 @@ function handleDeferredLaunches() {
 
 app.on('chrome-browser-process-created', function() {
     otherInstanceRunning = app.makeSingleInstance((commandLine) => {
+        log.writeToLog(1, `chrome-browser-process-created callback ${commandLine}`, true);
         const socketServerState = coreState.getSocketServerState();
         if (appIsReady && socketServerState && socketServerState.port) {
             return handleDelegatedLaunch(commandLine);
@@ -267,6 +268,8 @@ app.on('ready', function() {
 
     rotateLogs(coreState.argo);
 
+    migrateCookies();
+
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
@@ -276,6 +279,12 @@ app.on('ready', function() {
 
     registerShortcuts();
     registerMacMenu();
+
+    app.on('activate', function() {
+        // On OS X it's common to re-create a window in the app when the
+        // dock icon is clicked and there are no other windows open.
+        launchApp(coreState.argo, true);
+    });
 
     //subscribe to auth requests:
     app.on('login', (event, webContents, request, authInfo, callback) => {
@@ -744,6 +753,36 @@ function handleMacSingleTenant() {
         cachePath = path.join(userData, 'cache', cachePath, process.versions['openfin']);
         app.setPath('userData', cachePath);
         app.setPath('userCache', cachePath);
+    }
+}
+
+function migrateCookies() {
+    if (!process.buildFlags.enableChromium) {
+        return;
+    }
+    const userData = app.getPath('userData');
+    const cookiePath = path.join(path.join(userData, 'Default'));
+    const legacyCookiePath = userData;
+    const cookieFile = path.join(path.join(cookiePath, 'Cookies'));
+    const cookieJrFile = path.join(path.join(cookiePath, 'Cookies-journal'));
+    const legacyCookieFile = path.join(path.join(legacyCookiePath, 'Cookies'));
+    const legacyCookieJrFile = path.join(path.join(legacyCookiePath, 'Cookies-journal'));
+    try {
+        if (fs.existsSync(legacyCookieFile) && !fs.existsSync(cookieFile)) {
+            log.writeToLog('info', `migrating cookies from ${legacyCookiePath} to ${cookiePath}`);
+            fs.copyFileSync(legacyCookieFile, cookieFile);
+            fs.copyFileSync(legacyCookieJrFile, cookieJrFile);
+        } else {
+            log.writeToLog(1, `skip cookie migration in ${cookiePath}`, true);
+        }
+    } catch (err) {
+        log.writeToLog('info', `Error migrating cookies from ${legacyCookiePath} to ${cookiePath} ${err}`);
+        try {
+            fs.unlinkSync(cookieFile);
+        } catch (ignored) {}
+        try {
+            fs.unlinkSync(cookieJrFile);
+        } catch (ignored) {}
     }
 }
 
