@@ -25,6 +25,7 @@ export interface PortInfo {
 
 export class PortDiscovery extends EventEmitter {
     private _transport: Base;
+    private _namedPipe: ChromiumIPC;
 
     constructor() {
         super();
@@ -76,20 +77,23 @@ export class PortDiscovery extends EventEmitter {
 
     public broadcast = (portDiscoveryPayload: PortInfo): void => {
         //we need to defer the creation of the wm_copy transport to invocation because on startup electron windowing is not ready.
-        const transport = this.constructTransport();
+        try {
+            const transport = this.constructTransport();
 
-        coreState.setSocketServerState(portDiscoveryPayload);
-        if (transport) {
-            transport.publish(portDiscoveryPayload);
-        }
+            coreState.setSocketServerState(portDiscoveryPayload);
+            if (transport) {
+                transport.publish(portDiscoveryPayload);
+            }
 
-        if (portDiscoveryPayload.runtimeInformationChannel) {
-            const namedPipeTransport = new ChromiumIPC(portDiscoveryPayload.runtimeInformationChannel);
-
-            namedPipeTransport.publish({
-                action: 'runtime-information',
-                payload: portDiscoveryPayload
-            });
+            if (portDiscoveryPayload.runtimeInformationChannel) {
+                this._namedPipe = new ChromiumIPC(portDiscoveryPayload.runtimeInformationChannel);
+                this._namedPipe.publish({
+                    action: 'runtime-information',
+                    payload: portDiscoveryPayload
+                });
+            }
+        } catch (e) {
+            log.writeToLog('info', `Port Discovery broadcast failed: ${JSON.stringify(e)}`);
         }
     }
 }

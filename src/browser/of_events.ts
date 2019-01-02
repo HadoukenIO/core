@@ -1,15 +1,35 @@
+import { app } from 'electron';
 import { EventEmitter } from 'events';
+import { isFloat } from '../common/main';
 import route from '../common/route';
 
+interface PastEvent {
+    payload: any;
+    routeString: string;
+    timestampJs: number;
+    timestampNative: number;
+}
+
 class OFEvents extends EventEmitter {
+    private history: PastEvent[]; // for temporarily storing past events
+    private isSavingEvents: boolean; // for temporarily storing past events
+
     constructor() {
         super();
+        this.startTempSaveEvents();
     }
 
     public emit(routeString: string, ...data: any[]) {
         const tokenizedRoute = routeString.split('/');
         const eventPropagations = new Map<string, any>();
-        const [payload, ...extraArgs] = data;
+        const [payload, maybeOpts, ...otherExtraArgs] = data;
+        if (this.isSavingEvents) {
+            const timestampJs = Date.now();
+            const timestampNative = app.nowFromSystemTime();
+            this.history.push({ payload, routeString, timestampJs, timestampNative });
+        }
+        const isMultiRuntimeEvent = maybeOpts && maybeOpts.isMultiRuntime;
+        const extraArgs = isMultiRuntimeEvent ? otherExtraArgs : [maybeOpts, ...otherExtraArgs];
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
             const uuid: string = (payload && payload.uuid) || tokenizedRoute[2] || '*';
@@ -27,7 +47,8 @@ class OFEvents extends EventEmitter {
                 // Wildcard on any channel/topic of a specified source (ex: 'window/*/myUUID-myWindow')
                 super.emit(route(channel, '*', source), envelope);
             }
-            if (channel === 'window' || channel === 'application') {
+            const shouldPropagate = (channel === 'window' || channel === 'application') && !isMultiRuntimeEvent;
+            if (shouldPropagate) {
                 const checkedPayload = typeof payload === 'object' ? payload : { payload };
                 if (channel === 'window') {
                     const propTopic = `window-${topic}`;
@@ -45,7 +66,7 @@ class OFEvents extends EventEmitter {
                         }
                     }
                     //Don't propagate -requested events to System
-                } else if (propagateToSystem) {
+                } else if (channel === 'application' && propagateToSystem) {
                     const propTopic = `application-${topic}`;
                     const appWindowEventsNotOnWindow = [
                         'window-alert-requested',
@@ -73,6 +94,48 @@ class OFEvents extends EventEmitter {
         ADDED: 'subscriber-added',
         REMOVED: 'subscriber-removed'
     };
+
+    /*
+        Check missed events for subscriptions received
+        after the event has already fired
+    */
+    public checkMissedEvents(data: any, listener: (payload: any) => void): void {
+        const { name, timestamp, topic, type, uuid } = data;
+        const routeString = route[topic](type, uuid, name);
+
+        this.history.forEach((pastEvent) => {
+            const routeMatches = pastEvent.routeString === routeString;
+
+            if (routeMatches) {
+                let missedEvent = false;
+
+                if (Number.isInteger(timestamp)) {
+                    missedEvent = pastEvent.timestampJs >= timestamp;
+                } else if (isFloat(timestamp)) {
+                    missedEvent = pastEvent.timestampNative >= timestamp;
+                }
+
+                if (missedEvent) {
+                    listener(pastEvent.payload);
+                }
+            }
+        });
+    }
+
+    /*
+        Temporary indicator for saving past events
+    */
+    private startTempSaveEvents() {
+        const STARTUP_SAVE_EVENTS_DURATION = 10000;
+
+        this.history = [];
+        this.isSavingEvents = true;
+
+        setTimeout(() => {
+            this.history.length = 0;
+            this.isSavingEvents = false;
+        }, STARTUP_SAVE_EVENTS_DURATION);
+    }
 }
 
 interface StringMap {

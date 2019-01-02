@@ -5,7 +5,9 @@ import route from '../../common/route';
 import { AckFunc, NackFunc, AckMessage, AckPayload, NackPayload } from '../api_protocol/transport_strategy/ack';
 import { sendToIdentity } from '../api_protocol/api_handlers/api_protocol_base';
 import { getExternalOrOfWindowIdentity } from '../core_state';
+import SubscriptionManager from '../subscription_manager';
 
+const subscriptionManager = new SubscriptionManager();
 const channelMap: Map<string, ProviderIdentity> = new Map();
 const pendingChannelConnections: Map<string, any[]> = new Map();
 
@@ -23,7 +25,8 @@ interface AckToSender {
     };
 }
 
-const getChannelId = (uuid: string, name: string, channelName: string): string => {
+const getChannelId = (identity: Identity, channelName: string): string => {
+    const { uuid, name } = identity;
     return `${uuid}/${name}/${channelName}`;
 };
 
@@ -39,21 +42,6 @@ const createAckToSender = (identity: Identity, messageId: number, providerIdenti
     };
 };
 
-const createChannelTeardown = (providerIdentity: ProviderIdentity): void => {
-    // When channel exits, remove from channelMap
-    const { uuid, name, isExternal, channelId } = providerIdentity;
-    const closedEvent = isExternal ? route.externalApplication('closed', uuid) : route.window('closed', uuid, name);
-    ofEvents.once(closedEvent, () => {
-        channelMap.delete(channelId);
-        ofEvents.emit(route.channel('disconnected'), providerIdentity);
-        // Need channel-disconnected for compatibility with 9.61.34.*
-        ofEvents.emit(route.channel('channel-disconnected'), providerIdentity);
-    });
-
-    // For some reason this is captured sometimes when window closed is not
-    ofEvents.once(route.application('closed', uuid), () => channelMap.delete(channelId));
-};
-
 export module Channel {
     export function addEventListener(targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) : () => void {
         const { uuid, name } = targetIdentity;
@@ -65,31 +53,12 @@ export module Channel {
         };
     }
 
-    export function getChannelByChannelId(channelId: string): ProviderIdentity {
-        return channelMap.get(channelId);
-    }
-
     export function getAllChannels(): ProviderIdentity[] {
         const allChannels: ProviderIdentity[] = [];
         channelMap.forEach(channel => {
             allChannels.push(channel);
         });
         return allChannels;
-    }
-
-    export function getChannelByIdentity(identity: Identity): ProviderIdentity[] {
-        const { uuid, name } = identity;
-        const providerIdentity: ProviderIdentity[] = [];
-        channelMap.forEach(channel => {
-            if (channel.uuid === uuid) {
-                if (!name) {
-                    providerIdentity.push(channel);
-                } else if (channel.name === name) {
-                    providerIdentity.push(channel);
-                }
-            }
-        });
-        return providerIdentity;
     }
 
     export function getChannelByChannelName(channelName: string, channelArray?: ProviderIdentity[]): ProviderIdentity|undefined {
@@ -104,21 +73,34 @@ export module Channel {
     }
 
     export function createChannel(identity: Identity, channelName: string, allChannels: ProviderIdentity[]): ProviderIdentity {
-        const { uuid, name } = identity;
-        const providerApp = getExternalOrOfWindowIdentity(identity);
-
-        // If a channel has already been created with that channelName
         if (Channel.getChannelByChannelName(channelName, allChannels)) {
+            // If a channel has already been created with that channelName
             const nackString = 'Channel creation failed: Please note that only one channel may be registered per channelName.';
             throw new Error(nackString);
         }
 
-        const channelId = getChannelId(uuid, name, channelName);
-
+        const providerApp = getExternalOrOfWindowIdentity(identity);
+        const channelId = getChannelId(identity, channelName);
         const providerIdentity = { ...providerApp, channelName, channelId };
         channelMap.set(channelId, providerIdentity);
 
-        createChannelTeardown(providerIdentity);
+        // Handled reloaded and navigation events
+        const { uuid, name } = providerIdentity;
+        const unloadEvent = route.window('unload', uuid, name, false);
+        const unloadListener = () => subscriptionManager.removeSubscription(identity, channelId);
+        ofEvents.once(unloadEvent, unloadListener);
+
+        // Handle close events with subscription manager
+        const onCloseListener = () => {
+            channelMap.delete(channelId);
+            ofEvents.emit(route.channel('disconnected'), providerIdentity);
+            // Need channel-disconnected for compatibility with 9.61.34.*
+            ofEvents.emit(route.channel('channel-disconnected'), providerIdentity);
+            ofEvents.removeListener(unloadEvent, unloadListener);
+        };
+        // register subscription to later unsubscribe and ensure disconnect fires on window or external-application close
+        subscriptionManager.registerSubscription(onCloseListener, identity, channelId);
+
         // Used internally by adapters for pending connections and onChannelConnect
         ofEvents.emit(route.channel('connected'), providerIdentity);
         // Need channel-connected for compatibility with 9.61.34.*
@@ -127,8 +109,32 @@ export module Channel {
         return providerIdentity;
     }
 
+    export function destroyChannel(identity: Identity, channelName: string): void {
+        // If a channel has already been created with that channelName
+        const channel = Channel.getChannelByChannelName(channelName);
+        if (!channel) {
+            const nackString = `Channel ${channelName} does not exist.`;
+            throw new Error(nackString);
+        } else if (channel.uuid !== identity.uuid) {
+            const nackString = 'Channel can only be destroyed from application that created it.';
+            throw new Error(nackString);
+        }
+
+        const { channelId } = channel;
+
+        channelMap.delete(channelId);
+        subscriptionManager.removeSubscription(identity, channelId);
+    }
+
+    export function disconnectFromChannel(identity: Identity, channelName: string): void {
+        // If a channel has already been created with that channelName
+        const disconnectedEvent = 'client-disconnected';
+        subscriptionManager.removeSubscription(identity, `${disconnectedEvent}-${channelName}`);
+    }
+
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { channelName, payload: connectionPayload } = payload;
+        const { uuid, name } = identity;
 
         const providerIdentity = Channel.getChannelByChannelName(channelName);
 
@@ -145,8 +151,22 @@ export module Channel {
                     payload: connectionPayload
                 }
             });
+
+            // handle client reload or navigatation events
+            const disconnectedEvent = 'client-disconnected';
+            const unloadEvent = route.window('unload', uuid, name, false);
+            const unloadListener = () => subscriptionManager.removeSubscription(identity, `${disconnectedEvent}-${channelName}`);
+            ofEvents.once(unloadEvent, unloadListener);
+
+            // Handle client close events with subscription manager
+            const clientDisconnect = () => {
+                const payload = { channelName, ...identity };
+                ofEvents.emit(route.channel(disconnectedEvent), payload);
+                ofEvents.removeListener(unloadEvent, unloadListener);
+            };
+            subscriptionManager.registerSubscription(clientDisconnect, identity, `${disconnectedEvent}-${channelName}`);
         } else if (identity.runtimeUuid) {
-            // Ack back with undefined payload for multi-runtime to make mesh middleware work
+            // If has runtimeUuid call originated in another runtime, ack back undefined for mesh middleware purposes
             ack({ success: true });
         } else {
             // Do not change this, checking for this in adapter
@@ -180,16 +200,12 @@ export module Channel {
         ackObj.correlationId = correlationId;
 
         if (destinationToken) {
-            if (success) {
-                ackObj.payload = new AckPayload(ackPayload);
-                if (destinationToken.runtimeUuid) {
-                    // Was sent from another runtime, ack to runtime not identity
-                    sendToIdentity({uuid: destinationToken.runtimeUuid}, ackObj);
-                } else {
-                    sendToIdentity(destinationToken, ackObj);
-                }
+            ackObj.payload = success ? new AckPayload(ackPayload) : new NackPayload(reason);
+
+            if (destinationToken.runtimeUuid) {
+                // Was sent from another runtime, ack to runtime not identity
+                sendToIdentity({uuid: destinationToken.runtimeUuid}, ackObj);
             } else {
-                ackObj.payload = new NackPayload(reason);
                 sendToIdentity(destinationToken, ackObj);
             }
         } else {

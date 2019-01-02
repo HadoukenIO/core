@@ -32,9 +32,10 @@ import { validateNavigationRules } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
+import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { makeMutexKey } from '../utils';
+import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -693,7 +694,8 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
             app._options._type !== ERROR_BOX_TYPES.RENDERER_CRASH &&
             !app._options._runtimeAuthDialog &&
             !runtimeIsClosing &&
-            coreState.shouldCloseRuntime();
+            coreState.shouldCloseRuntime() &&
+            process.platform !== 'darwin';
 
         if (shouldCloseRuntime) {
             try {
@@ -706,6 +708,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                         Application.close(a.identity, true);
                     }
                 }
+
+                //deregister all proxy windows
+                deregisterAllRuntimeProxyWindows();
 
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {
@@ -733,8 +738,10 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
         ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
     };
 
-    if (appWasAlreadyRunning) {
+    if (isValidChromePageUrl(app._options.url) || appWasAlreadyRunning) {
         loadUrl();
+        // no API injection for chrome pages, so call .show here
+        app.mainWindow.show();
     } else {
         System.downloadPreloadScripts(windowIdentity, preloadScripts)
             .catch((error) => {
@@ -782,6 +789,18 @@ Application.setShortcuts = function(identity, config, callback, errorCallback) {
     } else {
         errorCallback(new Error('App must be started from a manifest to be able to change its shortcut configuration'));
     }
+};
+
+Application.setAppLogUsername = function(identity, username) {
+    let app = Application.wrap(identity.uuid);
+
+    const options = {
+        topic: 'application',
+        action: 'application-log-username',
+        sourceUrl: app._configUrl,
+        data: { 'userName': username }
+    };
+    return sendToRVM(options);
 };
 
 
@@ -888,6 +907,17 @@ Application.setZoomLevel = function(identity, level) {
     }
 };
 
+Application.sendApplicationLog = function(identity) {
+    let app = Application.wrap(identity.uuid);
+
+    const options = {
+        topic: 'application',
+        action: 'application-log-send',
+        sourceUrl: app._configUrl
+    };
+
+    return sendToRVM(options);
+};
 
 Application.getTrayIconInfo = function(identity, callback, errorCallback) {
     const app = Application.wrap(identity.uuid);
@@ -1098,7 +1128,9 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         opts.url = opts.url || 'about:blank';
 
-        if (!isHttpUrl(opts.url) && !isFileUrl(opts.url) && !opts.url.startsWith('about:') && !path.isAbsolute(opts.url)) {
+        const isValidUrl = isValidChromePageUrl(opts.url) || isHttpUrl(opts.url) || isFileUrl(opts.url) ||
+            isAboutPageUrl(opts.url) || path.isAbsolute(opts.url);
+        if (!isValidUrl || !isURLAllowed(opts.url)) {
             throw new Error(`Invalid URL supplied: ${opts.url}`);
         }
 

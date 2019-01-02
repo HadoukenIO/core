@@ -14,13 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 /*tslint:disable */
+import { mockElectron } from './electron';
 import * as assert from 'assert';
+import * as mockery from 'mockery';
 import ofEvents from '../src/browser/of_events';
 import route from '../src/common/route';
 
 const uuid = 'uuid4';
 const name = 'name3';
 
+mockery.registerMock('electron', mockElectron);
+mockery.enable({
+    warnOnReplace: false,
+    warnOnUnregistered: false
+});
 
 describe('Event Propagation', function () {
     it('propagates window events to system', function (done) {

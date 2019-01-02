@@ -4,7 +4,7 @@
   "description": "The core app of the OpenFin Runtime 8",
   "main": "index.js",
   "scripts": {
-    "build": "grunt",
+    "build": "grunt build-pac",
     "deploy": "grunt deploy",
     "postinstall": "grunt",
     "pretest": "grunt babel && grunt ts",
@@ -61,7 +61,6 @@
     "wrench": "^1.5.9"
   },
   "dependencies": {
-    "hadouken-js-adapter": "0.36.1-alpha.1",
     "minimist": "^1.2.0",
     "options": "0.0.6",
     "rx": "^4.1.0",

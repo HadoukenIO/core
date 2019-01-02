@@ -49,13 +49,14 @@ export interface APIPayloadAck {
     success: boolean;
     data?: any;
 }
-export type Acker = (payload: APIPayloadAck) => void;
 
 export interface APIPayloadNack {
     success: boolean;
     error?: Error;
     reason?: string;
 }
+
+export type Acker = (payload: APIPayloadAck) => void;
 export type Nacker = (payload: APIPayloadNack) => void;
 export type NackerError = (payload: Error) => void;
 export type NackerErrorString = (payload: string) => void;
@@ -104,10 +105,12 @@ export interface OpenFinWindow {
     preloadScripts: PreloadScriptState[];
     uuid: string;
     mainFrameRoutingId: number;
+    isProxy?: boolean;
 }
 
 export interface BrowserWindow extends BrowserWindowElectron {
     _options: WindowOptions;
+    setExternalWindowNativeId?: Function;
 }
 
 export interface AppObj {
@@ -146,6 +149,7 @@ export interface WindowOptions {
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
     applicationIcon?: string;
+    appLogFlushInterval?: number;
     aspectRatio?: number;
     autoShow?: boolean;
     backgroundColor?: string;
@@ -156,6 +160,11 @@ export interface WindowOptions {
         blacklist?: string[];
     };
     contextMenu?: boolean;
+    contextMenuSettings?: {
+        enable: boolean,
+        devtools?: boolean,
+        reload?: boolean
+    };
     cornerRounding?: {
         height: number;
         width: number;
@@ -313,6 +322,7 @@ export interface ElectronIpcChannels {
 export interface WindowInitialOptionSet {
     options: WindowOptions;
     entityInfo: FrameInfo;
+    enableChromiumBuild: boolean;
     socketServerState: PortInfo;
     frames: ChildFrameInfo[];
     elIPCConfig: {
@@ -374,3 +384,5 @@ export interface Subscriber {
     topic: string;
     uuid: string;
 }
+
+export type Func = () => void;

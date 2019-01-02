@@ -14,6 +14,7 @@ let nativeImage = electron.nativeImage;
 
 // npm modules
 let _ = require('underscore');
+const crypto = require('crypto');
 import * as Rx from 'rx';
 
 // local modules
@@ -61,6 +62,9 @@ let Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
+    'api-injection-disabled': {
+        topic: 'api-injection-disabled'
+    },
     'api-injection-failed': {
         topic: 'api-injection-failed'
     },
@@ -143,10 +147,22 @@ function genWindowKey(identity) {
 */
 let optionSetters = {
     contextMenu: function(newVal, browserWin) {
+        // so old API still works
         let contextMenuBool = !!newVal;
-
-        setOptOnBrowserWin('contextMenu', contextMenuBool, browserWin);
+        optionSetters['contextMenuSettings']({ enable: contextMenuBool }, browserWin);
+    },
+    contextMenuSettings: function(newVal, browserWin) {
+        if (!newVal ||
+            (typeof newVal.enable !== 'undefined' && typeof newVal.enable !== 'boolean') ||
+            (typeof newVal.devtools !== 'undefined' && typeof newVal.devtools !== 'boolean') ||
+            (typeof newVal.reload !== 'undefined' && typeof newVal.reload !== 'boolean')) {
+            return;
+        }
+        const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
+            newVal);
+        setOptOnBrowserWin('contextMenuSettings', val, browserWin);
         browserWin.setMenu(null);
+        browserWin.webContents.updateContextMenuSettings(val);
     },
     customData: function(newVal, browserWin) {
         setOptOnBrowserWin('customData', newVal, browserWin);
@@ -622,6 +638,20 @@ Window.create = function(id, opts) {
                     if (decoratorFn(payload, arguments)) {
                         // Let the decorator apply changes to the type
                         ofEvents.emit(route.window(payload.type, uuid, name), payload);
+                        // emit new 'user-movement-disabled' or 'user-movement-enabled' events in v2API
+                        if (evnt === 'user-movement-disabled' || evnt === 'user-movement-enabled') {
+                            let newPayload = _.clone(payload);
+                            newPayload.type = evnt;
+                            ofEvents.emit(route.window(newPayload.type, uuid, name), newPayload);
+                        }
+
+                        // emit new 'disabled-movement-bounds-changed' or 'disabled-movement-bounds-changing' events in v2API
+                        if (evnt === 'disabled-frame-bounds-changed' || evnt === 'disabled-frame-bounds-changing') {
+                            const newEventType = evnt === 'disabled-frame-bounds-changed' ? 'disabled-movement-bounds-changed' : 'disabled-movement-bounds-changing';
+                            let newPayload = _.clone(payload);
+                            newPayload.type = newEventType;
+                            ofEvents.emit(route.window(newPayload.type, uuid, name), newPayload);
+                        }
                     }
                 };
 
@@ -645,12 +675,13 @@ Window.create = function(id, opts) {
             var _win = coreState.getWindowByUuidName(uuid, name) || {};
             var _groupUuid = _win.groupUuid || null;
 
-            if (event.groupUuid === _groupUuid) {
+            //if the groupUuid's match or the _win object has no uuid (the window has closed)
+            if (event.groupUuid === _groupUuid || _win.uuid === void 0) {
                 var payload = event.payload;
 
                 payload.name = name;
                 /* jshint ignore:start */
-                payload.uuid = _win.app_uuid;
+                payload.uuid = _win.app_uuid || event.uuid;
                 /* jshint ignore:end */
 
                 if (payload.reason === 'disband') {
@@ -792,12 +823,22 @@ Window.create = function(id, opts) {
                     };
                     observer.next(constructorCallbackMessage);
                 });
+                ofEvents.once(route.window('api-injection-disabled', uuid, name), () => {
+                    electronApp.vlog(1, `api-injection-disabled ${uuid}-${name}`);
+                    // can happen for chrome pages
+                    browserWindow.show();
+                    constructorCallbackMessage.data = {
+                        httpResponseCode,
+                        apiInjected: false
+                    };
+                    observer.next(constructorCallbackMessage);
+                });
             }
 
         });
 
-        //Restoring window possitioning from disk cache.
-        //We treat this as a check point event, either succes or failure will raise the event.
+        //Restoring window positioning from disk cache.
+        //We treat this as a check point event, either success or failure will raise the event.
         const windowPositioningObserver = Rx.Observable.create(observer => {
             if (!_options.saveWindowState) {
                 observer.next();
@@ -851,14 +892,18 @@ Window.create = function(id, opts) {
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
         /*
+            DEBUG:     -1
             INFO:      0
             WARNING:   1
             ERROR:     2
             FATAL:     3
         */
-        if (level === /* INFO */ 0 ||
+        const printDebugLogs = (coreState.argo['v'] >= 1);
+        if ((level === /* DEBUG */ -1 && !printDebugLogs) ||
+            level === /* INFO */ 0 ||
             level === /* WARNING */ 1) {
             // Prevent INFO and WARNING messages from writing to debug.log
+            // DEBUG messages are also prevented if --v=1 or higher isn't specified
             event.preventDefault();
         }
 
@@ -886,9 +931,9 @@ Window.create = function(id, opts) {
                 return;
             }
 
-            function checkPrependLeadingZero(num) {
+            function checkPrependLeadingZero(num, length) {
                 let str = String(num);
-                if (str.length === 1) {
+                while (str.length < length) {
                     str = '0' + str;
                 }
 
@@ -896,17 +941,18 @@ Window.create = function(id, opts) {
             }
 
             const date = new Date();
-            const month = checkPrependLeadingZero(date.getMonth() + 1);
-            const day = checkPrependLeadingZero(date.getDate());
-            const year = String(date.getFullYear()).slice(2);
-            const hour = checkPrependLeadingZero(date.getHours());
-            const minute = checkPrependLeadingZero(date.getMinutes());
-            const second = checkPrependLeadingZero(date.getSeconds());
+            const year = String(date.getFullYear());
+            const month = checkPrependLeadingZero(date.getMonth() + 1, 2);
+            const day = checkPrependLeadingZero(date.getDate(), 2);
+            const hour = checkPrependLeadingZero(date.getHours(), 2);
+            const minute = checkPrependLeadingZero(date.getMinutes(), 2);
+            const second = checkPrependLeadingZero(date.getSeconds(), 2);
+            const millisecond = checkPrependLeadingZero(date.getMilliseconds(), 3);
 
             // Format timestamp to match debug.log
-            const timeStamp = `${month}/${day}/${year} ${hour}:${minute}:${second}`;
+            const timeStamp = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
 
-            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp });
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
 
         }, 1);
     };
@@ -1063,12 +1109,12 @@ function disabledFrameUnsubDecorator(identity) {
         if (refCount > 1) {
             disabledFrameRef.set(windowKey, --refCount);
         } else {
-            Window.enableFrame(identity);
+            Window.enableUserMovement(identity);
         }
     };
 }
 
-Window.disableFrame = function(requestorIdentity, windowIdentity) {
+Window.disableUserMovement = function(requestorIdentity, windowIdentity) {
     const browserWindow = getElectronBrowserWindow(windowIdentity);
     const windowKey = genWindowKey(windowIdentity);
 
@@ -1104,7 +1150,7 @@ Window.embed = function(identity, parentHwnd) {
     });
 };
 
-Window.enableFrame = function(identity) {
+Window.enableUserMovement = function(identity) {
     const windowKey = genWindowKey(identity);
     let browserWindow = getElectronBrowserWindow(identity);
 
@@ -1339,8 +1385,7 @@ Window.getSnapshot = (opts) => {
             return browserWindow.capturePage(callback);
         }
 
-        if (
-            !area ||
+        if (!area ||
             typeof area !== 'object' ||
             typeof area.x !== 'number' ||
             typeof area.y !== 'number' ||
@@ -1393,16 +1438,7 @@ Window.isShowing = function(identity) {
 
 
 Window.joinGroup = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
-
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
-    WindowGroups.joinGroup(identityOfWindow, groupingOfWindow);
+    return WindowGroups.joinGroup({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
@@ -1414,7 +1450,7 @@ Window.leaveGroup = function(identity) {
     }
 
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
-    WindowGroups.leaveGroup(openfinWindow);
+    return WindowGroups.leaveGroup(openfinWindow);
 };
 
 
@@ -1428,16 +1464,7 @@ Window.maximize = function(identity) {
 
 
 Window.mergeGroups = function(identity, grouping) {
-    let identityOfWindow = Window.wrap(identity.uuid, identity.name);
-    let groupingOfWindow = Window.wrap(grouping.uuid, grouping.name);
-    let identityBrowserWindow = identityOfWindow && identityOfWindow.browserWindow;
-    let groupingBrowserWindow = groupingOfWindow && groupingOfWindow.browserWindow;
-
-    if (!identityBrowserWindow || !groupingBrowserWindow) {
-        return;
-    }
-
-    WindowGroups.mergeGroups(identityOfWindow, groupingOfWindow);
+    return WindowGroups.mergeGroups({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
@@ -1795,22 +1822,23 @@ Window.exists = function(identity) {
 };
 
 Window.getBoundsFromDisk = function(identity, callback, errorCallback) {
-    let cacheFile = getBoundsCacheSafeFileName(identity);
-    try {
-        fs.readFile(cacheFile, 'utf8', (err, data) => {
-            if (err) {
-                errorCallback(err);
-            } else {
-                try {
-                    callback(JSON.parse(data));
-                } catch (parseErr) {
-                    errorCallback(new Error(`Error parsing saved bounds data ${parseErr.message}`));
+    getBoundsCacheSafeFileName(identity, cacheFile => {
+        try {
+            fs.readFile(cacheFile, 'utf8', (err, data) => {
+                if (err) {
+                    errorCallback(err);
+                } else {
+                    try {
+                        callback(JSON.parse(data));
+                    } catch (parseErr) {
+                        errorCallback(new Error(`Error parsing saved bounds data ${parseErr.message}`));
+                    }
                 }
-            }
-        });
-    } catch (err) {
-        errorCallback(err);
-    }
+            });
+        } catch (err) {
+            errorCallback(err);
+        }
+    }, errorCallback);
 };
 
 Window.authenticate = function(identity, username, password, callback) {
@@ -1945,7 +1973,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
         coreState.removeChildById(id);
 
         // remove window from any groups it belongs to
-        WindowGroups.leaveGroup(ofWindow);
+        promises.push(WindowGroups.leaveGroup(ofWindow));
 
         promises.push(handleSaveStateAlwaysResolve());
 
@@ -1961,35 +1989,66 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
 }
 
 function saveBoundsToDisk(identity, bounds, zoomLevel, callback) {
-    const cacheFile = getBoundsCacheSafeFileName(identity);
-    const data = {
-        'active': 'true',
-        'height': bounds.height,
-        'width': bounds.width,
-        'left': bounds.x,
-        'top': bounds.y,
-        'name': identity.name,
-        'windowState': bounds.windowState,
-        'zoomLevel': zoomLevel
-    };
+    getBoundsCacheSafeFileName(identity, cacheFile => {
+        const data = {
+            'active': 'true',
+            'height': bounds.height,
+            'width': bounds.width,
+            'left': bounds.x,
+            'top': bounds.y,
+            'name': identity.name,
+            'windowState': bounds.windowState,
+            'zoomLevel': zoomLevel
+        };
+
+        try {
+            const userCache = electronApp.getPath('userCache');
+            fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
+                fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
+                    callback(writeFileErr);
+                });
+            });
+        } catch (err) {
+            callback(err);
+        }
+    }, callback);
+}
+
+//make sure the uuid/names with special characters do not break the bounds cache.
+function getBoundsCacheSafeFileName(identity, callback, errorCallback) {
+    const userCache = electronApp.getPath('userCache');
+
+    // new hashed file name
+    const hash = crypto.createHash('sha256');
+    hash.update(identity.uuid);
+    hash.update(identity.name);
+    const safeName = hash.digest('hex');
+    const newFileName = path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 
     try {
-        const userCache = electronApp.getPath('userCache');
-        fs.mkdir(path.join(userCache, windowPosCacheFolder), () => {
-            fs.writeFile(cacheFile, JSON.stringify(data), (writeFileErr) => {
-                callback(writeFileErr);
-            });
+        fs.access(newFileName, fs.constants.F_OK, (newFileErr) => {
+            if (newFileErr) { // new file name doesn't exist
+                // current old style file name
+                const oldSafeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
+                const oldFileName = path.join(userCache, windowPosCacheFolder, `${oldSafeName}.json`);
+
+                // check if an old file name exists
+                fs.access(oldFileName, fs.constants.F_OK, (oldFileErr) => {
+                    if (!oldFileErr) { // if it exists, rename it by a new file name.
+                        fs.rename(oldFileName, newFileName, () => {
+                            callback(newFileName);
+                        });
+                    } else {
+                        callback(newFileName);
+                    }
+                });
+            } else {
+                callback(newFileName);
+            }
         });
     } catch (err) {
-        callback(err);
+        errorCallback(err);
     }
-
-}
-//make sure the uuid/names with special characters do not break the bounds cache.
-function getBoundsCacheSafeFileName(identity) {
-    let safeName = new Buffer(identity.uuid + '-' + identity.name).toString('hex');
-    const userCache = electronApp.getPath('userCache');
-    return path.join(userCache, windowPosCacheFolder, `${safeName}.json`);
 }
 
 function applyAdditionalOptionsToWindowOnVisible(browserWindow, callback) {
@@ -2449,11 +2508,7 @@ function restoreWindowPosition(identity, cb) {
 
         // set zoom level
         const { zoomLevel } = savedBounds;
-        if (zoomLevel) {
-            const browserWindow = getElectronBrowserWindow(identity);
-            browserWindow.webContents.setZoomLevel(zoomLevel);
-        }
-
+        Window.setZoomLevel(identity, zoomLevel);
         cb();
     }, (err) => {
         //We care about errors but lets keep window creation going.

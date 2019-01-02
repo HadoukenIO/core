@@ -11,7 +11,7 @@ import { FrameApiHandler } from './api_handlers/frame';
 import { ChannelApiHandler } from './api_handlers/channel';
 import { GlobalHotkeyApiHandler } from './api_handlers/global_hotkey';
 
-const EventListenerApiHandler = require('./api_handlers/event_listener').EventListenerApiHandler;
+import { init as initEventListenerApiHandler } from './api_handlers/event_listener';
 import { init as initIabApiHandler } from './api_handlers/interappbus';
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
 import { init as initSystemApiHandler } from './api_handlers/system';
@@ -50,7 +50,7 @@ export function initApiHandlers() {
     initClipboardAPIHandler();
     const frameApiHandler = new FrameApiHandler();
     const channelApiHandler = new ChannelApiHandler();
-    const eventListenerApiHandler = new EventListenerApiHandler();
+    initEventListenerApiHandler();
     initIabApiHandler();
     const notificationApiHandler = new NotificationApiHandler();
     initSystemApiHandler();
