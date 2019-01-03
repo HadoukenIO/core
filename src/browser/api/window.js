@@ -15,7 +15,7 @@ let nativeImage = electron.nativeImage;
 // npm modules
 let _ = require('underscore');
 const crypto = require('crypto');
-import * as Rx from 'rx';
+import * as Rx from 'rxjs';
 
 // local modules
 let animations = require('../animations.js');
@@ -827,8 +827,7 @@ Window.create = function(id, opts) {
             }
 
             ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
-            //need to use the old RXJS API: https://github.com/Reactive-Extensions/RxJS/blob/master/doc/api/core/operators/create.md
-            subscription.dispose();
+            subscription.unsubscribe();
         });
     } // end noregister
 

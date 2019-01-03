@@ -31,7 +31,6 @@
     "@types/mocha": "^5.2.5",
     "@types/mockery": "^1.4.29",
     "@types/node": "^10.5.2",
-    "@types/rx": "^4.1.1",
     "@types/underscore": "^1.8.8",
     "asar": "^0.14.3",
     "babel-core": "^6.26.3",
@@ -63,7 +62,7 @@
   "dependencies": {
     "minimist": "^1.2.0",
     "options": "0.0.6",
-    "rx": "^4.1.0",
+    "rxjs": "^5.5.12",
     "ultron": "^1.0.2",
     "underscore": "^1.8.3",
     "ws": "1.1.1"
