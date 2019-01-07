@@ -34,6 +34,10 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
                         }).catch(err => {
                             ack(new NackPayload(err));
                         });
+                } else {
+                    const runtimeVersion = system.getVersion();
+                    const nackMessage = `API call ${data.action} not implemented in runtime version: ${runtimeVersion}.`;
+                    ack(new NackPayload(nackMessage));
                 }
             }
         });

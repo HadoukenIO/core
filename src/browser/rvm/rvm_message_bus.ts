@@ -2,6 +2,7 @@ import { WMCopyData } from '../transport';
 import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
+import { argo } from '../core_state';
 
 import { app } from 'electron';
 const _ = require('underscore');
@@ -276,7 +277,8 @@ export class RVMMessageBus extends EventEmitter  {
         const {topic, timeToLive} = msg;
         const payload: any = Object.assign({
             processId: process.pid,
-            runtimeVersion: processVersions.openfin
+            runtimeVersion: processVersions.openfin,
+            securityRealm: argo ? argo['security-realm'] : ''
         }, msg);
 
         delete payload.topic; // ensure original payload that lacked the topic
