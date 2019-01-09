@@ -4,9 +4,8 @@ import { subscribeToAllRuntimes } from '../../remote_subscriptions';
 import { deleteApp, getAppRunningState, appInCoreState, argo} from '../../core_state';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import RequestHandler from '../transport_strategy/base_handler';
-import { makeMutexKey } from '../../utils';
 import { meshEnabled } from '../../connection_manager';
-const namedMutex = require('electron').namedMutex;
+import { isUuidAvailable } from '../../uuid_availability';
 
 
 export const enforceUuidUniqueness = meshEnabled && (argo['enforce-uuid-uniqueness'] || false);
@@ -42,9 +41,7 @@ function lockOnRun(msg: MessagePackage, next: (locals?: any) => void): void {
     const name = payload && payload.name;
     const action = data && data.action;
     if (action === 'run-application' && !identity.runtimeUuid) {
-        const key = makeMutexKey(uuid);
-        const lock = namedMutex.tryLock(key);
-        if (!lock.locked) {
+        if (!isUuidAvailable(uuid)) {
             //Delete the app from core state to properly forward to owning runtime
             deleteApp(uuid);
             //Set duplicateUuidRun to true to avoid running on early multi -runtime

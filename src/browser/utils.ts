@@ -86,5 +86,3 @@ function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEG
     clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
   };
 }
-
-export const makeMutexKey = (uuid: string) => `uuid-${uuid}`;

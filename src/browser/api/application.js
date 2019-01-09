@@ -13,7 +13,6 @@ let globalShortcut = electron.globalShortcut;
 let nativeImage = electron.nativeImage;
 let ProcessInfo = electron.processInfo;
 let Tray = electron.Tray;
-const namedMutex = electron.namedMutex;
 
 // npm modules
 let _ = require('underscore');
@@ -34,8 +33,8 @@ import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
 import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
-import { makeMutexKey } from '../utils';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
+import { releaseUuid } from '../uuid_availability';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -662,12 +661,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     ofEvents.once(route.window('closed', uuid, uuid), () => {
         delete fetchingIcon[uuid];
         removeTrayIcon(app);
-        const key = makeMutexKey(uuid);
-        let released = namedMutex.releaseLock(key).ok;
-        while (released) {
-            released = namedMutex.releaseLock(key).ok;
-        }
-
+        releaseUuid(uuid);
         if (uuid in registeredUsersByApp) {
             delete registeredUsersByApp[uuid];
         }

@@ -11,6 +11,7 @@ let socketServer = require('../../transports/socket_server').server;
 let ProcessTracker = require('../../process_tracker.js');
 const rvmMessageBus = require('../../rvm/rvm_message_bus').rvmMessageBus;
 import route from '../../../common/route';
+import { isUuidAvailable } from '../../uuid_availability';
 const successAck = {
     success: true
 };
@@ -159,7 +160,7 @@ function addPendingAuthentication(uuid, token, file, sponsor, authReqPayload) {
 }
 
 function authenticateUuid(authObj, authRequest, cb) {
-    if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid) || coreState.getAppByUuid(authRequest.uuid)) {
+    if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid) || coreState.getAppByUuid(authRequest.uuid) || !isUuidAvailable(authRequest.uuid)) {
         cb(false, 'Application with specified UUID already exists: ' + authRequest.uuid);
     } else if (!authObj) {
         cb(false, 'Invalid UUID: ' + authRequest.uuid);
