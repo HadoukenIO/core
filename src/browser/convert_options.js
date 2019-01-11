@@ -13,7 +13,8 @@ let _ = require('underscore');
 // local modules
 let coreState = require('./core_state.js');
 let log = require('./log');
-import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
+// import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
+import { isFileUrl } from '../common/main';
 import { fetchReadFile } from './cached_resource_fetcher';
 
 // constants
@@ -322,6 +323,8 @@ module.exports = {
         // ensure removal of eclosing double-quotes when absolute path.
         let configUrl = (argo['startup-url'] || argo['config']);
         let localConfigPath = argo['local-startup-url'];
+        log.writeToLog(1, `------configUrl: ${configUrl}`, true);
+        log.writeToLog(1, `------localConfigPath: ${localConfigPath}`, true);
         let offlineAccess = false;
         let errorCallback = err => {
             if (offlineAccess) {
@@ -344,6 +347,8 @@ module.exports = {
                 log.writeToLog(1, err, true);
             }
         }
+        // read file from RVM local cache folder to avoid sending url request
+        configUrl = localConfigPath ? localConfigPath : configUrl;
 
         if (typeof configUrl !== 'string') {
             configUrl = '';
@@ -358,21 +363,9 @@ module.exports = {
             return;
         }
 
-        if (isHttpUrl(configUrl)) {
-            fetchReadFile(configUrl, true)
-                .then((configObject) => onComplete({ configObject, configUrl }))
-                .catch(errorCallback);
-            return;
-        }
-
-        let filepath = isFileUrl(configUrl) ? uriToPath(configUrl) : configUrl;
-
-        return readFile(filepath, configObject => {
-            onComplete({
-                configObject,
-                configUrl
-            });
-        }, errorCallback);
+        fetchReadFile(configUrl, true)
+            .then((configObject) => onComplete({ configObject, configUrl }))
+            .catch(errorCallback);
     },
 
     normalizePreloadScripts(options) {

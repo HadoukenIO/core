@@ -295,11 +295,15 @@ export function fetchURL(url: string, done: (resp: any) => void, onError: (err: 
  * Fetches a file to disk and then reads it
  */
 export function fetchReadFile(url: string, isJSON: boolean): Promise<string|object> {
+    app.vlog(1, `---------passedIn url: ${url}`);
     return new Promise((resolve, reject) => {
         if (isHttpUrl(url)) {
+            app.vlog(1, '===== url request====');
             fetchURL(url, resolve, reject);
 
         } else if (isFileUrl(url)) {
+            app.vlog(1, '---------read a local file');
+
             const pathToFile = uriToPath(url);
 
             readFile(pathToFile, isJSON)
@@ -307,6 +311,7 @@ export function fetchReadFile(url: string, isJSON: boolean): Promise<string|obje
                 .catch(reject);
 
         } else {
+            app.vlog(1, '---------non url or file');
             stat(url, (err: null|Error) => {
                 if (err) {
                     reject(new Error(`URL protocol is not supported in ${url}`));
