@@ -71,7 +71,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
     'get-machine-id': { apiFunc: getMachineId, apiPath: '.getMachineId' },
     'get-min-log-level': getMinLogLevel,
-    'get-monitor-info': getMonitorInfo, // apiPath: '.getMonitorInfo' -> called by js adapter during init so can't be disabled
+    'get-monitor-info': { apiFunc: getMonitorInfo, apiPath: '.getMonitorInfo' },
     'get-mouse-position': { apiFunc: getMousePosition, apiPath: '.getMousePosition' },
     'get-nearest-display-root': getNearestDisplayRoot,
     'get-proxy-settings': getProxySettings,
