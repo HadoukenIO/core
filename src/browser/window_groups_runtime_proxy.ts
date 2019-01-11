@@ -108,16 +108,17 @@ export class RuntimeProxyWindow {
         const { identity: { uuid, name } } = this.wrappedWindow;
         const windowKey = `${uuid}${name}`;
 
-        this.window.browserWindow.setExternalWindowNativeId('0x0');
-        this.window.browserWindow.close();
-        this.boundLocalWindows.clear();
-        externalWindowsProxyList.delete(windowKey);
 
         try {
+            this.window.browserWindow.setExternalWindowNativeId('0x0');
+            this.window.browserWindow.close();
             await this.wrappedWindow.removeListener('group-changed', this.onGroupChanged);
         } catch (err) {
             writeToLog('info', 'Non Fatal error: remove all listeners failed for proxy window');
             writeToLog('info', err);
+        } finally {
+            this.boundLocalWindows.clear();
+            externalWindowsProxyList.delete(windowKey);
         }
     }
 
