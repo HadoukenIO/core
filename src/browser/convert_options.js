@@ -13,8 +13,6 @@ let _ = require('underscore');
 // local modules
 let coreState = require('./core_state.js');
 let log = require('./log');
-// import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
-import { isFileUrl } from '../common/main';
 import { fetchReadFile } from './cached_resource_fetcher';
 
 // constants
