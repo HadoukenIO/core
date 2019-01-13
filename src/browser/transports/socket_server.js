@@ -1,141 +1,138 @@
 const http = require('http');
 const EventEmitter = require('events').EventEmitter;
-const util = require('util');
 const log = require('../log');
+const idPool = require('../int_pool').default;
 import route from '../../common/route';
 
+class Server extends EventEmitter {
+    constructor() {
+        super();
 
-let Server = function() {
-    let me = this;
-    EventEmitter.call(this);
-
-    let hasStarted = false;
-    let activeConnections = {};
-    let idPool = require('../int_pool').default;
-    let httpServer = http.createServer(function(req, res) {
-        res.writeHead(403, {
-            'Content-Type': 'text/plain'
+        this.hasStarted = false;
+        this.activeConnections = {};
+        this.httpServer = http.createServer((req, res) => {
+            res.writeHead(403, {
+                'Content-Type': 'text/plain'
+            });
+            res.end('');
         });
-        res.end('');
-    });
-    let httpServerError = false;
+        this.httpServerError = false;
 
-    httpServer.on('error', function(err) {
-        httpServerError = true;
-        me.emit(route.server('error'), err);
-    });
+        this.httpServer.on('error', (err) => {
+            this.httpServerError = true;
+            this.emit(route.server('error'), err);
+        });
+    }
 
-    me.getPort = function() {
-        return (httpServer.address() || {
+    getPort() {
+        return (this.httpServer.address() || {
             port: null
         }).port;
-    };
+    }
 
-    me.publish = function(message) {
-        let usedIds = Object.keys(activeConnections);
-        usedIds.forEach(function(id) {
-            if (activeConnections[id]) {
-                activeConnections[id].send(message);
+    publish(message) {
+        let usedIds = Object.keys(this.activeConnections);
+        usedIds.forEach((id) => {
+            if (this.activeConnections[id]) {
+                this.activeConnections[id].send(message);
             }
         });
-    };
+    }
 
-    me.send = function(id, message) {
-        if (activeConnections[id]) {
-            activeConnections[id].send(message);
+    send(id, message) {
+        if (this.activeConnections[id]) {
+            this.activeConnections[id].send(message);
         }
-    };
+    }
 
-    me.closeAllConnections = function() {
-        let usedIds = Object.keys(activeConnections);
-        usedIds.forEach(function(id) {
-            if (activeConnections[id]) {
-                activeConnections[id].close();
+    closeAllConnections() {
+        let usedIds = Object.keys(this.activeConnections);
+        usedIds.forEach((id) => {
+            if (this.activeConnections[id]) {
+                this.activeConnections[id].close();
             }
         });
-    };
+    }
 
-    me.closeConnection = function(id) {
-        if (activeConnections[id]) {
+    closeConnection(id) {
+        if (this.activeConnections[id]) {
             // Removed from map on close event
-            activeConnections[id].close();
+            this.activeConnections[id].close();
         }
-    };
+    }
 
-    me.start = function(port) {
-        if (hasStarted && !httpServerError) {
+    start(port) {
+        if (this.hasStarted && !this.httpServerError) {
             log.writeToLog(1, 'socket server already running', true);
             return;
         }
 
-        httpServer.listen(port, '127.0.0.1', function() {
-            if (httpServerError) {
-                httpServerError = false;
+        this.httpServer.listen(port, '127.0.0.1', () => {
+            if (this.httpServerError) {
+                this.httpServerError = false;
                 return;
             }
 
             let WebSocketServer = require('ws').Server,
                 wss = new WebSocketServer({
-                    server: httpServer
+                    server: this.httpServer
                 });
 
-            wss.on('headers', function(headers) {
-                me.emit(route.server('headers'), headers);
+            wss.on('headers', (headers) => {
+                this.emit(route.server('headers'), headers);
             });
 
-            wss.on('error', function(err) {
-                httpServerError = true;
-                me.emit(route.server('error'), err);
+            wss.on('error', (err) => {
+                this.httpServerError = true;
+                this.emit(route.server('error'), err);
             });
 
-            wss.on('connection', function connection(ws) {
+            wss.on('connection', (ws) => {
                 let id = idPool.next();
-                activeConnections[id] = ws;
+                this.activeConnections[id] = ws;
                 // Unused events
                 // ping
                 // pong
 
-                ws.on('error', function(error) {
-                    me.emit(route.connection('error'), id, error);
+                ws.on('error', (error) => {
+                    this.emit(route.connection('error'), id, error);
                 });
 
-                ws.on('close', function( /*code,message*/ ) {
-                    delete activeConnections[id];
+                ws.on('close', ( /*code,message*/ ) => {
+                    delete this.activeConnections[id];
                     idPool.release(id);
                     ws = null;
-                    me.emit(route.connection('close'), id);
+                    this.emit(route.connection('close'), id);
                 });
 
-                ws.on('open', function( /*open*/ ) {
+                ws.on('open', ( /*open*/ ) => {
                     console.log('Opened ', id);
-                    me.emit(route.connection('open'), id);
+                    this.emit(route.connection('open'), id);
                 });
 
-                ws.on('message', function incoming(data, flags) {
-                    me.emit(route.connection('message'), id, JSON.parse(data), flags);
+                ws.on('message', (data, flags) => {
+                    this.emit(route.connection('message'), id, JSON.parse(data), flags);
                 });
             });
 
-            me.emit(route.server('open'), me.getPort());
+            this.emit(route.server('open'), this.getPort());
         });
 
-        hasStarted = true;
-    };
+        this.hasStarted = true;
+    }
 
-    me.connectionAuthenticated = function(id, uuid) {
-        me.emit(route.connection('authenticated'), {
+    connectionAuthenticated(id, uuid) {
+        this.emit(route.connection('authenticated'), {
             id,
             uuid
         });
-    };
+    }
 
-    me.isConnectionOpen = function(id) {
-        const socket = activeConnections[id];
+    isConnectionOpen(id) {
+        const socket = this.activeConnections[id];
         return typeof socket === 'object' && socket.readyState === socket.OPEN;
-    };
-};
-
-util.inherits(Server, EventEmitter);
+    }
+}
 
 module.exports = {
     server: new Server()
