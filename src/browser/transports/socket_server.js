@@ -1,7 +1,14 @@
-const http = require('http');
-const EventEmitter = require('events').EventEmitter;
-const log = require('../log');
-const idPool = require('../int_pool').default;
+//const http = require('http');
+//const EventEmitter = require('events').EventEmitter;
+//const log = require('../log');
+//const idPool = require('../int_pool').default;
+
+import * as http from 'http';
+import { EventEmitter } from 'events';
+import { Server as WebSocketServer } from 'ws';
+
+import * as log from '../log';
+import idPool from '../int_pool';
 import route from '../../common/route';
 
 class Server extends EventEmitter {
@@ -73,10 +80,9 @@ class Server extends EventEmitter {
                 return;
             }
 
-            let WebSocketServer = require('ws').Server,
-                wss = new WebSocketServer({
-                    server: this.httpServer
-                });
+            let wss = new WebSocketServer({
+                server: this.httpServer
+            });
 
             wss.on('headers', (headers) => {
                 this.emit(route.server('headers'), headers);
