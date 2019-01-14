@@ -23,7 +23,7 @@ let System = require('./src/browser/api/system.js').System;
 import { Window } from './src/browser/api/window';
 
 let apiProtocol = require('./src/browser/api_protocol');
-let socketServer = require('./src/browser/transports/socket_server').server;
+import socketServer from './src/browser/transports/socket_server';
 
 import { addPendingAuthRequests, createAuthUI } from './src/browser/authentication_delegate';
 let convertOptions = require('./src/browser/convert_options.js');

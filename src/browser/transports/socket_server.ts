@@ -1,17 +1,18 @@
-//const http = require('http');
-//const EventEmitter = require('events').EventEmitter;
-//const log = require('../log');
-//const idPool = require('../int_pool').default;
-
 import * as http from 'http';
 import { EventEmitter } from 'events';
-import { Server as WebSocketServer } from 'ws';
+import * as WebSocket from 'ws';
+import { AddressInfo } from 'net';
 
 import * as log from '../log';
 import idPool from '../int_pool';
 import route from '../../common/route';
 
 class Server extends EventEmitter {
+    private hasStarted: boolean;
+    private activeConnections: { [id: string]: WebSocket };
+    private httpServer: http.Server;
+    private httpServerError: boolean;
+
     constructor() {
         super();
 
@@ -31,14 +32,14 @@ class Server extends EventEmitter {
         });
     }
 
-    getPort() {
-        return (this.httpServer.address() || {
-            port: null
-        }).port;
+    public getPort(): number {
+        const serverAddress = <AddressInfo>this.httpServer.address();
+
+        return (serverAddress && serverAddress.port) || null;
     }
 
-    publish(message) {
-        let usedIds = Object.keys(this.activeConnections);
+    public publish(message: string) {
+        const usedIds = Object.keys(this.activeConnections);
         usedIds.forEach((id) => {
             if (this.activeConnections[id]) {
                 this.activeConnections[id].send(message);
@@ -46,14 +47,14 @@ class Server extends EventEmitter {
         });
     }
 
-    send(id, message) {
+    public send(id: number, message: string) {
         if (this.activeConnections[id]) {
             this.activeConnections[id].send(message);
         }
     }
 
-    closeAllConnections() {
-        let usedIds = Object.keys(this.activeConnections);
+    public closeAllConnections() {
+        const usedIds = Object.keys(this.activeConnections);
         usedIds.forEach((id) => {
             if (this.activeConnections[id]) {
                 this.activeConnections[id].close();
@@ -61,14 +62,14 @@ class Server extends EventEmitter {
         });
     }
 
-    closeConnection(id) {
+    public closeConnection(id: number) {
         if (this.activeConnections[id]) {
             // Removed from map on close event
             this.activeConnections[id].close();
         }
     }
 
-    start(port) {
+    public start(port: number) {
         if (this.hasStarted && !this.httpServerError) {
             log.writeToLog(1, 'socket server already running', true);
             return;
@@ -80,7 +81,7 @@ class Server extends EventEmitter {
                 return;
             }
 
-            let wss = new WebSocketServer({
+            const wss = new WebSocket.Server({
                 server: this.httpServer
             });
 
@@ -94,8 +95,8 @@ class Server extends EventEmitter {
             });
 
             wss.on('connection', (ws) => {
-                let id = idPool.next();
-                this.activeConnections[id] = ws;
+                const id = idPool.next();
+                this.activeConnections[id] = <WebSocket>ws;
                 // Unused events
                 // ping
                 // pong
@@ -112,7 +113,6 @@ class Server extends EventEmitter {
                 });
 
                 ws.on('open', ( /*open*/ ) => {
-                    console.log('Opened ', id);
                     this.emit(route.connection('open'), id);
                 });
 
@@ -127,19 +127,17 @@ class Server extends EventEmitter {
         this.hasStarted = true;
     }
 
-    connectionAuthenticated(id, uuid) {
+    public connectionAuthenticated(id: number, uuid: string) {
         this.emit(route.connection('authenticated'), {
             id,
             uuid
         });
     }
 
-    isConnectionOpen(id) {
+    public isConnectionOpen(id: number) {
         const socket = this.activeConnections[id];
         return typeof socket === 'object' && socket.readyState === socket.OPEN;
     }
 }
 
-module.exports = {
-    server: new Server()
-};
+export default new Server();
