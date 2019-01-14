@@ -12,6 +12,7 @@ let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
+import { isUuidAvailable } from '../../uuid_availability';
 
 const SetWindowPosition = {
     SWP_HIDEWINDOW: 0x0080,
@@ -323,7 +324,7 @@ function notifyOnContentLoaded(identity, message, ack) {
 }
 
 function runApplication(identity, message, ack, nack) {
-    const { payload, locals } = message;
+    const { payload } = message;
     const { manifestUrl } = payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
     const { uuid } = appIdentity;
@@ -335,7 +336,7 @@ function runApplication(identity, message, ack, nack) {
         className: 'window',
         eventName: 'fire-constructor-callback'
     };
-    if (coreState.getAppRunningState(uuid) || (locals && locals.duplicateUuidRun)) {
+    if (coreState.getAppRunningState(uuid)) {
         Application.emitRunRequested(appIdentity);
         nack(`Application with specified UUID is already running: ${uuid}`);
         return;
@@ -360,10 +361,20 @@ function runApplication(identity, message, ack, nack) {
     if (manifestUrl) {
         addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
             remoteSubscriptionUnSubscribe = unSubscribe;
-            Application.runWithRVM(identity, manifestUrl).catch(nack);
+            //Promise never resolves, only rejects
+            Application.runWithRVM(identity, manifestUrl, appIdentity).catch((e) => {
+                remoteSubscriptionUnSubscribe();
+                nack(e);
+            });
         });
     } else {
-        Application.run(appIdentity);
+        if (isUuidAvailable(uuid)) {
+            Application.run(appIdentity);
+        } else {
+            Application.emitRunRequested(appIdentity);
+            nack(`Application with specified UUID is already running: ${uuid}`);
+            return;
+        }
     }
 }
 

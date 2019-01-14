@@ -35,6 +35,7 @@ import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowe
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 import { releaseUuid } from '../uuid_availability';
+import duplicateUuidTransport from '../duplicate_uuid_delegation';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -748,17 +749,24 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 }
 
 /**
- * Run an application via RVM
+ * Run an application via RVM. Returns a promise which never resolves, only rejects.
  */
-Application.runWithRVM = function(identity, manifestUrl) {
-    return sendToRVM({
+Application.runWithRVM = function(identity, manifestUrl, appIdentity) {
+    let rej;
+    const { uuid } = appIdentity;
+    const rejectPromise = new Promise((y, n) => {
+        rej = n;
+    });
+    duplicateUuidTransport.subscribeToUuid(uuid, () => rej(`Application with specified UUID is already running: ${uuid}`));
+    const rvmPromise = sendToRVM({
         topic: 'application',
         action: 'launch-app',
-        sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
+        sourceUrl: coreState.getConfigUrlByUuid(uuid),
         data: {
             configUrl: manifestUrl
         }
     });
+    return Promise.all([rvmPromise, rejectPromise]);
 };
 
 Application.send = function() {

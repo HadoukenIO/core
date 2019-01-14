@@ -24,7 +24,6 @@ import {
     registerMiddleware as registerProcessExternalAppMiddleware,
     legacyWindowingEnabled
 } from './api_handlers/deprecated_external_windowing_middleware';
-import { initDuplicateUuidHandler, enforceUuidUniqueness } from './api_handlers/duplicate_uuid_handler';
 
 
 // Middleware registration. The order is important.
@@ -36,9 +35,6 @@ if (legacyWindowingEnabled()) {
 
 if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
-}
-if (enforceUuidUniqueness) {
-    initDuplicateUuidHandler(getDefaultRequestHandler());
 }
 registerExternalConnAuthMiddleware(getDefaultRequestHandler());
 

@@ -1,13 +1,15 @@
 import { PoorlyNamedTransport } from './transport';
-import { appInCoreState, getAppRunningState, getAllApplications } from './core_state';
+import { appInCoreState, getAppRunningState, getAllApplications, deleteApp } from './core_state';
 import * as log from './log';
 import ofEvents from './of_events';
 import route from '../common/route';
+import { subscribeToAllRuntimes } from './remote_subscriptions';
 
 const UNIX_FILENAME_PREFIX: string = '/tmp/of.uuid';
 const WINDOW_CLASS_NAME = 'OPENFIN_UUID_WINDOW';
 
 class DuplicateUuidTransport extends PoorlyNamedTransport {
+    private subs = new Map<string, ((...args: any[]) => any)[]>();
     constructor() {
         super(process.platform === 'win32' ? WINDOW_CLASS_NAME : UNIX_FILENAME_PREFIX);
     }
@@ -22,6 +24,7 @@ class DuplicateUuidTransport extends PoorlyNamedTransport {
                 const allUuids = getAllApplications().map(a => a.uuid);
                 log.writeToLog('info', allUuids);
                 log.writeToLog('info', allUuids.map(u => u === uuid));
+                this.emit(`duplicate-uuid-on-launch-${uuid}`, data);
                 if (getAppRunningState(uuid)) {
                     log.writeToLog('info', `duplicate app ${uuid} run detected`);
                     doOnDupe(data.argv);
@@ -29,7 +32,11 @@ class DuplicateUuidTransport extends PoorlyNamedTransport {
                     log.writeToLog('info', `duplicate app ${uuid} not running here`);
                 }
             });
+            subscribeToRunningExternal();
         }
+    }
+    public subscribeToUuid = (uuid: string, listener: (...args: any[]) => any) => {
+        this.once(`duplicate-uuid-on-launch-${uuid}`, listener);
     }
     public broadcast = (payload: any) => {
         try {
@@ -44,5 +51,16 @@ class DuplicateUuidTransport extends PoorlyNamedTransport {
     }
 }
 
+async function subscribeToRunningExternal() {
+    //clean up apps after they are started in other runtimes
+    await subscribeToAllRuntimes({ listenType: 'on', className: 'system', eventName: 'application-started' });
+    ofEvents.on(route.system('application-started'), (data) => {
+        const uuid = data.uuid;
+        if (data.runtimeUuid && appInCoreState(uuid) && !getAppRunningState(uuid)) {
+            deleteApp(data.uuid);
+        }
+    });
+}
 
-export default new DuplicateUuidTransport();
+export const duplicateUuidTransport = new DuplicateUuidTransport();
+export default duplicateUuidTransport;
