@@ -135,30 +135,6 @@ function five0BaseOptions() {
 function isInContainer(type) {
     return process && process.versions && process.versions[type];
 }
-/*
-function readFile(filePath, done, onError) {
-    log.writeToLog(1, `Requested contents from ${filePath}`, true);
-    let normalizedPath = path.resolve(filePath);
-    log.writeToLog(1, `Normalized path as ${normalizedPath}`, true);
-    fs.readFile(normalizedPath, 'utf8', (err, data) => {
-        if (err) {
-            onError(err);
-            return;
-        }
-
-        log.writeToLog(1, `Contents from ${normalizedPath}`, true);
-        log.writeToLog(1, data, true);
-
-        let config;
-        try {
-            config = JSON.parse(data);
-        } catch (e) {
-            onError(e);
-            return;
-        }
-        done(config);
-    });
-}*/
 
 function validateOptions(options) {
     var baseOptions = five0BaseOptions();
