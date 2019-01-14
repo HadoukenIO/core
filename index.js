@@ -764,21 +764,21 @@ function registerMacMenu() {
 function handleCachePath() {
     const openfinVersion = process.versions.openfin;
     const securityRealm = coreState.argo['security-realm'];
-    const userData = app.getPath('userData');
+
     if (process.platform === 'darwin') {
         const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
         let cachePath = encodeURIComponent(configUrl);
         if (securityRealm) {
             cachePath = path.join(cachePath, securityRealm);
         }
-
+        const userData = app.getPath('userData');
         cachePath = path.join(userData, 'cache', cachePath, openfinVersion);
         app.setPath('userData', cachePath);
         app.setPath('userCache', cachePath);
     } else {
+        const userData = coreState.argo['user-data-dir'];
         log.writeToLog('info', `[user data before] [${userData}] `);
-        let cachePath = userData.replace('Roaming', 'Local');
-        cachePath = path.join(cachePath, 'cache');
+        let cachePath = path.join(userData, 'cache');
         if (securityRealm) {
             cachePath = path.join(cachePath, securityRealm);
         }
