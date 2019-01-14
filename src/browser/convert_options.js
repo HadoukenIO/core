@@ -13,7 +13,7 @@ let _ = require('underscore');
 // local modules
 let coreState = require('./core_state.js');
 let log = require('./log');
-import { fetchReadFile } from './cached_resource_fetcher';
+import { fetchReadFile, readFile } from './cached_resource_fetcher';
 
 // constants
 import {
@@ -135,7 +135,7 @@ function five0BaseOptions() {
 function isInContainer(type) {
     return process && process.versions && process.versions[type];
 }
-
+/*
 function readFile(filePath, done, onError) {
     log.writeToLog(1, `Requested contents from ${filePath}`, true);
     let normalizedPath = path.resolve(filePath);
@@ -158,7 +158,7 @@ function readFile(filePath, done, onError) {
         }
         done(config);
     });
-}
+}*/
 
 function validateOptions(options) {
     var baseOptions = five0BaseOptions();
@@ -191,12 +191,9 @@ function validate(base, user) {
 
 function fetchLocalConfig(configUrl, successCallback, errorCallback) {
     log.writeToLog(1, `Falling back on local-startup-url path: ${configUrl}`, true);
-    readFile(configUrl, configObject => {
-        successCallback({
-            configObject,
-            configUrl
-        });
-    }, errorCallback);
+    readFile(configUrl, true)
+        .then((configObject) => successCallback({ configObject, configUrl }))
+        .catch(errorCallback);
 }
 
 module.exports = {
@@ -321,8 +318,6 @@ module.exports = {
         // ensure removal of eclosing double-quotes when absolute path.
         let configUrl = (argo['startup-url'] || argo['config']);
         let localConfigPath = argo['local-startup-url'];
-        log.writeToLog(1, `------configUrl: ${configUrl}`, true);
-        log.writeToLog(1, `------localConfigPath: ${localConfigPath}`, true);
         let offlineAccess = false;
         let errorCallback = err => {
             if (offlineAccess) {
@@ -345,8 +340,6 @@ module.exports = {
                 log.writeToLog(1, err, true);
             }
         }
-        // read file from RVM local cache folder to avoid sending url request
-        configUrl = localConfigPath ? localConfigPath : configUrl;
 
         if (typeof configUrl !== 'string') {
             configUrl = '';
@@ -361,7 +354,11 @@ module.exports = {
             return;
         }
 
-        fetchReadFile(configUrl, true)
+        // read config file from RVM local app folder if it exists
+        const actualConfigUrl = localConfigPath ? localConfigPath : configUrl;
+
+        // Note: actualConfigUrl is only used for getting config object, but configUrl is still needed in callback function. otherwise RVM sent error message.
+        fetchReadFile(actualConfigUrl, true)
             .then((configObject) => onComplete({ configObject, configUrl }))
             .catch(errorCallback);
     },
