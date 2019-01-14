@@ -1,4 +1,4 @@
-import { PoorlyNamedTransport } from './transport';
+import { NamedOneToManyTransport } from './transport';
 import { appInCoreState, getAppRunningState, getAllApplications, deleteApp } from './core_state';
 import * as log from './log';
 import ofEvents from './of_events';
@@ -8,7 +8,7 @@ import { subscribeToAllRuntimes } from './remote_subscriptions';
 const UNIX_FILENAME_PREFIX: string = '/tmp/of.uuid';
 const WINDOW_CLASS_NAME = 'OPENFIN_UUID_WINDOW';
 
-class DuplicateUuidTransport extends PoorlyNamedTransport {
+class DuplicateUuidTransport extends NamedOneToManyTransport {
     private subs = new Map<string, ((...args: any[]) => any)[]>();
     constructor() {
         super(process.platform === 'win32' ? WINDOW_CLASS_NAME : UNIX_FILENAME_PREFIX);

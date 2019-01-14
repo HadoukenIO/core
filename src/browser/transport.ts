@@ -9,7 +9,7 @@ import { EventEmitter } from 'events';
  */
 export { Base, ChromiumIPC, UnixDomainSocket, WMCopyData };
 
-export class PoorlyNamedTransport extends EventEmitter {
+export class NamedOneToManyTransport extends EventEmitter {
     protected _transport: Base;
 
     constructor(private name: string) {

@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Base, ChromiumIPC, UnixDomainSocket, WMCopyData, PoorlyNamedTransport } from './transport';
+import { Base, ChromiumIPC, UnixDomainSocket, WMCopyData, NamedOneToManyTransport } from './transport';
 import * as log from './log';
 import route from '../common/route';
 import { isMeshEnabled } from './connection_manager';
@@ -23,7 +23,7 @@ export interface PortInfo {
     multiRuntime: boolean;
 }
 
-export class PortDiscovery extends PoorlyNamedTransport {
+export class PortDiscovery extends NamedOneToManyTransport {
     private _namedPipe: ChromiumIPC;
 
     constructor() {
