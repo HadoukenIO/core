@@ -1,7 +1,6 @@
 /* global routingId, isMainFrame, isSameOriginIframe, isCrossOriginIframe, isChildMainFrame */
 
 const electron = require('electron');
-const resolvePromise = Promise.resolve.bind(Promise);
 
 const defaultWebFrame = electron.webFrame;
 
@@ -34,34 +33,26 @@ const { apiString, initialOptions } = JSON.parse(apiInfo);
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');
 
 const hookWebFrame = (webFrame, renderFrameId) => {
-    electron.ipcRenderer.on(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`, (event, method, args) => {
+    electron.ipcRendererInternal.on(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`, (event, method, args) => {
         webFrame[method](...args);
     });
 
-    electron.ipcRenderer.on(`ELECTRON_INTERNAL_RENDERER_SYNC_WEB_FRAME_METHOD-${renderFrameId}`, (event, requestId, method, args) => {
-        const result = webFrame[method](...args);
-        event.sender.send(renderFrameId, `ELECTRON_INTERNAL_BROWSER_SYNC_WEB_FRAME_RESPONSE_${requestId}`, result);
-    });
-
-    electron.ipcRenderer.on(`ELECTRON_INTERNAL_RENDERER_ASYNC_WEB_FRAME_METHOD-${renderFrameId}`, (event, requestId, method, args) => {
-        const responseCallback = function(result) {
-            resolvePromise(result)
-                .then((resolvedResult) => {
-                    event.sender.send(renderFrameId, `ELECTRON_INTERNAL_BROWSER_ASYNC_WEB_FRAME_RESPONSE_${requestId}`, null, resolvedResult);
-                })
-                .catch((resolvedError) => {
-                    event.sender.send(renderFrameId, `ELECTRON_INTERNAL_BROWSER_ASYNC_WEB_FRAME_RESPONSE_${requestId}`, resolvedError);
-                });
-        };
-        args.push(responseCallback);
-        webFrame[method](...args);
+    electron.ipcRendererInternal.on(`ELECTRON_INTERNAL_RENDERER_ASYNC_WEB_FRAME_METHOD-${renderFrameId}`, (event, requestId, method, args) => {
+        new Promise(resolve => {
+            webFrame[method](...args, resolve);
+        }).then(result => {
+            return [null, result];
+        }, error => {
+            return [error];
+        }).then(responseArgs => {
+            event.sender.send(renderFrameId, `ELECTRON_INTERNAL_BROWSER_ASYNC_WEB_FRAME_RESPONSE_${requestId}`, ...responseArgs);
+        });
     });
 
     // Teardown
     return () => {
-        electron.ipcRenderer.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`);
-        electron.ipcRenderer.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_SYNC_WEB_FRAME_METHOD-${renderFrameId}`);
-        electron.ipcRenderer.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_ASYNC_WEB_FRAME_METHOD-${renderFrameId}`);
+        electron.ipcRendererInternal.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`);
+        electron.ipcRendererInternal.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_ASYNC_WEB_FRAME_METHOD-${renderFrameId}`);
     };
 };
 
