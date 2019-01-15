@@ -673,6 +673,9 @@ exports.System = {
             };
         });
     },
+    getAllExternalWindows: function() {
+        return ['roma']
+    },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);
         const app = coreState.getAppObjByUuid(uuid);
