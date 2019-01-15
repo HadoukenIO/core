@@ -16,7 +16,7 @@ export function isUuidAvailable(uuid: string) {
 export function releaseUuid (uuid: string) {
     const key = makeMutexKey(uuid);
     let released = namedMutex.releaseLock(key);
-    while (released) {
+    while (!released) {
         released = namedMutex.releaseLock(key);
     }
 }
