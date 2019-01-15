@@ -3,7 +3,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as log from '../../log';
 import { default as connectionManager } from '../../connection_manager';
 import ofEvents from '../../of_events';
-import { isLocalUuid } from '../../core_state';
+import { isLocalUuid, appInCoreState } from '../../core_state';
 import { IdentityAddress, PeerRuntime } from '../../runtime_p2p/peer_connection_manager';
 
 const SUBSCRIBE_ACTION = 'subscribe';
@@ -19,7 +19,8 @@ const apiMessagesToIgnore: any = {
     'subscriber-added': true,
     'subscriber-removed': true,
     'subscribe-to-desktop-event': true,
-    'unsubscribe-to-desktop-event': true
+    'unsubscribe-to-desktop-event': true,
+    'create-application': true
 };
 
 // NEW AGGREGATE APIS: add the point version to the map so that previous runtime versions are not polled
@@ -137,8 +138,8 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
     const isRemoteEntity = !isLocalUuid(uuid);
     //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
     const isLocalAction = !identity.runtimeUuid;
-
-    if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction) {
+    const isLocalRun = action === 'run-application' && appInCoreState(uuid);
+    if (isValidUuid && isForwardAction  && isValidIdentity && isRemoteEntity && isLocalAction && !isLocalRun) {
         try {
             connectionManager.resolveIdentity({uuid})
             .then((id: IdentityAddress) => {
