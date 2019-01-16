@@ -3,6 +3,7 @@
  */
 
 // built-in modules
+let os = require('os');
 let path = require('path');
 let electron = require('electron');
 let queryString = require('querystring');
@@ -34,6 +35,7 @@ import route from '../../common/route';
 import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
+import { launch } from '../../../js-adapter/src/main';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
