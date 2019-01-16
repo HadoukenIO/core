@@ -521,7 +521,7 @@ function migrateLocalStorage(argo) {
     const newLocalStoragePath = argo['new-local-storage-path'] || '';
     const localStorageUrl = argo['local-storage-url'] || '';
 
-     if (oldLocalStoragePath && newLocalStoragePath && localStorageUrl) {
+    if (oldLocalStoragePath && newLocalStoragePath && localStorageUrl) {
         try {
             System.log('info', 'Migrating Local Storage from ' + oldLocalStoragePath + ' to ' + newLocalStoragePath);
             app.migrateLocalStorage(oldLocalStoragePath, newLocalStoragePath, localStorageUrl);
