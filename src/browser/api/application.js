@@ -750,14 +750,19 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
  * Run an application via RVM
  */
 Application.runWithRVM = function(identity, manifestUrl) {
-    return sendToRVM({
-        topic: 'application',
-        action: 'launch-app',
-        sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
-        data: {
-            configUrl: manifestUrl
-        }
-    });
+    // on mac/linux, launch the app, else hand off to RVM
+    if (os.platform() !== 'win32') {
+        return launch({ manifestUrl: manifestUrl });
+    } else {
+        return sendToRVM({
+            topic: 'application',
+            action: 'launch-app',
+            sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
+            data: {
+                configUrl: manifestUrl
+            }
+        });
+    }
 };
 
 Application.send = function() {
