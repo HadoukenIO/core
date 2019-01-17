@@ -3,6 +3,7 @@
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
 (function() {
+    console.log('in api_decorator');
     const glbl = global;
     const QUEUE_COUNTER_NAME = 'queueCounter';
     const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
@@ -196,17 +197,21 @@
             e.preventDefault();
         });
         global.addEventListener('click', e => {
-            const tag = e.target.tagName;
             const modifiedClick = e.shiftKey || e.metaKey || e.ctrlKey || e.altKey;
-            const mightOpenNewWindow = tag === 'A' || tag === 'IMG';
-            if (mightOpenNewWindow && modifiedClick) {
-                e.preventDefault();
-            } else if (modifiedClick && (tag === 'BUTTON' || tag === 'INPUT')) {
-                if (e.target.type === 'submit') {
+            e.path.some(target => {
+                const tag = target.tagName;
+                const mightOpenNewWindow = tag === 'A' || tag === 'IMG';
+                if (mightOpenNewWindow && modifiedClick) {
                     e.preventDefault();
-                }
+                    return true;
+                } else if (modifiedClick && (tag === 'BUTTON' || tag === 'INPUT')) {
+                    if (target.type === 'submit') {
+                        e.preventDefault();
+                        return true;
+                    }
 
-            }
+                }
+            });
         });
     }
 
@@ -245,18 +250,18 @@
     var pendingMainCallbacks = [];
     var currPageHasLoaded = false;
 
-    global.addEventListener('load', function() {
-
-        //---------------------------------------------------------------
+    global.addEventListener('DOMContentLoaded', function() {
+        disableModifiedClicks(glbl);
+    });
+    global.addEventListener('load', function() {        //---------------------------------------------------------------
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
 
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
-
+           
         wireUpMenu(glbl);
-        disableModifiedClicks(glbl);
         wireUpMouseWheelZoomEvents();
         raiseReadyEvents(entityInfo);
 
