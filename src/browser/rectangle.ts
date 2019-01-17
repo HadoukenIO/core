@@ -468,7 +468,7 @@ export class Rectangle {
         const maxDelta = Object.keys(delta).reduce((prev: number, curr: keyof RectangleBase) => {
             const diff = Math.abs(delta[curr]);
             return diff > prev ? diff : prev;
-        }, 0.00001);
+        }, 1);
         const iterator = Math.ceil(maxDelta / Rectangle.BOUND_SHARE_THRESHOLD);
         const iterDelta: RectangleBase = {
             x: Math.round(delta.x / iterator),
