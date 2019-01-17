@@ -110,6 +110,12 @@ export function getTargetWindowIdentity(payload: any) {
     };
 }
 
+export function getTargetExternalWindowIdentity(payload: any) {
+    return {
+        nativeId: payload.nativeId
+    };
+}
+
 export function getTargetApplicationIdentity(payload: any) {
     return {
         uuid: payload.uuid

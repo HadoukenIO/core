@@ -674,7 +674,50 @@ exports.System = {
         });
     },
     getAllExternalWindows: function() {
-        return ['roma']
+        const skipOwnWindows = false;
+        const nativeWindows = [];
+        const classNamesToIgnore = [
+            'tooltips_class32',
+            'IME',
+            'WorkerW',
+            'MSCTFIME UI'
+        ];
+        const rawNativeWindows = electronApp.getAllNativeWindowInfo(skipOwnWindows);
+        /*
+            alwaysOnTop: false,
+            bounds: {
+                height: 350,
+                width: 444,
+                x: 49,
+                y: 311,
+            },
+            className: "Notepad",
+            focused: false,
+            id: "0x0046094A",
+            maximized: false,
+            minimized: false,
+            process: {
+                imageName: "C:\Windows\System32\notepad.exe",
+                injected: false,
+                pid: 4832,
+            },
+            title: "Untitled - Notepad",
+            visible: true,
+        */
+        
+        rawNativeWindows.forEach(e => {
+            if (classNamesToIgnore.includes(e.className)) {
+                return;
+            }
+
+            nativeWindows.push({
+                className: e.className,
+                id: e.id,
+                process: e.process
+            });
+        });
+        
+        return nativeWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);

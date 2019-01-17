@@ -1478,27 +1478,11 @@ Window.minimize = function(identity) {
 
 
 Window.moveBy = function(identity, deltaLeft, deltaTop) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
+    const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
     }
-
-    let currentBounds = browserWindow.getBounds();
-    let left = toSafeInt(deltaLeft, 0);
-    let top = toSafeInt(deltaTop, 0);
-
-    if (browserWindow.isMaximized()) {
-        browserWindow.unmaximize();
-    }
-
-    // no need to call clipBounds here because width and height are not changing
-    browserWindow.setBounds({
-        x: currentBounds.x + left,
-        y: currentBounds.y + top,
-        width: currentBounds.width,
-        height: currentBounds.height
-    });
+    NativeWindow.moveBy(browserWindow, { deltaLeft, deltaTop });
 };
 
 
@@ -2531,6 +2515,10 @@ function boundsVisible(bounds, monitorInfo) {
         }
     }
     return visible;
+}
+
+function isBrowserWindow(obj) {
+    return obj instanceof BrowserWindow;
 }
 
 module.exports.Window = Window;

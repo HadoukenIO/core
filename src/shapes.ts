@@ -386,3 +386,8 @@ export interface Subscriber {
 }
 
 export type Func = () => void;
+
+export interface MoveWindowByOpts {
+    deltaLeft: number;
+    deltaTop: number;
+}

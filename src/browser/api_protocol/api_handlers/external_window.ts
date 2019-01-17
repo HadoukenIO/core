@@ -1,6 +1,6 @@
 import { APIHandlerMap, APIMessage, Identity } from '../../../shapes';
-import { registerActionMap } from './api_protocol_base.js';
-import * as ExternalWindow from '../../api/external_window'
+import { getTargetExternalWindowIdentity, registerActionMap } from './api_protocol_base.js';
+import * as ExternalWindow from '../../api/external_window';
 
 export const ExternalWindowApiMap: APIHandlerMap = {
   'animate-external-window': animateExternalWindow,
@@ -129,7 +129,9 @@ async function minimizeExternalWindow(identity: Identity, message: APIMessage) {
 
 async function moveExternalWindowBy(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.moveExternalWindowBy();
+  const { deltaLeft, deltaTop } = payload;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return await ExternalWindow.moveExternalWindowBy(targetIdentity, { deltaLeft, deltaTop });
 }
 
 async function moveExternalWindow(identity: Identity, message: APIMessage) {
