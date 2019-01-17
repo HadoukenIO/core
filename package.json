@@ -33,6 +33,7 @@
     "@types/node": "^10.5.2",
     "@types/rx": "^4.1.1",
     "@types/underscore": "^1.8.8",
+    "@types/ws": "0.0.36",
     "asar": "^0.14.3",
     "babel-core": "^6.26.3",
     "babel-preset-es2015": "^6.24.1",
