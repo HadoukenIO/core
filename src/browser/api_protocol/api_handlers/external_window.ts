@@ -1,18 +1,18 @@
 import { APIHandlerMap, APIMessage, Identity } from '../../../shapes';
-import { registerActionMap } from './api_protocol_base.js';
-import * as ExternalWindow from '../../api/external_window'
+import { getTargetExternalWindowIdentity, registerActionMap } from './api_protocol_base.js';
+import * as ExternalWindow from '../../api/external_window';
 
 export const ExternalWindowApiMap: APIHandlerMap = {
   'animate-external-window': animateExternalWindow,
   'bring-external-window-to-front': bringExternalWindowToFront,
   'close-external-window': closeExternalWindow,
   'disable-external-window-frame': disableExternalWindowFrame,
-  'enable-externa-window-frame': enableExternaWindowFrame,
+  'enable-external-window-frame': enableExternaWindowFrame,
   'flash-external-window': flashExternalWindow,
   'focus-external-window': focusExternalWindow,
   'get-external-window-bounds': getExternalWindowBounds,
   'get-external-window-group': getExternalWindowGroup,
-  'get-external-window-options': getExternalWindowOptions,
+  'get-external-window-info': getExternalWindowInfo,
   'get-external-window-state': getExternalWindowState,
   'hide-external-window': hideExternalWindow,
   'is-external-window-showing': isExternalWindowShowing,
@@ -24,14 +24,14 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'move-external-window-by': moveExternalWindowBy,
   'move-external-window': moveExternalWindow,
   'resize-external-window-by': resizeExternalWindowBy,
-  'resize-external-window': resizeExternalWindow,
+  'resize-external-window': resizeExternalWindowTo,
   'restore-external-window': restoreExternalWindow,
-  'set-foreground-external-window': setForegroundExternalWindow,
+  'set-external-window-as-foreground': setExternalWindowAsForeground,
   'set-external-window-bounds': setExternalWindowBounds,
   'show-external-window': showExternalWindow,
-  'show-at-external-window': showAtExternalWindow,
-  'stop-flash-external-window': stopFlashExternalWindow,
-}
+  'show-external-window-at': showExternalWindowAt,
+  'stop-external-window-flashing': stopExternalWindowFlashing
+};
 
 export function init(): void {
   registerActionMap(ExternalWindowApiMap);
@@ -39,140 +39,174 @@ export function init(): void {
 
 async function animateExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.animateExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.animateExternalWindow(targetIdentity);
 }
 
 async function bringExternalWindowToFront(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.bringExternalWindowToFront();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.bringExternalWindowToFront(targetIdentity);
 }
 
 async function closeExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.closeExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.closeExternalWindow(targetIdentity);
 }
 
 async function disableExternalWindowFrame(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.disableExternalWindowFrame();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.disableExternalWindowFrame(targetIdentity);
 }
 
 async function enableExternaWindowFrame(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.enableExternaWindowFrame();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.enableExternaWindowFrame(targetIdentity);
 }
 
 async function flashExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.flashExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.flashExternalWindow(targetIdentity);
 }
 
 async function focusExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.focusExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.focusExternalWindow(targetIdentity);
 }
 
 async function getExternalWindowBounds(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.getExternalWindowBounds();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.getExternalWindowBounds(targetIdentity);
 }
 
 async function getExternalWindowGroup(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.getExternalWindowGroup();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.getExternalWindowGroup(targetIdentity);
 }
 
-async function getExternalWindowOptions(identity: Identity, message: APIMessage) {
+async function getExternalWindowInfo(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.getExternalWindowOptions();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.getExternalWindowInfo(targetIdentity);
 }
 
 async function getExternalWindowState(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.getExternalWindowState();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.getExternalWindowState(targetIdentity);
 }
 
 async function hideExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.hideExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.hideExternalWindow(targetIdentity);
 }
 
 async function isExternalWindowShowing(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.isExternalWindowShowing();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.isExternalWindowShowing(targetIdentity);
 }
 
 async function joinExternalWindowGroup(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.joinExternalWindowGroup();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.joinExternalWindowGroup(targetIdentity);
 }
 
 async function leaveExternalWindowGroup(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.leaveExternalWindowGroup();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.leaveExternalWindowGroup(targetIdentity);
 }
 
 async function maximizeExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.maximizeExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.maximizeExternalWindow(targetIdentity);
 }
 
 async function mergeExternalWindowGroups(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.mergeExternalWindowGroups();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.mergeExternalWindowGroups(targetIdentity);
 }
 
 async function minimizeExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.minimizeExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.minimizeExternalWindow(targetIdentity);
 }
 
 async function moveExternalWindowBy(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.moveExternalWindowBy();
+  const { deltaLeft, deltaTop } = payload;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.moveExternalWindowBy(targetIdentity, { deltaLeft, deltaTop });
 }
 
 async function moveExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.moveExternalWindow();
+  const { left, top } = payload;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.moveExternalWindow(targetIdentity, { left, top });
 }
 
 async function resizeExternalWindowBy(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.resizeExternalWindowBy();
+  const { anchor, deltaHeight, deltaWidth } = payload;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.resizeExternalWindowBy(targetIdentity, { anchor, deltaHeight, deltaWidth });
 }
 
-async function resizeExternalWindow(identity: Identity, message: APIMessage) {
+async function resizeExternalWindowTo(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.resizeExternalWindow();
+  const { anchor, height, width } = payload;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.resizeExternalWindowTo(targetIdentity, { anchor, height, width });
 }
 
 async function restoreExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.restoreExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.restoreExternalWindow(targetIdentity);
 }
 
-async function setForegroundExternalWindow(identity: Identity, message: APIMessage) {
+async function setExternalWindowAsForeground(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.setForegroundExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.setExternalWindowAsForeground(targetIdentity);
 }
 
 async function setExternalWindowBounds(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.setExternalWindowBounds();
+  const { height, left, top, width } = payload;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.setExternalWindowBounds(targetIdentity, { height, left, top, width });
 }
 
 async function showExternalWindow(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.showExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.showExternalWindow(targetIdentity);
 }
 
-async function showAtExternalWindow(identity: Identity, message: APIMessage) {
+async function showExternalWindowAt(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.showAtExternalWindow();
+  const { left, top } = payload;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.showExternalWindowAt(targetIdentity, { left, top });
 }
 
-async function stopFlashExternalWindow(identity: Identity, message: APIMessage) {
+async function stopExternalWindowFlashing(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.stopFlashExternalWindow();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.stopExternalWindowFlashing(targetIdentity);
 }

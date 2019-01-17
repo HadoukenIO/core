@@ -28,6 +28,7 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
+import { extendNativeWindowInfo } from '../utils';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -674,7 +675,26 @@ exports.System = {
         });
     },
     getAllExternalWindows: function() {
-        return ['roma']
+        const skipOwnWindows = false;
+        const nativeWindows = [];
+        const rawNativeWindows = electronApp.getAllNativeWindowInfo(skipOwnWindows);
+        const classNamesToIgnore = [
+            'tooltips_class32',
+            'IME',
+            'WorkerW',
+            'MSCTFIME UI'
+        ];
+
+        rawNativeWindows.forEach(e => {
+            if (classNamesToIgnore.includes(e.className)) {
+                return;
+            }
+
+            const nativeWindowInfo = extendNativeWindowInfo(e);
+            nativeWindows.push(nativeWindowInfo);
+        });
+
+        return nativeWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);

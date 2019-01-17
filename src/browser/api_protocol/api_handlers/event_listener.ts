@@ -200,8 +200,7 @@ const subExternalApp = async (identity: Identity, eventName: string, payload: Ev
     Subscribe to an external window event
 */
 const subExternalWindow = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
-    const { uuid } = payload;
-    const externalWindowIdentity = { uuid };
+    const externalWindowIdentity = apiProtocolBase.getTargetExternalWindowIdentity(payload);
     return ExternalWindow.addEventListener(externalWindowIdentity, eventName, listener);
 };
 
