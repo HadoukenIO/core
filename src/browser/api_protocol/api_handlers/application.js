@@ -53,7 +53,7 @@ module.exports.applicationApiMap = {
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
-    'get-shortcuts': getShortcuts,
+    'get-shortcuts': { apiFunc: getShortcuts, apiPath: '.getShortcuts' },
     'get-tray-icon-info': getTrayIconInfo,
     'is-application-running': isApplicationRunning,
     'notify-on-app-connected': notifyOnAppConnected,
