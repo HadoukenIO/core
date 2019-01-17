@@ -278,12 +278,12 @@ Application.close = function(identity, force, callback) {
         Window.close(mainWindowIdentity, force, callback);
     }
 };
-Application.destroy = function(identity, cb, nack) {
+Application.destroy = function(identity, ack, nack) {
     if (coreState.getAppRunningState(identity.uuid)) {
         nack('Cannot destroy a running application');
     } else {
         coreState.deleteApp(identity.uuid);
-        cb();
+        ack();
     }
 };
 Application.getChildWindows = function(identity /*, callback, errorCallback*/ ) {
