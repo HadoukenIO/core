@@ -1512,37 +1512,20 @@ Window.removeEventListener = function(identity, type, listener) {
 Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
     const browserWindow = getElectronBrowserWindow(identity);
     const opts = { anchor, deltaHeight, deltaWidth };
-
     if (!browserWindow) {
         return;
     }
-
     NativeWindow.resizeBy(browserWindow, opts);
 };
 
 
-Window.resizeTo = function(identity, newWidth, newHeight, anchor) {
+Window.resizeTo = function(identity, width, height, anchor) {
     const browserWindow = getElectronBrowserWindow(identity);
-
+    const opts = { anchor, height, width };
     if (!browserWindow) {
         return;
     }
-
-    if (browserWindow.isMaximized()) {
-        browserWindow.unmaximize();
-    }
-
-    const currentBounds = browserWindow.getBounds();
-    newWidth = toSafeInt(newWidth, currentBounds.width);
-    newHeight = toSafeInt(newHeight, currentBounds.height);
-    const boundsAnchor = calcBoundsAnchor(anchor, newWidth, newHeight, currentBounds);
-
-    browserWindow.setBounds(clipBounds({
-        x: boundsAnchor.x,
-        y: boundsAnchor.y,
-        width: newWidth,
-        height: newHeight
-    }, browserWindow));
+    NativeWindow.resizeTo(browserWindow, opts);
 };
 
 

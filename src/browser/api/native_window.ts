@@ -110,12 +110,28 @@ export function resizeBy(browserWindow: BrowserWindow, opts: Shapes.ResizeWindow
     browserWindow.unmaximize();
   }
 
-  const currentBounds = browserWindow.getBounds();
-  const newWidth = toSafeInt(currentBounds.width + deltaWidth, currentBounds.width);
-  const newHeight = toSafeInt(currentBounds.height + deltaHeight, currentBounds.height);
-  const { x, y } = calcBoundsAnchor(anchor, newWidth, newHeight, currentBounds);
+  const bounds = browserWindow.getBounds();
+  const newWidth = toSafeInt(bounds.width + deltaWidth, bounds.width);
+  const newHeight = toSafeInt(bounds.height + deltaHeight, bounds.height);
+  const { x, y } = calcBoundsAnchor(anchor, newWidth, newHeight, bounds);
   const clippedBounds = clipBounds({ x, y, width: newWidth, height: newHeight }, browserWindow);
   
+  browserWindow.setBounds(clippedBounds);
+}
+
+export function resizeTo(browserWindow: BrowserWindow, opts: Shapes.ResizeWindowToOpts): void {
+  const { anchor, height, width } = opts;
+  
+  if (browserWindow.isMaximized()) {
+    browserWindow.unmaximize();
+  }
+
+  const bounds = browserWindow.getBounds();
+  const newWidth = toSafeInt(width, bounds.width);
+  const newHeight = toSafeInt(height, bounds.height);
+  const { x, y } = calcBoundsAnchor(anchor, newWidth, newHeight, bounds);
+  const clippedBounds = clipBounds({ x, y, width: newWidth, height: newHeight }, browserWindow);
+
   browserWindow.setBounds(clippedBounds);
 }
 

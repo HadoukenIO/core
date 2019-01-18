@@ -403,3 +403,9 @@ export interface ResizeWindowByOpts {
     deltaHeight: number;
     deltaWidth: number;
 }
+
+export interface ResizeWindowToOpts {
+    anchor: AnchorType;
+    height: number;
+    width: number;
+}

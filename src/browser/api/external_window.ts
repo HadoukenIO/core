@@ -118,9 +118,9 @@ export function resizeExternalWindowBy(identity: ExternalWindowIdentity, payload
   NativeWindow.resizeBy(externalWindow, payload);
 }
 
-export function resizeExternalWindow(identity: ExternalWindowIdentity) {
+export function resizeExternalWindowTo(identity: ExternalWindowIdentity, payload: Shapes.ResizeWindowToOpts) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.resizeTo(externalWindow, payload);
 }
 
 export function restoreExternalWindow(identity: ExternalWindowIdentity) {

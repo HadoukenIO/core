@@ -24,7 +24,7 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'move-external-window-by': moveExternalWindowBy,
   'move-external-window': moveExternalWindow,
   'resize-external-window-by': resizeExternalWindowBy,
-  'resize-external-window': resizeExternalWindow,
+  'resize-external-window': resizeExternalWindowTo,
   'restore-external-window': restoreExternalWindow,
   'set-foreground-external-window': setForegroundExternalWindow,
   'set-external-window-bounds': setExternalWindowBounds,
@@ -166,10 +166,11 @@ async function resizeExternalWindowBy(identity: Identity, message: APIMessage) {
   return ExternalWindow.resizeExternalWindowBy(targetIdentity, { anchor, deltaHeight, deltaWidth });
 }
 
-async function resizeExternalWindow(identity: Identity, message: APIMessage) {
+async function resizeExternalWindowTo(identity: Identity, message: APIMessage) {
   const { payload } = message;
+  const { anchor, height, width } = payload;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.resizeExternalWindow(targetIdentity);
+  return ExternalWindow.resizeExternalWindowTo(targetIdentity, { anchor, height, width });
 }
 
 async function restoreExternalWindow(identity: Identity, message: APIMessage) {
