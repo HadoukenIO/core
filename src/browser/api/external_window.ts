@@ -45,7 +45,7 @@ export function flashExternalWindow(identity: ExternalWindowIdentity) {
 
 export function focusExternalWindow(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.focus(externalWindow);
 }
 
 export function getExternalWindowBounds(identity: ExternalWindowIdentity) {

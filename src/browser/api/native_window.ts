@@ -8,6 +8,10 @@ export function noop(browserWindow: BrowserWindow) {
 
 }
 
+export function focus(browserWindow: BrowserWindow): void {
+  browserWindow.focus();
+}
+
 export function getBounds(browserWindow: BrowserWindow): Bounds {
   const bounds = browserWindow.getBounds();
 
