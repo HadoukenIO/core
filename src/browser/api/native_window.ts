@@ -7,6 +7,16 @@ export function noop(browserWindow: BrowserWindow) {
 
 }
 
+export function getState(browserWindow: BrowserWindow): string {
+  if (browserWindow.isMinimized()) {
+    return 'minimized';
+  } else if (browserWindow.isMaximized()) {
+    return 'maximized';
+  } else {
+    return 'normal';
+  }
+}
+
 export function hide(browserWindow: BrowserWindow): void {
   browserWindow.hide();
 }

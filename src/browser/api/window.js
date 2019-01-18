@@ -1404,14 +1404,10 @@ Window.getSnapshot = (opts) => {
 
 Window.getState = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
-
-    if (browserWindow && browserWindow.isMinimized()) {
-        return 'minimized';
-    } else if (browserWindow && browserWindow.isMaximized()) {
-        return 'maximized';
-    } else {
+    if (!browserWindow) {
         return 'normal';
     }
+    return NativeWindow.getState(browserWindow);
 };
 
 

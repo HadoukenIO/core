@@ -63,9 +63,9 @@ export async function getExternalWindowOptions(identity: ExternalWindowIdentity)
   NativeWindow.noop(externalWindow);
 }
 
-export async function getExternalWindowState(identity: ExternalWindowIdentity): Promise<void> {
+export async function getExternalWindowState(identity: ExternalWindowIdentity): Promise<string> {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  return NativeWindow.getState(externalWindow);
 }
 
 export async function hideExternalWindow(identity: ExternalWindowIdentity): Promise<void> {
