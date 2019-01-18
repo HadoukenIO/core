@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const asar = require('asar');
+const https = require('https');
 const electronRebuild = require('electron-rebuild');
 const wrench = require('wrench');
 const openfinSign = require('openfin-sign'); // OpenFin signing module
@@ -233,13 +234,33 @@ module.exports = (grunt) => {
     });
 
     grunt.registerTask('clean-up-dependencies', 'Clean up dependencies', function() {
+        const done = this.async();
 
-        // Clean Rx library (6.94MB -> 144KB)
-        const rxLibPath = path.join(stagingNodeModulesPath, 'rx');
-        const rxLib = fs.readFileSync(path.join(rxLibPath, 'dist', 'rx.all.min.js'), 'utf-8');
-        wrench.rmdirSyncRecursive(rxLibPath);
-        wrench.mkdirSyncRecursive(rxLibPath);
-        fs.writeFileSync(path.join(rxLibPath, 'index.js'), rxLib);
+        // Clean RxJS library (19MB -> 148KB)
+        const rxjsLibPath = path.join(stagingNodeModulesPath, 'rxjs');
+        const rxjsPackageJsonPath = './node_modules/rxjs/package.json';
+        const rxjsMinUrl = 'https://unpkg.com/rxjs@' + require(rxjsPackageJsonPath).version + '/bundles/Rx.min.js';
+        https.get(rxjsMinUrl, (res) => {
+            if (res.statusCode !== 200) {
+                grunt.log.error('HTTPS request failed');
+                done();
+            }
+
+            let data = '';
+            res.on('data', (d) => {
+                data += d;
+            });
+
+            res.on('end', () => {
+                wrench.rmdirSyncRecursive(rxjsLibPath);
+                wrench.mkdirSyncRecursive(rxjsLibPath);
+                fs.writeFileSync(path.join(rxjsLibPath, 'index.js'), data);
+                done();
+            });
+        }).on('error', (e) => {
+            grunt.log.error(e);
+            done();
+        });
 
         // Underscore (128KB -> 20KB)
         const underscoreLibPath = path.join(stagingNodeModulesPath, 'underscore');
