@@ -73,9 +73,9 @@ export async function hideExternalWindow(identity: ExternalWindowIdentity, paylo
   NativeWindow.noop(externalWindow);
 }
 
-export async function isExternalWindowShowing(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+export async function isExternalWindowShowing(identity: ExternalWindowIdentity): Promise<boolean> {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  return NativeWindow.isVisible(externalWindow);
 }
 
 export async function joinExternalWindowGroup(identity: ExternalWindowIdentity, payload: any): Promise<void> {

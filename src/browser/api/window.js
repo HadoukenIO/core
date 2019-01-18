@@ -1432,8 +1432,10 @@ Window.isNotification = function(name) {
 
 Window.isShowing = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
-
-    return !!(browserWindow && browserWindow.isVisible());
+    if (!browserWindow) {
+        return false;
+    }
+    return NativeWindow.isVisible(browserWindow);
 };
 
 

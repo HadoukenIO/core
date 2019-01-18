@@ -7,15 +7,19 @@ export function noop(browserWindow: BrowserWindow) {
 
 }
 
-export function maximize(browserWindow: BrowserWindow) {
+export function isVisible(browserWindow: BrowserWindow): boolean {
+  return browserWindow.isVisible();
+}
+
+export function maximize(browserWindow: BrowserWindow): void {
   browserWindow.maximize();
 }
 
-export function minimize(browserWindow: BrowserWindow) {
+export function minimize(browserWindow: BrowserWindow): void {
   browserWindow.minimize();
 }
 
-export function moveBy(browserWindow: BrowserWindow, opts: Shapes.MoveWindowByOpts) {
+export function moveBy(browserWindow: BrowserWindow, opts: Shapes.MoveWindowByOpts): void {
   const { deltaLeft, deltaTop } = opts;
   const currentBounds = browserWindow.getBounds();
   const left = toSafeInt(deltaLeft, 0);
@@ -34,7 +38,7 @@ export function moveBy(browserWindow: BrowserWindow, opts: Shapes.MoveWindowByOp
   });
 }
 
-export function moveTo(browserWindow: BrowserWindow, opts: Shapes.MoveWindowToOpts) {
+export function moveTo(browserWindow: BrowserWindow, opts: Shapes.MoveWindowToOpts): void {
   const { left, top } = opts;
   const currentBounds = browserWindow.getBounds();
   const safeX = toSafeInt(left);

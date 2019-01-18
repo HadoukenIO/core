@@ -99,7 +99,8 @@ async function hideExternalWindow(identity: Identity, message: APIMessage) {
 
 async function isExternalWindowShowing(identity: Identity, message: APIMessage) {
   const { payload } = message;
-  return await ExternalWindow.isExternalWindowShowing();
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return await ExternalWindow.isExternalWindowShowing(targetIdentity);
 }
 
 async function joinExternalWindowGroup(identity: Identity, message: APIMessage) {
