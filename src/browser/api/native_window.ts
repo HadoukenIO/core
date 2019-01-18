@@ -12,6 +12,10 @@ export function bringToFront(browserWindow: BrowserWindow): void {
   browserWindow.bringToFront();
 }
 
+export function close(browserWindow: BrowserWindow): void {
+  browserWindow.close();
+}
+
 export function flash(browserWindow: BrowserWindow): void {
   browserWindow.flashFrame(true);
 }

@@ -1089,7 +1089,7 @@ Window.close = function(identity, force, callback = () => {}) {
         if (!browserWindow.isDestroyed()) {
             let openfinWindow = Window.wrap(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
-            browserWindow.close();
+            NativeWindow.close(browserWindow);
         }
     };
 

@@ -25,7 +25,7 @@ export function bringExternalWindowToFront(identity: ExternalWindowIdentity) {
 
 export function closeExternalWindow(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.close(externalWindow);
 }
 
 export function disableExternalWindowFrame(identity: ExternalWindowIdentity) {
