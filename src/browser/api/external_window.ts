@@ -40,7 +40,7 @@ export function enableExternaWindowFrame(identity: ExternalWindowIdentity) {
 
 export function flashExternalWindow(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.flash(externalWindow);
 }
 
 export function focusExternalWindow(identity: ExternalWindowIdentity) {

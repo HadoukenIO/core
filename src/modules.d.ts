@@ -114,6 +114,7 @@ declare module 'electron' {
         devToolsWebContents: null;
         webContents: webContents;
         setUserMovementEnabled(enabled: boolean): void;
+        flashFrame(flag: boolean): void;
         focus(): void;
         hide(): void;
         isVisible(): boolean;

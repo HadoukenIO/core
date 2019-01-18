@@ -1176,13 +1176,11 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
 };
 
 Window.flash = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
+    const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
     }
-
-    browserWindow.flashFrame(true);
+    NativeWindow.flash(browserWindow);
 };
 
 Window.stopFlashing = function(identity) {

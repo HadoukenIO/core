@@ -8,6 +8,10 @@ export function noop(browserWindow: BrowserWindow) {
 
 }
 
+export function flash(browserWindow: BrowserWindow): void {
+  browserWindow.flashFrame(true);
+}
+
 export function focus(browserWindow: BrowserWindow): void {
   browserWindow.focus();
 }
