@@ -114,6 +114,7 @@ declare module 'electron' {
         devToolsWebContents: null;
         webContents: webContents;
         setUserMovementEnabled(enabled: boolean): void;
+        maximize(): void;
         minimize(): void;
 
         _eventsCount: number;

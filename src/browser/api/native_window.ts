@@ -7,6 +7,10 @@ export function noop(browserWindow: BrowserWindow) {
 
 }
 
+export function maximize(browserWindow: BrowserWindow) {
+  browserWindow.maximize();
+}
+
 export function minimize(browserWindow: BrowserWindow) {
   browserWindow.minimize();
 }

@@ -88,9 +88,9 @@ export async function leaveExternalWindowGroup(identity: ExternalWindowIdentity,
   NativeWindow.noop(externalWindow);
 }
 
-export async function maximizeExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+export async function maximizeExternalWindow(identity: ExternalWindowIdentity): Promise<void> {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.maximize(externalWindow);
 }
 
 export async function mergeExternalWindowGroups(identity: ExternalWindowIdentity, payload: any): Promise<void> {

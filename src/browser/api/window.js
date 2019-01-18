@@ -1458,7 +1458,7 @@ Window.maximize = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'maximize');
     let maximizable = getOptFromBrowserWin('maximizable', browserWindow, true);
     if (maximizable) {
-        browserWindow.maximize();
+        NativeWindow.maximize(browserWindow);
     }
 };
 
