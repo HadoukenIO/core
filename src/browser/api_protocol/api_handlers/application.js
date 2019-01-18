@@ -329,6 +329,7 @@ function runApplication(identity, message, ack, nack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
     const { uuid } = appIdentity;
     let remoteSubscriptionUnSubscribe;
+    let unsub;
     const remoteSubscription = {
         uuid,
         name: uuid,
@@ -352,7 +353,9 @@ function runApplication(identity, message, ack, nack) {
             theErr.networkErrorCode = loadInfo.data.networkErrorCode;
             nack(theErr);
         }
-
+        if (typeof unsub === 'function') {
+            unsub();
+        }
         if (typeof remoteSubscriptionUnSubscribe === 'function') {
             remoteSubscriptionUnSubscribe();
         }
@@ -361,9 +364,11 @@ function runApplication(identity, message, ack, nack) {
     if (manifestUrl) {
         addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
             remoteSubscriptionUnSubscribe = unSubscribe;
-            //Promise never resolves, only rejects
-            Application.runWithRVM(identity, manifestUrl, appIdentity).catch((e) => {
+            unsub = Application.runWithRVM(manifestUrl, appIdentity, (e) => {
                 remoteSubscriptionUnSubscribe();
+                if (typeof unsub === 'function') {
+                    unsub();
+                }
                 nack(e);
             });
         });

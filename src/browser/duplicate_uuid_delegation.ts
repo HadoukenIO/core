@@ -24,7 +24,7 @@ class DuplicateUuidTransport extends NamedOneToManyTransport {
                 const allUuids = getAllApplications().map(a => a.uuid);
                 log.writeToLog('info', allUuids);
                 log.writeToLog('info', allUuids.map(u => u === uuid));
-                this.emit(`duplicate-uuid-on-launch-${uuid}`, data);
+                this.emit(this.makeEvent(uuid), data);
                 if (getAppRunningState(uuid)) {
                     log.writeToLog('info', `duplicate app ${uuid} run detected`);
                     doOnDupe(data.argv);
@@ -35,8 +35,10 @@ class DuplicateUuidTransport extends NamedOneToManyTransport {
             subscribeToRunningExternal();
         }
     }
+    private makeEvent = (uuid: string) => `duplicate-uuid-on-launch-${uuid}`;
     public subscribeToUuid = (uuid: string, listener: (...args: any[]) => any) => {
-        this.once(`duplicate-uuid-on-launch-${uuid}`, listener);
+        this.once(this.makeEvent(uuid), listener);
+        return () => this.removeListener(this.makeEvent(uuid), listener);
     }
     public broadcast = (payload: any) => {
         try {

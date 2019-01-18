@@ -749,24 +749,22 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 }
 
 /**
- * Run an application via RVM. Returns a promise which never resolves, only rejects.
+ * Run an application via RVM Call can only error, must wait on windowConstructor for success case. returns unsubscribe function
  */
-Application.runWithRVM = function(identity, manifestUrl, appIdentity) {
-    let rej;
+Application.runWithRVM = function(manifestUrl, appIdentity, nack) {
     const { uuid } = appIdentity;
-    const rejectPromise = new Promise((y, n) => {
-        rej = n;
-    });
-    duplicateUuidTransport.subscribeToUuid(uuid, () => rej(`Application with specified UUID is already running: ${uuid}`));
-    const rvmPromise = sendToRVM({
+    const unsub = duplicateUuidTransport.subscribeToUuid(uuid, () => nack(`Application with specified UUID is already running: ${uuid}`));
+    sendToRVM({
         topic: 'application',
         action: 'launch-app',
         sourceUrl: coreState.getConfigUrlByUuid(uuid),
         data: {
             configUrl: manifestUrl
         }
+    }).catch(e => {
+        nack(e);
     });
-    return Promise.all([rvmPromise, rejectPromise]);
+    return unsub;
 };
 
 Application.send = function() {
