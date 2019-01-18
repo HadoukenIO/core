@@ -8,6 +8,10 @@ export function noop(browserWindow: BrowserWindow) {
 
 }
 
+export function bringToFront(browserWindow: BrowserWindow): void {
+  browserWindow.bringToFront();
+}
+
 export function flash(browserWindow: BrowserWindow): void {
   browserWindow.flashFrame(true);
 }

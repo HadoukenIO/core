@@ -20,7 +20,7 @@ export function animateExternalWindow(identity: ExternalWindowIdentity) {
 
 export function bringExternalWindowToFront(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.bringToFront(externalWindow);
 }
 
 export function closeExternalWindow(identity: ExternalWindowIdentity) {

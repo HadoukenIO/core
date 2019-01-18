@@ -1063,13 +1063,11 @@ Window.blur = function(identity) {
 };
 
 Window.bringToFront = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
+    const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
     }
-
-    browserWindow.bringToFront();
+    NativeWindow.bringToFront(browserWindow);
 };
 
 
