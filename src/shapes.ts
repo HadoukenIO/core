@@ -391,3 +391,8 @@ export interface MoveWindowByOpts {
     deltaLeft: number;
     deltaTop: number;
 }
+
+export interface MoveWindowToOpts {
+    left: number;
+    top: number;
+}

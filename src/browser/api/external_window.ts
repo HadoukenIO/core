@@ -13,76 +13,94 @@ export function addEventListener(identity: Shapes.Identity, type: string, listen
   return () => ofEvents.removeListener(evt, listener);
 }
 
-export async function animateExternalWindow(): Promise<void> {
-
+export async function animateExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function bringExternalWindowToFront(): Promise<void> {
-
+export async function bringExternalWindowToFront(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function closeExternalWindow(): Promise<void> {
-
+export async function closeExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function disableExternalWindowFrame(): Promise<void> {
-
+export async function disableExternalWindowFrame(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function enableExternaWindowFrame(): Promise<void> {
-
+export async function enableExternaWindowFrame(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function flashExternalWindow(): Promise<void> {
-
+export async function flashExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function focusExternalWindow(): Promise<void> {
-
+export async function focusExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function getExternalWindowBounds(): Promise<void> {
-
+export async function getExternalWindowBounds(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function getExternalWindowGroup(): Promise<void> {
-
+export async function getExternalWindowGroup(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function getExternalWindowOptions(): Promise<void> {
-
+export async function getExternalWindowOptions(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function getExternalWindowState(): Promise<void> {
-
+export async function getExternalWindowState(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function hideExternalWindow(): Promise<void> {
-
+export async function hideExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function isExternalWindowShowing(): Promise<void> {
-
+export async function isExternalWindowShowing(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function joinExternalWindowGroup(): Promise<void> {
-
+export async function joinExternalWindowGroup(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function leaveExternalWindowGroup(): Promise<void> {
-
+export async function leaveExternalWindowGroup(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function maximizeExternalWindow(): Promise<void> {
-
+export async function maximizeExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function mergeExternalWindowGroups(): Promise<void> {
-
+export async function mergeExternalWindowGroups(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function minimizeExternalWindow(): Promise<void> {
-
+export async function minimizeExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
 export async function moveExternalWindowBy(identity: ExternalWindowIdentity, payload: Shapes.MoveWindowByOpts): Promise<void> {
@@ -90,40 +108,49 @@ export async function moveExternalWindowBy(identity: ExternalWindowIdentity, pay
   NativeWindow.moveBy(externalWindow, payload);
 }
 
-export async function moveExternalWindow(): Promise<void> {
-
+export async function moveExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.moveTo(externalWindow, payload);
 }
 
-export async function resizeExternalWindowBy(): Promise<void> {
-  
+export async function resizeExternalWindowBy(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function resizeExternalWindow(): Promise<void> {
-
+export async function resizeExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function restoreExternalWindow(): Promise<void> {
-
+export async function restoreExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function setForegroundExternalWindow(): Promise<void> {
-
+export async function setForegroundExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function setExternalWindowBounds(): Promise<void> {
-
+export async function setExternalWindowBounds(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function showExternalWindow(): Promise<void> {
-
+export async function showExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function showAtExternalWindow(): Promise<void> {
-
+export async function showAtExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
-export async function stopFlashExternalWindow(): Promise<void> {
-
+export async function stopFlashExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+  const externalWindow = getExternalWindow(identity);
+  NativeWindow.noop(externalWindow);
 }
 
 function getExternalWindow(identity: ExternalWindowIdentity) {

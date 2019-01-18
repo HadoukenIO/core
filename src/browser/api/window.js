@@ -1486,28 +1486,12 @@ Window.moveBy = function(identity, deltaLeft, deltaTop) {
 };
 
 
-Window.moveTo = function(identity, x, y) {
+Window.moveTo = function(identity, left, top) {
     const browserWindow = getElectronBrowserWindow(identity);
-
     if (!browserWindow) {
         return;
     }
-
-    const currentBounds = browserWindow.getBounds();
-    const safeX = toSafeInt(x);
-    const safeY = toSafeInt(y);
-
-    if (browserWindow.isMaximized()) {
-        browserWindow.unmaximize();
-    }
-
-    // no need to call clipBounds here because width and height are not changing
-    browserWindow.setBounds({
-        x: safeX,
-        y: safeY,
-        width: currentBounds.width,
-        height: currentBounds.height
-    });
+    NativeWindow.moveTo(browserWindow, { left, top });
 };
 
 Window.navigate = function(identity, url) {
