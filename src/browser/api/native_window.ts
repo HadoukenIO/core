@@ -1,5 +1,6 @@
 import { Bounds } from '../../../js-adapter/src/shapes';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, Rectangle } from 'electron';
+import { clipBounds } from '../utils';
 import { toSafeInt } from '../../common/safe_int';
 import * as Shapes from '../../shapes';
 
@@ -100,4 +101,41 @@ export function moveTo(browserWindow: BrowserWindow, opts: Shapes.MoveWindowToOp
     width: currentBounds.width,
     height: currentBounds.height
   });
+}
+
+export function resizeBy(browserWindow: BrowserWindow, opts: Shapes.ResizeWindowByOpts): void {
+  const { anchor, deltaHeight, deltaWidth } = opts;
+
+  if (browserWindow.isMaximized()) {
+    browserWindow.unmaximize();
+  }
+
+  const currentBounds = browserWindow.getBounds();
+  const newWidth = toSafeInt(currentBounds.width + deltaWidth, currentBounds.width);
+  const newHeight = toSafeInt(currentBounds.height + deltaHeight, currentBounds.height);
+  const { x, y } = calcBoundsAnchor(anchor, newWidth, newHeight, currentBounds);
+  const clippedBounds = clipBounds({ x, y, width: newWidth, height: newHeight }, browserWindow);
+  
+  browserWindow.setBounds(clippedBounds);
+}
+
+function calcBoundsAnchor(anchor: string, newWidth: number, newHeight: number, bounds: Rectangle) {
+  const { x, y, width, height } = bounds;
+  const calcAnchor = { x, y };
+  
+  if (!anchor) {
+    return calcAnchor;
+  }
+  
+  const [yAnchor, xAnchor] = anchor.split('-');
+
+  if (yAnchor === 'bottom' && height !== newHeight) {
+    calcAnchor.y = y + (height - newHeight);
+  }
+  
+  if (xAnchor === 'right' && width !== newWidth) {
+    calcAnchor.x = x + (width - newWidth);
+  }
+
+  return calcAnchor;
 }

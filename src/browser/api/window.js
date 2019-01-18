@@ -1510,26 +1510,14 @@ Window.removeEventListener = function(identity, type, listener) {
 
 
 Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
-    let browserWindow = getElectronBrowserWindow(identity);
+    const browserWindow = getElectronBrowserWindow(identity);
+    const opts = { anchor, deltaHeight, deltaWidth };
 
     if (!browserWindow) {
         return;
     }
 
-    if (browserWindow.isMaximized()) {
-        browserWindow.unmaximize();
-    }
-
-    let currentBounds = browserWindow.getBounds();
-    let newWidth = toSafeInt(currentBounds.width + deltaWidth, currentBounds.width);
-    let newHeight = toSafeInt(currentBounds.height + deltaHeight, currentBounds.height);
-    let boundsAnchor = calcBoundsAnchor(anchor, newWidth, newHeight, currentBounds);
-    browserWindow.setBounds(clipBounds({
-        x: boundsAnchor.x,
-        y: boundsAnchor.y,
-        width: newWidth,
-        height: newHeight
-    }, browserWindow));
+    NativeWindow.resizeBy(browserWindow, opts);
 };
 
 
@@ -2256,29 +2244,6 @@ function loadFailedDecorator(payload, args) {
 function noOpDecorator( /*payload*/ ) {
 
     return true;
-}
-
-
-function calcBoundsAnchor(anchor, newWidth, newHeight, currBounds) {
-    let calcAnchor = {
-        x: currBounds.x,
-        y: currBounds.y
-    };
-    if (!anchor) {
-        return calcAnchor;
-    }
-    let anchors = anchor.split('-');
-    let yAnchor = anchors[0];
-    let xAnchor = anchors[1];
-
-    if (yAnchor === 'bottom' && currBounds.height !== newHeight) {
-        calcAnchor.y = currBounds.y + (currBounds.height - newHeight);
-    }
-    if (xAnchor === 'right' && currBounds.width !== newWidth) {
-        calcAnchor.x = currBounds.x + (currBounds.width - newWidth);
-    }
-
-    return calcAnchor;
 }
 
 function setTaskbar(browserWindow, forceFetch = false) {

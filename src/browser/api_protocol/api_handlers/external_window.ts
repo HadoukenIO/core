@@ -161,8 +161,9 @@ async function moveExternalWindow(identity: Identity, message: APIMessage) {
 
 async function resizeExternalWindowBy(identity: Identity, message: APIMessage) {
   const { payload } = message;
+  const { anchor, deltaHeight, deltaWidth } = payload;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.resizeExternalWindowBy(targetIdentity);
+  return ExternalWindow.resizeExternalWindowBy(targetIdentity, { anchor, deltaHeight, deltaWidth });
 }
 
 async function resizeExternalWindow(identity: Identity, message: APIMessage) {

@@ -2,6 +2,7 @@
 import { PortInfo } from './browser/port_discovery';
 import { BrowserWindow as BrowserWindowElectron } from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
+import { AnchorType } from '../js-adapter/src/shapes';
 
 export interface Identity {
     uuid: string;
@@ -395,4 +396,10 @@ export interface MoveWindowByOpts {
 export interface MoveWindowToOpts {
     left: number;
     top: number;
+}
+
+export interface ResizeWindowByOpts {
+    anchor: AnchorType;
+    deltaHeight: number;
+    deltaWidth: number;
 }
