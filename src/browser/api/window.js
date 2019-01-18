@@ -1417,12 +1417,10 @@ Window.getState = function(identity) {
 
 Window.hide = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
-
     if (!browserWindow) {
         return;
     }
-
-    browserWindow.hide();
+    NativeWindow.hide(browserWindow);
 };
 
 Window.isNotification = function(name) {

@@ -7,6 +7,10 @@ export function noop(browserWindow: BrowserWindow) {
 
 }
 
+export function hide(browserWindow: BrowserWindow): void {
+  browserWindow.hide();
+}
+
 export function isVisible(browserWindow: BrowserWindow): boolean {
   return browserWindow.isVisible();
 }
