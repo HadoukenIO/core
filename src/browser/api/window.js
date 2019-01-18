@@ -1223,7 +1223,7 @@ Window.getAllFrames = function(identity) {
 };
 
 Window.getBounds = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
+    const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return {
@@ -1236,18 +1236,7 @@ Window.getBounds = function(identity) {
         };
     }
 
-    let bounds = browserWindow.getBounds();
-
-    //5.0 Compatibility:
-    //right and bottom should not be documented.
-    return {
-        height: bounds.height,
-        left: bounds.x,
-        top: bounds.y,
-        width: bounds.width,
-        right: bounds.width + bounds.x,
-        bottom: bounds.height + bounds.y
-    };
+    NativeWindow.getBounds(browserWindow);
 };
 
 

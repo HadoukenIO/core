@@ -50,7 +50,7 @@ export function focusExternalWindow(identity: ExternalWindowIdentity) {
 
 export function getExternalWindowBounds(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  return NativeWindow.getBounds(externalWindow);
 }
 
 export function getExternalWindowGroup(identity: ExternalWindowIdentity) {

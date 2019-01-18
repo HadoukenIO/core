@@ -1,3 +1,4 @@
+import { Bounds } from '../../../js-adapter/src/shapes';
 import { BrowserWindow } from 'electron';
 import { toSafeInt } from '../../common/safe_int';
 import * as Shapes from '../../shapes';
@@ -5,6 +6,20 @@ import * as Shapes from '../../shapes';
 // TODO: remove this
 export function noop(browserWindow: BrowserWindow) {
 
+}
+
+export function getBounds(browserWindow: BrowserWindow): Bounds {
+  const bounds = browserWindow.getBounds();
+
+  // v5 compatibility: right and bottom should not be documented
+  return {
+    bottom: bounds.height + bounds.y,
+    height: bounds.height,
+    left: bounds.x,
+    right: bounds.width + bounds.x,
+    top: bounds.y,
+    width: bounds.width
+  };
 }
 
 export function getState(browserWindow: BrowserWindow): string {
