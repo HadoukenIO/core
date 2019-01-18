@@ -98,9 +98,9 @@ export async function mergeExternalWindowGroups(identity: ExternalWindowIdentity
   NativeWindow.noop(externalWindow);
 }
 
-export async function minimizeExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+export async function minimizeExternalWindow(identity: ExternalWindowIdentity): Promise<void> {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.minimize(externalWindow);
 }
 
 export async function moveExternalWindowBy(identity: ExternalWindowIdentity, payload: Shapes.MoveWindowByOpts): Promise<void> {
@@ -108,7 +108,7 @@ export async function moveExternalWindowBy(identity: ExternalWindowIdentity, pay
   NativeWindow.moveBy(externalWindow, payload);
 }
 
-export async function moveExternalWindow(identity: ExternalWindowIdentity, payload: any): Promise<void> {
+export async function moveExternalWindow(identity: ExternalWindowIdentity, payload: Shapes.MoveWindowToOpts): Promise<void> {
   const externalWindow = getExternalWindow(identity);
   NativeWindow.moveTo(externalWindow, payload);
 }

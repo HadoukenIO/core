@@ -1472,7 +1472,7 @@ Window.minimize = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'minimize');
     let minimizable = getOptFromBrowserWin('minimizable', browserWindow, true);
     if (minimizable) {
-        browserWindow.minimize();
+        NativeWindow.minimize(browserWindow);
     }
 };
 

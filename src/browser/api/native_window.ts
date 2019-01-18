@@ -7,6 +7,10 @@ export function noop(browserWindow: BrowserWindow) {
 
 }
 
+export function minimize(browserWindow: BrowserWindow) {
+  browserWindow.minimize();
+}
+
 export function moveBy(browserWindow: BrowserWindow, opts: Shapes.MoveWindowByOpts) {
   const { deltaLeft, deltaTop } = opts;
   const currentBounds = browserWindow.getBounds();
