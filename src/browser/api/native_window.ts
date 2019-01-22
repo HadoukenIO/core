@@ -192,6 +192,10 @@ export function showAt(browserWindow: BrowserWindow, opts: Shapes.ShowWindowAtOp
   }
 }
 
+export function stopFlashing(browserWindow: BrowserWindow): void {
+  browserWindow.flashFrame(false);
+}
+
 function calcBoundsAnchor(anchor: string, newWidth: number, newHeight: number, bounds: Rectangle) {
   const { x, y, width, height } = bounds;
   const calcAnchor = { x, y };

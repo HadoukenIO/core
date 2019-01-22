@@ -151,7 +151,7 @@ export function showExternalWindowAt(identity: ExternalWindowIdentity, payload: 
 
 export function stopFlashExternalWindow(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.stopFlashing(externalWindow);
 }
 
 function getExternalWindow(identity: ExternalWindowIdentity) {

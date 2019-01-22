@@ -1182,13 +1182,11 @@ Window.flash = function(identity) {
 };
 
 Window.stopFlashing = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
+    const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
     }
-
-    browserWindow.flashFrame(false);
+    NativeWindow.stopFlashing(browserWindow);
 };
 
 Window.focus = function(identity) {
