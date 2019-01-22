@@ -128,9 +128,9 @@ export function restoreExternalWindow(identity: ExternalWindowIdentity) {
   NativeWindow.restore(externalWindow);
 }
 
-export function setForegroundExternalWindow(identity: ExternalWindowIdentity) {
+export function setExternalWindowAsForeground(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.setAsForeground(externalWindow);
 }
 
 export function setExternalWindowBounds(identity: ExternalWindowIdentity) {

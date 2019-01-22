@@ -122,6 +122,7 @@ declare module 'electron' {
         minimize(): void;
         restore(): void;
         showInactive(): void;
+        activate(): void;
 
         _eventsCount: number;
         _events: {

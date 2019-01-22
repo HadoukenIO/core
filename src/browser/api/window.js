@@ -1536,13 +1536,11 @@ Window.restore = function(identity) {
 
 
 Window.setAsForeground = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity);
-
+    const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
     }
-
-    browserWindow.activate();
+    NativeWindow.setAsForeground(browserWindow);
 };
 
 

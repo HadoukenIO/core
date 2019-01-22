@@ -146,6 +146,10 @@ export function restore(browserWindow: BrowserWindow): void {
   }
 }
 
+export function setAsForeground(browserWindow: BrowserWindow): void {
+  browserWindow.activate();
+}
+
 function calcBoundsAnchor(anchor: string, newWidth: number, newHeight: number, bounds: Rectangle) {
   const { x, y, width, height } = bounds;
   const calcAnchor = { x, y };
