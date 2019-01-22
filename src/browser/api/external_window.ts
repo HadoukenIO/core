@@ -144,9 +144,9 @@ export function showExternalWindow(identity: ExternalWindowIdentity) {
   NativeWindow.show(externalWindow);
 }
 
-export function showAtExternalWindow(identity: ExternalWindowIdentity) {
+export function showExternalWindowAt(identity: ExternalWindowIdentity, payload: Shapes.ShowWindowAtOpts) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.showAt(externalWindow, payload);
 }
 
 export function stopFlashExternalWindow(identity: ExternalWindowIdentity) {

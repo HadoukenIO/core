@@ -409,3 +409,7 @@ export interface ResizeWindowToOpts {
     height: number;
     width: number;
 }
+
+export interface ShowWindowAtOpts extends MoveWindowToOpts {
+    force?: boolean;
+}

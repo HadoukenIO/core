@@ -29,7 +29,7 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'set-foreground-external-window': setExternalWindowAsForeground,
   'set-external-window-bounds': setExternalWindowBounds,
   'show-external-window': showExternalWindow,
-  'show-at-external-window': showAtExternalWindow,
+  'show-at-external-window': showExternalWindowAt,
   'stop-flash-external-window': stopFlashExternalWindow,
 }
 
@@ -198,10 +198,11 @@ async function showExternalWindow(identity: Identity, message: APIMessage) {
   return ExternalWindow.showExternalWindow(targetIdentity);
 }
 
-async function showAtExternalWindow(identity: Identity, message: APIMessage) {
+async function showExternalWindowAt(identity: Identity, message: APIMessage) {
   const { payload } = message;
+  const { left, top } = payload;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.showAtExternalWindow(targetIdentity);
+  return ExternalWindow.showExternalWindowAt(targetIdentity, { left, top });
 }
 
 async function stopFlashExternalWindow(identity: Identity, message: APIMessage) {

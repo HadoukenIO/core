@@ -175,6 +175,23 @@ export function show(browserWindow: BrowserWindow): void {
   }
 }
 
+export function showAt(browserWindow: BrowserWindow, opts: Shapes.ShowWindowAtOpts): void {
+  if (browserWindow.isMaximized()) {
+    browserWindow.unmaximize();
+  }
+
+  const x = toSafeInt(opts.left);
+  const y = toSafeInt(opts.top);
+  const { height, width } = browserWindow.getBounds();
+
+  // No need to call clipBounds here because width and height are not changing
+  browserWindow.setBounds({ x, y, height, width });
+
+  if (!browserWindow.isMinimized()) {
+    browserWindow.showInactive();
+  }
+}
+
 function calcBoundsAnchor(anchor: string, newWidth: number, newHeight: number, bounds: Rectangle) {
   const { x, y, width, height } = bounds;
   const calcAnchor = { x, y };

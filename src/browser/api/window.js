@@ -1566,7 +1566,7 @@ Window.show = function(identity, force = false) {
 
 
 Window.showAt = function(identity, left, top, force = false) {
-    let browserWindow = getElectronBrowserWindow(identity);
+    const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
@@ -1574,29 +1574,8 @@ Window.showAt = function(identity, left, top, force = false) {
 
     const safeLeft = toSafeInt(left);
     const safeTop = toSafeInt(top);
-    let payload = {
-        top: safeTop,
-        left: safeLeft
-    };
-    let defaultAction = () => {
-        let currentBounds = browserWindow.getBounds();
-
-        if (browserWindow.isMaximized()) {
-            browserWindow.unmaximize();
-        }
-
-        // no need to call clipBounds here because width and height are not changing
-        browserWindow.setBounds({
-            x: safeLeft,
-            y: safeTop,
-            width: currentBounds.width,
-            height: currentBounds.height
-        });
-
-        if (!browserWindow.isMinimized()) {
-            browserWindow.showInactive();
-        }
-    };
+    const payload = { top: safeTop, left: safeLeft };
+    const defaultAction = () => NativeWindow.showAt(browserWindow, { left, top });
 
     handleForceActions(identity, force, 'show-requested', payload, defaultAction);
 };
