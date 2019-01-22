@@ -187,8 +187,9 @@ async function setExternalWindowAsForeground(identity: Identity, message: APIMes
 
 async function setExternalWindowBounds(identity: Identity, message: APIMessage) {
   const { payload } = message;
+  const { height, left, top, width } = payload;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.setExternalWindowBounds(targetIdentity);
+  return ExternalWindow.setExternalWindowBounds(targetIdentity, { height, left, top, width });
 }
 
 async function showExternalWindow(identity: Identity, message: APIMessage) {

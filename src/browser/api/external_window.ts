@@ -1,7 +1,8 @@
+import { Bounds } from '../../../js-adapter/src/shapes';
 import { BrowserWindow } from 'electron';
 import { ExternalWindowIdentity } from '../../../js-adapter/src/identity';
-import * as Shapes from '../../shapes';
 import * as NativeWindow from './native_window';
+import * as Shapes from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
 
@@ -133,9 +134,9 @@ export function setExternalWindowAsForeground(identity: ExternalWindowIdentity) 
   NativeWindow.setAsForeground(externalWindow);
 }
 
-export function setExternalWindowBounds(identity: ExternalWindowIdentity) {
+export function setExternalWindowBounds(identity: ExternalWindowIdentity, payload: Bounds) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.setBounds(externalWindow, payload);
 }
 
 export function showExternalWindow(identity: ExternalWindowIdentity) {

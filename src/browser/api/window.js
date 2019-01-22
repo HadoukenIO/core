@@ -1545,19 +1545,9 @@ Window.setAsForeground = function(identity) {
 
 
 Window.setBounds = function(identity, left, top, width, height) {
-    let browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
-    let bounds = browserWindow.getBounds();
-
-    if (browserWindow.isMaximized()) {
-        browserWindow.unmaximize();
-    }
-
-    browserWindow.setBounds(clipBounds({
-        x: toSafeInt(left, bounds.x),
-        y: toSafeInt(top, bounds.y),
-        width: toSafeInt(width, bounds.width),
-        height: toSafeInt(height, bounds.height)
-    }, browserWindow));
+    const browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
+    const opts = { height, left, top, width };
+    NativeWindow.setBounds(browserWindow, opts);
 };
 
 
