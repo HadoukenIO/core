@@ -113,7 +113,7 @@ export function resizeBy(browserWindow: BrowserWindow, opts: Shapes.ResizeWindow
   const height = toSafeInt(bounds.height + opts.deltaHeight, bounds.height);
   const { x, y } = calcBoundsAnchor(opts.anchor, width, height, bounds);
   const clippedBounds = clipBounds({ x, y, width, height }, browserWindow);
-  
+
   browserWindow.setBounds(clippedBounds);
 }
 
@@ -150,7 +150,7 @@ export function setBounds(browserWindow: BrowserWindow, opts: Bounds): void {
   if (browserWindow.isMaximized()) {
     browserWindow.unmaximize();
   }
-  
+
   const bounds = browserWindow.getBounds();
   const x = toSafeInt(opts.left, bounds.x);
   const y = toSafeInt(opts.top, bounds.y);
@@ -161,20 +161,34 @@ export function setBounds(browserWindow: BrowserWindow, opts: Bounds): void {
   browserWindow.setBounds(clippedBounds);
 }
 
+export function show(browserWindow: BrowserWindow): void {
+  const dontShow =
+    // RUN-2905: To match v5 behavior, for maximized window, avoid showInactive() because it does an
+    // erroneous restore(), an apparent Electron oversight (a restore _is_ needed in all other cases).
+    // RUN-4122: For minimized window we should allow to show it when
+    // it is hidden.
+    browserWindow.isVisible() &&
+    (browserWindow.isMinimized() || browserWindow.isMaximized());
+
+  if (!dontShow) {
+    browserWindow.showInactive();
+  }
+}
+
 function calcBoundsAnchor(anchor: string, newWidth: number, newHeight: number, bounds: Rectangle) {
   const { x, y, width, height } = bounds;
   const calcAnchor = { x, y };
-  
+
   if (!anchor) {
     return calcAnchor;
   }
-  
+
   const [yAnchor, xAnchor] = anchor.split('-');
 
   if (yAnchor === 'bottom' && height !== newHeight) {
     calcAnchor.y = y + (height - newHeight);
   }
-  
+
   if (xAnchor === 'right' && width !== newWidth) {
     calcAnchor.x = x + (width - newWidth);
   }

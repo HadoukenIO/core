@@ -141,7 +141,7 @@ export function setExternalWindowBounds(identity: ExternalWindowIdentity, payloa
 
 export function showExternalWindow(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.show(externalWindow);
 }
 
 export function showAtExternalWindow(identity: ExternalWindowIdentity) {

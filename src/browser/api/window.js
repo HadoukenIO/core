@@ -21,7 +21,6 @@ import * as Rx from 'rx';
 let animations = require('../animations.js');
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
-import { clipBounds } from '../utils';
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
 let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
@@ -47,6 +46,7 @@ import {
     ERROR_BOX_TYPES,
     showErrorBox
 } from '../../common/errors';
+import * as NativeWindow from './native_window';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -1552,27 +1552,14 @@ Window.setBounds = function(identity, left, top, width, height) {
 
 
 Window.show = function(identity, force = false) {
-    let browserWindow = getElectronBrowserWindow(identity);
+    const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
         return;
     }
 
-    let payload = {};
-    let defaultAction = () => {
-        const dontShow = (
-            // RUN-2905: To match v5 behavior, for maximized window, avoid showInactive() because it does an
-            // erroneous restore(), an apparent Electron oversight (a restore _is_ needed in all other cases).
-            // RUN-4122: For minimized window we should allow to show it when
-            // it is hidden.
-            browserWindow.isVisible() &&
-            (browserWindow.isMinimized() || browserWindow.isMaximized())
-        );
-
-        if (!dontShow) {
-            browserWindow.showInactive();
-        }
-    };
+    const payload = {};
+    const defaultAction = () => NativeWindow.show(browserWindow);
 
     handleForceActions(identity, force, 'show-requested', payload, defaultAction);
 };
