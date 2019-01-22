@@ -120,6 +120,8 @@ declare module 'electron' {
         isVisible(): boolean;
         maximize(): void;
         minimize(): void;
+        restore(): void;
+        showInactive(): void;
 
         _eventsCount: number;
         _events: {

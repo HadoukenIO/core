@@ -26,7 +26,7 @@ interface Clamped {
   This function sets window's bounds to be in a visible area, in case
   the display where it was originally located was disconnected
 */
-export function windowSetBoundsToVisible(browserWindow: OFBrowserWindow): void {
+export function windowSetBoundsToVisible(browserWindow: OFBrowserWindow | BrowserWindow): void {
   const bounds = browserWindow.getBounds();
   const { workArea } = screen.getDisplayMatching(bounds);
   const windowIsOutsideOfDisplay =

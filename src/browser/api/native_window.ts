@@ -1,6 +1,6 @@
 import { Bounds } from '../../../js-adapter/src/shapes';
 import { BrowserWindow, Rectangle } from 'electron';
-import { clipBounds } from '../utils';
+import { clipBounds, windowSetBoundsToVisible } from '../utils';
 import { toSafeInt } from '../../common/safe_int';
 import * as Shapes from '../../shapes';
 
@@ -133,6 +133,17 @@ export function resizeTo(browserWindow: BrowserWindow, opts: Shapes.ResizeWindow
   const clippedBounds = clipBounds({ x, y, width: newWidth, height: newHeight }, browserWindow);
 
   browserWindow.setBounds(clippedBounds);
+}
+
+export function restore(browserWindow: BrowserWindow): void {
+  if (browserWindow.isMinimized()) {
+    windowSetBoundsToVisible(browserWindow);
+    browserWindow.restore();
+  } else if (browserWindow.isMaximized()) {
+    browserWindow.unmaximize();
+  } else {
+    browserWindow.showInactive();
+  }
 }
 
 function calcBoundsAnchor(anchor: string, newWidth: number, newHeight: number, bounds: Rectangle) {

@@ -125,7 +125,7 @@ export function resizeExternalWindowTo(identity: ExternalWindowIdentity, payload
 
 export function restoreExternalWindow(identity: ExternalWindowIdentity) {
   const externalWindow = getExternalWindow(identity);
-  NativeWindow.noop(externalWindow);
+  NativeWindow.restore(externalWindow);
 }
 
 export function setForegroundExternalWindow(identity: ExternalWindowIdentity) {
