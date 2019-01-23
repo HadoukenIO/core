@@ -13,6 +13,7 @@ import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
 import { isUuidAvailable } from '../../uuid_availability';
+import duplicateUuidTransport from '../../duplicate_uuid_delegation';
 
 const SetWindowPosition = {
     SWP_HIDEWINDOW: 0x0080,
@@ -364,12 +365,19 @@ function runApplication(identity, message, ack, nack) {
     if (manifestUrl) {
         addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
             remoteSubscriptionUnSubscribe = unSubscribe;
-            unsub = Application.runWithRVM(manifestUrl, appIdentity, (e) => {
+            unsub = duplicateUuidTransport.subscribeToUuid(uuid, (e) => {
+                nack(`Application with specified UUID is already running: ${uuid}`);
                 remoteSubscriptionUnSubscribe();
                 if (typeof unsub === 'function') {
                     unsub();
                 }
+            });
+            Application.runWithRVM(manifestUrl, appIdentity).catch(e => {
                 nack(e);
+                remoteSubscriptionUnSubscribe();
+                if (typeof unsub === 'function') {
+                    unsub();
+                }
             });
         });
     } else {

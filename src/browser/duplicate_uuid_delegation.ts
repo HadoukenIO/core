@@ -9,7 +9,6 @@ const UNIX_FILENAME_PREFIX: string = '/tmp/of.uuid';
 const WINDOW_CLASS_NAME = 'OPENFIN_UUID_WINDOW';
 
 class DuplicateUuidTransport extends NamedOneToManyTransport {
-    private subs = new Map<string, ((...args: any[]) => any)[]>();
     constructor() {
         super(process.platform === 'win32' ? WINDOW_CLASS_NAME : UNIX_FILENAME_PREFIX);
     }
@@ -21,9 +20,6 @@ class DuplicateUuidTransport extends NamedOneToManyTransport {
                 const data = JSON.parse(payload);
                 const uuid = data.uuid;
                 log.writeToLog('info', `duplicate uuid message received for uuid: ${uuid}`);
-                const allUuids = getAllApplications().map(a => a.uuid);
-                log.writeToLog('info', allUuids);
-                log.writeToLog('info', allUuids.map(u => u === uuid));
                 this.emit(this.makeEvent(uuid), data);
                 if (getAppRunningState(uuid)) {
                     log.writeToLog('info', `duplicate app ${uuid} run detected`);
@@ -32,8 +28,9 @@ class DuplicateUuidTransport extends NamedOneToManyTransport {
                     log.writeToLog('info', `duplicate app ${uuid} not running here`);
                 }
             });
-            subscribeToRunningExternal();
+            return this;
         }
+        return this;
     }
     private makeEvent = (uuid: string) => `duplicate-uuid-on-launch-${uuid}`;
     public subscribeToUuid = (uuid: string, listener: (...args: any[]) => any) => {
@@ -42,10 +39,12 @@ class DuplicateUuidTransport extends NamedOneToManyTransport {
     }
     public broadcast = (payload: any) => {
         try {
-            const transport = this._transport || super.construct();
-
+            const transport = this._transport;
             if (transport) {
+                log.writeToLog('info', `Sending duplicate UUID message for uuid: ${JSON.stringify(payload)}`);
                 transport.publish(payload);
+            } else {
+                log.writeToLog('info', `Duplicate uuid transport not ready for broadcast - ${JSON.stringify(payload)}`);
             }
         } catch (e) {
             log.writeToLog('info', `Duplicate Uuid delegation failed: ${JSON.stringify(e)}`);

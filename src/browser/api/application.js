@@ -35,7 +35,6 @@ import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowe
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 import { releaseUuid } from '../uuid_availability';
-import duplicateUuidTransport from '../duplicate_uuid_delegation';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -749,22 +748,18 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 }
 
 /**
- * Run an application via RVM Call can only error, must wait on windowConstructor for success case. returns unsubscribe function
+ * Run an application via RVM Call
  */
-Application.runWithRVM = function(manifestUrl, appIdentity, nack) {
+Application.runWithRVM = function(manifestUrl, appIdentity) {
     const { uuid } = appIdentity;
-    const unsub = duplicateUuidTransport.subscribeToUuid(uuid, () => nack(`Application with specified UUID is already running: ${uuid}`));
-    sendToRVM({
+    return sendToRVM({
         topic: 'application',
         action: 'launch-app',
         sourceUrl: coreState.getConfigUrlByUuid(uuid),
         data: {
             configUrl: manifestUrl
         }
-    }).catch(e => {
-        nack(e);
     });
-    return unsub;
 };
 
 Application.send = function() {

@@ -278,6 +278,7 @@ app.on('ready', function() {
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
+    duplicateUuidTransport.init(handleDelegatedLaunch);
     webRequestHandlers.initHandlers();
 
     launchApp(coreState.argo, true);
@@ -536,7 +537,6 @@ function initServer() {
 
     socketServer.on('server/open', function(port) {
         console.log('Opened on', port);
-        duplicateUuidTransport.init(handleDelegatedLaunch);
         portDiscovery.broadcast(portDiscovery.getPortInfoByArgs(coreState.argo, port));
         resolveServerReady();
         handleDeferredLaunches();
