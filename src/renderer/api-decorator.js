@@ -3,7 +3,6 @@
 
 // THIS FILE GETS EVALED IN THE RENDERER PROCESS
 (function() {
-    console.log('in api_decorator');
     const glbl = global;
     const QUEUE_COUNTER_NAME = 'queueCounter';
     const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
@@ -260,7 +259,7 @@
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
-           
+
         wireUpMenu(glbl);
         wireUpMouseWheelZoomEvents();
         raiseReadyEvents(entityInfo);
