@@ -609,7 +609,8 @@ function launchApp(argo, startExternalAdapterServer) {
             }
         }
         // comparing ofManifestUrl and configUrl shouldn't consider query strings. Otherwise, it will break deep linking
-        if (startupAppOptions && passedMutexCheck && (!isRunning || ofManifestUrl.split('?')[0] !== configUrl.split('?')[0])) {
+        const shouldRun = passedMutexCheck && (!isRunning || ofManifestUrl.split('?')[0] !== configUrl.split('?')[0]);
+        if (startupAppOptions && shouldRun) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
