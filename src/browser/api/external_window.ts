@@ -149,7 +149,7 @@ export function showExternalWindowAt(identity: ExternalWindowIdentity, payload: 
   NativeWindowModule.showAt(nativeWindow, payload);
 }
 
-export function stopFlashExternalWindow(identity: ExternalWindowIdentity) {
+export function stopExternalWindowFlashing(identity: ExternalWindowIdentity) {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.stopFlashing(nativeWindow);
 }

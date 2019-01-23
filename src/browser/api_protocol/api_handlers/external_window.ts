@@ -7,7 +7,7 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'bring-external-window-to-front': bringExternalWindowToFront,
   'close-external-window': closeExternalWindow,
   'disable-external-window-frame': disableExternalWindowFrame,
-  'enable-externa-window-frame': enableExternaWindowFrame,
+  'enable-external-window-frame': enableExternaWindowFrame,
   'flash-external-window': flashExternalWindow,
   'focus-external-window': focusExternalWindow,
   'get-external-window-bounds': getExternalWindowBounds,
@@ -26,11 +26,11 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'resize-external-window-by': resizeExternalWindowBy,
   'resize-external-window': resizeExternalWindowTo,
   'restore-external-window': restoreExternalWindow,
-  'set-foreground-external-window': setExternalWindowAsForeground,
+  'set-external-window-as-foreground': setExternalWindowAsForeground,
   'set-external-window-bounds': setExternalWindowBounds,
   'show-external-window': showExternalWindow,
-  'show-at-external-window': showExternalWindowAt,
-  'stop-flash-external-window': stopFlashExternalWindow,
+  'show-external-window-at': showExternalWindowAt,
+  'stop-external-window-flashing': stopExternalWindowFlashing,
 }
 
 export function init(): void {
@@ -205,8 +205,8 @@ async function showExternalWindowAt(identity: Identity, message: APIMessage) {
   return ExternalWindow.showExternalWindowAt(targetIdentity, { left, top });
 }
 
-async function stopFlashExternalWindow(identity: Identity, message: APIMessage) {
+async function stopExternalWindowFlashing(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.stopFlashExternalWindow(targetIdentity);
+  return ExternalWindow.stopExternalWindowFlashing(targetIdentity);
 }
