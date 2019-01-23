@@ -413,3 +413,29 @@ export interface ResizeWindowToOpts {
 export interface ShowWindowAtOpts extends MoveWindowToOpts {
     force?: boolean;
 }
+
+export interface Bounds {
+    height: number;
+    width: number;
+    x: number;
+    y: number;
+}
+
+export interface ProcessInfo {
+    imageName: string;
+    injected: boolean;
+    pid: number;
+}
+
+export interface NativeWindowInfo {
+    alwaysOnTop: boolean;
+    bounds: Bounds;
+    className: string;
+    focused: boolean;
+    id: string;
+    maximized: boolean;
+    minimized: boolean;
+    process: ProcessInfo;
+    title: string;
+    visible: boolean;
+}

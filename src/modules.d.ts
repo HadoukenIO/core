@@ -1,3 +1,4 @@
+import * as Shapes from './shapes';
 
 /**
  * All declared modules in this file don't correctly represent all of
@@ -21,6 +22,8 @@ declare module 'electron' {
         export function readRegistryValue(root: string, key: string, value: string): any;
         export function setMinLogLevel(level: number): void;
         export function vlog(level: number, message: any): any;
+        export function getAllNativeWindowInfo(skipOwnWindows: boolean): any;
+        export function getNativeWindowInfoForNativeId(nativeId: string): Shapes.NativeWindowInfo;
     }
     namespace windowTransaction {
         export class Transaction {
