@@ -310,9 +310,14 @@ Application.getManifest = function(identity, manifestUrl, callback, errCallback)
     }
 
     if (manifestUrl) {
-        fetchReadFile(manifestUrl, true)
-            .then(callback)
-            .catch(errCallback);
+        const configObj = coreState.getManifestByUrl(manifestUrl);
+        if (configObj) {
+            callback(configObj);
+        } else {
+            fetchReadFile(manifestUrl, true)
+                .then(callback)
+                .catch(errCallback);
+        }
     } else {
         errCallback(new Error('App not started from manifest'));
     }
