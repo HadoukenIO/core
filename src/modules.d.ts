@@ -23,7 +23,7 @@ declare module 'electron' {
         export function setMinLogLevel(level: number): void;
         export function vlog(level: number, message: any): any;
         export function getAllNativeWindowInfo(skipOwnWindows: boolean): any;
-        export function getNativeWindowInfoForNativeId(nativeId: string): Shapes.NativeWindowInfo;
+        export function getNativeWindowInfoForNativeId(nativeId: string): Shapes.RawNativeWindowInfo;
     }
     namespace windowTransaction {
         export class Transaction {

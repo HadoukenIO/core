@@ -427,7 +427,7 @@ export interface ProcessInfo {
     pid: number;
 }
 
-export interface NativeWindowInfo {
+export interface RawNativeWindowInfo {
     alwaysOnTop: boolean;
     bounds: Bounds;
     className: string;
@@ -438,4 +438,8 @@ export interface NativeWindowInfo {
     process: ProcessInfo;
     title: string;
     visible: boolean;
+}
+
+export interface NativeWindowInfo extends RawNativeWindowInfo {
+    uuid: string;
 }

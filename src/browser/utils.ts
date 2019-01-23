@@ -16,6 +16,7 @@ limitations under the License.
 
 import { BrowserWindow as OFBrowserWindow } from '../shapes';
 import { BrowserWindow, Rectangle, screen } from 'electron';
+import * as Shapes from '../shapes';
 
 interface Clamped {
   value: number;
@@ -84,5 +85,12 @@ function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEG
   return {
     value,
     clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
+  };
+}
+
+export function extendNativeWindowInfo(rawNativeWindowInfo: Shapes.RawNativeWindowInfo): Shapes.NativeWindowInfo {
+  return {
+    ...rawNativeWindowInfo,
+    uuid: rawNativeWindowInfo.id
   };
 }
