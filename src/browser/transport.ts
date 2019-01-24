@@ -16,7 +16,7 @@ export class NamedOneToManyTransport extends EventEmitter {
         super();
     }
 
-    protected construct = (): Base => {
+    protected construct () {
         if (!this._transport) {
             if (process.platform === 'win32') {
                 // Send and receive messages on the same Window's classname
@@ -27,7 +27,8 @@ export class NamedOneToManyTransport extends EventEmitter {
         }
         return this._transport;
     }
-    protected onMessage = (listener: (...args: any[]) => any) => {
+
+    protected onMessage (listener: (...args: any[]) => any) {
         if (this._transport) {
             this._transport.on('message', listener);
         }
