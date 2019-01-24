@@ -677,13 +677,13 @@ exports.System = {
     getAllExternalWindows: function() {
         const skipOwnWindows = false;
         const nativeWindows = [];
+        const rawNativeWindows = electronApp.getAllNativeWindowInfo(skipOwnWindows);
         const classNamesToIgnore = [
             'tooltips_class32',
             'IME',
             'WorkerW',
             'MSCTFIME UI'
         ];
-        const rawNativeWindows = electronApp.getAllNativeWindowInfo(skipOwnWindows);
         
         rawNativeWindows.forEach(e => {
             if (classNamesToIgnore.includes(e.className)) {

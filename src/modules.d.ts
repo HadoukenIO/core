@@ -9,9 +9,12 @@ import * as Shapes from './shapes';
 declare module 'electron' {
     namespace app {
         export function generateGUID(): string;
+        export function getAllNativeWindowInfo(skipOwnWindows: boolean): any;
         export function getCommandLineArguments(): string;
         export function getCommandLineArgv(): string[];
+        export function getNativeWindowInfoForNativeId(nativeId: string): Shapes.RawNativeWindowInfo;
         export function getPath(str: string): string;
+        export function getProcessIdForNativeId(nativeId: string): number;
         export function getTickCount(): number;
         export function isAeroGlassEnabled(): boolean;
         export function log(level: string, message: any): any;
@@ -22,8 +25,6 @@ declare module 'electron' {
         export function readRegistryValue(root: string, key: string, value: string): any;
         export function setMinLogLevel(level: number): void;
         export function vlog(level: number, message: any): any;
-        export function getAllNativeWindowInfo(skipOwnWindows: boolean): any;
-        export function getNativeWindowInfoForNativeId(nativeId: string): Shapes.RawNativeWindowInfo;
     }
     namespace windowTransaction {
         export class Transaction {
@@ -95,37 +96,37 @@ declare module 'electron' {
         static getAllWindows(): BrowserWindow[];
         static fromWebContents(wc: webContents): BrowserWindow;
 
-        close(): void;
-        on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
-        once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
-        removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
-        getWindowsByClassName(className: string): any;
-        sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
-        hookWindowMessage(n: number, listener: (message: any) => void): void;
-        subscribeSessionNotifications(b: boolean): void;
+        activate(): void;
         bringToFront(): any;
-        isDestroyed(): boolean;
-        isMaximized(): boolean;
-        isFullScreen(): boolean;
-        isMinimized(): boolean;
-        unmaximize(): any;
-        setFullScreen(fullscreen: boolean): void;
-        emit(routeString: string, ...args: any[]): void;
-        getBounds(): Rectangle;
-        setBounds(bounds: Rectangle): void;
-        setWindowPlacement(bounds: Rectangle): void;
+        close(): void;
         devToolsWebContents: null;
-        webContents: webContents;
-        setUserMovementEnabled(enabled: boolean): void;
+        emit(routeString: string, ...args: any[]): void;
         flashFrame(flag: boolean): void;
         focus(): void;
+        getBounds(): Rectangle;
+        getWindowsByClassName(className: string): any;
         hide(): void;
+        hookWindowMessage(n: number, listener: (message: any) => void): void;
+        isDestroyed(): boolean;
+        isFullScreen(): boolean;
+        isMaximized(): boolean;
+        isMinimized(): boolean;
         isVisible(): boolean;
         maximize(): void;
         minimize(): void;
+        on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
+        once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
+        removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         restore(): void;
+        sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
+        setBounds(bounds: Rectangle): void;
+        setFullScreen(fullscreen: boolean): void;
+        setUserMovementEnabled(enabled: boolean): void;
+        setWindowPlacement(bounds: Rectangle): void;
         showInactive(): void;
-        activate(): void;
+        subscribeSessionNotifications(b: boolean): void;
+        unmaximize(): any;
+        webContents: webContents;
 
         _eventsCount: number;
         _events: {
