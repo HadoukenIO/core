@@ -78,3 +78,6 @@ API Docs for the OpenFin core are available here:
 
 ### File Structure Notes
 The contents of `/src/renderer/extended` folder is referenced by the `openfin.asar` (not contained in this project)
+
+### License
+The code in this repository is covered by the included license.  If you run this code, it may call on the OpenFin RVM or OpenFin Runtime, which are subject to OpenFin’s [Developer License](https://openfin.co/developer-agreement/). If you have questions, please contact support@openfin.co.
