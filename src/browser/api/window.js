@@ -1228,7 +1228,7 @@ Window.getBounds = function(identity) {
         };
     }
 
-    NativeWindow.getBounds(browserWindow);
+    return NativeWindow.getBounds(browserWindow);
 };
 
 
