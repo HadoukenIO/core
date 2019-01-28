@@ -30,8 +30,8 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'set-external-window-bounds': setExternalWindowBounds,
   'show-external-window': showExternalWindow,
   'show-external-window-at': showExternalWindowAt,
-  'stop-external-window-flashing': stopExternalWindowFlashing,
-}
+  'stop-external-window-flashing': stopExternalWindowFlashing
+};
 
 export function init(): void {
   registerActionMap(ExternalWindowApiMap);

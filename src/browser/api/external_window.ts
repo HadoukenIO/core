@@ -64,8 +64,7 @@ export function getExternalWindowGroup(identity: Identity) {
 export function getExternalWindowInfo(identity: Identity): Shapes.RawNativeWindowInfo {
   const { uuid } = identity;
   const rawNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(uuid);
-  const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo)
-  return nativeWindowInfo;
+  return extendNativeWindowInfo(rawNativeWindowInfo);
 }
 
 export function getExternalWindowState(identity: Identity) {

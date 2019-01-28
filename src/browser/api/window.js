@@ -2372,8 +2372,4 @@ function boundsVisible(bounds, monitorInfo) {
     return visible;
 }
 
-function isBrowserWindow(obj) {
-    return obj instanceof BrowserWindow;
-}
-
 module.exports.Window = Window;

@@ -4,9 +4,8 @@ import { clipBounds, windowSetBoundsToVisible } from '../utils';
 import { toSafeInt } from '../../common/safe_int';
 import * as Shapes from '../../shapes';
 
-// TODO: remove this
 export function noop(browserWindow: BrowserWindow) {
-
+  // TODO: remove this
 }
 
 export function bringToFront(browserWindow: BrowserWindow): void {

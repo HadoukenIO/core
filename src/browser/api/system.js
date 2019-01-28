@@ -684,7 +684,7 @@ exports.System = {
             'WorkerW',
             'MSCTFIME UI'
         ];
-        
+
         rawNativeWindows.forEach(e => {
             if (classNamesToIgnore.includes(e.className)) {
                 return;
@@ -693,7 +693,7 @@ exports.System = {
             const nativeWindowInfo = extendNativeWindowInfo(e);
             nativeWindows.push(nativeWindowInfo);
         });
-        
+
         return nativeWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
