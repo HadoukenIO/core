@@ -1,5 +1,3 @@
-import * as Shapes from './shapes';
-
 /**
  * All declared modules in this file don't correctly represent all of
  * their functionality, rather things are constantly added here while
@@ -7,12 +5,14 @@ import * as Shapes from './shapes';
  */
 
 declare module 'electron' {
+    import { EventEmitter } from 'events';
+
     namespace app {
         export function generateGUID(): string;
         export function getAllNativeWindowInfo(skipOwnWindows: boolean): any;
         export function getCommandLineArguments(): string;
         export function getCommandLineArgv(): string[];
-        export function getNativeWindowInfoForNativeId(nativeId: string): Shapes.RawNativeWindowInfo;
+        export function getNativeWindowInfoForNativeId(nativeId: string): import('./shapes').RawNativeWindowInfo;
         export function getPath(str: string): string;
         export function getProcessIdForNativeId(nativeId: string): number;
         export function getTickCount(): number;
@@ -198,6 +198,10 @@ declare module 'electron' {
         export function readRTF(type?: string): string;
         export function readHTML(type?: string): string;
         export function readText(type?: string): string;
+    }
+
+    export class winEventHookEmitter extends EventEmitter {
+        constructor(opts: { pid?: number });
     }
 }
 

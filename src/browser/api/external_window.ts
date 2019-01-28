@@ -1,4 +1,4 @@
-import { app as electronApp, BrowserWindow, winEventHookEmitter } from 'electron';
+import { app as electronApp, BrowserWindow } from 'electron';
 import { Bounds } from '../../../js-adapter/src/shapes';
 import { extendNativeWindowInfo } from '../utils';
 import { Identity } from '../../../js-adapter/src/identity';
@@ -6,7 +6,6 @@ import * as NativeWindowModule from './native_window';
 import * as Shapes from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
-import { extendNativeWindowInfo } from '../utils';
 
 const registeredExternalWindows = new Map<string, BrowserWindow>();
 
