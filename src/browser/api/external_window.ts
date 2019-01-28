@@ -1,5 +1,6 @@
+import { app as electronApp, BrowserWindow, winEventHookEmitter } from 'electron';
 import { Bounds } from '../../../js-adapter/src/shapes';
-import { app as electronApp, BrowserWindow } from 'electron';
+import { extendNativeWindowInfo } from '../utils';
 import { Identity } from '../../../js-adapter/src/identity';
 import * as NativeWindowModule from './native_window';
 import * as Shapes from '../../shapes';
@@ -60,7 +61,7 @@ export function getExternalWindowGroup(identity: Identity) {
   NativeWindowModule.noop(nativeWindow);
 }
 
-export function getExternalWindowOptions(identity: Identity): Shapes.RawNativeWindowInfo {
+export function getExternalWindowInfo(identity: Identity): Shapes.RawNativeWindowInfo {
   const { uuid } = identity;
   const rawNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(uuid);
   const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo)

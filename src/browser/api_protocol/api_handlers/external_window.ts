@@ -12,7 +12,7 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'focus-external-window': focusExternalWindow,
   'get-external-window-bounds': getExternalWindowBounds,
   'get-external-window-group': getExternalWindowGroup,
-  'get-external-window-options': getExternalWindowOptions,
+  'get-external-window-info': getExternalWindowInfo,
   'get-external-window-state': getExternalWindowState,
   'hide-external-window': hideExternalWindow,
   'is-external-window-showing': isExternalWindowShowing,
@@ -91,10 +91,10 @@ async function getExternalWindowGroup(identity: Identity, message: APIMessage) {
   return ExternalWindow.getExternalWindowGroup(targetIdentity);
 }
 
-async function getExternalWindowOptions(identity: Identity, message: APIMessage) {
+async function getExternalWindowInfo(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.getExternalWindowOptions(targetIdentity);
+  return ExternalWindow.getExternalWindowInfo(targetIdentity);
 }
 
 async function getExternalWindowState(identity: Identity, message: APIMessage) {
