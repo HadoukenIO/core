@@ -7,55 +7,55 @@ import * as Shapes from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
 
-const registeredExternalWindows = new Map<string, BrowserWindow>();
+export const registeredExternalWindows = new Map<string, BrowserWindow>();
 
-export function addEventListener(identity: Shapes.Identity, type: string, listener: Shapes.Listener) {
+export function addEventListener(identity: Shapes.Identity, type: string, listener: Shapes.Listener): Shapes.Func {
   const evt = route.externalWindow(type, identity.uuid);
   ofEvents.on(evt, listener);
   return () => ofEvents.removeListener(evt, listener);
 }
 
-export function animateExternalWindow(identity: Identity) {
+export function animateExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.noop(nativeWindow);
 }
 
-export function bringExternalWindowToFront(identity: Identity) {
+export function bringExternalWindowToFront(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.bringToFront(nativeWindow);
 }
 
-export function closeExternalWindow(identity: Identity) {
+export function closeExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.close(nativeWindow);
 }
 
-export function disableExternalWindowFrame(identity: Identity) {
+export function disableExternalWindowFrame(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.noop(nativeWindow);
 }
 
-export function enableExternaWindowFrame(identity: Identity) {
+export function enableExternaWindowFrame(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.noop(nativeWindow);
 }
 
-export function flashExternalWindow(identity: Identity) {
+export function flashExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.flash(nativeWindow);
 }
 
-export function focusExternalWindow(identity: Identity) {
+export function focusExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.focus(nativeWindow);
 }
 
-export function getExternalWindowBounds(identity: Identity) {
+export function getExternalWindowBounds(identity: Identity): Bounds {
   const nativeWindow = getNativeWindow(identity);
   return NativeWindowModule.getBounds(nativeWindow);
 }
 
-export function getExternalWindowGroup(identity: Identity) {
+export function getExternalWindowGroup(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.noop(nativeWindow);
 }
@@ -66,103 +66,102 @@ export function getExternalWindowInfo(identity: Identity): Shapes.RawNativeWindo
   return extendNativeWindowInfo(rawNativeWindowInfo);
 }
 
-export function getExternalWindowState(identity: Identity) {
+export function getExternalWindowState(identity: Identity): string {
   const nativeWindow = getNativeWindow(identity);
   return NativeWindowModule.getState(nativeWindow);
 }
 
-export function hideExternalWindow(identity: Identity) {
+export function hideExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.hide(nativeWindow);
 }
 
-export function isExternalWindowShowing(identity: Identity) {
+export function isExternalWindowShowing(identity: Identity): boolean {
   const nativeWindow = getNativeWindow(identity);
   return NativeWindowModule.isVisible(nativeWindow);
 }
 
-export function joinExternalWindowGroup(identity: Identity) {
+export function joinExternalWindowGroup(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.noop(nativeWindow);
 }
 
-export function leaveExternalWindowGroup(identity: Identity) {
+export function leaveExternalWindowGroup(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.noop(nativeWindow);
 }
 
-export function maximizeExternalWindow(identity: Identity) {
+export function maximizeExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.maximize(nativeWindow);
 }
 
-export function mergeExternalWindowGroups(identity: Identity) {
+export function mergeExternalWindowGroups(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.noop(nativeWindow);
 }
 
-export function minimizeExternalWindow(identity: Identity) {
+export function minimizeExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.minimize(nativeWindow);
 }
 
-export function moveExternalWindowBy(identity: Identity, payload: Shapes.MoveWindowByOpts) {
+export function moveExternalWindowBy(identity: Identity, payload: Shapes.MoveWindowByOpts): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.moveBy(nativeWindow, payload);
 }
 
-export function moveExternalWindow(identity: Identity, payload: Shapes.MoveWindowToOpts) {
+export function moveExternalWindow(identity: Identity, payload: Shapes.MoveWindowToOpts): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.moveTo(nativeWindow, payload);
 }
 
-export function resizeExternalWindowBy(identity: Identity, payload: Shapes.ResizeWindowByOpts) {
+export function resizeExternalWindowBy(identity: Identity, payload: Shapes.ResizeWindowByOpts): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.resizeBy(nativeWindow, payload);
 }
 
-export function resizeExternalWindowTo(identity: Identity, payload: Shapes.ResizeWindowToOpts) {
+export function resizeExternalWindowTo(identity: Identity, payload: Shapes.ResizeWindowToOpts): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.resizeTo(nativeWindow, payload);
 }
 
-export function restoreExternalWindow(identity: Identity) {
+export function restoreExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.restore(nativeWindow);
 }
 
-export function setExternalWindowAsForeground(identity: Identity) {
+export function setExternalWindowAsForeground(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.setAsForeground(nativeWindow);
 }
 
-export function setExternalWindowBounds(identity: Identity, payload: Bounds) {
+export function setExternalWindowBounds(identity: Identity, payload: Bounds): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.setBounds(nativeWindow, payload);
 }
 
-export function showExternalWindow(identity: Identity) {
+export function showExternalWindow(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.show(nativeWindow);
 }
 
-export function showExternalWindowAt(identity: Identity, payload: Shapes.ShowWindowAtOpts) {
+export function showExternalWindowAt(identity: Identity, payload: Shapes.ShowWindowAtOpts): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.showAt(nativeWindow, payload);
 }
 
-export function stopExternalWindowFlashing(identity: Identity) {
+export function stopExternalWindowFlashing(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
   NativeWindowModule.stopFlashing(nativeWindow);
 }
 
-function getNativeWindow(identity: Identity) {
+function getNativeWindow(identity: Identity): BrowserWindow {
   const { uuid } = identity;
   let nativeWindow = registeredExternalWindows.get(uuid);
 
   if (!nativeWindow) {
     nativeWindow = new BrowserWindow({ hwnd: uuid });
-    // TODO: add nativeWindow destruction
     registeredExternalWindows.set(uuid, nativeWindow);
   }
 

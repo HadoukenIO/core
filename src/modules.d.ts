@@ -120,6 +120,7 @@ declare module 'electron' {
         restore(): void;
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
         setBounds(bounds: Rectangle): void;
+        setExternalWindowNativeId(hwnd: string): void;
         setFullScreen(fullscreen: boolean): void;
         setUserMovementEnabled(enabled: boolean): void;
         setWindowPlacement(bounds: Rectangle): void;
