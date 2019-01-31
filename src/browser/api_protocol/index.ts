@@ -16,6 +16,7 @@ import { init as initIabApiHandler } from './api_handlers/interappbus';
 const NotificationApiHandler = require('./api_handlers/notifications').NotificationApiHandler;
 import { init as initSystemApiHandler } from './api_handlers/system';
 import { init as initWindowApiHandler } from './api_handlers/window';
+import { init as initExternalWindowApiHandler } from './api_handlers/external_window';
 import { init as initApiProtocol, getDefaultRequestHandler } from './api_handlers/api_protocol_base';
 import { meshEnabled } from '../connection_manager';
 import { registerMiddleware as registerEntityExistenceMiddleware } from './api_handlers/middleware_entity_existence';
@@ -51,6 +52,7 @@ export function initApiHandlers() {
     initSystemApiHandler();
     const globalHotkeyApiHandler = new GlobalHotkeyApiHandler();
     initWindowApiHandler();
+    initExternalWindowApiHandler();
 
     initApiProtocol();
 

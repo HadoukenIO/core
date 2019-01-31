@@ -58,6 +58,7 @@ export const SystemApiMap: APIHandlerMap = {
     'generate-guid': generateGuid,
     'get-all-applications': getAllApplications,
     'get-all-external-applications': getAllExternalApplications,
+    'get-all-external-windows': getAllExternalWindows,
     'get-all-windows': getAllWindows,
     'get-app-asset-info': getAppAssetInfo,
     'get-command-line-arguments': { apiFunc: getCommandLineArguments, apiPath: '.getCommandLineArguments' },
@@ -265,6 +266,15 @@ function getAllExternalApplications(identity: Identity, message: APIMessage, ack
         const filteredAggregateSet = [...new Set(filteredAggregate)];
         dataAck.data = [...dataAck.data, ...filteredAggregateSet];
     }
+
+    ack(dataAck);
+}
+
+function getAllExternalWindows(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { locals } = message;
+    const dataAck = Object.assign({}, successAck);
+
+    dataAck.data = System.getAllExternalWindows();
 
     ack(dataAck);
 }

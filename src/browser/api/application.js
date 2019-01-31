@@ -34,6 +34,7 @@ import route from '../../common/route';
 import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
+import { registeredExternalWindows } from './external_window';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -716,6 +717,12 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
                 //deregister all proxy windows
                 deregisterAllRuntimeProxyWindows();
+
+                // Release all external windows to prevent bringing them
+                // down when the runtime closes.
+                registeredExternalWindows.forEach((nativeWindow) => {
+                    nativeWindow.setExternalWindowNativeId('');
+                });
 
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {

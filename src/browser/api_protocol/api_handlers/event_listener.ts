@@ -14,6 +14,7 @@ import { Window } from '../../api/window';
 import * as _ from 'underscore';
 import * as apiProtocolBase from './api_protocol_base';
 import ofEvents from '../../of_events';
+import * as ExternalWindow from '../../api/external_window';
 
 type Subscribe = (
     identity: Identity | NoteIdentity,
@@ -196,6 +197,14 @@ const subExternalApp = async (identity: Identity, eventName: string, payload: Ev
 };
 
 /*
+    Subscribe to an external window event
+*/
+const subExternalWindow = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
+    const externalWindowIdentity = apiProtocolBase.getTargetExternalWindowIdentity(payload);
+    return ExternalWindow.addEventListener(externalWindowIdentity, eventName, listener);
+};
+
+/*
     Subscribe to a global hotkey event
 */
 const subGlobalHotkey = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
@@ -206,6 +215,7 @@ const subscriptionMap: SubscriptionMap = {
     'application': subApplication,
     'channel': subChannel,
     'external-application': subExternalApp,
+    'external-window': subExternalWindow,
     'frame': subFrame,
     'global-hotkey': subGlobalHotkey,
     'notifications': subNotifications,
