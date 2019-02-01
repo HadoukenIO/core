@@ -7,7 +7,7 @@ let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 let _ = require('underscore');
 let log = require('../../log');
-let socketServer = require('../../transports/socket_server').server;
+import socketServer from '../../transports/socket_server';
 let ProcessTracker = require('../../process_tracker.js');
 const rvmMessageBus = require('../../rvm/rvm_message_bus').rvmMessageBus;
 import route from '../../../common/route';

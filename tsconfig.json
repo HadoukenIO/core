@@ -5,7 +5,7 @@
         "noImplicitAny": true,
         "removeComments": true,
         "preserveConstEnums": true,
-        "sourceMap": false,
+        "sourceMap": true,
         "outDir": "./staging/core/",
         "moduleResolution": "node",
         "allowJs": true

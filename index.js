@@ -23,7 +23,7 @@ let System = require('./src/browser/api/system.js').System;
 import { Window } from './src/browser/api/window';
 
 let apiProtocol = require('./src/browser/api_protocol');
-let socketServer = require('./src/browser/transports/socket_server').server;
+import socketServer from './src/browser/transports/socket_server';
 
 import { addPendingAuthRequests, createAuthUI } from './src/browser/authentication_delegate';
 let convertOptions = require('./src/browser/convert_options.js');
@@ -155,9 +155,6 @@ portDiscovery.on(route.runtime('launched'), (portInfo) => {
 
 includeFlashPlugin();
 
-// Enable Single tenant for MAC
-handleMacSingleTenant();
-
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
 
@@ -274,6 +271,8 @@ app.on('ready', function() {
     rotateLogs(coreState.argo);
 
     migrateCookies();
+
+    migrateLocalStorage(coreState.argo);
 
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
@@ -520,6 +519,23 @@ function rvmCleanup(argo) {
     }
 }
 
+function migrateLocalStorage(argo) {
+    const oldLocalStoragePath = argo['old-local-storage-path'] || '';
+    const newLocalStoragePath = argo['new-local-storage-path'] || '';
+    const localStorageUrl = argo['local-storage-url'] || '';
+
+    if (oldLocalStoragePath && newLocalStoragePath && localStorageUrl) {
+        try {
+            System.log('info', 'Migrating Local Storage from ' + oldLocalStoragePath + ' to ' + newLocalStoragePath);
+            app.migrateLocalStorage(oldLocalStoragePath, newLocalStoragePath, localStorageUrl);
+            System.log('info', 'Migrated Local Storage');
+        } catch (e) {
+            System.log('error', `Couldn't migrate cache from ${oldLocalStoragePath} to ${newLocalStoragePath}`);
+            System.log('error', e);
+        }
+    }
+}
+
 function initServer() {
     let attemptedHardcodedPort = false;
 
@@ -756,21 +772,6 @@ function registerMacMenu() {
         ];
         const menu = Menu.buildFromTemplate(template);
         Menu.setApplicationMenu(menu);
-    }
-}
-
-// Set usrData & userCache path specifically for each application for MAC_OS
-function handleMacSingleTenant() {
-    if (process.platform === 'darwin') {
-        const configUrl = coreState.argo['startup-url'] || coreState.argo['config'];
-        let cachePath = encodeURIComponent(configUrl);
-        if (coreState.argo['security-realm']) {
-            cachePath = path.join(cachePath, coreState.argo['security-realm']);
-        }
-        const userData = app.getPath('userData');
-        cachePath = path.join(userData, 'cache', cachePath, process.versions['openfin']);
-        app.setPath('userData', cachePath);
-        app.setPath('userCache', cachePath);
     }
 }
 

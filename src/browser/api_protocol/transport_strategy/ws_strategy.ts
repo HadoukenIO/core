@@ -8,7 +8,7 @@ import * as log from '../../log';
 declare var require: any;
 
 import { ExternalApplication } from '../../api/external_application';
-const socketServer = require('../../transports/socket_server').server;
+import socketServer from '../../transports/socket_server';
 const system = require('../../api/system').System;
 
 export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
@@ -60,11 +60,11 @@ export class WebSocketStrategy extends ApiTransportBase<MessagePackage> {
         }
     }
 
-    public onClientAuthenticated(cb: Function): void {
+    public onClientAuthenticated(cb: (...args: any[]) => void): void {
         socketServer.on(route.connection('authenticated'), cb);
     }
 
-    public onClientDisconnect(cb: Function): void {
+    public onClientDisconnect(cb: (...args: any[]) => void): void {
         socketServer.on(route.connection('close'), cb);
     }
 
