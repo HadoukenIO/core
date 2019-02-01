@@ -196,17 +196,21 @@
             e.preventDefault();
         });
         global.addEventListener('click', e => {
-            const tag = e.target.tagName;
             const modifiedClick = e.shiftKey || e.metaKey || e.ctrlKey || e.altKey;
-            const mightOpenNewWindow = tag === 'A' || tag === 'IMG';
-            if (mightOpenNewWindow && modifiedClick) {
-                e.preventDefault();
-            } else if (modifiedClick && (tag === 'BUTTON' || tag === 'INPUT')) {
-                if (e.target.type === 'submit') {
+            e.path.some(target => {
+                const tag = target.tagName;
+                const mightOpenNewWindow = tag === 'A' || tag === 'IMG';
+                if (mightOpenNewWindow && modifiedClick) {
                     e.preventDefault();
-                }
+                    return true;
+                } else if (modifiedClick && (tag === 'BUTTON' || tag === 'INPUT')) {
+                    if (target.type === 'submit') {
+                        e.preventDefault();
+                        return true;
+                    }
 
-            }
+                }
+            });
         });
     }
 
@@ -245,9 +249,10 @@
     var pendingMainCallbacks = [];
     var currPageHasLoaded = false;
 
-    global.addEventListener('load', function() {
-
-        //---------------------------------------------------------------
+    global.addEventListener('DOMContentLoaded', function() {
+        disableModifiedClicks(glbl);
+    });
+    global.addEventListener('load', function() {        //---------------------------------------------------------------
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
 
@@ -256,7 +261,6 @@
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
         wireUpMenu(glbl);
-        disableModifiedClicks(glbl);
         wireUpMouseWheelZoomEvents();
         raiseReadyEvents(entityInfo);
 

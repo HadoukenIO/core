@@ -279,7 +279,14 @@ Application.close = function(identity, force, callback) {
         Window.close(mainWindowIdentity, force, callback);
     }
 };
-
+Application.destroy = function(identity, ack, nack) {
+    if (coreState.getAppRunningState(identity.uuid)) {
+        nack('Cannot destroy a running application');
+    } else {
+        coreState.deleteApp(identity.uuid);
+        ack();
+    }
+};
 Application.getChildWindows = function(identity /*, callback, errorCallback*/ ) {
     const uuid = identity.uuid;
     const appError = checkApplicationAvailability(uuid);
@@ -304,9 +311,14 @@ Application.getManifest = function(identity, manifestUrl, callback, errCallback)
     }
 
     if (manifestUrl) {
-        fetchReadFile(manifestUrl, true)
-            .then(callback)
-            .catch(errCallback);
+        const configObj = coreState.getManifestByUrl(manifestUrl);
+        if (configObj) {
+            callback(configObj);
+        } else {
+            fetchReadFile(manifestUrl, true)
+                .then(callback)
+                .catch(errCallback);
+        }
     } else {
         errCallback(new Error('App not started from manifest'));
     }

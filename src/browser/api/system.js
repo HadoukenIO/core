@@ -20,7 +20,7 @@ import { ExternalApplication } from './external_application';
 const log = require('../log.js');
 import ofEvents from '../of_events';
 const ProcessTracker = require('../process_tracker.js');
-const socketServer = require('../transports/socket_server').server;
+import socketServer from '../transports/socket_server';
 const portDiscovery = require('../port_discovery').portDiscovery;
 
 import route from '../../common/route';

@@ -46,6 +46,7 @@ module.exports.applicationApiMap = {
     'create-application': createApplication,
     'create-child-window': createChildWindow,
     'deregister-external-window': deregisterExternalWindow,
+    'destroy-application': destroyApplication,
     'external-window-action': externalWindowAction,
     'get-application-groups': getApplicationGroups,
     'get-application-manifest': getApplicationManifest,
@@ -53,7 +54,7 @@ module.exports.applicationApiMap = {
     'get-child-windows': getChildWindows,
     'get-info': getInfo,
     'get-parent-application': getParentApplication,
-    'get-shortcuts': getShortcuts,
+    'get-shortcuts': { apiFunc: getShortcuts, apiPath: '.getShortcuts' },
     'get-tray-icon-info': getTrayIconInfo,
     'is-application-running': isApplicationRunning,
     'notify-on-app-connected': notifyOnAppConnected,
@@ -77,6 +78,11 @@ module.exports.applicationApiMap = {
 module.exports.init = function() {
     apiProtocolBase.registerActionMap(module.exports.applicationApiMap, 'Application');
 };
+
+function destroyApplication(identity, message, ack, nack) {
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(message.payload);
+    Application.destroy(appIdentity, () => ack(successAck), nack);
+}
 
 function sendApplicationLog(identity, message, ack) {
     const payload = message.payload;
