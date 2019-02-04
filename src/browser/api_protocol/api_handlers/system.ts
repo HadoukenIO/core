@@ -271,11 +271,8 @@ function getAllExternalApplications(identity: Identity, message: APIMessage, ack
 }
 
 function getAllExternalWindows(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { locals } = message;
     const dataAck = Object.assign({}, successAck);
-
     dataAck.data = System.getAllExternalWindows();
-
     ack(dataAck);
 }
 
