@@ -27,8 +27,8 @@ export interface Route {
 
     frame: WindowRoute;
     window: WindowRoute;
-    externalWindow: SimpleRoute;
-    'external-window': SimpleRoute;
+    externalWindow: WindowRoute;
+    'external-window': WindowRoute;
 
     system: SimpleRoute;
     channel: SimpleRoute;
@@ -85,7 +85,7 @@ route.externalApplication = route['external-application'] = <SimpleRoute>router.
 
 route.frame = <WindowRoute>router.bind(HYPHEN, 'frame');
 route.window = <WindowRoute>router.bind(HYPHEN, 'window');
-route.externalWindow = route['external-window'] = <SimpleRoute>router.bind(HYPHEN, 'external-window');
+route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
 
 route.channel = <WindowRoute>router.bind(HYPHEN, 'channel');
 route.system = <SimpleRoute>router.bind(null, 'system');
