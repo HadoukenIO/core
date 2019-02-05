@@ -28,9 +28,9 @@ class DuplicateUuidTransport extends NamedOneToManyTransport {
                     log.writeToLog('info', `duplicate app ${uuid} not running here`);
                 }
             });
-            return this;
+            return subscribeToRunningExternal();
         }
-        return this;
+        return Promise.resolve();
     }
     private makeEvent = (uuid: string) => `duplicate-uuid-on-launch-${uuid}`;
     public subscribeToUuid = (uuid: string, listener: (...args: any[]) => any) => {

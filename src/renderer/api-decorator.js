@@ -252,7 +252,7 @@
     global.addEventListener('DOMContentLoaded', function() {
         disableModifiedClicks(glbl);
     });
-    global.addEventListener('load', function() {        //---------------------------------------------------------------
+    global.addEventListener('load', function() { //---------------------------------------------------------------
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
 

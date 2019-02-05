@@ -12,7 +12,7 @@ let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
-import { isUuidAvailable } from '../../uuid_availability';
+import { lockUuid } from '../../uuid_availability';
 import duplicateUuidTransport from '../../duplicate_uuid_delegation';
 
 const SetWindowPosition = {
@@ -387,7 +387,7 @@ function runApplication(identity, message, ack, nack) {
             });
         });
     } else {
-        if (isUuidAvailable(uuid)) {
+        if (lockUuid(uuid)) {
             Application.run(appIdentity);
         } else {
             Application.emitRunRequested(appIdentity);

@@ -5,7 +5,7 @@ import { getAppRunningState } from './core_state';
 
 const makeMutexKey = (uuid: string) => `uuid-${uuid}`;
 
-export function isUuidAvailable(uuid: string) {
+export function lockUuid(uuid: string) {
     return !getAppRunningState(uuid) && (
         !meshEnabled || (
             namedMutex.tryLock(makeMutexKey(uuid)) === 0
@@ -15,8 +15,5 @@ export function isUuidAvailable(uuid: string) {
 
 export function releaseUuid (uuid: string) {
     const key = makeMutexKey(uuid);
-    let released = namedMutex.releaseLock(key);
-    while (!released) {
-        released = namedMutex.releaseLock(key);
-    }
+    return namedMutex.releaseLock(key);
 }

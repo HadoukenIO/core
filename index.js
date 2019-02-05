@@ -54,7 +54,7 @@ import route from './src/common/route';
 import { createWillDownloadEventListener } from './src/browser/api/file_download';
 import duplicateUuidTransport from './src/browser/duplicate_uuid_delegation';
 import { deleteApp, argv } from './src/browser/core_state';
-import { isUuidAvailable } from './src/browser/uuid_availability';
+import { lockUuid } from './src/browser/uuid_availability';
 
 // locals
 let firstApp = null;
@@ -616,7 +616,7 @@ function launchApp(argo, startExternalAdapterServer) {
         let passedMutexCheck = false;
         let failedMutexCheck = false;
         if (uuid && !isRunning) {
-            if (!isUuidAvailable(uuid)) {
+            if (!lockUuid(uuid)) {
                 deleteApp(uuid);
                 duplicateUuidTransport.broadcast({ argv, uuid });
                 failedMutexCheck = true;
