@@ -1,4 +1,4 @@
-import { app as electronApp, BrowserWindow } from 'electron';
+import { app as electronApp, ExternalWindow } from 'electron';
 import { Bounds } from '../../../js-adapter/src/shapes';
 import { extendNativeWindowInfo } from '../utils';
 import { Identity } from '../../../js-adapter/src/identity';
@@ -7,7 +7,7 @@ import * as Shapes from '../../shapes';
 import ofEvents from '../of_events';
 import route from '../../common/route';
 
-export const registeredExternalWindows = new Map<string, BrowserWindow>();
+export const registeredExternalWindows = new Map<string, ExternalWindow>();
 
 export function addEventListener(identity: Shapes.Identity, type: string, listener: Shapes.Listener): Shapes.Func {
   const evt = route.externalWindow(type, identity.uuid);
@@ -156,12 +156,12 @@ export function stopExternalWindowFlashing(identity: Identity): void {
   NativeWindowModule.stopFlashing(nativeWindow);
 }
 
-function getNativeWindow(identity: Identity): BrowserWindow {
+function getNativeWindow(identity: Identity): ExternalWindow {
   const { uuid } = identity;
   let nativeWindow = registeredExternalWindows.get(uuid);
 
   if (!nativeWindow) {
-    nativeWindow = new BrowserWindow({ hwnd: uuid });
+    nativeWindow = new ExternalWindow({ hwnd: uuid });
     registeredExternalWindows.set(uuid, nativeWindow);
   }
 

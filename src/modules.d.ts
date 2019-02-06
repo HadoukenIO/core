@@ -143,6 +143,8 @@ declare module 'electron' {
         };
     }
 
+    export class ExternalWindow extends BrowserWindow { }
+
     export class webContents {
         hasFrame: (frameName: string) => boolean;
         mainFrameRoutingId: number;
