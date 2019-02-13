@@ -270,6 +270,8 @@ app.on('ready', function() {
 
     migrateCookies();
 
+    migrateLocalStorage(coreState.argo);
+
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
@@ -279,6 +281,12 @@ app.on('ready', function() {
 
     registerShortcuts();
     registerMacMenu();
+
+    app.on('activate', function() {
+        // On OS X it's common to re-create a window in the app when the
+        // dock icon is clicked and there are no other windows open.
+        launchApp(coreState.argo, true);
+    });
 
     //subscribe to auth requests:
     app.on('login', (event, webContents, request, authInfo, callback) => {
@@ -505,6 +513,23 @@ function rvmCleanup(argo) {
         }, (err) => {
             console.log(err);
         });
+    }
+}
+
+function migrateLocalStorage(argo) {
+    const oldLocalStoragePath = argo['old-local-storage-path'] || '';
+    const newLocalStoragePath = argo['new-local-storage-path'] || '';
+    const localStorageUrl = argo['local-storage-url'] || '';
+
+     if (oldLocalStoragePath && newLocalStoragePath && localStorageUrl) {
+        try {
+            System.log('info', 'Migrating Local Storage from ' + oldLocalStoragePath + ' to ' + newLocalStoragePath);
+            app.migrateLocalStorage(oldLocalStoragePath, newLocalStoragePath, localStorageUrl);
+            System.log('info', 'Migrated Local Storage');
+        } catch (e) {
+            System.log('error', `Couldn't migrate cache from ${oldLocalStoragePath} to ${newLocalStoragePath}`);
+            System.log('error', e);
+        }
     }
 }
 

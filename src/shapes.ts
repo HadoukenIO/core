@@ -49,13 +49,14 @@ export interface APIPayloadAck {
     success: boolean;
     data?: any;
 }
-export type Acker = (payload: APIPayloadAck) => void;
 
 export interface APIPayloadNack {
     success: boolean;
     error?: Error;
     reason?: string;
 }
+
+export type Acker = (payload: APIPayloadAck) => void;
 export type Nacker = (payload: APIPayloadNack) => void;
 export type NackerError = (payload: Error) => void;
 export type NackerErrorString = (payload: string) => void;
@@ -148,6 +149,7 @@ export interface WindowOptions {
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
     applicationIcon?: string;
+    appLogFlushInterval?: number;
     aspectRatio?: number;
     autoShow?: boolean;
     backgroundColor?: string;
@@ -382,3 +384,5 @@ export interface Subscriber {
     topic: string;
     uuid: string;
 }
+
+export type Func = () => void;

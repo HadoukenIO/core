@@ -108,16 +108,17 @@ export class RuntimeProxyWindow {
         const { identity: { uuid, name } } = this.wrappedWindow;
         const windowKey = `${uuid}${name}`;
 
-        this.window.browserWindow.setExternalWindowNativeId('0x0');
-        this.window.browserWindow.close();
-        this.boundLocalWindows.clear();
-        externalWindowsProxyList.delete(windowKey);
 
         try {
+            this.window.browserWindow.setExternalWindowNativeId('0x0');
+            this.window.browserWindow.close();
             await this.wrappedWindow.removeListener('group-changed', this.onGroupChanged);
         } catch (err) {
             writeToLog('info', 'Non Fatal error: remove all listeners failed for proxy window');
             writeToLog('info', err);
+        } finally {
+            this.boundLocalWindows.clear();
+            externalWindowsProxyList.delete(windowKey);
         }
     }
 
@@ -205,12 +206,16 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
     } else {
         const { runtime: hostRuntime} = await connectionManager.resolveIdentity(identity);
         const apiVersion = hostRuntime.portInfo.version.split('.')[2];
+
         if (+apiVersion < MIN_API_VER) {
             throw new Error(`Window belongs to an older version, cannot group with Windows on version ${ hostRuntime.portInfo.version }`);
         }
-        if (!argo['disabled-frame-groups']) {
+        if (argo['use-legacy-window-groups']) {
             // tslint:disable-next-line:max-line-length
-            throw new Error('Window belongs to another instance of OpenFin, experimental feature only enabled by setting the "disabled-frame-groups" flag');
+            throw new Error('Unsupported action: Window belongs to another instance of OpenFin and "use-legacy-window-groups" flag suplied.');
+        }
+        if (hostRuntime.portInfo.options['use-legacy-window-groups']) {
+            throw new Error('Unsupported action: Window belongs to another instance of OpenFin that is using "use-legacy-window-groups".');
         }
         const wrappedWindow = hostRuntime.fin.Window.wrapSync(identity);
         const nativeId = await wrappedWindow.getNativeId();

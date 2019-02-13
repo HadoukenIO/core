@@ -1,10 +1,13 @@
+import { app } from 'electron';
 import { EventEmitter } from 'events';
+import { isFloat } from '../common/main';
 import route from '../common/route';
 
 interface PastEvent {
     payload: any;
     routeString: string;
-    timestamp: number;
+    timestampJs: number;
+    timestampNative: number;
 }
 
 class OFEvents extends EventEmitter {
@@ -17,15 +20,16 @@ class OFEvents extends EventEmitter {
     }
 
     public emit(routeString: string, ...data: any[]) {
-        const timestamp = Date.now();
         const tokenizedRoute = routeString.split('/');
         const eventPropagations = new Map<string, any>();
-        const [payload, ...extraArgs] = data;
-
+        const [payload, maybeOpts, ...otherExtraArgs] = data;
         if (this.isSavingEvents) {
-            this.history.push({ payload, routeString, timestamp });
+            const timestampJs = Date.now();
+            const timestampNative = app.nowFromSystemTime();
+            this.history.push({ payload, routeString, timestampJs, timestampNative });
         }
-
+        const isMultiRuntimeEvent = maybeOpts && maybeOpts.isMultiRuntime;
+        const extraArgs = isMultiRuntimeEvent ? otherExtraArgs : [maybeOpts, ...otherExtraArgs];
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
             const uuid: string = (payload && payload.uuid) || tokenizedRoute[2] || '*';
@@ -43,7 +47,8 @@ class OFEvents extends EventEmitter {
                 // Wildcard on any channel/topic of a specified source (ex: 'window/*/myUUID-myWindow')
                 super.emit(route(channel, '*', source), envelope);
             }
-            if (channel === 'window' || channel === 'application') {
+            const shouldPropagate = (channel === 'window' || channel === 'application') && !isMultiRuntimeEvent;
+            if (shouldPropagate) {
                 const checkedPayload = typeof payload === 'object' ? payload : { payload };
                 if (channel === 'window') {
                     const propTopic = `window-${topic}`;
@@ -61,7 +66,7 @@ class OFEvents extends EventEmitter {
                         }
                     }
                     //Don't propagate -requested events to System
-                } else if (propagateToSystem) {
+                } else if (channel === 'application' && propagateToSystem) {
                     const propTopic = `application-${topic}`;
                     const appWindowEventsNotOnWindow = [
                         'window-alert-requested',
@@ -100,10 +105,19 @@ class OFEvents extends EventEmitter {
 
         this.history.forEach((pastEvent) => {
             const routeMatches = pastEvent.routeString === routeString;
-            const missedEvent = pastEvent.timestamp >= timestamp;
 
-            if (routeMatches && missedEvent) {
-                listener(pastEvent.payload);
+            if (routeMatches) {
+                let missedEvent = false;
+
+                if (Number.isInteger(timestamp)) {
+                    missedEvent = pastEvent.timestampJs >= timestamp;
+                } else if (isFloat(timestamp)) {
+                    missedEvent = pastEvent.timestampNative >= timestamp;
+                }
+
+                if (missedEvent) {
+                    listener(pastEvent.payload);
+                }
             }
         });
     }
