@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const asar = require('asar');
+const https = require('https');
 const electronRebuild = require('electron-rebuild');
 const wrench = require('wrench');
 const openfinSign = require('openfin-sign'); // OpenFin signing module
@@ -233,27 +234,67 @@ module.exports = (grunt) => {
     });
 
     grunt.registerTask('clean-up-dependencies', 'Clean up dependencies', function() {
+        const done = this.async();
 
-        // Clean Rx library (6.94MB -> 144KB)
-        const rxLibPath = path.join(stagingNodeModulesPath, 'rx');
-        const rxLib = fs.readFileSync(path.join(rxLibPath, 'dist', 'rx.all.min.js'), 'utf-8');
-        wrench.rmdirSyncRecursive(rxLibPath);
-        wrench.mkdirSyncRecursive(rxLibPath);
-        fs.writeFileSync(path.join(rxLibPath, 'index.js'), rxLib);
+        // Clean RxJS library (19MB -> 148KB)
+        const libRxjsDir = path.join('./lib', 'rxjs');
+        const libRxjs = path.join(libRxjsDir, 'Rx.min.js');
+        const rxjsStagingPath = path.join(stagingNodeModulesPath, 'rxjs');
+        const rxjsStagingIndex = path.join(rxjsStagingPath, 'index.js');
+        const rxjsPackageJsonPath = './node_modules/rxjs/package.json';
+        const rxjsVersion = require(rxjsPackageJsonPath).version;
+        const rxjsMinUrl = `https://unpkg.com/rxjs@${rxjsVersion}/bundles/Rx.min.js`;
 
-        // Underscore (128KB -> 20KB)
-        const underscoreLibPath = path.join(stagingNodeModulesPath, 'underscore');
-        const underscoreLib = fs.readFileSync(path.join(underscoreLibPath, 'underscore-min.js'), 'utf-8');
-        wrench.rmdirSyncRecursive(underscoreLibPath);
-        wrench.mkdirSyncRecursive(underscoreLibPath);
-        fs.writeFileSync(path.join(underscoreLibPath, 'index.js'), underscoreLib);
+        wrench.rmdirSyncRecursive(rxjsStagingPath);
+        wrench.mkdirSyncRecursive(rxjsStagingPath);
 
-        // Minimist (64KB -> 8KB)
-        const minimistLibPath = path.join(stagingNodeModulesPath, 'minimist');
-        const minimistLib = fs.readFileSync(path.join(minimistLibPath, 'index.js'), 'utf-8');
-        wrench.rmdirSyncRecursive(minimistLibPath);
-        wrench.mkdirSyncRecursive(minimistLibPath);
-        fs.writeFileSync(path.join(minimistLibPath, 'index.js'), minimistLib);
+        const resolveRxjs = new Promise((resolve, rej) => {
+            try {
+                fs.copyFileSync(libRxjs, rxjsStagingIndex);
+                resolve();
+            } catch (error) {
+                https.get(rxjsMinUrl, (res) => {
+                    if (res.statusCode !== 200) {
+                        grunt.log.error('HTTPS request failed');
+                        rej();
+                    }
+
+                    let data = '';
+                    res.on('data', (d) => {
+                        data += d;
+                    });
+
+                    res.on('end', () => {
+                        if (!fs.existsSync(libRxjsDir)) {
+                            fs.mkdirSync(libRxjsDir);
+                        }
+                        fs.writeFileSync(libRxjs, data);
+                        fs.writeFileSync(path.join(rxjsStagingPath, 'index.js'), data);
+                        resolve();
+                    });
+                }).on('error', (e) => {
+                    grunt.log.error(e);
+                    rej();
+                });
+            }
+        });
+
+        resolveRxjs.then(() => {
+            // Underscore (128KB -> 20KB)
+            const underscoreLibPath = path.join(stagingNodeModulesPath, 'underscore');
+            const underscoreLib = fs.readFileSync(path.join(underscoreLibPath, 'underscore-min.js'), 'utf-8');
+            wrench.rmdirSyncRecursive(underscoreLibPath);
+            wrench.mkdirSyncRecursive(underscoreLibPath);
+            fs.writeFileSync(path.join(underscoreLibPath, 'index.js'), underscoreLib);
+
+            // Minimist (64KB -> 8KB)
+            const minimistLibPath = path.join(stagingNodeModulesPath, 'minimist');
+            const minimistLib = fs.readFileSync(path.join(minimistLibPath, 'index.js'), 'utf-8');
+            wrench.rmdirSyncRecursive(minimistLibPath);
+            wrench.mkdirSyncRecursive(minimistLibPath);
+            fs.writeFileSync(path.join(minimistLibPath, 'index.js'), minimistLib);
+            done();
+        });
     });
 
     grunt.registerTask('rebuild-native-modules', 'Rebuild native modules', function() {
