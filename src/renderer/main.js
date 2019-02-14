@@ -38,8 +38,9 @@ const api = (windowId, initialOptions) => {
     const mainWindowOptions = windowOptionSet.options || {};
     const enableV2Api = (mainWindowOptions.experimental || {}).v2Api;
     const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
-
+    const { uuid, name } = mainWindowOptions;
     windowOptionSet.runtimeArguments = JSON.stringify(coreState.args);
+    windowOptionSet.licenseKey = coreState.getManifest({ uuid, name }).licenseKey;
 
     return [
         `global.__startOptions = ${JSON.stringify(windowOptionSet)}`,
