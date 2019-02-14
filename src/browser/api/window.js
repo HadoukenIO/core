@@ -169,10 +169,16 @@ let optionSetters = {
     },
     frame: function(newVal, browserWin) {
         let frameBool = !!newVal;
-
+        const prevBool = getOptFromBrowserWin('frame', browserWin, true);
         setOptOnBrowserWin('frame', frameBool, browserWin);
         browserWin.setHasFrame(frameBool);
-
+        if (frameBool !== prevBool) {
+            const maxWidth = getOptFromBrowserWin('maxWidth', browserWin, -1);
+            const maxHeight = getOptFromBrowserWin('maxHeight', browserWin, -1);
+            if (maxWidth !== -1 || maxHeight !== -1) {
+                browserWin.setMaximumSize(maxWidth, maxHeight);
+            }
+        }
         if (!frameBool) {
             // reapply corner rounding
             let cornerRounding = getOptFromBrowserWin('cornerRounding', browserWin, {
