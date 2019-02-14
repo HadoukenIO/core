@@ -178,6 +178,11 @@ let optionSetters = {
             if (maxWidth !== -1 || maxHeight !== -1) {
                 browserWin.setMaximumSize(maxWidth, maxHeight);
             }
+            const minWidth = getOptFromBrowserWin('minWidth', browserWin, -1);
+            const minHeight = getOptFromBrowserWin('minHeight', browserWin, -1);
+            if (minWidth !== -1 || minHeight !== -1) {
+                browserWin.setMinimumSize(minWidth, minHeight);
+            }
         }
         if (!frameBool) {
             // reapply corner rounding
