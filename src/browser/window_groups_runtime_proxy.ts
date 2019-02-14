@@ -179,13 +179,7 @@ export class RuntimeProxyWindow {
                         name: evt.targetWindowName
                     }, 'remove', []);
                 }
-                if (evt.reason === 'join') {
-                    this.raiseChangeEvents({
-                        uuid: evt.sourceWindowAppUuid,
-                        name: evt.sourceWindowName
-                    }, 'add', evt.sourceGroup);
-                }
-                if (evt.reason === 'merge') {
+                if (evt.reason === 'join' || evt.reason === 'merge') {
                     this.raiseChangeEvents({
                         uuid: evt.sourceWindowAppUuid,
                         name: evt.sourceWindowName
