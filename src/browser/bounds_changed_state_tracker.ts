@@ -2,8 +2,6 @@
     src/browser/bounds_changed_state_tracker.js
  */
 
-// const WindowTransaction = require('electron').windowTransaction;
-
 import * as _ from 'underscore';
 import * as animations from './animations.js';
 import * as coreState from './core_state.js';
