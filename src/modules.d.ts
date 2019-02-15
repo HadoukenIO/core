@@ -1,4 +1,3 @@
-/*tslint:disable */
 /**
  * All declared modules in this file don't correctly represent all of
  * their functionality, rather things are constantly added here while
@@ -139,10 +138,6 @@ declare namespace Electron {
         get: (filter: Object, callback: (error: Error, cookies: any[]) => any) => void;
     }
 
-    export interface ipcMain {
-
-    }
-
     export interface systemPreferences {
         subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): void;
     }
@@ -166,15 +161,4 @@ declare namespace Electron {
         public isRunning(): boolean;
     }
 
-    // namespace clipboard {
-    //     export function write(data: { text?: string; html?: string; rtf?: string; }, type?: string): void;
-    //     export function writeRTF(data: string, type?: string): void;
-    //     export function writeHTML(data: string, type?: string): void;
-    //     export function writeText(data: string, type?: string): void;
-    //     export function availableFormats(type?: string): string[];
-    //     export function clear(type?: string): void;
-    //     export function readRTF(type?: string): string;
-    //     export function readHTML(type?: string): string;
-    //     export function readText(type?: string): string;
-    // }
 }
