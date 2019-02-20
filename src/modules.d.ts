@@ -1,4 +1,3 @@
-
 /**
  * All declared modules in this file don't correctly represent all of
  * their functionality, rather things are constantly added here while
@@ -6,11 +5,16 @@
  */
 
 declare module 'electron' {
+    import { EventEmitter } from 'events';
+
     namespace app {
         export function generateGUID(): string;
+        export function getAllNativeWindowInfo(skipOwnWindows: boolean): any;
         export function getCommandLineArguments(): string;
         export function getCommandLineArgv(): string[];
+        export function getNativeWindowInfoForNativeId(nativeId: string): import('./shapes').RawNativeWindowInfo;
         export function getPath(str: string): string;
+        export function getProcessIdForNativeId(nativeId: string): number;
         export function getTickCount(): number;
         export function isAeroGlassEnabled(): boolean;
         export function log(level: string, message: any): any;
@@ -92,28 +96,38 @@ declare module 'electron' {
         static getAllWindows(): BrowserWindow[];
         static fromWebContents(wc: webContents): BrowserWindow;
 
+        activate(): void;
+        bringToFront(): any;
         close(): void;
+        devToolsWebContents: null;
+        emit(routeString: string, ...args: any[]): void;
+        flashFrame(flag: boolean): void;
+        focus(): void;
+        getBounds(): Rectangle;
+        getWindowsByClassName(className: string): any;
+        hide(): void;
+        hookWindowMessage(n: number, listener: (message: any) => void): void;
+        isDestroyed(): boolean;
+        isFullScreen(): boolean;
+        isMaximized(): boolean;
+        isMinimized(): boolean;
+        isVisible(): boolean;
+        maximize(): void;
+        minimize(): void;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
-        getWindowsByClassName(className: string): any;
+        restore(): void;
         sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
-        hookWindowMessage(n: number, listener: (message: any) => void): void;
-        subscribeSessionNotifications(b: boolean): void;
-        bringToFront(): any;
-        isDestroyed(): boolean;
-        isMaximized(): boolean;
-        isFullScreen(): boolean;
-        isMinimized(): boolean;
-        unmaximize(): any;
-        setFullScreen(fullscreen: boolean): void;
-        emit(routeString: string, ...args: any[]): void;
-        getBounds(): Rectangle;
         setBounds(bounds: Rectangle): void;
-        setWindowPlacement(bounds: Rectangle): void;
-        devToolsWebContents: null;
-        webContents: webContents;
+        setExternalWindowNativeId(hwnd: string): void;
+        setFullScreen(fullscreen: boolean): void;
         setUserMovementEnabled(enabled: boolean): void;
+        setWindowPlacement(bounds: Rectangle): void;
+        showInactive(): void;
+        subscribeSessionNotifications(b: boolean): void;
+        unmaximize(): any;
+        webContents: webContents;
 
         _eventsCount: number;
         _events: {
@@ -185,5 +199,9 @@ declare module 'electron' {
         export function readRTF(type?: string): string;
         export function readHTML(type?: string): string;
         export function readText(type?: string): string;
+    }
+
+    export class winEventHookEmitter extends EventEmitter {
+        constructor(opts: { pid?: number });
     }
 }
