@@ -156,7 +156,8 @@ function handleBoundsChanging(
     win: OpenFinWindow,
     e: any,
     rawPayloadBounds: RectangleBase,
-    changeType: ChangeType
+    changeType: ChangeType,
+    treatBothChangedAsJustAResize: boolean = false
 ): Move[] {
     const initialPositions: Move[] = getInitialPositions(win);
     const leaderRectIndex = initialPositions.map(x => x.ofWin).indexOf(win);
@@ -178,12 +179,15 @@ function handleBoundsChanging(
             const yShift = delta.y ? delta.y + delta.height : 0;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
             const resizeDelta = {x: delta.x - xShift, y: delta.y - yShift, width: delta.width, height: delta.height};
-
-            moves = (delta.width || delta.height)
+            const resized = (delta.width || delta.height);
+            moves = resized
                 ? handleResizeOnly(leaderRectIndex, startMove, start.shift(resizeDelta), initialPositions)
                 : initialPositions;
-
-            moves = (xShift || yShift)
+            const moved = (xShift || yShift);
+            //This flag is here because sometimes the runtime lies and says we moved on a resize
+            //This flag should always be set to true when relying on runtime events. It should be false on api moves.
+            //Setting it to false on runtime events can cause a growing window bug.
+            moves = moved && !treatBothChangedAsJustAResize
                 ? handleMoveOnly(start, start.shift(shift), moves)
                 : moves;
 
@@ -260,13 +264,13 @@ export function addWindowToGroup(win: OpenFinWindow) {
                 const moved = new Set<OpenFinWindow>();
                 groupInfo.boundsChanging = true;
                 await raiseEvent(win, 'begin-user-bounds-changing', { ...eventBounds, windowState: getState(win.browserWindow) });
-                const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
+                const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
                 handleBatchedMove(initialMoves, true);
                 groupInfo.interval = setInterval(() => {
                     try {
                         if (groupInfo.payloadCache.length) {
                             const [a, b, c, d] = groupInfo.payloadCache.pop();
-                            const moves = handleBoundsChanging(a, b, c, d);
+                            const moves = handleBoundsChanging(a, b, c, d, true);
                             groupInfo.payloadCache = [];
                             handleBatchedMove(moves);
                             moves.forEach((move) => {
@@ -283,7 +287,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
                         groupInfo.boundsChanging = false;
                         clearInterval(groupInfo.interval);
                         groupInfo.payloadCache = [];
-                        const moves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
+                        const moves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
                         handleBatchedMove(moves);
                         const promises: Promise<void>[] = [];
                         moved.forEach((movedWin) => {
