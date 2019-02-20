@@ -177,11 +177,17 @@ let optionSetters = {
             const maxHeight = getOptFromBrowserWin('maxHeight', browserWin, -1);
             if (maxWidth !== -1 || maxHeight !== -1) {
                 browserWin.setMaximumSize(maxWidth, maxHeight);
+                const { width, height, x, y } = browserWin.getBounds();
+                const setMaxWidth = maxWidth === -1 ? Number.MAX_SAFE_INTEGER : maxWidth;
+                const setMaxHeight = maxHeight === -1 ? Number.MAX_SAFE_INTEGER : maxHeight;
+                browserWin.setBounds({ width: Math.min(width, setMaxWidth), height: Math.min(height, setMaxHeight), x, y });
             }
-            const minWidth = getOptFromBrowserWin('minWidth', browserWin, -1);
-            const minHeight = getOptFromBrowserWin('minHeight', browserWin, -1);
-            if (minWidth !== -1 || minHeight !== -1) {
+            const minWidth = getOptFromBrowserWin('minWidth', browserWin, 0);
+            const minHeight = getOptFromBrowserWin('minHeight', browserWin, 0);
+            if (minWidth !== 0 || minHeight !== 0) {
                 browserWin.setMinimumSize(minWidth, minHeight);
+                const { width, height, x, y } = browserWin.getBounds();
+                browserWin.setBounds({ width: Math.max(width, minWidth), height: Math.max(height, minHeight), x, y });
             }
         }
         if (!frameBool) {
