@@ -1,4 +1,4 @@
-import * as Rx from 'rx';
+import * as Rx from 'rxjs';
 import {Identity} from './shapes';
 
 export const createdNotes = new Rx.Subject();
@@ -40,6 +40,7 @@ export const noteStack = Rx.Observable.merge(
 
             if (idxRemoved === -1) {
                 acc.push({
+                    create: 0,
                     name: value.name,
                     uuid: value.uuid,
                     opacity: value.opacity
