@@ -1956,7 +1956,7 @@ function handleForceActions(identity, force, eventType, eventPayload, defaultAct
 
 
 function applyAdditionalOptionsToWindow(browserWindow) {
-    let options = browserWindow && browserWindow._options;
+    const options = browserWindow && JSON.parse(JSON.stringify(browserWindow._options));
 
     if (!options) {
         return;
