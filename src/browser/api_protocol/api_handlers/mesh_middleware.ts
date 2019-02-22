@@ -174,21 +174,35 @@ function ferryActionMiddleware(msg: MessagePackage, next: () => void) {
 
 // On certain system API calls, provide aggregate results from all runtimes on the mesh
 function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: object) => void) {
-    const { identity, data, nack } = msg;
+    const { identity, data } = msg;
     const action = data && data.action;
     const isAggregateAction = apiMessagesToAggregate[action];
-    //runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
+    // runtimeUuid as part of the identity means the request originated from a different runtime. We do not want to handle it.
     const isLocalAction = !identity.runtimeUuid;
     const filteredRuntimes = filterRuntimes(action, connectionManager.connections);
 
     try {
         if (isAggregateAction && isLocalAction && filteredRuntimes.length) {
             const aggregateData = JSON.parse(JSON.stringify(data));
+
             if (action === 'create-channel') {
                 aggregateData.action = 'get-all-channels';
             }
-            Promise.all(filteredRuntimes.map(runtime => runtime.fin.System.executeOnRemote(identity, aggregateData)))
-            .then(externalResults => {
+
+            const externalResults: any[] = [];
+            const aggregateSafePromises = filteredRuntimes.map(runtime => {
+                return runtime.fin.System.executeOnRemote(identity, aggregateData)
+                    .then((externalResult) => externalResults.push(externalResult))
+                    .catch((error) => {
+                        log.writeToLog('info',
+                            'Failed to get multi-runtime aggregate data ' +
+                            `for action "${action}". Error: ${error}. ` +
+                            `Requested runtime: ${JSON.stringify(runtime.portInfo)}`
+                        );
+                    });
+            });
+
+            Promise.all(aggregateSafePromises).then(() => {
                 const externalRuntimeData = externalResults.reduce((result, runtime) => {
                     if (runtime && runtime.data) {
                         if (Array.isArray(runtime.data)) {
@@ -199,10 +213,11 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
                     }
                     return result;
                 }, []);
+
                 const locals = { aggregate: externalRuntimeData };
                 next(locals);
-            })
-            .catch(nack);
+            });
+
         } else {
             next();
         }
@@ -211,7 +226,6 @@ function aggregateFromExternalRuntime(msg: MessagePackage, next: (locals?: objec
         log.writeToLog('info', e);
         next();
     }
-
 }
 
 function registerMiddleware (requestHandler: RequestHandler<MessagePackage>): void {
