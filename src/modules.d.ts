@@ -91,27 +91,14 @@ declare namespace Electron {
         id: number;
         nativeId: string;
 
-        close(): void;
+        activate(): void;
+        bringToFront(): any;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
-        getWindowsByClassName(className: string): any;
-        sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
-        hookWindowMessage(n: number, listener: (message: any) => void): void;
-        subscribeSessionNotifications(b: boolean): void;
-        bringToFront(): any;
-        isDestroyed(): boolean;
-        isMaximized(): boolean;
-        isFullScreen(): boolean;
-        isMinimized(): boolean;
-        unmaximize(): any;
-        setFullScreen(fullscreen: boolean): void;
-        emit(routeString: string, ...args: any[]): any;
-        getBounds(): Rectangle;
-        setBounds(bounds: Rectangle): void;
-        setWindowPlacement(bounds: Rectangle): void;
-        devToolsWebContents: null;
         setUserMovementEnabled(enabled: boolean): void;
+        setWindowPlacement(bounds: Rectangle): void;
+        subscribeSessionNotifications(b: boolean): void;
 
         _eventsCount: number;
         _events: {
@@ -161,4 +148,7 @@ declare namespace Electron {
         public isRunning(): boolean;
     }
 
+    export class winEventHookEmitter extends EventEmitter {
+        constructor(opts: { pid?: number });
+    }
 }

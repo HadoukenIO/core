@@ -2,6 +2,7 @@
 import { PortInfo } from './browser/port_discovery';
 import { BrowserWindow as BrowserWindowElectron } from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
+import { AnchorType } from '../js-adapter/src/shapes';
 
 export interface Identity {
     uuid: string;
@@ -110,7 +111,7 @@ export interface OpenFinWindow {
 
 export interface BrowserWindow extends BrowserWindowElectron {
     _options: WindowOptions;
-    setExternalWindowNativeId?: Function;
+    setExternalWindowNativeId(hwnd: string): void;
 }
 
 export interface AppObj {
@@ -386,3 +387,59 @@ export interface Subscriber {
 }
 
 export type Func = () => void;
+
+export interface MoveWindowByOpts {
+    deltaLeft: number;
+    deltaTop: number;
+}
+
+export interface MoveWindowToOpts {
+    left: number;
+    top: number;
+}
+
+export interface ResizeWindowByOpts {
+    anchor: AnchorType;
+    deltaHeight: number;
+    deltaWidth: number;
+}
+
+export interface ResizeWindowToOpts {
+    anchor: AnchorType;
+    height: number;
+    width: number;
+}
+
+export interface ShowWindowAtOpts extends MoveWindowToOpts {
+    force?: boolean;
+}
+
+export interface Bounds {
+    height: number;
+    width: number;
+    x: number;
+    y: number;
+}
+
+export interface ProcessInfo {
+    imageName: string;
+    injected: boolean;
+    pid: number;
+}
+
+export interface RawNativeWindowInfo {
+    alwaysOnTop: boolean;
+    bounds: Bounds;
+    className: string;
+    focused: boolean;
+    id: string;
+    maximized: boolean;
+    minimized: boolean;
+    process: ProcessInfo;
+    title: string;
+    visible: boolean;
+}
+
+export interface NativeWindowInfo extends RawNativeWindowInfo {
+    uuid: string;
+}

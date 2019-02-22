@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { BrowserWindow } from '../shapes';
-import { Rectangle, screen } from 'electron';
+import { BrowserWindow as OFBrowserWindow } from '../shapes';
+import { BrowserWindow, Rectangle, screen } from 'electron';
+import * as Shapes from '../shapes';
 
 interface Clamped {
   value: number;
@@ -26,7 +27,7 @@ interface Clamped {
   This function sets window's bounds to be in a visible area, in case
   the display where it was originally located was disconnected
 */
-export function windowSetBoundsToVisible(browserWindow: BrowserWindow): void {
+export function windowSetBoundsToVisible(browserWindow: OFBrowserWindow | BrowserWindow): void {
   const bounds = browserWindow.getBounds();
   const { workArea } = screen.getDisplayMatching(bounds);
   const windowIsOutsideOfDisplay =
@@ -53,7 +54,7 @@ export function windowSetBoundsToVisible(browserWindow: BrowserWindow): void {
 /*
   Clip width and height values to be within allowed maximum
 */
-export function clipBounds(bounds: Rectangle, browserWindow: BrowserWindow): Rectangle {
+export function clipBounds(bounds: Rectangle, browserWindow: OFBrowserWindow | BrowserWindow): Rectangle {
   if (!('_options' in browserWindow)) {
     return bounds;
   }
@@ -84,5 +85,12 @@ function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEG
   return {
     value,
     clampedOffset: num < min ? -1 * (min - num) : 0 || num > max ? -1 * (num - max) : 0
+  };
+}
+
+export function extendNativeWindowInfo(rawNativeWindowInfo: Shapes.RawNativeWindowInfo): Shapes.NativeWindowInfo {
+  return {
+    ...rawNativeWindowInfo,
+    uuid: rawNativeWindowInfo.id
   };
 }
