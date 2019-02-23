@@ -336,7 +336,7 @@ function runApplication(identity, message, ack, nack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
     const { uuid } = appIdentity;
     let remoteSubscriptionUnSubscribe;
-    let unsub;
+    let unsub = () => null;
     const remoteSubscription = {
         uuid,
         name: uuid,
@@ -360,9 +360,7 @@ function runApplication(identity, message, ack, nack) {
             theErr.networkErrorCode = loadInfo.data.networkErrorCode;
             nack(theErr);
         }
-        if (typeof unsub === 'function') {
-            unsub();
-        }
+        unsub();
         if (typeof remoteSubscriptionUnSubscribe === 'function') {
             remoteSubscriptionUnSubscribe();
         }
@@ -374,16 +372,12 @@ function runApplication(identity, message, ack, nack) {
             unsub = duplicateUuidTransport.subscribeToUuid(uuid, (e) => {
                 nack(`Application with specified UUID is already running: ${uuid}`);
                 remoteSubscriptionUnSubscribe();
-                if (typeof unsub === 'function') {
-                    unsub();
-                }
+                unsub();
             });
             Application.runWithRVM(manifestUrl, appIdentity).catch(e => {
                 nack(e);
                 remoteSubscriptionUnSubscribe();
-                if (typeof unsub === 'function') {
-                    unsub();
-                }
+                unsub();
             });
         });
     } else {
