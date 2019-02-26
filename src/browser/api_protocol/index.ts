@@ -32,6 +32,7 @@ registerEntityExistenceMiddleware(getDefaultRequestHandler());
 if (legacyWindowingEnabled()) {
     registerProcessExternalAppMiddleware(getDefaultRequestHandler());
 }
+
 if (meshEnabled) {
     registerMeshMiddleware(getDefaultRequestHandler());
 }
