@@ -33,7 +33,8 @@
         options: { api: { iframe: { enableDeprecatedSharedName } } },
         socketServerState,
         runtimeArguments,
-        frames
+        frames,
+        licenseKey
     } = glbl.__startOptions;
 
     //Check if we need to use the process.eval in a nodeless environment.
@@ -129,6 +130,13 @@
 
     function getIpcConfigSync() {
         return elIPCConfig;
+    }
+
+    function isLicenseKeyValid() {
+        if (licenseKey && licenseKey.length === 36) {
+            return true;
+        }
+        return false;
     }
 
     function raiseEventSync(eventName, eventArgs) {
@@ -311,7 +319,10 @@
 
 
     function onContentReady(bindObject, callback) {
-
+        if (!isLicenseKeyValid()) {
+            console.warn('WARNING : Application does not have a valid OpenFin license key implemented in application manifest.' +
+                'To obtain a valid license key or to begin your 30 days of free support, please contact support@openfin.co.');
+        }
         if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen)) {
             deferByTick(() => {
                 callback();
