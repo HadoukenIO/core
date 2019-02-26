@@ -320,7 +320,7 @@
 
     function onContentReady(bindObject, callback) {
         if (!isLicenseKeyValid()) {
-            console.warn('WARNING : Application does not have a valid OpenFin license key implemented in application manifest.' +
+            console.warn('WARNING : Application does not have a valid OpenFin license key implemented in application manifest. ' +
                 'To obtain a valid license key or to begin your 30 days of free support, please contact support@openfin.co.');
         }
         if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen)) {
