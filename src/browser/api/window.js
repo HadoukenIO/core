@@ -842,12 +842,24 @@ Window.create = function(id, opts) {
         const windowPositioningObserver = Rx.Observable.create(observer => {
             if (!_options.saveWindowState) {
                 observer.next();
+                //if saveWindowState:false and autoShow:true and waitForPageLoad:false are present
+                //we show as soon as we restore the window position instead of waiting for the connected event
+                if (_options.autoShow && (!_options.waitForPageLoad)) {
+                    browserWindow.show();
+                }
             } else if (_options.waitForPageLoad) {
                 browserWindow.once('ready-to-show', () => {
                     restoreWindowPosition(identity, () => observer.next());
                 });
             } else {
-                restoreWindowPosition(identity, () => observer.next());
+                restoreWindowPosition(identity, () => {
+                    //if autoShow:true and waitForPageLoad:false are present we show as soon as we restore the window position
+                    //instead of waiting for the connected event
+                    if (_options.autoShow) {
+                        browserWindow.show();
+                    }
+                    observer.next();
+                });
             }
         });
 
@@ -855,7 +867,9 @@ Window.create = function(id, opts) {
         const subscription = Rx.Observable.zip(apiInjectionObserver, windowPositioningObserver).subscribe((event) => {
             const constructorCallbackMessage = event[0];
             if (_options.autoShow || _options.toShowOnRun) {
-                Window.show(identity);
+                if (!browserWindow.isVisible()) {
+                    Window.show(identity);
+                }
             }
 
             ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
