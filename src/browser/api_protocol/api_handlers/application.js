@@ -336,7 +336,10 @@ function runApplication(identity, message, ack, nack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
     const { uuid } = appIdentity;
     let remoteSubscriptionUnSubscribe;
-    let unsub = () => null;
+    const logMsg = manifestUrl ?
+        `unsub called before duplicate uuid transport listener removed for ${uuid}`
+        : '';
+    let unsub = () => writeToLog('error', logMsg);
     const remoteSubscription = {
         uuid,
         name: uuid,
