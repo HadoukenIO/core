@@ -14,6 +14,7 @@ import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
 import { lockUuid } from '../../uuid_availability';
 import duplicateUuidTransport from '../../duplicate_uuid_delegation';
+import { writeToLog } from '../../log';
 
 const SetWindowPosition = {
     SWP_HIDEWINDOW: 0x0080,
@@ -337,8 +338,8 @@ function runApplication(identity, message, ack, nack) {
     const { uuid } = appIdentity;
     let remoteSubscriptionUnSubscribe;
     const logMsg = manifestUrl ?
-        `unsub called before duplicate uuid transport listener removed for ${uuid}`
-        : '';
+        `unsub called before duplicate uuid transport listener removed for ${uuid}` :
+        '';
     let unsub = () => writeToLog('error', logMsg);
     const remoteSubscription = {
         uuid,
