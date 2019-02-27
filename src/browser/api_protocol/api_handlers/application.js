@@ -12,6 +12,8 @@ let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
+import { lockUuid } from '../../uuid_availability';
+import duplicateUuidTransport from '../../duplicate_uuid_delegation';
 
 const SetWindowPosition = {
     SWP_HIDEWINDOW: 0x0080,
@@ -334,6 +336,7 @@ function runApplication(identity, message, ack, nack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
     const { uuid } = appIdentity;
     let remoteSubscriptionUnSubscribe;
+    let unsub = () => null;
     const remoteSubscription = {
         uuid,
         name: uuid,
@@ -341,7 +344,6 @@ function runApplication(identity, message, ack, nack) {
         className: 'window',
         eventName: 'fire-constructor-callback'
     };
-
     if (coreState.getAppRunningState(uuid)) {
         Application.emitRunRequested(appIdentity);
         nack(`Application with specified UUID is already running: ${uuid}`);
@@ -358,7 +360,7 @@ function runApplication(identity, message, ack, nack) {
             theErr.networkErrorCode = loadInfo.data.networkErrorCode;
             nack(theErr);
         }
-
+        unsub();
         if (typeof remoteSubscriptionUnSubscribe === 'function') {
             remoteSubscriptionUnSubscribe();
         }
@@ -367,10 +369,25 @@ function runApplication(identity, message, ack, nack) {
     if (manifestUrl) {
         addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
             remoteSubscriptionUnSubscribe = unSubscribe;
-            Application.runWithRVM(identity, manifestUrl).catch(nack);
+            unsub = duplicateUuidTransport.subscribeToUuid(uuid, (e) => {
+                nack(`Application with specified UUID is already running: ${uuid}`);
+                remoteSubscriptionUnSubscribe();
+                unsub();
+            });
+            Application.runWithRVM(manifestUrl, appIdentity).catch(e => {
+                nack(e);
+                remoteSubscriptionUnSubscribe();
+                unsub();
+            });
         });
     } else {
-        Application.run(appIdentity);
+        if (lockUuid(uuid)) {
+            Application.run(appIdentity);
+        } else {
+            Application.emitRunRequested(appIdentity);
+            nack(`Application with specified UUID is already running: ${uuid}`);
+            return;
+        }
     }
 }
 

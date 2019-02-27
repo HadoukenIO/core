@@ -120,7 +120,7 @@ export class PeerConnectionManager extends EventEmitter {
         });
     }
 
-    public resolveIdentity(identity: Identity) : Promise<IdentityAddress> {
+    public resolveIdentity(identity: Identity): Promise<IdentityAddress> {
         const identityKey = this.genIdentityKey(identity);
 
         return new Promise((resolve, reject) => {
