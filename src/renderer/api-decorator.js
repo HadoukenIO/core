@@ -346,7 +346,8 @@
             url,
             uuid: initialOptions.uuid,
             name: name,
-            autoShow: true
+            autoShow: true,
+            waitForPageLoad: false
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
