@@ -35,7 +35,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
-import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
+import { isFileUrl, isHttpUrl, getIdentityFromObject, isObject, mergeDeep } from '../../common/main';
 import {
     DEFAULT_RESIZE_REGION_SIZE,
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
@@ -2016,10 +2016,17 @@ function getOptFromBrowserWin(opt, browserWin, defaultVal) {
 }
 
 
-function setOptOnBrowserWin(opt, val, browserWin) {
-    var opts = browserWin && browserWin._options;
-    if (opts) {
-        opts[opt] = val;
+function setOptOnBrowserWin(opt, newValue, browserWin) {
+    var options = browserWin && browserWin._options;
+
+    if (options) {
+        const oldValue = options[opt];
+
+        if (isObject(oldValue) && isObject(newValue)) {
+            mergeDeep(oldValue, newValue);
+        } else {
+            options[opt] = newValue;
+        }
     }
 }
 
