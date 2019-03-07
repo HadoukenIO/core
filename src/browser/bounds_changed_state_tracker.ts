@@ -12,7 +12,7 @@ import { toSafeInt } from '../common/safe_int';
 import ofEvents from './of_events';
 import route from '../common/route';
 import { clipBounds, windowSetBoundsToVisible } from './utils';
-import { OpenFinWindow, BrowserWindow } from '../shapes';
+import { OpenFinWindow, BrowserWindow, ExternalWindow } from '../shapes';
 import { windowTransaction } from 'electron';
 import {RectangleBase, Rectangle} from './rectangle';
 
@@ -266,7 +266,7 @@ export default class BoundsChangedStateTracker {
         return Math.abs(boundOne - boundTwo) < this.sharedBoundPixelDiff;
     };
 
-    private handleGroupedResize = (windowToUpdate: OpenFinWindow, bounds: RectangleBase): RectangleBase => {
+    private handleGroupedResize = (windowToUpdate: OpenFinWindow|ExternalWindow, bounds: RectangleBase): RectangleBase => {
         if (!trackingResize) {
             return bounds;
         }

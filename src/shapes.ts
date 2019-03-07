@@ -428,6 +428,27 @@ export interface ProcessInfo {
     pid: number;
 }
 
+// This mock is for window grouping accepting external windows
+interface BrowserWindowMock extends BrowserWindowElectron {
+    _options: {
+        frame?: boolean;
+        maxHeight?: number;
+        maxWidth?: number;
+        minWidth?: number;
+    };
+}
+
+export interface ExternalWindow extends BrowserWindowElectron {
+    _window?: {};
+    _options: {};
+    app_uuid?: string;
+    browserWindow: BrowserWindowMock;
+    groupUuid?: string;
+    isProxy?: boolean;
+    name: string;
+    uuid: string;
+}
+
 export interface RawNativeWindowInfo {
     alwaysOnTop: boolean;
     bounds: Bounds;
@@ -442,5 +463,6 @@ export interface RawNativeWindowInfo {
 }
 
 export interface NativeWindowInfo extends RawNativeWindowInfo {
+    name: string;
     uuid: string;
 }

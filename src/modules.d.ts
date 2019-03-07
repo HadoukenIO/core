@@ -51,6 +51,7 @@ declare namespace Electron {
         isDestroyed(): boolean;
         on(event: string, callback: (...args: any[]) => any): void;
         sendbyname(classname: string, windowname: string, message: string, maskPayload?: boolean): boolean;
+        sendbyid(id: number, message: string, maskPayload?: boolean): boolean;
         setmessagetimeout(timeout: number): void;
     }
 
@@ -94,6 +95,7 @@ declare namespace Electron {
         bringToFront(): any;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
+        removeAllListeners(eventName?: string): any;
         removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         setUserMovementEnabled(enabled: boolean): void;
         setWindowPlacement(bounds: Rectangle): void;
@@ -113,6 +115,17 @@ declare namespace Electron {
         };
     }
 
+    export class ExternalWindow extends BrowserWindow { }
+
+    export class webContents {
+        hasFrame: (frameName: string) => boolean;
+        mainFrameRoutingId: number;
+        session: session;
+    }
+
+    export namespace screen {
+        export function getDisplayMatching(rect: Rectangle): Display;
+    }
 
     export interface screen {
         getDisplayMatching(rect: Rectangle): Display;
@@ -150,7 +163,8 @@ declare namespace Electron {
         const tryLock: (key: string) => number;
         const releaseLock: (key: string) => number;
     }
-    export class winEventHookEmitter extends EventEmitter {
-        constructor(opts: { pid?: number });
+
+    export class WinEventHookEmitter extends EventEmitter {
+        constructor(opts?: { pid?: number });
     }
 }

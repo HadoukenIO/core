@@ -28,6 +28,8 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
+import { extendNativeWindowInfo } from '../utils';
+import { externalWindows } from './external_window';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -674,6 +676,38 @@ exports.System = {
                 uuid: eApp.uuid
             };
         });
+    },
+    getAllExternalWindows: function() {
+        const skipOwnWindows = false;
+        const nativeWindows = [];
+        const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOwnWindows);
+        const classNamesToIgnore = [
+            'Windows.UI.Core.CoreWindow'
+        ];
+        const titlesToIgnore = [
+            'Cortana',
+            'Microsoft Store',
+            'Program Manager',
+            'Settings',
+            'Start',
+            'Window Search'
+        ];
+
+        allNativeWindows.forEach(e => {
+            const ew = extendNativeWindowInfo(e);
+            const isUserFriendlyWindow = !classNamesToIgnore.includes(ew.className) &&
+                !titlesToIgnore.includes(ew.title) &&
+                ew.title &&
+                (ew.visible || externalWindows.has(ew.uuid));
+
+            if (!isUserFriendlyWindow) {
+                return;
+            }
+
+            nativeWindows.push(ew);
+        });
+
+        return nativeWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);
