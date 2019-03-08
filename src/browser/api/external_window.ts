@@ -8,6 +8,7 @@ import * as Shapes from '../../shapes';
 import NativeWindowInjectionBus from '../transports/native_window_injection_bus';
 import ofEvents from '../of_events';
 import route from '../../common/route';
+import WindowGroups from '../window_groups';
 
 export const externalWindows = new Map<string, Shapes.ExternalWindow>();
 const winEventHooksEmitters = new Map<string, WinEventHookEmitter>();
@@ -83,9 +84,10 @@ export function getExternalWindowBounds(identity: Identity): Bounds {
   return NativeWindowModule.getBounds(nativeWindow);
 }
 
-export function getExternalWindowGroup(identity: Identity): void {
+export function getExternalWindowGroup(identity: Identity): Shapes.GroupWindowIdentity[] {
   const nativeWindow = getNativeWindow(identity);
-  NativeWindowModule.noop(nativeWindow);
+  const windowGroup = WindowGroups.getGroup(nativeWindow.groupUuid);
+  return windowGroup.map(({ name, uuid, isExternalWindow }) => ({ name, uuid, windowName: name, isExternalWindow }));
 }
 
 export function getExternalWindowInfo(identity: Identity): Shapes.NativeWindowInfo {
@@ -219,6 +221,7 @@ function getNativeWindow(identity: Identity): Shapes.ExternalWindow {
     nativeWindow._options = {};
     nativeWindow.browserWindow = nativeWindow;
     nativeWindow.browserWindow._options = {};
+    nativeWindow.isExternalWindow = true;
     nativeWindow.name = uuid;
     nativeWindow.uuid = uuid;
     //-----------------------------------
