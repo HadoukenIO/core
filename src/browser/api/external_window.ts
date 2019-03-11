@@ -112,13 +112,13 @@ export function isExternalWindowShowing(identity: Identity): boolean {
 }
 
 export function joinExternalWindowGroup(identity: Identity, groupingIdentity: Identity): void {
-  const nativeWindow = getNativeWindow(identity);
+  getNativeWindow(identity);
   WindowGroups.joinGroup(identity, groupingIdentity);
 }
 
 export function leaveExternalWindowGroup(identity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
-  NativeWindowModule.noop(nativeWindow);
+  WindowGroups.leaveGroup(nativeWindow);
 }
 
 export function maximizeExternalWindow(identity: Identity): void {
