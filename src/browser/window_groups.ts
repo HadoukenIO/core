@@ -83,19 +83,22 @@ export class WindowGroups extends EventEmitter {
     }
 
     public joinGroup = async (source: Identity, target: Identity): Promise<void> => {
-        let sourceWindow: OpenFinWindow | ExternalWindow;
-        let targetWindow: OpenFinWindow | ExternalWindow;
+        let sourceWindow: GroupWindow;
+        let targetWindow: GroupWindow;
 
         sourceWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
         targetWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
 
-        let runtimeProxyWindow;
-        const sourceGroupUuid = sourceWindow.groupUuid;
-
-        // Check if missing target window is an external window
+        // Check if missing source or/and target window are external windows
+        if (!sourceWindow) {
+            sourceWindow = <ExternalWindow>externalWindows.get(source.uuid);
+        }
         if (!targetWindow) {
             targetWindow = <ExternalWindow>externalWindows.get(target.uuid);
         }
+
+        let runtimeProxyWindow;
+        const sourceGroupUuid = sourceWindow.groupUuid;
 
         //identify if either the target or the source belong to a different runtime:
         if (!targetWindow) {
@@ -148,7 +151,7 @@ export class WindowGroups extends EventEmitter {
 
     };
 
-    public leaveGroup = async (win: OpenFinWindow): Promise<void> => {
+    public leaveGroup = async (win: GroupWindow): Promise<void> => {
         const groupUuid = win && win.groupUuid;
 
         // cannot leave a group if you don't belong to one

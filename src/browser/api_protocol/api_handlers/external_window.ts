@@ -1,5 +1,5 @@
 import { APIHandlerMap, APIMessage, Identity } from '../../../shapes';
-import { getTargetExternalWindowIdentity, registerActionMap } from './api_protocol_base.js';
+import { getTargetExternalWindowIdentity, registerActionMap, getGroupingWindowIdentity } from './api_protocol_base.js';
 import * as ExternalWindow from '../../api/external_window';
 
 export const ExternalWindowApiMap: APIHandlerMap = {
@@ -118,7 +118,8 @@ async function isExternalWindowShowing(identity: Identity, message: APIMessage) 
 async function joinExternalWindowGroup(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.joinExternalWindowGroup(targetIdentity);
+  const groupingIdentity = getGroupingWindowIdentity(payload);
+  return ExternalWindow.joinExternalWindowGroup(targetIdentity, groupingIdentity);
 }
 
 async function leaveExternalWindowGroup(identity: Identity, message: APIMessage) {

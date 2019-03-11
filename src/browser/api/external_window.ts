@@ -111,9 +111,9 @@ export function isExternalWindowShowing(identity: Identity): boolean {
   return NativeWindowModule.isVisible(nativeWindow);
 }
 
-export function joinExternalWindowGroup(identity: Identity): void {
+export function joinExternalWindowGroup(identity: Identity, groupingIdentity: Identity): void {
   const nativeWindow = getNativeWindow(identity);
-  NativeWindowModule.noop(nativeWindow);
+  WindowGroups.joinGroup(identity, groupingIdentity);
 }
 
 export function leaveExternalWindowGroup(identity: Identity): void {
