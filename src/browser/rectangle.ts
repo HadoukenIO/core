@@ -43,9 +43,14 @@ class RectOptionsOpts {
 const zeroDelta = { x: 0, y: 0, height: 0, width: 0 };
 
 export class Rectangle {
-    public static CREATE_FROM_BOUNDS(rect: RectangleBase, opts: Opts = {}): Rectangle {
+    public static CREATE_FROM_BOUNDS(rect: RectangleBase, opts?: Opts): Rectangle {
         const { x, y, width, height } = rect;
-        return new Rectangle(x, y, width, height, new RectOptionsOpts(opts));
+        const options = opts
+            ? opts
+            : rect instanceof Rectangle
+                ? rect.opts
+                : {};
+        return new Rectangle(x, y, width, height, new RectOptionsOpts(options));
     }
     public static BOUND_SHARE_THRESHOLD = 5;
 

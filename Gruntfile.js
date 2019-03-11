@@ -237,44 +237,64 @@ module.exports = (grunt) => {
         const done = this.async();
 
         // Clean RxJS library (19MB -> 148KB)
-        const rxjsLibPath = path.join(stagingNodeModulesPath, 'rxjs');
+        const libRxjsDir = path.join('./lib', 'rxjs');
+        const libRxjs = path.join(libRxjsDir, 'Rx.min.js');
+        const rxjsStagingPath = path.join(stagingNodeModulesPath, 'rxjs');
+        const rxjsStagingIndex = path.join(rxjsStagingPath, 'index.js');
         const rxjsPackageJsonPath = './node_modules/rxjs/package.json';
-        const rxjsMinUrl = 'https://unpkg.com/rxjs@' + require(rxjsPackageJsonPath).version + '/bundles/Rx.min.js';
-        https.get(rxjsMinUrl, (res) => {
-            if (res.statusCode !== 200) {
-                grunt.log.error('HTTPS request failed');
-                done();
+        const rxjsVersion = require(rxjsPackageJsonPath).version;
+        const rxjsMinUrl = `https://unpkg.com/rxjs@${rxjsVersion}/bundles/Rx.min.js`;
+
+        wrench.rmdirSyncRecursive(rxjsStagingPath);
+        wrench.mkdirSyncRecursive(rxjsStagingPath);
+
+        const resolveRxjs = new Promise((resolve, rej) => {
+            try {
+                fs.copyFileSync(libRxjs, rxjsStagingIndex);
+                resolve();
+            } catch (error) {
+                https.get(rxjsMinUrl, (res) => {
+                    if (res.statusCode !== 200) {
+                        grunt.log.error('HTTPS request failed');
+                        rej();
+                    }
+
+                    let data = '';
+                    res.on('data', (d) => {
+                        data += d;
+                    });
+
+                    res.on('end', () => {
+                        if (!fs.existsSync(libRxjsDir)) {
+                            fs.mkdirSync(libRxjsDir);
+                        }
+                        fs.writeFileSync(libRxjs, data);
+                        fs.writeFileSync(path.join(rxjsStagingPath, 'index.js'), data);
+                        resolve();
+                    });
+                }).on('error', (e) => {
+                    grunt.log.error(e);
+                    rej();
+                });
             }
-
-            let data = '';
-            res.on('data', (d) => {
-                data += d;
-            });
-
-            res.on('end', () => {
-                wrench.rmdirSyncRecursive(rxjsLibPath);
-                wrench.mkdirSyncRecursive(rxjsLibPath);
-                fs.writeFileSync(path.join(rxjsLibPath, 'index.js'), data);
-                done();
-            });
-        }).on('error', (e) => {
-            grunt.log.error(e);
-            done();
         });
 
-        // Underscore (128KB -> 20KB)
-        const underscoreLibPath = path.join(stagingNodeModulesPath, 'underscore');
-        const underscoreLib = fs.readFileSync(path.join(underscoreLibPath, 'underscore-min.js'), 'utf-8');
-        wrench.rmdirSyncRecursive(underscoreLibPath);
-        wrench.mkdirSyncRecursive(underscoreLibPath);
-        fs.writeFileSync(path.join(underscoreLibPath, 'index.js'), underscoreLib);
+        resolveRxjs.then(() => {
+            // Underscore (128KB -> 20KB)
+            const underscoreLibPath = path.join(stagingNodeModulesPath, 'underscore');
+            const underscoreLib = fs.readFileSync(path.join(underscoreLibPath, 'underscore-min.js'), 'utf-8');
+            wrench.rmdirSyncRecursive(underscoreLibPath);
+            wrench.mkdirSyncRecursive(underscoreLibPath);
+            fs.writeFileSync(path.join(underscoreLibPath, 'index.js'), underscoreLib);
 
-        // Minimist (64KB -> 8KB)
-        const minimistLibPath = path.join(stagingNodeModulesPath, 'minimist');
-        const minimistLib = fs.readFileSync(path.join(minimistLibPath, 'index.js'), 'utf-8');
-        wrench.rmdirSyncRecursive(minimistLibPath);
-        wrench.mkdirSyncRecursive(minimistLibPath);
-        fs.writeFileSync(path.join(minimistLibPath, 'index.js'), minimistLib);
+            // Minimist (64KB -> 8KB)
+            const minimistLibPath = path.join(stagingNodeModulesPath, 'minimist');
+            const minimistLib = fs.readFileSync(path.join(minimistLibPath, 'index.js'), 'utf-8');
+            wrench.rmdirSyncRecursive(minimistLibPath);
+            wrench.mkdirSyncRecursive(minimistLibPath);
+            fs.writeFileSync(path.join(minimistLibPath, 'index.js'), minimistLib);
+            done();
+        });
     });
 
     grunt.registerTask('rebuild-native-modules', 'Rebuild native modules', function() {
