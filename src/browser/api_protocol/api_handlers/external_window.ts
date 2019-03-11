@@ -137,7 +137,8 @@ async function maximizeExternalWindow(identity: Identity, message: APIMessage) {
 async function mergeExternalWindowGroups(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.mergeExternalWindowGroups(targetIdentity);
+  const groupingIdentity = getGroupingWindowIdentity(payload);
+  return ExternalWindow.mergeExternalWindowGroups(targetIdentity, groupingIdentity);
 }
 
 async function minimizeExternalWindow(identity: Identity, message: APIMessage) {

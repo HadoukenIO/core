@@ -176,10 +176,23 @@ export class WindowGroups extends EventEmitter {
     };
 
     public mergeGroups = async (source: Identity, target: Identity): Promise<void> => {
-        const sourceWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
-        let targetWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
-        let sourceGroupUuid = sourceWindow.groupUuid;
+        let sourceWindow: GroupWindow;
+        let targetWindow: GroupWindow;
+
+        sourceWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
+        targetWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
+
+        // Check if missing source or/and target window are external windows
+        if (!sourceWindow) {
+            sourceWindow = <ExternalWindow>externalWindows.get(source.uuid);
+        }
+        if (!targetWindow) {
+            targetWindow = <ExternalWindow>externalWindows.get(target.uuid);
+        }
+
         let runtimeProxyWindow;
+        let sourceGroupUuid = sourceWindow.groupUuid;
+
         //identify if either the target or the source belong to a different runtime:
         if (!targetWindow) {
             runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);

@@ -126,9 +126,9 @@ export function maximizeExternalWindow(identity: Identity): void {
   NativeWindowModule.maximize(nativeWindow);
 }
 
-export function mergeExternalWindowGroups(identity: Identity): void {
-  const nativeWindow = getNativeWindow(identity);
-  NativeWindowModule.noop(nativeWindow);
+export function mergeExternalWindowGroups(identity: Identity, groupingIdentity: Identity): void {
+  getNativeWindow(identity);
+  WindowGroups.mergeGroups(identity, groupingIdentity);
 }
 
 export function minimizeExternalWindow(identity: Identity): void {
