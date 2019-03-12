@@ -128,6 +128,18 @@ export interface AppObj {
     uuid: string;
 }
 
+export interface WinDiagnosticData {
+    name: string;
+    isShowing: boolean;
+}
+
+export interface AppDiagnosticData {
+    uuid: string;
+    mainWindow: WinDiagnosticData;
+    childWindows: WinDiagnosticData[];
+}
+
+
 export type WebRequestHeader = {[key: string]: string};
 
 export type WebRequestHeaderConfig = {
