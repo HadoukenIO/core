@@ -23,13 +23,14 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'minimize-external-window': minimizeExternalWindow,
   'move-external-window-by': moveExternalWindowBy,
   'move-external-window': moveExternalWindow,
+  'register-native-external-window': registerNativeExternalWindow,
   'resize-external-window-by': resizeExternalWindowBy,
   'resize-external-window': resizeExternalWindowTo,
   'restore-external-window': restoreExternalWindow,
   'set-external-window-as-foreground': setExternalWindowAsForeground,
   'set-external-window-bounds': setExternalWindowBounds,
-  'show-external-window': showExternalWindow,
   'show-external-window-at': showExternalWindowAt,
+  'show-external-window': showExternalWindow,
   'stop-external-window-flashing': stopExternalWindowFlashing
 };
 
@@ -161,6 +162,12 @@ async function moveExternalWindow(identity: Identity, message: APIMessage) {
   return ExternalWindow.moveExternalWindow(targetIdentity, { left, top });
 }
 
+async function registerNativeExternalWindow(identity: Identity, message: APIMessage) {
+  const { payload } = message;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.registerNativeExternalWindow(targetIdentity);
+}
+
 async function resizeExternalWindowBy(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const { anchor, deltaHeight, deltaWidth } = payload;
@@ -194,17 +201,17 @@ async function setExternalWindowBounds(identity: Identity, message: APIMessage) 
   return ExternalWindow.setExternalWindowBounds(targetIdentity, { height, left, top, width });
 }
 
-async function showExternalWindow(identity: Identity, message: APIMessage) {
-  const { payload } = message;
-  const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.showExternalWindow(targetIdentity);
-}
-
 async function showExternalWindowAt(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const { left, top } = payload;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
   return ExternalWindow.showExternalWindowAt(targetIdentity, { left, top });
+}
+
+async function showExternalWindow(identity: Identity, message: APIMessage) {
+  const { payload } = message;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.showExternalWindow(targetIdentity);
 }
 
 async function stopExternalWindowFlashing(identity: Identity, message: APIMessage) {

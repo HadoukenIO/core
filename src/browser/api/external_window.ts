@@ -150,6 +150,10 @@ export function moveExternalWindow(identity: Identity, payload: Shapes.MoveWindo
   emitBoundsChangedEvent(identity, windowInfo);
 }
 
+export function registerNativeExternalWindow(identity: Identity): void {
+  getNativeWindow(identity);
+}
+
 export function resizeExternalWindowBy(identity: Identity, payload: Shapes.ResizeWindowByOpts): void {
   const nativeWindow = getNativeWindow(identity);
   const windowInfo = getExternalWindowInfo(identity);
@@ -181,16 +185,16 @@ export function setExternalWindowBounds(identity: Identity, payload: Bounds): vo
   emitBoundsChangedEvent(identity, windowInfo);
 }
 
-export function showExternalWindow(identity: Identity): void {
-  const nativeWindow = getNativeWindow(identity);
-  NativeWindowModule.show(nativeWindow);
-}
-
 export function showExternalWindowAt(identity: Identity, payload: Shapes.ShowWindowAtOpts): void {
   const nativeWindow = getNativeWindow(identity);
   const windowInfo = getExternalWindowInfo(identity);
   NativeWindowModule.showAt(nativeWindow, payload);
   emitBoundsChangedEvent(identity, windowInfo);
+}
+
+export function showExternalWindow(identity: Identity): void {
+  const nativeWindow = getNativeWindow(identity);
+  NativeWindowModule.show(nativeWindow);
 }
 
 export function stopExternalWindowFlashing(identity: Identity): void {
