@@ -79,10 +79,14 @@ export default class NativeWindowInjectionBus {
   private sendMessage(message: SendMessage): boolean {
     const { action, event, messageId } = message;
 
-    return copyDataTransport.sendByName('OpenFin-WindowManager-Server-8604', {
-      action,
-      messageId,
-      payload: { nativeId: this._nativeId, event }
+
+    return copyDataTransport.send({
+      data: {
+        action,
+        messageId,
+        payload: { nativeId: this._nativeId, event }
+      },
+      target: 'OpenFin-WindowManager-Server-8604'
     });
   }
 
