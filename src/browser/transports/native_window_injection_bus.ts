@@ -2,6 +2,14 @@ import { app as electronApp } from 'electron';
 import WMCopyData from './wm_copydata';
 
 const copyDataTransport = new WMCopyData('OpenFin-NativeWindowManager-Client', '');
+const eventTypeMapNum: EventTypeMapNum = {
+  8: 'blurred'
+};
+let alreadySubscribed = false;
+
+interface EventTypeMapNum {
+  [key: number]: string;
+}
 
 interface MessageBase {
   action: string;
@@ -17,7 +25,10 @@ interface AckMessage extends MessageBase {
 
 interface BroadcastMessage extends MessageBase {
   payload: {
-    data: any;
+    data: {
+      type: number;
+      [key: string]: string | number;
+    };
     nativeId: string;
   };
   retries: number[];
@@ -43,32 +54,81 @@ interface SendMessage {
   messageId: string;
 }
 
+interface PendingRequest {
+  resolve: () => void;
+  reject: (error: string) => void;
+}
+
 export default class NativeWindowInjectionBus {
-  private _events: { [eventName: string]: Listener[] };
+  private _events: Map<string, Listener[]>;
   private _eventsCount: number;
   private _nativeId: string;
+  private _pendingRequests: Map<string, PendingRequest>;
   private _pid: number;
   private _sequence: number;
 
   constructor(params: ConstructorParams) {
     const { nativeId, pid } = params;
-    this._events = {};
+
+    this._events = new Map();
     this._eventsCount = 0;
     this._nativeId = nativeId;
+    this._pendingRequests = new Map();
     this._pid = pid;
     this._sequence = 0;
+
+    copyDataTransport.on('message', (sender: number, rawMessage: string) => {
+      const parsedMessage: MessageBase = JSON.parse(rawMessage);
+      const { messageId } = parsedMessage;
+
+      this._sequence += 1;
+
+      if (this._sequence !== parsedMessage.sequence) {
+        // TODO: verify sequence logic
+        // Sequence numbers aren't matching indicating some
+        // messages might have failed to get delivered
+      }
+
+      if (this._pendingRequests.has(messageId)) {
+        const pendingRequest = this._pendingRequests.get(messageId);
+
+        // Ack message
+        if (parsedMessage.action.includes('response')) {
+          return pendingRequest.resolve();
+        }
+
+        // Nack message
+        if (parsedMessage.action.includes('error')) {
+          // handleNack(message.payload.reason);
+          return pendingRequest.reject((<NackMessage>parsedMessage).payload.reason);
+        }
+
+        return;
+      }
+
+      // Broadcast message
+      const { payload: { data } } = <BroadcastMessage>parsedMessage;
+      const { type: eventAsNumber } = data;
+      const eventAsString = eventTypeMapNum[eventAsNumber];
+
+      // Call all event listeners
+      if (this._events.has(eventAsString)) {
+        const listeners = this._events.get(eventAsString);
+        listeners.forEach(e => e(data));
+      }
+    });
   }
 
   public async on(event: string, listener: Listener): Promise<void> {
-    const listeners = this._events[event] || [];
+    const listeners = this._events.get(event) || [];
 
     if (listeners.length === 0) {
-      this._events[event] = listeners;
-      await this.subscribe(event);
+      await this.sendSubscriptionRequest(event);
     }
 
-    this._eventsCount += 1;
     listeners.push(listener);
+    this._events.set(event, listeners);
+    this._eventsCount += 1;
   }
 
   public removeAllListeners() {
@@ -78,7 +138,6 @@ export default class NativeWindowInjectionBus {
 
   private sendMessage(message: SendMessage): boolean {
     const { action, event, messageId } = message;
-
 
     return copyDataTransport.send({
       data: {
@@ -90,64 +149,33 @@ export default class NativeWindowInjectionBus {
     });
   }
 
-  private async subscribe(event: string): Promise<any> {
+  private sendSubscriptionRequest(event: string): Promise<any> {
     return new Promise((resolve, reject) => {
       const messageId = electronApp.generateGUID();
       const nackTimeoutDelay = 1000;
-      let nackTimeout: NodeJS.Timeout;
-
-      const handleNack = (errorMessage: string = `Failed to subscribe to ${event}`): void => {
+      const handleReject = (errorMessage: string = `Failed to subscribe to ${event}`): void => {
         clearTimeout(nackTimeout);
         reject(errorMessage);
       };
+      const nackTimeout = setTimeout(handleReject, nackTimeoutDelay);
 
-      const onMessage = (sender: number, rawMessage: string) => {
-        const parsedMessage: MessageBase = JSON.parse(rawMessage);
-        const messageIdMatch = messageId === parsedMessage.messageId;
-        let message;
-
-        this._sequence += 1;
-
-        // Ack
-        if (parsedMessage.action.includes('response')) {
-          if (messageIdMatch) {
-            clearTimeout(nackTimeout);
-            message = <AckMessage>parsedMessage;
-            resolve();
-          }
-          return;
+      this._pendingRequests.set(messageId, {
+        reject: handleReject,
+        resolve: () => {
+          clearTimeout(nackTimeout);
+          resolve();
         }
+      });
 
-        // Nack
-        if (parsedMessage.action.includes('error')) {
-          if (messageIdMatch) {
-            message = <NackMessage>parsedMessage;
-            handleNack(message.payload.reason);
-          }
-          return;
-        }
+      // TODO: alreadySubscribed is added to bandaid unfinished event subscription
+      if (alreadySubscribed) {
+        clearTimeout(nackTimeout);
+        resolve();
+      } else {
+        alreadySubscribed = true;
+        this.sendMessage({ action: 'subscription/set/request', event, messageId });
+      }
 
-        // Broadcast
-        if (parsedMessage.action.includes('broadcast')) {
-          message = <BroadcastMessage>parsedMessage;
-        }
-
-        const { payload: { data } } = message;
-        data.eventType = data.type;
-
-        // Call all event listeners
-        this._events[event].forEach(e => e(data));
-
-        if (this._sequence !== message.sequence) {
-          // TODO: verify sequence logic
-          // Sequence numbers aren't matching indicating some
-          // messages might have failed to get delivered
-        }
-      };
-
-      copyDataTransport.on('message', onMessage);
-      this.sendMessage({ action: 'subscription/set/request', event, messageId });
-      nackTimeout = setTimeout(handleNack, nackTimeoutDelay);
     });
   }
 }

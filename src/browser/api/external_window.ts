@@ -33,11 +33,17 @@ export async function addEventListener(identity: Identity, eventName: string, li
     winEventHooksEmitters.set(emitterKey, winEventHooksEmitter);
   }
 
-  // Native window injection buses
+  // Native window injection bus
   if (!nativeWindowInjectionBus) {
-    nativeWindowInjectionBus = await subToNativeWindowInjectionEvents(nativeWindow, eventName);
+    const { nativeId } = nativeWindow;
+    const pid = electronApp.getProcessIdForNativeId(nativeId);
+    nativeWindowInjectionBus = new NativeWindowInjectionBus({ nativeId, pid });
     nativeWindowInjectionBuses.set(emitterKey, nativeWindowInjectionBus);
   }
+
+  await nativeWindowInjectionBus.on(eventName, (data) => {
+    nativeWindow.emit(eventName, data);
+  });
 
   nativeWindow.on(eventName, listener);
 
@@ -356,19 +362,4 @@ function subToWinEventHooks(nativeWindow: Shapes.ExternalWindow): WinEventHookEm
   }));
 
   return winEventHooks;
-}
-
-/*
-  Subscribes to native window injection events
-*/
-async function subToNativeWindowInjectionEvents(nativeWindow: Shapes.ExternalWindow, eventName: string): Promise<NativeWindowInjectionBus> {
-  const { nativeId } = nativeWindow;
-  const pid = electronApp.getProcessIdForNativeId(nativeId);
-  const nativeWindowInjectionBus = new NativeWindowInjectionBus({ nativeId, pid });
-
-  await nativeWindowInjectionBus.on(eventName, (data) => {
-    nativeWindow.emit(eventName, data);
-  });
-
-  return nativeWindowInjectionBus;
 }
