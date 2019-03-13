@@ -1,4 +1,5 @@
 import { app as electronApp } from 'electron';
+import { writeToLog } from '../log';
 import WMCopyData from './wm_copydata';
 
 const copyDataTransport = new WMCopyData('OpenFin-NativeWindowManager-Client', '');
@@ -52,6 +53,7 @@ interface SendMessage {
   action: string;
   event: string;
   messageId: string;
+  type: string;
 }
 
 interface PendingRequest {
@@ -137,13 +139,21 @@ export default class NativeWindowInjectionBus {
   }
 
   private sendMessage(message: SendMessage): boolean {
-    const { action, event, messageId } = message;
+    const { action, event, messageId, type } = message;
 
     return copyDataTransport.send({
       data: {
         action,
         messageId,
-        payload: { nativeId: this._nativeId, event }
+        payload: {
+          data: {
+            [this._nativeId]: [event]
+          },
+          type
+        },
+        senderId: '0x0000',
+        sequence: 0,
+        time: 0
       },
       target: 'OpenFin-WindowManager-Server-8604'
     });
@@ -153,11 +163,15 @@ export default class NativeWindowInjectionBus {
     return new Promise((resolve, reject) => {
       const messageId = electronApp.generateGUID();
       const nackTimeoutDelay = 1000;
-      const handleReject = (errorMessage: string = `Failed to subscribe to ${event}`): void => {
+      const defaultErrorMessage = `Failed to subscribe to "${event}" event for external window ${this._nativeId}`;
+      const handleReject = (errorMessage: string = defaultErrorMessage): void => {
         clearTimeout(nackTimeout);
         reject(errorMessage);
       };
-      const nackTimeout = setTimeout(handleReject, nackTimeoutDelay);
+      const nackTimeout = setTimeout(() => {
+        writeToLog('info', `Timed out waiting for an injection event subscription response. ${defaultErrorMessage}`);
+        handleReject();
+      }, nackTimeoutDelay);
 
       this._pendingRequests.set(messageId, {
         reject: handleReject,
@@ -173,7 +187,11 @@ export default class NativeWindowInjectionBus {
         resolve();
       } else {
         alreadySubscribed = true;
-        this.sendMessage({ action: 'subscription/set/request', event, messageId });
+        const sent = this.sendMessage({ action: 'window/subscription/request', event, messageId, type: 'set' });
+        if (!sent) {
+          writeToLog('info', `Failed to send subscription request message over WM_COPYDATA. ${defaultErrorMessage}`);
+          handleReject();
+        }
       }
 
     });
