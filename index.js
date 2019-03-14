@@ -67,10 +67,14 @@ const serverReadyPromise = new Promise((resolve) => {
     resolveServerReady = () => resolve();
 });
 
-app.on('child-window-created', function(parentId, childId, childOptions) {
+app.on('child-window-created', function(parentId, childId, childOptions, notApiCreated) {
 
     if (!coreState.addChildToWin(parentId, childId)) {
         console.warn('failed to add');
+    }
+
+    if (notApiCreated) {
+        Object.assign(childOptions, { waitForPageLoad: false });
     }
 
     Window.create(childId, childOptions);
@@ -357,13 +361,13 @@ app.on('ready', function() {
 
     rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-progress'), payload => {
         if (payload) {
-            ofEvents.emit(route.system(`runtime-download-progress-${ payload.downloadId }`), payload);
+            ofEvents.emit(route.system(`runtime-download-progress-${payload.downloadId}`), payload);
         }
     });
 
     rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-error'), payload => {
         if (payload) {
-            ofEvents.emit(route.system(`runtime-download-error-${ payload.downloadId }`), {
+            ofEvents.emit(route.system(`runtime-download-error-${payload.downloadId}`), {
                 reason: payload.error,
                 err: errors.errorToPOJO(new Error(payload.error))
             });
@@ -372,7 +376,7 @@ app.on('ready', function() {
 
     rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-complete'), payload => {
         if (payload) {
-            ofEvents.emit(route.system(`runtime-download-complete-${ payload.downloadId }`), {
+            ofEvents.emit(route.system(`runtime-download-complete-${payload.downloadId}`), {
                 path: payload.path
             });
         }
