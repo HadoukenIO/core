@@ -107,3 +107,35 @@ export function noop(): void {
 export function isFloat(n: any): boolean {
     return Number(n) === n && n % 1 !== 0;
 }
+
+export function isObject(item: any): boolean {
+    return (item && typeof item === 'object' && !Array.isArray(item));
+}
+
+// Deep merge https://stackoverflow.com/a/34749873
+export function mergeDeep(target: any, ...sources: any[]): any {
+    if (!sources.length) {
+        return target;
+    }
+
+    const source = sources.shift();
+
+    if (isObject(target) && isObject(source)) {
+        const keys = Object.keys(source);
+
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+
+            if (isObject(source[key])) {
+                if (!target[key]) {
+                    Object.assign(target, { [key]: {} });
+                }
+                mergeDeep(target[key], source[key]);
+            } else {
+                Object.assign(target, { [key]: source[key] });
+            }
+        }
+    }
+
+    return mergeDeep(target, ...sources);
+}
