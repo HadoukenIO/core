@@ -982,7 +982,7 @@ Window.create = function(id, opts) {
             // Format timestamp to match debug.log
             const timeStamp = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
 
-            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
+            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, coreState.argo['app-log-flush-interval-ms']);
 
         }, 1);
     };

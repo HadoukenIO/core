@@ -58,10 +58,16 @@ export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessag
 
         flushConsoleMessageQueue();
 
-    // Otherwise if no timer already set, set one to flush the queue in 10s
+    // Otherwise if no timer already set, set one to flush the queue in 'interval' seconds
     } else if (!isFlushScheduled) {
         isFlushScheduled = true;
-        timer = setTimeout(flushConsoleMessageQueue, flushInterval ? flushInterval : defaultFlushInterval);
+
+        let interval = defaultFlushInterval;
+        if (flushInterval !== undefined) {
+            interval = flushInterval;
+        }
+
+        timer = setTimeout(flushConsoleMessageQueue, interval);
     }
 }
 
