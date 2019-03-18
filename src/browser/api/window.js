@@ -35,7 +35,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
-import { isFileUrl, isHttpUrl, getIdentityFromObject } from '../../common/main';
+import { isFileUrl, isHttpUrl, getIdentityFromObject, isObject, mergeDeep } from '../../common/main';
 import {
     DEFAULT_RESIZE_REGION_SIZE,
     DEFAULT_RESIZE_REGION_BOTTOM_RIGHT_CORNER,
@@ -169,10 +169,27 @@ let optionSetters = {
     },
     frame: function(newVal, browserWin) {
         let frameBool = !!newVal;
-
+        const prevBool = getOptFromBrowserWin('frame', browserWin, true);
         setOptOnBrowserWin('frame', frameBool, browserWin);
         browserWin.setHasFrame(frameBool);
-
+        if (frameBool !== prevBool) {
+            const maxWidth = getOptFromBrowserWin('maxWidth', browserWin, -1);
+            const maxHeight = getOptFromBrowserWin('maxHeight', browserWin, -1);
+            if (maxWidth !== -1 || maxHeight !== -1) {
+                browserWin.setMaximumSize(maxWidth, maxHeight);
+                const { width, height, x, y } = browserWin.getBounds();
+                const setMaxWidth = maxWidth === -1 ? Number.MAX_SAFE_INTEGER : maxWidth;
+                const setMaxHeight = maxHeight === -1 ? Number.MAX_SAFE_INTEGER : maxHeight;
+                browserWin.setBounds({ width: Math.min(width, setMaxWidth), height: Math.min(height, setMaxHeight), x, y });
+            }
+            const minWidth = getOptFromBrowserWin('minWidth', browserWin, 0);
+            const minHeight = getOptFromBrowserWin('minHeight', browserWin, 0);
+            if (minWidth !== 0 || minHeight !== 0) {
+                browserWin.setMinimumSize(minWidth, minHeight);
+                const { width, height, x, y } = browserWin.getBounds();
+                browserWin.setBounds({ width: Math.max(width, minWidth), height: Math.max(height, minHeight), x, y });
+            }
+        }
         if (!frameBool) {
             // reapply corner rounding
             let cornerRounding = getOptFromBrowserWin('cornerRounding', browserWin, {
@@ -2030,10 +2047,17 @@ function getOptFromBrowserWin(opt, browserWin, defaultVal) {
 }
 
 
-function setOptOnBrowserWin(opt, val, browserWin) {
-    var opts = browserWin && browserWin._options;
-    if (opts) {
-        opts[opt] = val;
+function setOptOnBrowserWin(opt, newValue, browserWin) {
+    var options = browserWin && browserWin._options;
+
+    if (options) {
+        const oldValue = options[opt];
+
+        if (isObject(oldValue) && isObject(newValue)) {
+            mergeDeep(oldValue, newValue);
+        } else {
+            options[opt] = newValue;
+        }
     }
 }
 
