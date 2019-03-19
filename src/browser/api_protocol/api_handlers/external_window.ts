@@ -6,8 +6,8 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'animate-external-window': animateExternalWindow,
   'bring-external-window-to-front': bringExternalWindowToFront,
   'close-external-window': closeExternalWindow,
-  'disable-external-window-frame': disableExternalWindowFrame,
-  'enable-external-window-frame': enableExternaWindowFrame,
+  'disable-external-window-user-movement': disableExternalWindowUserMovement,
+  'enable-external-window-user-movement': enableExternaWindowUserMovement,
   'flash-external-window': flashExternalWindow,
   'focus-external-window': focusExternalWindow,
   'get-external-window-bounds': getExternalWindowBounds,
@@ -56,16 +56,16 @@ async function closeExternalWindow(identity: Identity, message: APIMessage) {
   return ExternalWindow.closeExternalWindow(targetIdentity);
 }
 
-async function disableExternalWindowFrame(identity: Identity, message: APIMessage) {
+async function disableExternalWindowUserMovement(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.disableExternalWindowFrame(targetIdentity);
+  return ExternalWindow.disableExternalWindowUserMovement(targetIdentity);
 }
 
-async function enableExternaWindowFrame(identity: Identity, message: APIMessage) {
+async function enableExternaWindowUserMovement(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.enableExternaWindowFrame(targetIdentity);
+  return ExternalWindow.enableExternaWindowUserMovement(targetIdentity);
 }
 
 async function flashExternalWindow(identity: Identity, message: APIMessage) {

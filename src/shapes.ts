@@ -431,6 +431,8 @@ export interface ProcessInfo {
 // This mock is for window grouping accepting external windows
 interface BrowserWindowMock extends BrowserWindowElectron {
     _options: {
+        uuid?: string;
+        name?: string;
         frame?: boolean;
         maxHeight?: number;
         maxWidth?: number;
@@ -439,7 +441,10 @@ interface BrowserWindowMock extends BrowserWindowElectron {
 }
 
 export interface ExternalWindow extends BrowserWindowElectron {
-    _options: {};
+    _options: {
+        uuid?: string;
+        name?: string;
+    };
     _window?: {};
     app_uuid?: string;
     browserWindow: BrowserWindowMock;

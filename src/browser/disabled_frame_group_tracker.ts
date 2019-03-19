@@ -67,11 +67,17 @@ async function emitChange(
     raiseEvent(ofWin, 'bounds-changed', eventArgs);
 
 }
-async function raiseEvent(ofWin: GroupWindow, topic: string, payload: any) {
-    const uuid = ofWin.uuid;
-    const name = ofWin.name;
+async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: any) {
+    const { uuid, name } = groupWindow;
     const id = { uuid, name };
-    const eventName = route.window(topic, uuid, name);
+    let eventName;
+
+    if (groupWindow.isExternalWindow) {
+        eventName = route.nativeWindow(topic, uuid, name);
+    } else {
+        eventName = route.window(topic, uuid, name);
+    }
+
     const eventArgs = {
         ...payload,
         uuid,
@@ -79,7 +85,8 @@ async function raiseEvent(ofWin: GroupWindow, topic: string, payload: any) {
         topic,
         type: 'window'
     };
-    if (ofWin.isProxy) {
+
+    if (groupWindow.isProxy) {
         const rt = await getRuntimeProxyWindow(id);
         const fin = rt.hostRuntime.fin;
         await fin.System.executeOnRemote(id, { action: 'raise-event', payload: { eventName, eventArgs } });

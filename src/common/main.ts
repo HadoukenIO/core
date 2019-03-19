@@ -1,6 +1,7 @@
 
 import { parse as parseUrl } from 'url';
 import { Identity } from '../shapes';
+import { Rectangle } from 'electron';
 
 const chromePageWhiteList : string[] = [
     'chrome://about',

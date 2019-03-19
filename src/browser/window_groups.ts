@@ -7,7 +7,7 @@ import * as coreState from './core_state';
 import * as windowGroupsProxy from './window_groups_runtime_proxy';
 import * as groupTracker from './disabled_frame_group_tracker';
 import { argo } from './core_state';
-import { externalWindows } from './api/external_window';
+import { getExternalWindow } from './api/external_window';
 
 let uuidSeed = 0;
 
@@ -89,12 +89,12 @@ export class WindowGroups extends EventEmitter {
         sourceWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
         targetWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
 
-        // Check if missing source or/and target window are external windows
+        // Check if missing source and target windows are external windows
         if (!sourceWindow) {
-            sourceWindow = <ExternalWindow>externalWindows.get(source.uuid);
+            sourceWindow = <ExternalWindow>getExternalWindow(source);
         }
         if (!targetWindow) {
-            targetWindow = <ExternalWindow>externalWindows.get(target.uuid);
+            targetWindow = <ExternalWindow>getExternalWindow(target);
         }
 
         let runtimeProxyWindow;
@@ -182,12 +182,12 @@ export class WindowGroups extends EventEmitter {
         sourceWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
         targetWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
 
-        // Check if missing source or/and target window are external windows
+        // Check if missing source and target windows are external windows
         if (!sourceWindow) {
-            sourceWindow = <ExternalWindow>externalWindows.get(source.uuid);
+            sourceWindow = <ExternalWindow>getExternalWindow(source);
         }
         if (!targetWindow) {
-            targetWindow = <ExternalWindow>externalWindows.get(target.uuid);
+            targetWindow = <ExternalWindow>getExternalWindow(target);
         }
 
         let runtimeProxyWindow;
