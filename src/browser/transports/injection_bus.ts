@@ -29,6 +29,7 @@ interface BroadcastMessage extends MessageBase {
 
 interface ConstructorParams {
   nativeId: string;
+  pid: number;
 }
 
 type Listener = (data: any) => void;
@@ -60,14 +61,16 @@ export default class NativeWindowInjectionBus {
   private _eventsCount: number;
   private _nativeId: string;
   private _pendingRequests: Map<string, PendingRequest>;
+  private _pid: number;
 
   constructor(params: ConstructorParams) {
-    const { nativeId } = params;
+    const { nativeId, pid } = params;
 
     this._events = new Map();
     this._eventsCount = 0;
     this._nativeId = nativeId;
     this._pendingRequests = new Map();
+    this._pid = pid;
 
     copyDataTransport.on('message', (sender: number, rawMessage: string) => {
       const parsedMessage: MessageBase = JSON.parse(rawMessage);
@@ -104,7 +107,7 @@ export default class NativeWindowInjectionBus {
   private send({ action, payload }: SendMessage): Promise<string | void> {
     return new Promise((resolve, reject) => {
       const messageId = electronApp.generateGUID();
-      const target = 'OpenFin-WindowManager-Server-8604';
+      const target = `OpenFin-WindowManager-Server-${this._pid}`;
       const nackTimeoutDelay = 1000;
       const messageSent = copyDataTransport.send({
         data: {
