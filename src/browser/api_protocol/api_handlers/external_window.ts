@@ -1,5 +1,7 @@
 import { APIHandlerMap, APIMessage, Identity } from '../../../shapes';
+import { argo } from '../../core_state';
 import { getTargetExternalWindowIdentity, registerActionMap, getGroupingWindowIdentity } from './api_protocol_base.js';
+import { hijackMovesForGroupedWindows } from './grouped_window_moves';
 import * as ExternalWindow from '../../api/external_window';
 
 export const ExternalWindowApiMap: APIHandlerMap = {
@@ -35,7 +37,11 @@ export const ExternalWindowApiMap: APIHandlerMap = {
 };
 
 export function init(): void {
-  registerActionMap(ExternalWindowApiMap);
+  const registrationMap = argo['use-legacy-window-groups']
+    ? ExternalWindowApiMap
+    : hijackMovesForGroupedWindows(ExternalWindowApiMap);
+  
+  registerActionMap(registrationMap);
 }
 
 async function animateExternalWindow(identity: Identity, message: APIMessage) {
