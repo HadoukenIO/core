@@ -379,7 +379,8 @@ function applyWindowGroupingStub(externalWindow: Shapes.ExternalWindow): Shapes.
 
   externalWindow._options = {
     uuid: nativeId,
-    name: nativeId
+    name: nativeId,
+    frame: true
   };
   externalWindow.browserWindow = externalWindow;
   externalWindow.isExternalWindow = true;
@@ -392,21 +393,28 @@ function applyWindowGroupingStub(externalWindow: Shapes.ExternalWindow): Shapes.
       await enableExternaWindowUserMovement(identity);
     } else {
       await disableExternalWindowUserMovement(identity);
+
+      injectionBus.on('WM_SIZING', (data: any) => {
+        const { bottom, left, right, top } = data;
+        const bounds = { x: left, y: top, width: right - left, height: bottom - top };
+        const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_SIZING, nativeId, nativeId);
+        ofEvents.emit(routeName, bounds);
+      });
+
+      injectionBus.on('WM_MOVING', () => {
+        const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_MOVING, nativeId, nativeId);
+        ofEvents.emit(routeName);
+      });
+
       injectionBus.on('WM_ENTERSIZEMOVE', (data: any) => {
         const { mouseX, mouseY } = data;
         const coordinates = { x: mouseX, y: mouseY };
-        const ofEvent = OF_EVENT_FROM_WINDOWS_MESSAGE.WM_ENTERSIZEMOVE;
-        const routeName = route.externalWindow(ofEvent, nativeId, nativeId);
+        const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_ENTERSIZEMOVE, nativeId, nativeId);
         ofEvents.emit(routeName, coordinates);
       });
-      injectionBus.on('WM_MOVING', () => {
-        const ofEvent = OF_EVENT_FROM_WINDOWS_MESSAGE.WM_MOVING;
-        const routeName = route.externalWindow(ofEvent, nativeId, nativeId);
-        ofEvents.emit(routeName);
-      });
+
       injectionBus.on('WM_EXITSIZEMOVE', () => {
-        const ofEvent = OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE;
-        const routeName = route.externalWindow(ofEvent, nativeId, nativeId);
+        const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, nativeId, nativeId);
         ofEvents.emit(routeName);
       });
     }

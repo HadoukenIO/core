@@ -46,12 +46,15 @@ export const OF_EVENT_FROM_WINDOWS_MESSAGE = <{ [key: string]: string; }>{
   'WM_KILLFOCUS': 'blurred',
   0x0008: 'blurred', // 8
 
-  'WM_EXITSIZEMOVE': 'end-user-bounds-change',
-  0x0232: 'end-user-bounds-change', // 562
+  'WM_SIZING': 'sizing',
+  0x0214: 'WM_SIZING', // 532
 
   'WM_MOVING': 'moving',
   0x0216: 'moving', // 534
 
   'WM_ENTERSIZEMOVE': 'begin-user-bounds-change',
-  0x0231: 'begin-user-bounds-change' // 561
+  0x0231: 'begin-user-bounds-change', // 561
+
+  'WM_EXITSIZEMOVE': 'end-user-bounds-change',
+  0x0232: 'end-user-bounds-change' // 562
 };
