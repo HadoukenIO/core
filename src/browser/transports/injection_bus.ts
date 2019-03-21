@@ -1,9 +1,9 @@
 import { app as electronApp } from 'electron';
+import { EventEmitter } from 'events';
 import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 import WMCopyData from './wm_copydata';
 
 const copyDataTransport = new WMCopyData('OpenFin-NativeWindowManager-Client', '');
-let alreadySubscribed = false;
 
 interface MessageBase {
   action: string;
@@ -32,8 +32,6 @@ interface ConstructorParams {
   pid: number;
 }
 
-type Listener = (data: any) => void;
-
 interface NackMessage extends MessageBase {
   payload: {
     code: number;
@@ -56,23 +54,30 @@ interface PendingRequest {
   reject: (error: string) => void;
 }
 
-export default class NativeWindowInjectionBus {
-  private _events: Map<string, Listener[]>;
-  private _eventsCount: number;
+export default class NativeWindowInjectionBus extends EventEmitter {
+  private _messageListener: (sender: number, rawMessage: string) => void;
   private _nativeId: string;
   private _pendingRequests: Map<string, PendingRequest>;
   private _pid: number;
 
   constructor(params: ConstructorParams) {
-    const { nativeId, pid } = params;
+    super();
 
-    this._events = new Map();
-    this._eventsCount = 0;
+    const { nativeId, pid } = params;
     this._nativeId = nativeId;
     this._pendingRequests = new Map();
     this._pid = pid;
+    this._pid = 8604;
 
-    copyDataTransport.on('message', (sender: number, rawMessage: string) => {
+    // Subscribe to all events
+    this.send({
+      action: 'window/subscription/request',
+      payload: { data: { [this._nativeId]: ['*'] }, type: 'set' }
+    });
+
+    // Listen to messages from the transport and 
+    // forward broadcast messages locally
+    this._messageListener = (sender: number, rawMessage: string) => {
       const parsedMessage: MessageBase = JSON.parse(rawMessage);
       const { messageId } = parsedMessage;
 
@@ -96,14 +101,13 @@ export default class NativeWindowInjectionBus {
       const { payload: { data: { type: eventAsInteger, ...payload } } } = <BroadcastMessage>parsedMessage;
       const windowsEvent = <string>WINDOWS_MESSAGE_MAP[eventAsInteger];
 
-      // Call all event listeners
-      if (this._events.has(windowsEvent)) {
-        const listeners = this._events.get(windowsEvent);
-        listeners.forEach(e => e(payload));
-      }
-    });
+      this.emit(windowsEvent, payload);
+    }
+
+    copyDataTransport.on('message', this._messageListener);
   }
 
+  // Sends a message to the injected window
   private send({ action, payload }: SendMessage): Promise<string | void> {
     return new Promise((resolve, reject) => {
       const messageId = electronApp.generateGUID();
@@ -141,44 +145,18 @@ export default class NativeWindowInjectionBus {
       });
     });
   }
-
-  public async on(event: string, listener: Listener): Promise<void> {
-    const listeners = this._events.get(event) || [];
-
-    // TODO: alreadySubscribed is added to bandaid unfinished event subscription
-    if (listeners.length === 0 && !alreadySubscribed) {
-      await this.send({
-        action: 'window/subscription/request',
-        payload: {
-          data: {
-            [this._nativeId]: [event]
-          },
-          type: 'set'
-        }
-      });
-
-      alreadySubscribed = true;
-    }
-
-    listeners.push(listener);
-    this._events.set(event, listeners);
-    this._eventsCount += 1;
-  }
-
+  
   public removeAllListeners() {
-    // TODO: un-subscription is not implemented yet on the injected processes
-    copyDataTransport.removeAllListeners();
+    copyDataTransport.removeListener('message', this._messageListener);
+    super.removeAllListeners();
+    return this;
   }
 
+  // Changes injected window setting
   public async set(setting: any): Promise<void> {
     await this.send({
       action: 'window/setting/request',
-      payload: {
-        data: {
-          [this._nativeId]: setting
-        },
-        type: 'set'
-      }
+      payload: { data: { [this._nativeId]: setting }, type: 'set' }
     });
   }
 }

@@ -4,13 +4,13 @@ import { Bounds } from '../../../js-adapter/src/shapes';
 import { EventEmitter } from 'events';
 import { extendNativeWindowInfo } from '../utils';
 import { Identity } from '../../../js-adapter/src/identity';
+import { OF_EVENT_FROM_WINDOWS_MESSAGE } from '../../common/windows_messages';
 import * as NativeWindowModule from './native_window';
 import * as Shapes from '../../shapes';
 import InjectionBus from '../transports/injection_bus';
 import ofEvents from '../of_events';
 import route from '../../common/route';
 import WindowGroups from '../window_groups';
-import { OF_EVENT_FROM_WINDOWS_MESSAGE } from '../../common/windows_messages';
 
 export const externalWindows = new Map<string, Shapes.ExternalWindow>();
 const winEventHooksEmitters = new Map<string, WinEventHookEmitter>();
@@ -18,32 +18,7 @@ const injectionBuses = new Map<string, InjectionBus>();
 
 export async function addEventListener(identity: Identity, eventName: string, listener: Shapes.Listener): Promise<() => void> {
   const externalWindow = getExternalWindow(identity);
-  const emitterKey = getEmitterKey(externalWindow);
-  let globalWinEventHooksEmitter = winEventHooksEmitters.get('*');
-  let winEventHooksEmitter = winEventHooksEmitters.get(emitterKey);
-  const injectionBus = getInjectionBus(externalWindow);
-
-  // Global Windows' event hook emitters
-  if (eventName === 'external-window-created' && !globalWinEventHooksEmitter) {
-    globalWinEventHooksEmitter = subToGlobalWinEventHooks();
-    winEventHooksEmitters.set('*', globalWinEventHooksEmitter);
-  }
-
-  // Windows' event hook emitters
-  if (!winEventHooksEmitter) {
-    winEventHooksEmitter = subToWinEventHooks(externalWindow);
-    winEventHooksEmitters.set(emitterKey, winEventHooksEmitter);
-  }
-
-  // Native window injection events
-  if (eventName === 'blurred') {
-    await injectionBus.on('WM_KILLFOCUS', (data) => {
-      externalWindow.emit(eventName, data);
-    });
-  }
-
   externalWindow.on(eventName, listener);
-
   return () => externalWindow.removeListener(eventName, listener);
 }
 
@@ -64,44 +39,9 @@ export function closeExternalWindow(identity: Identity): void {
 
 export async function disableExternalWindowUserMovement(identity: Identity): Promise<void> {
   const externalWindow = getExternalWindow(identity);
-  const { uuid, name } = externalWindow;
   const injectionBus = getInjectionBus(externalWindow);
   await injectionBus.set({ userMovement: false });
-
   externalWindow.emit('user-movement-disabled');
-  
-  await injectionBus.on('WM_SIZING', (data: any) => {
-    const { bottom, left, right, top } = data;
-    const bounds = { x: left, y: top, width: right - left, height: bottom - top };
-    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_SIZING, uuid, name);
-    ofEvents.emit(routeName, bounds);
-    if (!externalWindow.isUserMovementEnabled()) {
-      externalWindow.emit('disabled-movement-bounds-changing');
-    }
-  });
-
-  await injectionBus.on('WM_MOVING', () => {
-    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_MOVING, uuid, name);
-    ofEvents.emit(routeName);
-    if (!externalWindow.isUserMovementEnabled()) {
-      externalWindow.emit('disabled-movement-bounds-changing');
-    }
-  });
-
-  await injectionBus.on('WM_ENTERSIZEMOVE', (data: any) => {
-    const { mouseX, mouseY } = data;
-    const coordinates = { x: mouseX, y: mouseY };
-    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_ENTERSIZEMOVE, uuid, name);
-    ofEvents.emit(routeName, coordinates);
-  });
-
-  await injectionBus.on('WM_EXITSIZEMOVE', () => {
-    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, uuid, name);
-    ofEvents.emit(routeName);
-    if (!externalWindow.isUserMovementEnabled()) {
-      externalWindow.emit('disabled-movement-bounds-changed');
-    }
-  });
   // TODO: enable user movement when requestors go away
 }
 
@@ -263,7 +203,17 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
 
   if (!externalWindow) {
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: uuid }));
+    
+    // Window grouping stub
     applyWindowGroupingStub(externalWindow);
+    
+    // Injection events subscription
+    subscribeToInjectionEvents(externalWindow);
+    
+    // Windows event hooks subscriptions
+    subToWinEventHooks(externalWindow);
+    subToGlobalWinEventHooks();
+    
     externalWindows.set(uuid, externalWindow);
   }
 
@@ -310,7 +260,12 @@ function emitBoundsChangedEvent(identity: Identity, previousNativeWindowInfo: Sh
 /*
   Subsribes to global win32 events
 */
-function subToGlobalWinEventHooks(): WinEventHookEmitter {
+function subToGlobalWinEventHooks(): void {
+  if (winEventHooksEmitters.has('*')) {
+    // Already subscribed to global hooks
+    return;
+  }
+  
   const winEventHooks = new WinEventHookEmitter();
 
   winEventHooks.on('EVENT_OBJECT_CREATE', (sender: EventEmitter, rawNativeWindowInfo: Shapes.RawNativeWindowInfo, timestamp: number) => {
@@ -318,16 +273,18 @@ function subToGlobalWinEventHooks(): WinEventHookEmitter {
     ofEvents.emit(route.system('external-window-created'), windowInfo);
   });
 
-  return winEventHooks;
+  winEventHooksEmitters.set('*', winEventHooks);
 }
 
 /*
   Subscribe to win32 events and propogate appropriate events to native window.
 */
-function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): WinEventHookEmitter {
+function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   const { nativeId } = externalWindow;
   const pid = electronApp.getProcessIdForNativeId(nativeId);
+  const emitterKey = getEmitterKey(externalWindow);
   const winEventHooks = new WinEventHookEmitter({ pid });
+  winEventHooksEmitters.set(emitterKey, winEventHooks);
 
   let previousNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(nativeId);
 
@@ -359,21 +316,19 @@ function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): WinEventHook
 
   winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const emitterKey = getEmitterKey(externalWindow);
-    const winEventHooksEmitter = winEventHooksEmitters.get(emitterKey);
-    const nativeWindowInjectionBus = injectionBuses.get(emitterKey);
+    const injectionBus = injectionBuses.get(emitterKey);
 
     externalWindow.emit('closing', nativeWindowInfo);
+
     winEventHooks.removeAllListeners();
-    externalWindows.delete(nativeId);
     winEventHooksEmitters.delete(emitterKey);
+
+    injectionBus.removeAllListeners();
+    injectionBuses.delete(emitterKey);
+    
     externalWindow.emit('closed', nativeWindowInfo);
     externalWindow.removeAllListeners();
-
-    winEventHooksEmitter.removeAllListeners();
-    winEventHooksEmitters.delete(emitterKey);
-
-    nativeWindowInjectionBus.removeAllListeners();
-    injectionBuses.delete(emitterKey);
+    externalWindows.delete(nativeId);
   }));
 
   winEventHooks.on('EVENT_OBJECT_FOCUS', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
@@ -406,8 +361,6 @@ function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): WinEventHook
       externalWindow.emit('bounds-changing', nativeWindowInfo);
     }
   }));
-
-  return winEventHooks;
 }
 
 // Window grouping stub (makes external windows work with our original disabled frame group tracker)
@@ -434,4 +387,47 @@ function applyWindowGroupingStub(externalWindow: Shapes.ExternalWindow): Shapes.
   };
 
   return externalWindow;
+}
+
+// Subscribe to all injection events
+async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow): Promise<void> {
+  const { uuid, name } = externalWindow;
+  const injectionBus = getInjectionBus(externalWindow);
+
+  injectionBus.on('WM_SIZING', (data: any) => {
+    const { bottom, left, right, top } = data;
+    const bounds = { x: left, y: top, width: right - left, height: bottom - top };
+    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_SIZING, uuid, name);
+    ofEvents.emit(routeName, bounds);
+    if (!externalWindow.isUserMovementEnabled()) {
+      externalWindow.emit('disabled-movement-bounds-changing');
+    }
+  });
+
+  injectionBus.on('WM_MOVING', () => {
+    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_MOVING, uuid, name);
+    ofEvents.emit(routeName);
+    if (!externalWindow.isUserMovementEnabled()) {
+      externalWindow.emit('disabled-movement-bounds-changing');
+    }
+  });
+
+  injectionBus.on('WM_ENTERSIZEMOVE', (data: any) => {
+    const { mouseX, mouseY } = data;
+    const coordinates = { x: mouseX, y: mouseY };
+    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_ENTERSIZEMOVE, uuid, name);
+    ofEvents.emit(routeName, coordinates);
+  });
+
+  injectionBus.on('WM_EXITSIZEMOVE', () => {
+    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, uuid, name);
+    ofEvents.emit(routeName);
+    if (!externalWindow.isUserMovementEnabled()) {
+      externalWindow.emit('disabled-movement-bounds-changed');
+    }
+  });
+
+  injectionBus.on('WM_KILLFOCUS', (data) => {
+    externalWindow.emit('blurred', data);
+  });
 }
