@@ -340,7 +340,7 @@
         const [url, requestedName, features = ''] = args; // jshint ignore:line
         const requestId = ++childWindowRequestId;
         const webContentsId = getWebContentsId();
-        const name = !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
+        const name = requestedName && !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
         const responseChannel = `${name}-created`;
 
         const options = Object.assign(featuresToOptionsObj(features), {
