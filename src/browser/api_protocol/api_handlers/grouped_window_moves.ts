@@ -4,7 +4,7 @@ import { setNewGroupedWindowBounds, updateGroupedWindowBounds } from '../../disa
 import { getTargetWindowIdentity } from './api_protocol_base';
 import { RectangleBase } from '../../rectangle';
 import { APIMessage, GroupWindow } from '../../../shapes';
-import { AckFunc, AckPayload } from '../transport_strategy/ack';
+import { AckFunc, AckPayload, NackFunc } from '../transport_strategy/ack';
 import { externalWindows } from '../../api/external_window';
 
 const unsupported = (payload: any) => {
@@ -46,7 +46,7 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
             specMap[action] = endpoint;
         } else {
             if (typeof endpoint === 'function') {
-                specMap[action] = (identity, message: APIMessage, ack: AckFunc, nack) => {
+                specMap[action] = (identity, message: APIMessage, ack: AckFunc, nack: NackFunc) => {
                     const { payload } = message;
                     const { uuid, name } = getTargetWindowIdentity(payload);
                     let window: GroupWindow|false = getWindowByUuidName(uuid, name);
@@ -76,11 +76,24 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
                             ack({ success: true });
                         }
                     } else {
-                        const endpointReturnValue: any = endpoint(identity, message, ack, nack);
+                        let endpointReturnValue: any;
+
+                        try {
+                            endpointReturnValue = endpoint(identity, message, ack, nack);
+                        } catch (error) {
+                            return nack(error);
+                        }
+
                         if (endpointReturnValue instanceof Promise) {
+                            // Promise-based endpoint
                             endpointReturnValue.then((data) => {
                                 ack(new AckPayload(data));
                             }).catch(nack);
+                        } else if (endpointReturnValue !== undefined) {
+                            // Synchronous endpoint with returned data
+                            ack(new AckPayload(endpointReturnValue));
+                        } else {
+                            // Callback-based endpoint (takes care of calling ack/nack by itself)
                         }
                     }
                 };

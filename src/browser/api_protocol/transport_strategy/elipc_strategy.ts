@@ -69,13 +69,26 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             } else {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
-                    const endpointReturnValue: any = endpoint.apiFunc(identity, data, ack, nack);
+                    let endpointReturnValue: any;
+
+                    try {
+                        endpointReturnValue = endpoint.apiFunc(identity, data, ack, nack);
+                    } catch (error) {
+                        return nack(error);
+                    }
+
                     if (endpointReturnValue instanceof Promise) {
+                        // Promise-based endpoint
                         endpointReturnValue.then(result => {
                             ack(new AckPayload(result));
                         }).catch(err => {
                             nack(err);
                         });
+                    } else if (endpointReturnValue !== undefined) {
+                        // Synchronous endpoint with returned data
+                        ack(new AckPayload(endpointReturnValue));
+                    } else {
+                        // Callback-based endpoint (takes care of calling ack/nack by itself)
                     }
                 } else {
                     const runtimeVersion = system.getVersion();
