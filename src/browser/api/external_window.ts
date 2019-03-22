@@ -203,17 +203,17 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
 
   if (!externalWindow) {
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: uuid }));
-    
+
     // Window grouping stub
     applyWindowGroupingStub(externalWindow);
-    
+
     // Injection events subscription
     subscribeToInjectionEvents(externalWindow);
-    
+
     // Windows event hooks subscriptions
     subToWinEventHooks(externalWindow);
     subToGlobalWinEventHooks();
-    
+
     externalWindows.set(uuid, externalWindow);
   }
 
@@ -265,7 +265,7 @@ function subToGlobalWinEventHooks(): void {
     // Already subscribed to global hooks
     return;
   }
-  
+
   const winEventHooks = new WinEventHookEmitter();
 
   winEventHooks.on('EVENT_OBJECT_CREATE', (sender: EventEmitter, rawNativeWindowInfo: Shapes.RawNativeWindowInfo, timestamp: number) => {
@@ -325,7 +325,7 @@ function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
 
     injectionBus.removeAllListeners();
     injectionBuses.delete(emitterKey);
-    
+
     externalWindow.emit('closed', nativeWindowInfo);
     externalWindow.removeAllListeners();
     externalWindows.delete(nativeId);

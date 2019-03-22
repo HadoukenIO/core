@@ -75,7 +75,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       payload: { data: { [this._nativeId]: ['*'] }, type: 'set' }
     });
 
-    // Listen to messages from the transport and 
+    // Listen to messages from the transport and
     // forward broadcast messages locally
     this._messageListener = (sender: number, rawMessage: string) => {
       const parsedMessage: MessageBase = JSON.parse(rawMessage);
@@ -86,12 +86,16 @@ export default class NativeWindowInjectionBus extends EventEmitter {
 
         // Ack message
         if (parsedMessage.action.includes('response')) {
-          return pendingRequest.resolve();
+          pendingRequest.resolve();
+          this._pendingRequests.delete(messageId);
+          return;
         }
 
         // Nack message
         if (parsedMessage.action.includes('error')) {
-          return pendingRequest.reject((<NackMessage>parsedMessage).payload.reason);
+          pendingRequest.reject((<NackMessage>parsedMessage).payload.reason);
+          this._pendingRequests.delete(messageId);
+          return;
         }
 
         return;
@@ -102,7 +106,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       const windowsEvent = <string>WINDOWS_MESSAGE_MAP[eventAsInteger];
 
       this.emit(windowsEvent, payload);
-    }
+    };
 
     copyDataTransport.on('message', this._messageListener);
   }
@@ -145,7 +149,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       });
     });
   }
-  
+
   public removeAllListeners() {
     copyDataTransport.removeListener('message', this._messageListener);
     super.removeAllListeners();

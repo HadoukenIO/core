@@ -69,16 +69,14 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             } else {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
-                    Promise.resolve()
-                        .then(() => endpoint.apiFunc(identity, data, ack, nack))
-                        .then(result => {
-                            // older action calls will invoke ack internally, newer ones will return a value
-                            if (result !== undefined) {
-                                ack(new AckPayload(result));
-                            }
+                    const endpointReturnValue: any = endpoint.apiFunc(identity, data, ack, nack);
+                    if (endpointReturnValue instanceof Promise) {
+                        endpointReturnValue.then(result => {
+                            ack(new AckPayload(result));
                         }).catch(err => {
                             nack(err);
                         });
+                    }
                 } else {
                     const runtimeVersion = system.getVersion();
                     const message = `API call ${data.action} not implemented in runtime version: ${runtimeVersion}.`;

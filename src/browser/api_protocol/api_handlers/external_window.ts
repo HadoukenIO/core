@@ -40,7 +40,7 @@ export function init(): void {
   const registrationMap = argo['use-legacy-window-groups']
     ? ExternalWindowApiMap
     : hijackMovesForGroupedWindows(ExternalWindowApiMap);
-  
+
   registerActionMap(registrationMap);
 }
 

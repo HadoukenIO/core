@@ -95,11 +95,11 @@ async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: any)
     }
 }
 
-export function updateGroupedWindowBounds(win: OpenFinWindow, delta: Partial<RectangleBase>) {
+export function updateGroupedWindowBounds(win: GroupWindow, delta: Partial<RectangleBase>) {
     const shift = { ...zeroDelta, ...delta };
     return handleApiMove(win, shift);
 }
-export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Partial<RectangleBase>) {
+export function setNewGroupedWindowBounds(win: GroupWindow, partialBounds: Partial<RectangleBase>) {
     const { rect, offset } = moveFromOpenFinWindow(win);
     const bounds = { ...applyOffset(rect, offset), ...partialBounds };
     const newBounds = normalizeExternalBounds(bounds, offset);
@@ -107,7 +107,7 @@ export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Par
     return handleApiMove(win, delta);
 }
 type MoveAccumulator = { otherWindows: Move[], leader?: Move };
-async function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
+async function handleApiMove(win: GroupWindow, delta: RectangleBase) {
     const { rect, offset } = moveFromOpenFinWindow(win);
     const newBounds = rect.shift(delta);
     if (!rect.moved(newBounds)) {

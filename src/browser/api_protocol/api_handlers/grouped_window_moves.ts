@@ -3,8 +3,8 @@ import { getWindowByUuidName } from '../../core_state';
 import { setNewGroupedWindowBounds, updateGroupedWindowBounds } from '../../disabled_frame_group_tracker';
 import { getTargetWindowIdentity } from './api_protocol_base';
 import { RectangleBase } from '../../rectangle';
-import { APIMessage } from '../../../shapes';
-import { AckFunc } from '../transport_strategy/ack';
+import { APIMessage, GroupWindow } from '../../../shapes';
+import { AckFunc, AckPayload } from '../transport_strategy/ack';
 import { externalWindows } from '../../api/external_window';
 
 const unsupported = (payload: any) => {
@@ -49,19 +49,19 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
                 specMap[action] = (identity, message: APIMessage, ack: AckFunc, nack) => {
                     const { payload } = message;
                     const { uuid, name } = getTargetWindowIdentity(payload);
-                    let window = getWindowByUuidName(uuid, name);
-                    
+                    let window: GroupWindow|false = getWindowByUuidName(uuid, name);
+
                     // Check if the missing window is an external window
                     if (!window) {
                         window = externalWindows.get(uuid);
                     }
-                    
+
                     if (window && window.groupUuid) {
                         const changeType = hijackThese[action](payload);
                         const moved = changeType.change === 'delta'
                             ? updateGroupedWindowBounds(window, changeType)
                             : setNewGroupedWindowBounds(window, changeType);
-                        
+
                         if (action === 'show-at-window') {
                             const showWindow = <Function>specMap['show-window'];
                             showWindow(identity, message, ack, nack);
@@ -71,12 +71,17 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
                             showExternalWindow(identity, message)
                                 .then(ack)
                                 .catch(nack);
-                            
+
                         } else {
                             ack({ success: true });
                         }
                     } else {
-                        endpoint(identity, message, ack, nack);
+                        const endpointReturnValue: any = endpoint(identity, message, ack, nack);
+                        if (endpointReturnValue instanceof Promise) {
+                            endpointReturnValue.then((data) => {
+                                ack(new AckPayload(data));
+                            }).catch(nack);
+                        }
                     }
                 };
             }
