@@ -79,6 +79,11 @@ export function getExternalWindowInfo(identity: Identity): Shapes.NativeWindowIn
   return extendNativeWindowInfo(rawNativeWindowInfo);
 }
 
+export function getExternalWindowOptions(identity: Identity): any {
+  const externalWindow = getExternalWindow(identity);
+  return externalWindow._options;
+}
+
 export function getExternalWindowState(identity: Identity): string {
   const externalWindow = getExternalWindow(identity);
   return NativeWindowModule.getState(externalWindow);
