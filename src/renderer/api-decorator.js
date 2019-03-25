@@ -256,6 +256,7 @@
 
     var pendingMainCallbacks = [];
     var currPageHasLoaded = false;
+    var isMainCallbackCalled = false;
 
     global.addEventListener('DOMContentLoaded', function() {
         disableModifiedClicks(glbl);
@@ -302,11 +303,11 @@
 
 
         currPageHasLoaded = true;
-
-        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen) {
+        if (getOpenerSuccessCallbackCalled() || isWindowOpen()) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
                     const userAppConfigArgs = initialOptions.userAppConfigArgs;
+                    isMainCallbackCalled = true;
                     if (userAppConfigArgs) { // handle deep linking callback
                         callback(userAppConfigArgs);
                     } else {
@@ -324,13 +325,20 @@
     }
 
     function onContentReady(bindObject, callback) {
-        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen)) {
+        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || isWindowOpen())) {
             deferByTick(() => {
                 callback();
             });
         } else {
             pendingMainCallbacks.push(callback);
         }
+    }
+
+    function isWindowOpen() {
+        if (window.opener === null || (currPageHasLoaded && window.opener)) {
+            return true;
+        }
+        return false;
     }
 
     //extend open
@@ -447,11 +455,13 @@
     function openerSuccessCBCalled() {
         customData.openerSuccessCalled = true;
 
-        deferByTick(() => {
-            pendingMainCallbacks.forEach((callback) => {
-                callback();
+        if (!isMainCallbackCalled) {
+            deferByTick(() => {
+                pendingMainCallbacks.forEach((callback) => {
+                    callback();
+                });
             });
-        });
+        }
     }
 
     //https://developer.mozilla.org/en-US/docs/Web/API/Window/open
