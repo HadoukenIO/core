@@ -147,7 +147,10 @@ declare namespace Electron {
         public reset(): void;
         public isRunning(): boolean;
     }
-
+    export namespace fileLock {
+        const tryLock: (key: string) => number;
+        const releaseLock: (key: string) => number;
+    }
     export class winEventHookEmitter extends EventEmitter {
         constructor(opts: { pid?: number });
     }
