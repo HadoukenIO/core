@@ -3,7 +3,7 @@
  * their functionality, rather things are constantly added here while
  * transitioning the code base to TypeScript to quickly make the editor "happy"
  */
-// <reference path="electron.d.ts"/>
+/// <reference path="electron.d.ts"/>
 
 declare namespace Electron {
     class App {

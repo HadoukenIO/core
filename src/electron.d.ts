@@ -1,4 +1,4 @@
-// Type definitions for Electron 3.0.6
+// Type definitions for Electron 3.0.16
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -113,7 +113,7 @@ declare namespace Electron {
   const shell: Shell;
   const systemPreferences: SystemPreferences;
   type webContents = WebContents;
-  const webContents: WebContents;
+  const webContents: typeof WebContents;
   const webFrame: WebFrame;
   const webviewTag: WebviewTag;
 
@@ -2179,20 +2179,9 @@ declare namespace Electron {
      * Start recording on all processes. Recording begins immediately locally and
      * asynchronously on child processes as soon as they receive the EnableRecording
      * request. The callback will be called once all child processes have acknowledged
-     * the startRecording request. categoryFilter is a filter to control what category
-     * groups should be traced. A filter can have an optional - prefix to exclude
-     * category groups that contain a matching category. Having both included and
-     * excluded category patterns in the same list is not supported. Examples:
-     * traceOptions controls what kind of tracing is enabled, it is a comma-delimited
-     * list. Possible options are: The first 3 options are trace recording modes and
-     * hence mutually exclusive. If more than one trace recording modes appear in the
-     * traceOptions string, the last one takes precedence. If none of the trace
-     * recording modes are specified, recording mode is record-until-full. The trace
-     * option will first be reset to the default option (record_mode set to
-     * record-until-full, enable_sampling and enable_systrace set to false) before
-     * options parsed from traceOptions are applied on it.
+     * the startRecording request.
      */
-    startRecording(options: StartRecordingOptions, callback: Function): void;
+    startRecording(options: TraceCategoriesAndOptions | TraceConfig, callback: Function): void;
     /**
      * Stop monitoring on all processes. Once all child processes have acknowledged the
      * stopMonitoring request the callback is called.
@@ -2805,7 +2794,9 @@ declare namespace Electron {
      * registered shortcut is pressed by the user. When the accelerator is already
      * taken by other applications, this call will silently fail. This behavior is
      * intended by operating systems, since they don't want applications to fight for
-     * global shortcuts.
+     * global shortcuts. The following accelerators will not be registered successfully
+     * on macOS 10.14 Mojave unless the app has been authorized as a trusted
+     * accessibility client:
      */
     register(accelerator: Accelerator, callback: Function): void;
     /**
@@ -3080,9 +3071,9 @@ declare namespace Electron {
      */
     sendSync(channel: string, ...args: any[]): any;
     /**
-     * Sends a message to a window with windowid via channel.
+     * Sends a message to a window with webContentsId via channel.
      */
-    sendTo(windowId: number, channel: string, ...args: any[]): void;
+    sendTo(webContentsId: number, channel: string, ...args: any[]): void;
     /**
      * Like ipcRenderer.send but the event will be sent to the <webview> element in the
      * host page instead of the main process.
@@ -4354,7 +4345,7 @@ declare namespace Electron {
      * Same as subscribeNotification, but uses NSNotificationCenter for local defaults.
      * This is necessary for events such as NSUserDefaultsDidChangeNotification.
      */
-    subscribeLocalNotification(event: string, callback: (event: string, userInfo: any) => void): void;
+    subscribeLocalNotification(event: string, callback: (event: string, userInfo: any) => void): number;
     /**
      * Subscribes to native notifications of macOS, callback will be called with
      * callback(event, userInfo) when the corresponding event happens. The userInfo is
@@ -4363,7 +4354,7 @@ declare namespace Electron {
      * unsubscribe the event. Under the hood this API subscribes to
      * NSDistributedNotificationCenter, example values of event are:
      */
-    subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): void;
+    subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): number;
     /**
      * Same as subscribeNotification, but uses
      * NSWorkspace.sharedWorkspace.notificationCenter. This is necessary for events
@@ -4541,6 +4532,42 @@ declare namespace Electron {
     static TouchBarSegmentedControl: typeof TouchBarSegmentedControl;
     static TouchBarSlider: typeof TouchBarSlider;
     static TouchBarSpacer: typeof TouchBarSpacer;
+  }
+
+  interface TraceCategoriesAndOptions {
+
+    // Docs: http://electronjs.org/docs/api/structures/trace-categories-and-options
+
+    /**
+     * – is a filter to control what category groups should be traced. A filter can
+     * have an optional prefix to exclude category groups that contain a matching
+     * category. Having both included and excluded category patterns in the same list
+     * is not supported. Examples: test_MyTest*, test_MyTest*,test_OtherStuff,
+     * -excluded_category1,-excluded_category2.
+     */
+    categoryFilter: string;
+    /**
+     * Controls what kind of tracing is enabled, it is a comma-delimited sequence of
+     * the following strings: record-until-full, record-continuously, trace-to-console,
+     * enable-sampling, enable-systrace, e.g. 'record-until-full,enable-sampling'. The
+     * first 3 options are trace recording modes and hence mutually exclusive. If more
+     * than one trace recording modes appear in the traceOptions string, the last one
+     * takes precedence. If none of the trace recording modes are specified, recording
+     * mode is record-until-full. The trace option will first be reset to the default
+     * option (record_mode set to record-until-full, enable_sampling and
+     * enable_systrace set to false) before options parsed from traceOptions are
+     * applied on it.
+     */
+    traceOptions: string;
+  }
+
+  interface TraceConfig {
+
+    // Docs: http://electronjs.org/docs/api/structures/trace-config
+
+    excluded_categories?: string[];
+    included_categories?: string[];
+    memory_dump_config?: MemoryDumpConfig;
   }
 
   interface Transaction {
@@ -4958,6 +4985,7 @@ declare namespace Electron {
   }
 
   class WebContents extends EventEmitter {
+      static fromProcessAndFrameIds: any;
 
     // Docs: http://electronjs.org/docs/api/web-contents
 
@@ -7862,6 +7890,9 @@ declare namespace Electron {
     args?: string[];
   }
 
+  interface MemoryDumpConfig {
+  }
+
   interface MenuItemConstructorOptions {
     /**
      * Will be called with click(menuItem, browserWindow, event) when the menu item is
@@ -8335,7 +8366,7 @@ declare namespace Electron {
      * Specify page size of the generated PDF. Can be A3, A4, A5, Legal, Letter,
      * Tabloid or an Object containing height and width in microns.
      */
-    pageSize?: string;
+    pageSize?: string | Size;
     /**
      * Whether to print CSS backgrounds.
      */
@@ -8613,11 +8644,6 @@ declare namespace Electron {
   }
 
   interface StartMonitoringOptions {
-    categoryFilter: string;
-    traceOptions: string;
-  }
-
-  interface StartRecordingOptions {
     categoryFilter: string;
     traceOptions: string;
   }
@@ -9144,7 +9170,9 @@ declare namespace Electron {
      */
     contextIsolation?: boolean;
     /**
-     * Whether to use native window.open(). Defaults to false. This option is currently
+     * Whether to use native window.open(). If set to true, the webPreferences of child
+     * window will always be the same with parent window, regardless of the parameters
+     * passed to window.open(). Defaults to false. This option is currently
      * experimental.
      */
     nativeWindowOpen?: boolean;
