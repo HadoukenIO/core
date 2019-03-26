@@ -55,7 +55,6 @@ import { createWillDownloadEventListener } from './src/browser/api/file_download
 import duplicateUuidTransport from './src/browser/duplicate_uuid_delegation';
 import { deleteApp, argv } from './src/browser/core_state';
 import { lockUuid } from './src/browser/uuid_availability';
-import * as diagnosticReporter from './src/browser/diagnostics_reporter';
 
 // locals
 let firstApp = null;
@@ -158,8 +157,6 @@ includeFlashPlugin();
 
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
-
-diagnosticReporter.init(coreState.argo);
 
 // Safe errors initialization
 errors.initSafeErrors(coreState.argo);
