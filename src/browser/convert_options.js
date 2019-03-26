@@ -187,7 +187,8 @@ module.exports = {
 
         if (isInContainer('openfin')) {
             newOptions.resizable = newOptions.resize && newOptions.resizable;
-            newOptions.show = newOptions.autoShow && !newOptions.waitForPageLoad;
+            //always rely on the core to show the window.
+            newOptions.show = false;
             newOptions.skipTaskbar = !newOptions.showTaskbarIcon;
             newOptions.title = newOptions.name;
 
