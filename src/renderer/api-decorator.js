@@ -256,7 +256,6 @@
 
     var pendingMainCallbacks = [];
     var currPageHasLoaded = false;
-    var isMainCallbackCalled = false;
 
     global.addEventListener('DOMContentLoaded', function() {
         disableModifiedClicks(glbl);
@@ -303,11 +302,10 @@
 
 
         currPageHasLoaded = true;
-        if (getOpenerSuccessCallbackCalled() || isWindowOpen()) {
+        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
                     const userAppConfigArgs = initialOptions.userAppConfigArgs;
-                    isMainCallbackCalled = true;
                     if (userAppConfigArgs) { // handle deep linking callback
                         callback(userAppConfigArgs);
                     } else {
@@ -325,20 +323,13 @@
     }
 
     function onContentReady(bindObject, callback) {
-        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || isWindowOpen())) {
+        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen)) {
             deferByTick(() => {
                 callback();
             });
         } else {
             pendingMainCallbacks.push(callback);
         }
-    }
-
-    function isWindowOpen() {
-        if (window.opener === null || (currPageHasLoaded && window.opener)) {
-            return true;
-        }
-        return false;
     }
 
     //extend open
@@ -356,7 +347,8 @@
             uuid: initialOptions.uuid,
             name: name,
             autoShow: true,
-            waitForPageLoad: false
+            waitForPageLoad: false,
+            isRawWindowOpen: true
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
@@ -455,13 +447,11 @@
     function openerSuccessCBCalled() {
         customData.openerSuccessCalled = true;
 
-        if (!isMainCallbackCalled) {
-            deferByTick(() => {
-                pendingMainCallbacks.forEach((callback) => {
-                    callback();
-                });
+        deferByTick(() => {
+            pendingMainCallbacks.forEach((callback) => {
+                callback();
             });
-        }
+        });
     }
 
     //https://developer.mozilla.org/en-US/docs/Web/API/Window/open

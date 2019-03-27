@@ -193,6 +193,7 @@ export interface WindowOptions {
     hideOnClose?: boolean;
     hideWhileChildrenVisible?: boolean;
     icon?: string;
+    isRawWindowOpen?: boolean;
     launchExternal?: string;
     loadErrorMessage?: string;
     maxHeight?: number;
