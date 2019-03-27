@@ -442,9 +442,14 @@ interface BrowserWindowMock extends BrowserWindowElectron {
 
 export interface ExternalWindow extends BrowserWindowElectron {
     _options: {
-        uuid?: string;
-        name?: string;
-        frame?: boolean;
+        alwaysOnTop: boolean;
+        frame: boolean;
+        maximizable: boolean;
+        name: string;
+        opacity: number;
+        resizable: boolean;
+        showTaskbarIcon: boolean;
+        uuid: string;
     };
     _window?: {};
     app_uuid?: string;

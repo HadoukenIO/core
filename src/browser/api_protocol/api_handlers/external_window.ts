@@ -34,7 +34,8 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'set-external-window-bounds': setExternalWindowBounds,
   'show-external-window-at': showExternalWindowAt,
   'show-external-window': showExternalWindow,
-  'stop-external-window-flashing': stopExternalWindowFlashing
+  'stop-external-window-flashing': stopExternalWindowFlashing,
+  'update-external-window-options': updateExternalWindowOptions
 };
 
 export function init(): void {
@@ -231,4 +232,11 @@ async function stopExternalWindowFlashing(identity: Identity, message: APIMessag
   const { payload } = message;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
   return ExternalWindow.stopExternalWindowFlashing(targetIdentity);
+}
+
+async function updateExternalWindowOptions(identity: Identity, message: APIMessage) {
+  const { payload } = message;
+  const { options } = payload;
+  const targetIdentity = getTargetExternalWindowIdentity(payload);
+  return ExternalWindow.updateExternalWindowOptions(targetIdentity, options);
 }

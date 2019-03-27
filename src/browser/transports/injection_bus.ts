@@ -1,6 +1,7 @@
 import { app as electronApp } from 'electron';
 import { EventEmitter } from 'events';
 import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
+import { writeToLog } from '../log';
 import WMCopyData from './wm_copydata';
 
 const copyDataTransport = new WMCopyData('OpenFin-NativeWindowManager-Client', '');
@@ -67,7 +68,6 @@ export default class NativeWindowInjectionBus extends EventEmitter {
     this._nativeId = nativeId;
     this._pendingRequests = new Map();
     this._pid = pid;
-    this._pid = 8604;
 
     // Subscribe to all events
     this.send({
@@ -102,6 +102,11 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       }
 
       // Broadcast message
+      if (!(<BroadcastMessage>parsedMessage).payload || !(<BroadcastMessage>parsedMessage).payload.data) {
+        writeToLog('info', `Injection event without payload: ${JSON.stringify(parsedMessage)}`); // TODO
+        return;
+      }
+
       const { payload: { data: { type: eventAsInteger, ...payload } } } = <BroadcastMessage>parsedMessage;
       const windowsEvent = <string>WINDOWS_MESSAGE_MAP[eventAsInteger];
 
@@ -115,7 +120,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
   private send({ action, payload }: SendMessage): Promise<string | void> {
     return new Promise((resolve, reject) => {
       const messageId = electronApp.generateGUID();
-      const target = `OpenFin-WindowManager-Server-${this._pid}`;
+      const target = `OpenFin-WindowManager-${this._pid}`;
       const nackTimeoutDelay = 1000;
       const messageSent = copyDataTransport.send({
         data: {

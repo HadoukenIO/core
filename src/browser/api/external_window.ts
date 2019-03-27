@@ -190,6 +190,11 @@ export function stopExternalWindowFlashing(identity: Identity): void {
   NativeWindowModule.stopFlashing(externalWindow);
 }
 
+export function updateExternalWindowOptions(identity: Identity, options: object): void {
+  getExternalWindow(identity);
+  // TODO
+}
+
 /*
   Returns a key for emitter maps
 */

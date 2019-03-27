@@ -2,11 +2,17 @@ export const WINDOWS_MESSAGE_MAP = <{ [key: string]: string | number; }>{
   'WM_DESTROY': 0x0002, // 2
   0x0002: 'WM_DESTROY',
 
+  'WM_MOVE': 0x0003, // 3
+  0x0003: 'WM_MOVE',
+
   'WM_SETFOCUS': 0x0007, // 7
   0x0007: 'WM_SETFOCUS',
 
   'WM_KILLFOCUS': 0x0008, // 8
   0x0008: 'WM_KILLFOCUS',
+
+  'WM_WINDOWPOSCHANGING': 0x0046, // 70
+  0x0046: 'WM_WINDOWPOSCHANGING',
 
   'WM_WINDOWPOSCHANGED': 0x0047, // 71
   0x0047: 'WM_WINDOWPOSCHANGED',
@@ -31,6 +37,9 @@ export const WINDOWS_MESSAGE_MAP = <{ [key: string]: string | number; }>{
 
   'WM_SIZING': 0x0214, // 532
   0x0214: 'WM_SIZING',
+
+  'WM_CAPTURECHANGED': 0x0215, // 533
+  0x0215: 'WM_CAPTURECHANGED',
 
   'WM_MOVING': 0x0216, // 534
   0x0216: 'WM_MOVING',
