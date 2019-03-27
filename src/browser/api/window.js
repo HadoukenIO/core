@@ -1697,13 +1697,21 @@ Window.defineDraggableArea = function() {};
 
 Window.updateOptions = function(identity, updateObj) {
     let browserWindow = getElectronBrowserWindow(identity, 'update settings for');
+    let { uuid, name } = identity;
+    let diff = [];
 
     try {
         for (var opt in updateObj) {
             if (optionSetters[opt]) {
+                let optionValues = { optionName: opt };
+                optionValues.oldVal = getOptFromBrowserWin(opt, browserWindow);
                 optionSetters[opt](updateObj[opt], browserWindow);
+                optionValues.newVal = getOptFromBrowserWin(opt, browserWindow);
+                diff.push(optionValues);
             }
         }
+        ofEvents.emit(route.window('options-changed', uuid, name), { diff, uuid, name });
+
     } catch (e) {
         console.log(e.message);
     }
