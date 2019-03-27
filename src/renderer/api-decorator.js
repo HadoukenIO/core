@@ -11,6 +11,7 @@
     const isMainFrame = glbl.isMainFrame;
     let renderFrameId = glbl.routingId;
     let customData = glbl.getFrameData(renderFrameId);
+    const webWindowMap = new Map();
 
     const electron = require('electron');
 
@@ -385,7 +386,7 @@
         ipc.once(responseChannel, () => {
             setTimeout(() => {
                 // Synchronous execution of window.open to trigger state tracking of child window
-                let nativeWindow = originalOpen((url !== 'about:blank' ? url : ''), frameName, features);
+                let webWindow = originalOpen((url !== 'about:blank' ? url : ''), frameName, features);
 
                 let popResponseChannel = `${frameName}-pop-request`;
                 ipc.once(popResponseChannel, (sender, meta) => {
@@ -393,7 +394,7 @@
                         try {
                             let returnMeta = JSON.parse(meta);
                             cb({
-                                nativeWindow: nativeWindow,
+                                webWindow: webWindow,
                                 id: returnMeta.windowId
                             });
                         } catch (e) {}
@@ -501,6 +502,67 @@
         return featuresObj;
     }
 
+    //WEB Window Functionality
+    function registerWebWindowOnParent(parent, name, wnd) {
+        try {
+            parent.fin.__internal_.registerWebWindow(name, wnd);
+            registerWebWindowOnParent(parent.opener, name, wnd);
+        } catch (err) {
+            //this is quite common for main windows. here just to have a debug target.
+            //console.error(err);
+        }
+    }
+
+    function deregisterWebWindowOnParent(parent, name) {
+        try {
+            parent.fin.__internal_.deregisterWebWindow(name);
+            deregisterWebWindowOnParent(parent.opener, name);
+        } catch (err) {
+            //this is quite common for main windows. here just to have a debug target.
+            //console.error(err);
+        }
+    }
+
+    function registerWebWindow(name, win) {
+        webWindowMap.set(name, win);
+        registerWebWindowOnParent(window.opener, name, win);
+    }
+
+    function deregisterWebWindow(name) {
+        webWindowMap.delete(name);
+        deregisterWebWindowOnParent(window.opener, name);
+    }
+
+    function getWebWindow(name) {
+
+        let webWindow = webWindowMap.get(name);
+        if (webWindow) {
+            return webWindow;
+        } else {
+            try {
+                return window.opener.fin.__internal_.getWebWindow(name);
+            } catch (err) {
+                //this is quite common for main windows. here just to have a debug target.
+                //console.error(err);
+            }
+        }
+    }
+
+
+    window.addEventListener('beforeunload', () => {
+        deregisterWebWindow(initialOptions.name);
+    });
+
+    onContentReady(window, () => {
+        const app = fin.Application.getCurrentSync();
+        app.on('window-closed', ({ name }) => {
+            deregisterWebWindow(name);
+        });
+    });
+
+    deferByTick(() => registerWebWindow(getWindowIdentitySync().name, window));
+    //End WEB Window Functionality
+
     ///external API Decorator:
     global.fin = {
         desktop: {
@@ -528,7 +590,10 @@
             emitNoteProxyReady: emitNoteProxyReady,
             initialOptions,
             entityInfo,
-            isMainFrame
+            isMainFrame,
+            registerWebWindow,
+            getWebWindow,
+            deregisterWebWindow
         }
     };
 
