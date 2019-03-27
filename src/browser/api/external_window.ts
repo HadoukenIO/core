@@ -257,7 +257,15 @@ function emitBoundsChangedEvent(identity: Identity, previousNativeWindowInfo: Sh
 
   if (boundsChanged) {
     externalWindow.once('bounds-changing', () => {
-      externalWindow.emit('bounds-changed', currentWindowInfo);
+      externalWindow.emit('bounds-changed', {
+        changeType: 0, // TODO: use real value
+        // deferred: false, // TODO
+        height: currentWindowInfo.bounds.height,
+        left: currentWindowInfo.bounds.x,
+        // reason: 'self', // TODO
+        top: currentWindowInfo.bounds.y,
+        width: currentWindowInfo.bounds.width
+      });
     });
   }
 }
@@ -284,6 +292,7 @@ function subToGlobalWinEventHooks(): void {
 /*
   Subscribe to win32 events and propogate appropriate events to native window.
 */
+// tslint:disable-next-line
 function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   const { nativeId } = externalWindow;
   const pid = electronApp.getProcessIdForNativeId(nativeId);
@@ -312,18 +321,20 @@ function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   };
 
   winEventHooks.on('EVENT_OBJECT_SHOW', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    externalWindow.emit('shown', nativeWindowInfo);
+    externalWindow.emit('shown');
   }));
 
   winEventHooks.on('EVENT_OBJECT_HIDE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    externalWindow.emit('hidden', nativeWindowInfo);
+    externalWindow.emit('hidden', {
+      reason: 'hide' // TOOD: use real value
+    });
   }));
 
   winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const emitterKey = getEmitterKey(externalWindow);
     const injectionBus = injectionBuses.get(emitterKey);
 
-    externalWindow.emit('closing', nativeWindowInfo);
+    externalWindow.emit('closing');
 
     winEventHooks.removeAllListeners();
     winEventHooksEmitters.delete(emitterKey);
@@ -331,52 +342,92 @@ function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
     injectionBus.removeAllListeners();
     injectionBuses.delete(emitterKey);
 
-    externalWindow.emit('closed', nativeWindowInfo);
+    externalWindow.emit('closed');
     externalWindow.removeAllListeners();
     externalWindows.delete(nativeId);
   }));
 
   winEventHooks.on('EVENT_OBJECT_FOCUS', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    externalWindow.emit('focused', nativeWindowInfo);
+    externalWindow.emit('focused');
   }));
 
   winEventHooks.on('EVENT_SYSTEM_MOVESIZESTART', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    externalWindow.emit('begin-user-bounds-changing', nativeWindowInfo);
+    externalWindow.emit('begin-user-bounds-changing', {
+      frame: true, // TODO: use real value
+      height: nativeWindowInfo.bounds.height,
+      left: nativeWindowInfo.bounds.x,
+      top: nativeWindowInfo.bounds.y,
+      width: nativeWindowInfo.bounds.width,
+      windowState: 'normal', // TODO: use real value
+      x: nativeWindowInfo.bounds.x,
+      y: nativeWindowInfo.bounds.y
+    });
   }));
 
   winEventHooks.on('EVENT_SYSTEM_MOVESIZEEND', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    externalWindow.emit('end-user-bounds-changing', nativeWindowInfo);
-    externalWindow.emit('bounds-changed', nativeWindowInfo);
+    externalWindow.emit('end-user-bounds-changing', {
+      frame: true, // TODO: use real value
+      height: nativeWindowInfo.bounds.height,
+      left: nativeWindowInfo.bounds.x,
+      top: nativeWindowInfo.bounds.y,
+      width: nativeWindowInfo.bounds.width,
+      windowState: 'normal', // TODO: use real value
+      x: nativeWindowInfo.bounds.x,
+      y: nativeWindowInfo.bounds.y
+    });
+    externalWindow.emit('bounds-changed', {
+      changeType: 0, // TODO: use real value
+      // deferred: false, // TODO
+      height: nativeWindowInfo.bounds.height,
+      left: nativeWindowInfo.bounds.x,
+      // reason: 'self', // TODO
+      top: nativeWindowInfo.bounds.y,
+      width: nativeWindowInfo.bounds.width
+    });
   }));
 
   winEventHooks.on('EVENT_OBJECT_LOCATIONCHANGE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     if (nativeWindowInfo.maximized && !previousNativeWindowInfo.maximized) {
-      externalWindow.emit('maximized', nativeWindowInfo);
+      externalWindow.emit('maximized');
     } else if (nativeWindowInfo.minimized && !previousNativeWindowInfo.minimized) {
-      externalWindow.emit('minimized', nativeWindowInfo);
+      externalWindow.emit('minimized');
     } else if (!nativeWindowInfo.maximized && previousNativeWindowInfo.maximized) {
-      externalWindow.emit('restored', nativeWindowInfo);
+      externalWindow.emit('restored');
     } else if (!nativeWindowInfo.minimized && previousNativeWindowInfo.minimized) {
-      externalWindow.emit('restored', nativeWindowInfo);
+      externalWindow.emit('restored');
     } else if (!nativeWindowInfo.minimized) {
       // Don't emit bounds-changing when the window is minimized, because it's
       // not being restored first automatically like for a maximized window,
       // and so the event is being triggerred even though the window's bounds
       // are not changing.
-      externalWindow.emit('bounds-changing', nativeWindowInfo);
+      externalWindow.emit('bounds-changing', {
+        changeType: 0, // TODO: use real value
+        // deferred: false, // TODO
+        height: nativeWindowInfo.bounds.height,
+        left: nativeWindowInfo.bounds.x,
+        // reason: 'self', // TODO
+        top: nativeWindowInfo.bounds.y,
+        width: nativeWindowInfo.bounds.width
+      });
     }
   }));
 }
 
 // Window grouping stub (makes external windows work with our original disabled frame group tracker)
+// Also some of the _options' values are needed in OpenFin Layouts
 function applyWindowGroupingStub(externalWindow: Shapes.ExternalWindow): Shapes.GroupWindow {
   const { nativeId } = externalWindow;
   const identity = { uuid: nativeId };
 
   externalWindow._options = {
-    uuid: nativeId,
+    alwaysOnTop: false,
+    frame: true,
+    maximizable: true,
     name: nativeId,
-    frame: true
+    opacity: 1,
+    resizable: true,
+    showTaskbarIcon: true,
+    uuid: nativeId
   };
   externalWindow.browserWindow = externalWindow;
   externalWindow.isExternalWindow = true;
