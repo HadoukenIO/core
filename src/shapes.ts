@@ -234,7 +234,7 @@ export interface WindowOptions {
     toShowOnRun?: boolean;
     transparent?: boolean;
     _type?: ERROR_BOX_TYPES;
-    url: string;
+    url?: string;
     uuid: string;
     waitForPageLoad?: boolean;
     webPreferences?: {
@@ -430,27 +430,11 @@ export interface ProcessInfo {
 
 // This mock is for window grouping accepting external windows
 interface BrowserWindowMock extends BrowserWindowElectron {
-    _options: {
-        uuid?: string;
-        name?: string;
-        frame?: boolean;
-        maxHeight?: number;
-        maxWidth?: number;
-        minWidth?: number;
-    };
+    _options: WindowOptions;
 }
 
 export interface ExternalWindow extends BrowserWindowElectron {
-    _options: {
-        alwaysOnTop: boolean;
-        frame: boolean;
-        maximizable: boolean;
-        name: string;
-        opacity: number;
-        resizable: boolean;
-        showTaskbarIcon: boolean;
-        uuid: string;
-    };
+    _options: WindowOptions;
     _window?: {};
     app_uuid?: string;
     browserWindow: BrowserWindowMock;
@@ -465,6 +449,7 @@ export interface RawNativeWindowInfo {
     alwaysOnTop: boolean;
     bounds: Bounds;
     className: string;
+    dpi: number;
     focused: boolean;
     id: string;
     maximized: boolean;

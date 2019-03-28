@@ -10,7 +10,9 @@ declare namespace Electron {
         generateGUID(): string;
         getCommandLineArguments(): string;
         getCommandLineArgv(): string[];
+        getNativeWindowInfoForNativeId(nativeId: string): import('./shapes').RawNativeWindowInfo;
         getPath(str: string): string;
+        getProcessIdForNativeId(nativeId: string): number;
         getTickCount(): number;
         isAeroGlassEnabled(): boolean;
         log(level: string, message: any): any;
@@ -22,6 +24,7 @@ declare namespace Electron {
         setMinLogLevel(level: number): void;
         vlog(level: number, message: any, thirdArg?: any): any;
     }
+    
     namespace windowTransaction {
         export class Transaction {
             on(arg0: string, arg1: (event: any, payload: any) => void): any;
@@ -87,6 +90,11 @@ declare namespace Electron {
         mainFrameRoutingId: number;
         session: Session;
     }
+
+    export interface BrowserWindowConstructorOptions {
+        hwnd?: string;
+    }
+
     export interface BrowserWindow {
         id: number;
         nativeId: string;
@@ -117,21 +125,9 @@ declare namespace Electron {
 
     export class ExternalWindow extends BrowserWindow { }
 
-    export class webContents {
-        hasFrame: (frameName: string) => boolean;
-        mainFrameRoutingId: number;
-        session: session;
-    }
-
-    export namespace screen {
-        export function getDisplayMatching(rect: Rectangle): Display;
-    }
-
     export interface screen {
         getDisplayMatching(rect: Rectangle): Display;
     }
-
-
 
     export interface cookies {
         get: (filter: Object, callback: (error: Error, cookies: any[]) => any) => void;

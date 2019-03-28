@@ -1,3 +1,4 @@
+import { adjustCoordsScaling } from '../../common/main';
 import { app as electronApp } from 'electron';
 import { EventEmitter } from 'events';
 import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
@@ -20,6 +21,7 @@ interface BroadcastMessage extends MessageBase {
       type: number;
       [key: string]: string | number;
     };
+    dpi: number;
     nativeId: string;
     state: {
       userMovement: boolean;
@@ -107,8 +109,12 @@ export default class NativeWindowInjectionBus extends EventEmitter {
         return;
       }
 
-      const { payload: { data: { type: eventAsInteger, ...payload } } } = <BroadcastMessage>parsedMessage;
+      const { payload: originalPayload } = <BroadcastMessage>parsedMessage;
+      const { data: { type: eventAsInteger, ...payload }, dpi: injectionDpi, nativeId } = originalPayload;
       const windowsEvent = <string>WINDOWS_MESSAGE_MAP[eventAsInteger];
+      const { dpi: runtimeDpi } = electronApp.getNativeWindowInfoForNativeId(nativeId);
+
+      adjustCoordsScaling(payload, runtimeDpi, injectionDpi);
 
       this.emit(windowsEvent, payload);
     };
