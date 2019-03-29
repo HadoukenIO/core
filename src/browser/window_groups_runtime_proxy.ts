@@ -235,6 +235,7 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         const windowOptions = await wrappedWindow.getOptions();
         const win = new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId, windowOptions);
         win.wireUpEvents();
+        
         return win;
     }
 }
