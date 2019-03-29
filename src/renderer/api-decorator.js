@@ -534,7 +534,6 @@
     }
 
     function getWebWindow(name) {
-
         let webWindow = webWindowMap.get(name);
         if (webWindow) {
             return webWindow;
@@ -547,21 +546,6 @@
             }
         }
     }
-
-
-    window.addEventListener('beforeunload', () => {
-        deregisterWebWindow(initialOptions.name);
-    });
-
-    onContentReady(window, () => {
-        const app = fin.Application.getCurrentSync();
-        app.on('window-closed', ({ name }) => {
-            deregisterWebWindow(name);
-        });
-    });
-
-    deferByTick(() => registerWebWindow(getWindowIdentitySync().name, window));
-    //End WEB Window Functionality
 
     ///external API Decorator:
     global.fin = {
@@ -676,5 +660,23 @@
 
         asyncApiCall(action, { allDone: true });
     }
+
+    window.addEventListener('beforeunload', () => {
+        try {
+            deregisterWebWindow(initialOptions.name);
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+    //if window content is cross domain, beforeunload might not catch this
+    onContentReady(window, () => {
+        const app = fin.Application.getCurrentSync();
+        app.on('window-closed', ({ name }) => {
+            deregisterWebWindow(name);
+        });
+    });
+
+    deferByTick(() => registerWebWindow(getWindowIdentitySync().name, window));
 
 }());
