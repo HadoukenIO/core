@@ -394,7 +394,7 @@
                         try {
                             let returnMeta = JSON.parse(meta);
                             cb({
-                                webWindow: webWindow,
+                                nativeWindow: webWindow,
                                 id: returnMeta.windowId
                             });
                         } catch (e) {}
