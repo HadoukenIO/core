@@ -386,7 +386,7 @@
         ipc.once(responseChannel, () => {
             setTimeout(() => {
                 // Synchronous execution of window.open to trigger state tracking of child window
-                let webWindow = originalOpen((url !== 'about:blank' ? url : ''), frameName, features);
+                let nativeWindow = originalOpen((url !== 'about:blank' ? url : ''), frameName, features);
 
                 let popResponseChannel = `${frameName}-pop-request`;
                 ipc.once(popResponseChannel, (sender, meta) => {
@@ -394,7 +394,7 @@
                         try {
                             let returnMeta = JSON.parse(meta);
                             cb({
-                                nativeWindow: webWindow,
+                                nativeWindow,
                                 id: returnMeta.windowId
                             });
                         } catch (e) {}
@@ -502,35 +502,24 @@
         return featuresObj;
     }
 
-    //WEB Window Functionality
-    function registerWebWindowOnParent(parent, name, wnd) {
-        try {
-            parent.fin.__internal_.registerWebWindow(name, wnd);
-            registerWebWindowOnParent(parent.opener, name, wnd);
-        } catch (err) {
-            //this is quite common for main windows. here just to have a debug target.
-            //console.error(err);
-        }
-    }
-
-    function deregisterWebWindowOnParent(parent, name) {
-        try {
-            parent.fin.__internal_.deregisterWebWindow(name);
-            deregisterWebWindowOnParent(parent.opener, name);
-        } catch (err) {
-            //this is quite common for main windows. here just to have a debug target.
-            //console.error(err);
-        }
-    }
-
-    function registerWebWindow(name, win) {
+    function registerWebWindow(name, win, from) {
         webWindowMap.set(name, win);
-        registerWebWindowOnParent(window.opener, name, win);
+        try {
+            window.opener.fin.__internal_.registerWebWindow(name, win);
+        } catch (err) {
+            //common for main windows, we do not want to expose this error. here just to have a debug target.
+            //console.error(err);
+        }
     }
 
     function deregisterWebWindow(name) {
         webWindowMap.delete(name);
-        deregisterWebWindowOnParent(window.opener, name);
+        try {
+            window.opener.fin.__internal_.deregisterWebWindow(name);
+        } catch (err) {
+            //common for main windows, we do not want to expose this error. here just to have a debug target.
+            //console.error(err);
+        }
     }
 
     function getWebWindow(name) {
@@ -541,11 +530,12 @@
             try {
                 return window.opener.fin.__internal_.getWebWindow(name);
             } catch (err) {
-                //this is quite common for main windows. here just to have a debug target.
+                //common for main windows, we do not want to expose this error. here just to have a debug target.
                 //console.error(err);
             }
         }
     }
+    //End WEB Window Functionality
 
     ///external API Decorator:
     global.fin = {
@@ -661,6 +651,7 @@
         asyncApiCall(action, { allDone: true });
     }
 
+    //Web window setup and cleanup
     window.addEventListener('beforeunload', () => {
         try {
             deregisterWebWindow(initialOptions.name);
@@ -678,5 +669,6 @@
     });
 
     deferByTick(() => registerWebWindow(getWindowIdentitySync().name, window));
+    //End Web window setup and cleanup
 
 }());
