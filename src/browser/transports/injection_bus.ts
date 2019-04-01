@@ -59,9 +59,10 @@ interface PendingRequest {
 
 export default class NativeWindowInjectionBus extends EventEmitter {
   private _messageListener: (sender: number, rawMessage: string) => void;
-  private _nativeId: string;
+  private _nativeId: string; // HWND of the external window
   private _pendingRequests: Map<string, PendingRequest>;
-  private _pid: number;
+  private _pid: number; // process ID of the external window
+  private _senderId: string; // ID of the injected DLL
 
   constructor(params: ConstructorParams) {
     super();
@@ -81,24 +82,23 @@ export default class NativeWindowInjectionBus extends EventEmitter {
     // forward broadcast messages locally
     this._messageListener = (sender: number, rawMessage: string) => {
       const parsedMessage: MessageBase = JSON.parse(rawMessage);
-      const { messageId } = parsedMessage;
+      const { messageId, senderId } = parsedMessage;
 
+      if (this._senderId && this._senderId !== senderId) {
+        return;
+      }
+
+      // Ack / Nack
       if (this._pendingRequests.has(messageId)) {
+        const isNack = parsedMessage.action.includes('error');
         const pendingRequest = this._pendingRequests.get(messageId);
 
-        // Ack message
-        if (parsedMessage.action.includes('response')) {
-          pendingRequest.resolve();
-          this._pendingRequests.delete(messageId);
-          return;
-        }
-
-        // Nack message
-        if (parsedMessage.action.includes('error')) {
-          pendingRequest.reject((<NackMessage>parsedMessage).payload.reason);
-          this._pendingRequests.delete(messageId);
-          return;
-        }
+        isNack
+          ? pendingRequest.reject((<NackMessage>parsedMessage).payload.reason)
+          : pendingRequest.resolve();
+        
+        this._senderId = senderId;
+        this._pendingRequests.delete(messageId);
 
         return;
       }
