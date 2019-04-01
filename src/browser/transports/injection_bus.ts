@@ -96,7 +96,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
         isNack
           ? pendingRequest.reject((<NackMessage>parsedMessage).payload.reason)
           : pendingRequest.resolve();
-        
+
         this._senderId = senderId;
         this._pendingRequests.delete(messageId);
 

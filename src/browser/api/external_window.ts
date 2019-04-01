@@ -1,4 +1,3 @@
-const ExternalWindowEventAdapter = require('../external_window_event_adapter');
 import { app as electronApp, ExternalWindow, WinEventHookEmitter } from 'electron';
 import { Bounds } from '../../../js-adapter/src/shapes';
 import { EventEmitter } from 'events';
@@ -7,6 +6,7 @@ import { Identity } from '../../../js-adapter/src/identity';
 import { OF_EVENT_FROM_WINDOWS_MESSAGE } from '../../common/windows_messages';
 import * as NativeWindowModule from './native_window';
 import * as Shapes from '../../shapes';
+import ExternalWindowEventAdapter from '../external_window_event_adapter';
 import InjectionBus from '../transports/injection_bus';
 import ofEvents from '../of_events';
 import route from '../../common/route';
@@ -15,6 +15,7 @@ import WindowGroups from '../window_groups';
 export const externalWindows = new Map<string, Shapes.ExternalWindow>();
 const winEventHooksEmitters = new Map<string, WinEventHookEmitter>();
 const injectionBuses = new Map<string, InjectionBus>();
+const externalWindowEventAdapters = new Map<string, ExternalWindowEventAdapter>();
 
 export async function addEventListener(identity: Identity, eventName: string, listener: Shapes.Listener): Promise<() => void> {
   const externalWindow = getExternalWindow(identity);
@@ -196,9 +197,9 @@ export function updateExternalWindowOptions(identity: Identity, options: object)
 }
 
 /*
-  Returns a key for emitter maps
+  Returns a key for maps
 */
-function getEmitterKey(externalWindow: Shapes.ExternalWindow): string {
+function getKey(externalWindow: Shapes.ExternalWindow): string {
   const { nativeId } = externalWindow;
   const pid = electronApp.getProcessIdForNativeId(nativeId);
   return `${pid}-${nativeId}`;
@@ -234,15 +235,17 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
   Gets (creates when missing) injection bus for specified external window
 */
 function getInjectionBus(externalWindow: Shapes.ExternalWindow): InjectionBus {
-  const emitterKey = getEmitterKey(externalWindow);
-  let injectionBus = injectionBuses.get(emitterKey);
+  const key = getKey(externalWindow);
+  let injectionBus = injectionBuses.get(key);
 
   if (!injectionBus) {
     const { nativeId } = externalWindow;
     const pid = electronApp.getProcessIdForNativeId(nativeId);
-    const eventAddapter = new ExternalWindowEventAdapter(externalWindow);
+    const externalWindowEventAdapter = new ExternalWindowEventAdapter(externalWindow);
     injectionBus = new InjectionBus({ nativeId, pid });
-    injectionBuses.set(emitterKey, injectionBus);
+
+    injectionBuses.set(key, injectionBus);
+    externalWindowEventAdapters.set(key, externalWindowEventAdapter);
   }
 
   return injectionBus;
@@ -301,9 +304,9 @@ function subToGlobalWinEventHooks(): void {
 function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   const { nativeId } = externalWindow;
   const pid = electronApp.getProcessIdForNativeId(nativeId);
-  const emitterKey = getEmitterKey(externalWindow);
+  const key = getKey(externalWindow);
   const winEventHooks = new WinEventHookEmitter({ pid });
-  winEventHooksEmitters.set(emitterKey, winEventHooks);
+  winEventHooksEmitters.set(key, winEventHooks);
 
   let previousNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(nativeId);
 
@@ -336,16 +339,20 @@ function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   }));
 
   winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    const emitterKey = getEmitterKey(externalWindow);
-    const injectionBus = injectionBuses.get(emitterKey);
+    const key = getKey(externalWindow);
+    const injectionBus = injectionBuses.get(key);
+    const externalWindowEventAdapter = externalWindowEventAdapters.get(key);
 
     externalWindow.emit('closing');
 
     winEventHooks.removeAllListeners();
-    winEventHooksEmitters.delete(emitterKey);
+    winEventHooksEmitters.delete(key);
 
     injectionBus.removeAllListeners();
-    injectionBuses.delete(emitterKey);
+    injectionBuses.delete(key);
+
+    externalWindowEventAdapter.removeAllListeners();
+    externalWindowEventAdapters.delete(key);
 
     externalWindow.emit('closed');
     externalWindow.removeAllListeners();

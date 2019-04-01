@@ -422,6 +422,11 @@ export interface Bounds {
     y: number;
 }
 
+export interface CoordinatesXY {
+    x: number;
+    y: number;
+}
+
 export interface ProcessInfo {
     imageName: string;
     injected: boolean;
