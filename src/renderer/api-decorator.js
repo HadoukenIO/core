@@ -11,7 +11,7 @@
     const isMainFrame = glbl.isMainFrame;
     let renderFrameId = glbl.routingId;
     let customData = glbl.getFrameData(renderFrameId);
-    const webWindowMap = new Map();
+    let webWindowMap = new Map();
 
     const electron = require('electron');
 
@@ -502,7 +502,13 @@
         return featuresObj;
     }
 
-    function registerWebWindow(name, win, from) {
+    ///WEB Window Functionality
+
+    function mergeWebWindowMap(map) {
+        webWindowMap = new Map([...webWindowMap, ...map]);
+    }
+
+    function registerWebWindow(name, win) {
         webWindowMap.set(name, win);
         try {
             window.opener.fin.__internal_.registerWebWindow(name, win);
@@ -567,7 +573,8 @@
             isMainFrame,
             registerWebWindow,
             getWebWindow,
-            deregisterWebWindow
+            deregisterWebWindow,
+            mergeWebWindowMap
         }
     };
 
@@ -660,12 +667,31 @@
         }
     });
 
-    //if window content is cross domain, beforeunload might not catch this
-    onContentReady(window, () => {
+
+    //wire up cleanup and re-hidration
+    window.addEventListener('load', () => {
+
+        //if window content is cross domain, beforeunload might not catch this
         const app = fin.Application.getCurrentSync();
         app.on('window-closed', ({ name }) => {
             deregisterWebWindow(name);
         });
+
+        //on parent reload we want to re-hidrate
+        try {
+            const parentIdentity = window.opener.fin.wire.me;
+            const win = fin.Window.wrapSync(parentIdentity);
+            win.on('initialized', () => {
+                try {
+                    window.opener.fin.__internal_.mergeWebWindowMap(webWindowMap);
+                } catch (err) {
+                    console.error(err);
+                }
+            });
+        } catch (err) {
+            //common for main windows, we do not want to expose this error. here just to have a debug target.
+            //console.error(err);
+        }
     });
 
     deferByTick(() => registerWebWindow(getWindowIdentitySync().name, window));
