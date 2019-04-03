@@ -44,14 +44,12 @@ function applyHeaders(requestHeaders: any, config: Shapes.WebRequestHeaderConfig
         config.headers.forEach((header) => {
             Object.keys(header).forEach(key => {
                 requestHeaders[key] = header[key];
-                electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler setting ${key} = ${header[key]}`);
             });
         });
     }
 }
 
 function beforeSendHeadersHandler(details: RequestDetails, callback: (response: HeadersResponse) => void): void {
-    electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler for ${JSON.stringify(details)}`);
     let headerAdded: boolean = false;
 
     if (details.renderProcessId && details.renderFrameId) {

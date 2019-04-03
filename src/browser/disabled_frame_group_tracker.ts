@@ -156,9 +156,11 @@ function handleBoundsChanging(
     win: OpenFinWindow,
     e: any,
     rawPayloadBounds: RectangleBase,
-    changeType: ChangeType
+    changeType: ChangeType,
+    treatBothChangedAsJustAResize: boolean = false
 ): Move[] {
     const initialPositions: Move[] = getInitialPositions(win);
+    const leaderRectIndex = initialPositions.map(x => x.ofWin).indexOf(win);
     let moves: Move[];
     const startMove = moveFromOpenFinWindow(win); //Corrected
     const start = startMove.rect;
@@ -169,7 +171,7 @@ function handleBoundsChanging(
             moves = handleMoveOnly(start, end, initialPositions);
             break;
         case ChangeType.SIZE:
-            moves = handleResizeOnly(startMove, end, initialPositions);
+            moves = handleResizeOnly(leaderRectIndex, startMove, end, initialPositions);
             break;
         case ChangeType.POSITION_AND_SIZE:
             const delta = start.delta(end);
@@ -177,12 +179,15 @@ function handleBoundsChanging(
             const yShift = delta.y ? delta.y + delta.height : 0;
             const shift = { x: xShift, y: yShift, width: 0, height: 0 };
             const resizeDelta = {x: delta.x - xShift, y: delta.y - yShift, width: delta.width, height: delta.height};
-
-            moves = (delta.width || delta.height)
-                ? handleResizeOnly(startMove, start.shift(resizeDelta), initialPositions, !!(xShift || yShift))
+            const resized = (delta.width || delta.height);
+            moves = resized
+                ? handleResizeOnly(leaderRectIndex, startMove, start.shift(resizeDelta), initialPositions)
                 : initialPositions;
-
-            moves = (xShift || yShift)
+            const moved = (xShift || yShift);
+            //This flag is here because sometimes the runtime lies and says we moved on a resize
+            //This flag should always be set to true when relying on runtime events. It should be false on api moves.
+            //Setting it to false on runtime events can cause a growing window bug.
+            moves = moved && !treatBothChangedAsJustAResize
                 ? handleMoveOnly(start, start.shift(shift), moves)
                 : moves;
 
@@ -194,67 +199,19 @@ function handleBoundsChanging(
     return moves;
 }
 
-function handleResizeOnly(startMove: Move, end: RectangleBase, initialPositions: Move[], willShift: boolean = false) {
+function handleResizeOnly(leaderRectIndex: number, startMove: Move, end: RectangleBase, initialPositions: Move[]) {
     const start = startMove.rect;
     const win = startMove.ofWin;
-    let leaderRect: number;
-    const numRects = initialPositions.length;
-    const rectPositions: Rectangle[] = [];
-    for (let i = 0; i < numRects; i++) {
-        const { rect } = initialPositions[i];
+    const delta = start.delta(end);
+    const rects = initialPositions.map(x => x.rect);
+    const iterMoves = Rectangle.PROPAGATE_MOVE(leaderRectIndex, start, delta, rects);
 
-        if (rect.hasIdenticalBounds(start)) {
-            leaderRect = i;
-        }
-        rectPositions.push(rect);
-    }
-    const windowGraph = Rectangle.GRAPH(rectPositions);
-    const distances = Rectangle.DISTANCES(windowGraph, leaderRect);
-    const allMoves = initialPositions
-        .map(({ ofWin, rect, offset }, index): Move => {
-            let rectFinalPosition = rect;
-            const cachedBounds = Rectangle.CREATE_FROM_BOUNDS(start);
-            const currentBounds = Rectangle.CREATE_FROM_BOUNDS(end);
-            let crossedEdges = rect.crossedEdgesBeyondThreshold(cachedBounds, currentBounds);
-            const hasCrossedEdges = crossedEdges.length > 0;
-            const endRect = Rectangle.CREATE_FROM_BOUNDS(end);
-            const initiallyReachable = distances.get(index) < Infinity;
+    const allMoves = iterMoves.map((x, i) => ({
+        ofWin: initialPositions[i].ofWin,
+        rect: x,
+        offset: initialPositions[i].offset}));
 
-
-            if (rectFinalPosition.hasIdenticalBounds(cachedBounds)) {
-                rectFinalPosition = currentBounds;
-            } else {
-
-                if (initiallyReachable) {
-                    rectFinalPosition = rect.move(start, end);
-
-                    // This is how one could detect if a bound was broken via a move "pushing" or "pulling" a
-                    // window as a result of breaking a min size constraint. Leave as a reference for now.
-                    // const brokeByMove = currentBounds.crossedEdgesBeyondThreshold(rect, rectFinalPosition);
-                    // if (brokeByMove.length > 0) {
-                    //     // handle pushed broken edges
-                    // }
-
-                    crossedEdges = rectFinalPosition.crossedEdgesBeyondThreshold(cachedBounds, currentBounds);
-
-                    if (crossedEdges.length > 0) {
-                        rectFinalPosition = rectFinalPosition.alignCrossedEdges(crossedEdges, endRect);
-                    }
-
-                } else if (hasCrossedEdges) {
-                    rectFinalPosition = rect.alignCrossedEdges(crossedEdges, endRect);
-                }
-            }
-
-            return { ofWin, rect: rectFinalPosition, offset };
-        });
-    const moves = allMoves.filter((move, i) => initialPositions[i].rect.moved(move.rect) || willShift);
-
-    const graphInitial = Rectangle.GRAPH_WITH_SIDE_DISTANCES(initialPositions.map(moveToRect));
-    const graphFinal = Rectangle.GRAPH_WITH_SIDE_DISTANCES(allMoves.map(moveToRect));
-    if (!Rectangle.SUBGRAPH_AND_CLOSER(graphInitial, graphFinal)) {
-        return [];
-    }
+    const moves = allMoves.filter((move, i) => initialPositions[i].rect.moved(move.rect));
     const endMove = moves.find(({ ofWin }) => ofWin === win);
     if (!endMove) {
         return [];
@@ -307,13 +264,13 @@ export function addWindowToGroup(win: OpenFinWindow) {
                 const moved = new Set<OpenFinWindow>();
                 groupInfo.boundsChanging = true;
                 await raiseEvent(win, 'begin-user-bounds-changing', { ...eventBounds, windowState: getState(win.browserWindow) });
-                const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
+                const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
                 handleBatchedMove(initialMoves, true);
                 groupInfo.interval = setInterval(() => {
                     try {
                         if (groupInfo.payloadCache.length) {
                             const [a, b, c, d] = groupInfo.payloadCache.pop();
-                            const moves = handleBoundsChanging(a, b, c, d);
+                            const moves = handleBoundsChanging(a, b, c, d, true);
                             groupInfo.payloadCache = [];
                             handleBatchedMove(moves);
                             moves.forEach((move) => {
@@ -323,14 +280,14 @@ export function addWindowToGroup(win: OpenFinWindow) {
                     } catch (error) {
                         writeToLog('error', error);
                     }
-                }, 16);
+                }, 30);
                 win.browserWindow
                 .once('disabled-frame-bounds-changed', async (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
                     try {
                         groupInfo.boundsChanging = false;
                         clearInterval(groupInfo.interval);
                         groupInfo.payloadCache = [];
-                        const moves = handleBoundsChanging(win, e, rawPayloadBounds, changeType);
+                        const moves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
                         handleBatchedMove(moves);
                         const promises: Promise<void>[] = [];
                         moved.forEach((movedWin) => {
