@@ -1386,14 +1386,11 @@ Window.getSnapshot = (opts) => {
             return reject(error);
         }
 
-        const callback = (img) => {
-            const imageBase64 = img.toPNG().toString('base64');
-            resolve(imageBase64);
-        };
+        const callback = (img) => resolve(img.toPNG().toString('base64'));
 
         if (typeof area === 'undefined') {
             // Snapshot of a full window
-            return browserWindow.capturePage(callback);
+            return browserWindow.capturePage().then(callback);
         }
 
         if (!area ||
@@ -1408,7 +1405,7 @@ Window.getSnapshot = (opts) => {
         }
 
         // Snapshot of a specified area of the window
-        browserWindow.capturePage(area, callback);
+        return browserWindow.capturePage(area).then(callback);
     });
 };
 
