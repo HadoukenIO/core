@@ -29,7 +29,7 @@ import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
 import { extendNativeWindowInfo } from '../utils';
-import { externalWindows } from './external_window';
+import { isValidExternalWindow } from './external_window';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -679,39 +679,19 @@ exports.System = {
     },
     getAllExternalWindows: function() {
         const skipOwnWindows = true;
-        const nativeWindows = [];
         const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOwnWindows);
-        const classNamesToIgnore = [
-            // TODO: Edge, calculator, etc (looks like they are always 
-            // "opened" and "visible", but at least visiblity part is wrong)
-            'ApplicationFrameWindow',
-
-            'Windows.UI.Core.CoreWindow'
-        ];
-        const titlesToIgnore = [
-            'Cortana',
-            'Microsoft Store',
-            'Program Manager',
-            'Settings',
-            'Start',
-            'Window Search'
-        ];
+        const externalWindows = [];
 
         allNativeWindows.forEach(e => {
-            const ew = extendNativeWindowInfo(e);
-            const isUserFriendlyWindow = !classNamesToIgnore.includes(ew.className) &&
-                !titlesToIgnore.includes(ew.title) &&
-                ew.title &&
-                (ew.visible || externalWindows.has(ew.uuid));
+            const externalWindow = extendNativeWindowInfo(e);
+            const isValid = isValidExternalWindow(externalWindow);
 
-            if (!isUserFriendlyWindow) {
-                return;
+            if (isValid) {
+                externalWindows.push(externalWindow);
             }
-
-            nativeWindows.push(ew);
         });
 
-        return nativeWindows;
+        return externalWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);

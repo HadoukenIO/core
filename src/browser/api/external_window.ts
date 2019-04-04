@@ -12,6 +12,10 @@ import ofEvents from '../of_events';
 import route from '../../common/route';
 import WindowGroups from '../window_groups';
 
+electronApp.on('ready', () => {
+  subToGlobalWinEventHooks();
+});
+
 export const externalWindows = new Map<string, Shapes.ExternalWindow>();
 const winEventHooksEmitters = new Map<string, WinEventHookEmitter>();
 const injectionBuses = new Map<string, InjectionBus>();
@@ -223,7 +227,6 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
 
     // Windows event hooks subscriptions
     subToWinEventHooks(externalWindow);
-    subToGlobalWinEventHooks();
 
     externalWindows.set(uuid, externalWindow);
   }
@@ -287,12 +290,47 @@ function subToGlobalWinEventHooks(): void {
     return;
   }
 
+  // TODO: remove this when it is in runtime's develop branch
+  if (!WinEventHookEmitter) {
+    return;
+  }
+
   const winEventHooks = new WinEventHookEmitter();
 
-  winEventHooks.on('EVENT_OBJECT_CREATE', (sender: EventEmitter, rawNativeWindowInfo: Shapes.RawNativeWindowInfo, timestamp: number) => {
-    const windowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
-    ofEvents.emit(route.system('external-window-created'), windowInfo);
-  });
+  const listener = (
+    parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
+    sender: EventEmitter,
+    rawNativeWindowInfo: Shapes.RawNativeWindowInfo,
+    timestamp: number
+  ): void => {
+    const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
+    const ignoreVisibility = true;
+    const isValid = isValidExternalWindow(nativeWindowInfo, ignoreVisibility);
+
+    if (isValid) {
+      parser(nativeWindowInfo);
+    }
+  };
+
+  winEventHooks.on('EVENT_OBJECT_CREATE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    const routeName = route.system('external-window-created');
+    ofEvents.emit(routeName, nativeWindowInfo);
+  }));
+
+  winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    const routeName = route.system('external-window-closed');
+    ofEvents.emit(routeName, nativeWindowInfo);
+  }));
+
+  winEventHooks.on('EVENT_OBJECT_HIDE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    const routeName = route.system('external-window-hidden');
+    ofEvents.emit(routeName, nativeWindowInfo);
+  }));
+
+  winEventHooks.on('EVENT_OBJECT_SHOW', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    const routeName = route.system('external-window-shown');
+    ofEvents.emit(routeName, nativeWindowInfo);
+  }));
 
   winEventHooksEmitters.set('*', winEventHooks);
 }
@@ -457,7 +495,7 @@ function applyWindowGroupingStub(externalWindow: Shapes.ExternalWindow): Shapes.
   return externalWindow;
 }
 
-// Subscribe to all injection events
+// Subscribe to injection events
 async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow): Promise<void> {
   const { uuid, name } = externalWindow;
   const injectionBus = getInjectionBus(externalWindow);
@@ -495,7 +533,37 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
     }
   });
 
-  injectionBus.on('WM_KILLFOCUS', (data) => {
+  injectionBus.on('WM_KILLFOCUS', (data: any) => {
     externalWindow.emit('blurred', data);
   });
+}
+
+const classNamesToIgnore = [
+  // TODO: Edge, calculator, etc (looks like they are always
+  // "opened" and "visible", but at least visiblity part is wrong)
+  'ApplicationFrameWindow',
+
+  'TaskListOverlayWnd',
+  'Windows.UI.Core.CoreWindow'
+];
+const titlesToIgnore = [
+  'Cortana',
+  'Microsoft Store',
+  'Program Manager',
+  'Settings',
+  'Start',
+  'Window Search'
+];
+
+/*
+    Decides whether external window is valid (external window filtering)
+*/
+export function isValidExternalWindow(nativeWindowInfo: Shapes.NativeWindowInfo, ignoreVisibility?: boolean) {
+  const { title, visible } = nativeWindowInfo;
+  const classNameOk = !classNamesToIgnore.includes(nativeWindowInfo.className);
+  const titleOk = !titlesToIgnore.includes(nativeWindowInfo.title);
+  const registered = externalWindows.has(nativeWindowInfo.uuid);
+  const validVisibility = ignoreVisibility ? true : visible;
+
+  return classNameOk && !!title && titleOk && (validVisibility || registered);
 }
