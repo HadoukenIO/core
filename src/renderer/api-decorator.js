@@ -16,7 +16,7 @@
 
     // Mock webFrame if unavailable
     const webFrame = (electron.webFrame ?
-        electron.webFrame.createForRenderFrame(renderFrameId) : {
+        electron.webFrame.findFrameByRoutingId(renderFrameId) : {
             getZoomLevel: () => { return 1.0; },
             setZoomLevel: () => {}
         });
