@@ -303,8 +303,7 @@
 
 
         currPageHasLoaded = true;
-
-        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen) {
+        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen || isCrossOrigin()) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
                     const userAppConfigArgs = initialOptions.userAppConfigArgs;
@@ -325,13 +324,26 @@
     }
 
     function onContentReady(bindObject, callback) {
-        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen)) {
+        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen || isCrossOrigin())) {
             deferByTick(() => {
                 callback();
             });
         } else {
             pendingMainCallbacks.push(callback);
         }
+    }
+
+    // When creating an openfin child window with cross domain url, we need to check this condition since openerSuccessDBCalled is NOT called.
+    function isCrossOrigin() {
+        let isCORS = false;
+        try {
+            if (window.opener && window.opener.name) {
+                isCORS = false;
+            }
+        } catch (e) {
+            isCORS = true;
+        }
+        return isCORS;
     }
 
     //extend open
@@ -341,7 +353,7 @@
         const [url, requestedName, features = ''] = args; // jshint ignore:line
         const requestId = ++childWindowRequestId;
         const webContentsId = getWebContentsId();
-        const name = !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
+        const name = requestedName && !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
         const responseChannel = `${name}-created`;
 
         const options = Object.assign(featuresToOptionsObj(features), {
@@ -349,7 +361,8 @@
             uuid: initialOptions.uuid,
             name: name,
             autoShow: true,
-            waitForPageLoad: false
+            waitForPageLoad: false,
+            isRawWindowOpen: true
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);

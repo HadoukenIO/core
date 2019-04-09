@@ -96,6 +96,7 @@ function five0BaseOptions() {
         'hideOnClose': false,
         'hideWhileChildrenVisible': false,
         'icon': '',
+        'isRawWindowOpen': false,
         'launchExternal': '',
         'loadErrorMessage': '',
         'maxHeight': -1,
