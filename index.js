@@ -853,7 +853,7 @@ function validatePreloadScripts(options) {
 function logSystemMemoryInfo() {
     const systemMemoryInfo = process.getSystemMemoryInfo();
 
-    log.writeToLog('info', `System memory info for: ${process.platform} ${os.release()} ${os.arch()}`);
+    log.writeToLog('info', `System memory info for: ${process.platform} ${os.release()} ${electron.app.getSystemArch()}`);
 
     for (const i of Object.keys(systemMemoryInfo)) {
         log.writeToLog('info', `${i}: ${systemMemoryInfo[i]} KB`);
