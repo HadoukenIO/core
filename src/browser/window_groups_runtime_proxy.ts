@@ -201,12 +201,12 @@ export class RuntimeProxyWindow {
     private onOptionsChanged = (evt: WindowOptionsChangedEvent<'window', 'options-changed'>) => {
         if (this.window.uuid === evt.uuid && this.window.name === evt.name) {
             const optionsToUpdate: {[name: string]: any} = {};
-            let option: keyof WindowOption;
 
-            for(option in evt.diff) {
+            Object.keys(evt.diff).forEach((option: keyof WindowOption) => {
                 optionsToUpdate[option] = evt.diff[option].newVal;
-            }
-            
+            });
+
+
             this.window._options = Object.assign({}, this.window._options, optionsToUpdate);
             writeToLog('info', 'Options changed event');
             writeToLog('info', evt);
@@ -240,7 +240,7 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         const windowOptions = await wrappedWindow.getOptions();
         const win = new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId, windowOptions);
         win.wireUpEvents();
-        
+
         return win;
     }
 }
