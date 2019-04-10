@@ -9,7 +9,7 @@ import * as coreState from './core_state';
 import { _Window } from '../../js-adapter/src/api/window/window';
 import { EventEmitter } from 'events';
 import { writeToLog } from './log';
-import { WindowGroupChanged } from '../../js-adapter/src/api/events/window';
+import { WindowGroupChanged, WindowOptionsChanged, WindowOptionDiffObject } from '../../js-adapter/src/api/events/window';
 import { argo } from './core_state';
 
 //Only allow window proxies to >=.35 runtimes.
@@ -113,6 +113,7 @@ export class RuntimeProxyWindow {
             this.window.browserWindow.setExternalWindowNativeId('0x0');
             this.window.browserWindow.close();
             await this.wrappedWindow.removeListener('group-changed', this.onGroupChanged);
+            await this.wrappedWindow.removeListener('options-changed', this.onOptionsChanged);
         } catch (err) {
             writeToLog('info', 'Non Fatal error: remove all listeners failed for proxy window');
             writeToLog('info', err);
@@ -129,6 +130,7 @@ export class RuntimeProxyWindow {
 
     public wireUpEvents = async (): Promise<void> => {
         await this.wrappedWindow.on('group-changed', this.onGroupChanged);
+        await this.wrappedWindow.on('options-changed', this.onOptionsChanged);
         await this.hostRuntime.fin.once('disconnected', () => {
             this.raiseChangeEvents(this.wrappedWindow.identity, 'remove', []);
         });
@@ -170,31 +172,42 @@ export class RuntimeProxyWindow {
     }
 
     private onGroupChanged = (evt: WindowGroupChanged<'window', 'group-changed'>) => {
-            writeToLog('info', 'Group changed event');
-            writeToLog('info', evt);
-            if (this.window.uuid === evt.targetWindowAppUuid && this.window.name === evt.targetWindowName) {
-                if (evt.reason === 'leave') {
-                    this.raiseChangeEvents({
-                        uuid: evt.targetWindowAppUuid,
-                        name: evt.targetWindowName
-                    }, 'remove', []);
-                }
-                if (evt.reason === 'join' || evt.reason === 'merge') {
-                    this.raiseChangeEvents({
-                        uuid: evt.sourceWindowAppUuid,
-                        name: evt.sourceWindowName
-                    }, 'add', evt.sourceGroup);
-                }
-            } else if (this.window.uuid === evt.sourceWindowAppUuid && this.window.name === evt.sourceWindowName) {
-                if (evt.reason === 'merge') {
-                    this.raiseChangeEvents({
-                        uuid: evt.targetWindowAppUuid,
-                        name: evt.targetWindowName
-                    }, 'add', []);
-                }
+        writeToLog('info', 'Group changed event');
+        writeToLog('info', evt);
+        if (this.window.uuid === evt.targetWindowAppUuid && this.window.name === evt.targetWindowName) {
+            if (evt.reason === 'leave') {
+                this.raiseChangeEvents({
+                    uuid: evt.targetWindowAppUuid,
+                    name: evt.targetWindowName
+                }, 'remove', []);
             }
-        };
-    }
+            if (evt.reason === 'join' || evt.reason === 'merge') {
+                this.raiseChangeEvents({
+                    uuid: evt.sourceWindowAppUuid,
+                    name: evt.sourceWindowName
+                }, 'add', evt.sourceGroup);
+            }
+        } else if (this.window.uuid === evt.sourceWindowAppUuid && this.window.name === evt.sourceWindowName) {
+            if (evt.reason === 'merge') {
+                this.raiseChangeEvents({
+                    uuid: evt.targetWindowAppUuid,
+                    name: evt.targetWindowName
+                }, 'add', []);
+            }
+        }
+    };
+
+    private onOptionsChanged = (evt: WindowOptionsChanged<'window', 'group-changed'>) => {
+        if (this.window.uuid === evt.uuid && this.window.name === evt.name) {
+            const optionsToUpdate: {[name: string]: WindowOptionDiffObject} = {};
+            evt.diff.forEach(option => optionsToUpdate[option.optionName] = option.newVal);
+
+            this.window._options = Object.assign({}, this.window._options, optionsToUpdate);
+            writeToLog('info', 'Options changed event');
+            writeToLog('info', evt);
+        }
+    };
+}
 
 export async function getRuntimeProxyWindow(identity: Identity): Promise<RuntimeProxyWindow> {
     const { uuid, name } = identity;
@@ -222,6 +235,7 @@ export async function getRuntimeProxyWindow(identity: Identity): Promise<Runtime
         const windowOptions = await wrappedWindow.getOptions();
         const win = new RuntimeProxyWindow(hostRuntime, wrappedWindow, nativeId, windowOptions);
         win.wireUpEvents();
+        
         return win;
     }
 }
