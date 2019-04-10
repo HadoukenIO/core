@@ -2,8 +2,6 @@
     src/browser/bounds_changed_state_tracker.js
  */
 
-const WindowTransaction = require('electron').windowTransaction;
-
 import * as _ from 'underscore';
 import * as animations from './animations.js';
 import * as coreState from './core_state.js';
@@ -380,7 +378,7 @@ export default class BoundsChangedStateTracker {
                     let wt: windowTransaction.Transaction; // window-transaction
                     const hwndToId: { [hwnd: number]: number } = {};
 
-                    const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
+                    const { noZorder, noSize, noActivate } = windowTransaction.flag;
                     let flags: number;
 
                     if (changeType === SIZE) {
@@ -426,7 +424,7 @@ export default class BoundsChangedStateTracker {
                             const hwnd = parseInt(win.browserWindow.nativeId, 16);
 
                             if (!wt) {
-                                wt = new WindowTransaction.Transaction(0);
+                                wt = new windowTransaction.Transaction(0);
 
                                 wt.on('deferred-set-window-pos', (event, payload: any): void => {
                                     payload.forEach((winPos: any): void => {

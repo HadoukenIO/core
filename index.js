@@ -158,6 +158,8 @@ includeFlashPlugin();
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
 
+initializeDiagnosticReporter(coreState.argo);
+
 // Safe errors initialization
 errors.initSafeErrors(coreState.argo);
 
@@ -449,6 +451,20 @@ function initializeCrashReporter(argo) {
     }
 
     crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
+}
+
+function initializeDiagnosticReporter(argo) {
+    if (!argo['diagnostics']) {
+        return;
+    }
+
+    // This event may be fired more than once for an unresponsive window.
+    ofEvents.on(route.window('not-responding', '*'), (payload) => {
+        log.writeToLog('info', `Window is not responding. uuid: ${payload.data[0].uuid}, name: ${payload.data[0].name}`);
+    });
+    ofEvents.on(route.window('responding', '*'), (payload) => {
+        log.writeToLog('info', `Window responding again. uuid: ${payload.data[0].uuid}, name: ${payload.data[0].name}`);
+    });
 }
 
 function rotateLogs(argo) {

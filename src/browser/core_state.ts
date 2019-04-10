@@ -10,7 +10,7 @@
 * */
 
 import * as minimist from 'minimist';
-import { app, webContents, session } from 'electron';
+import { app, webContents, session, Session, WebContents } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
@@ -510,7 +510,7 @@ export function getBrowserWindow(identity: Shapes.Identity): Shapes.BrowserWindo
     }
 }
 
-export function getWebContents(identity: Shapes.Identity): webContents|undefined {
+export function getWebContents(identity: Shapes.Identity): WebContents|undefined {
     const browserWindow = getBrowserWindow(identity);
 
     if (browserWindow) {
@@ -518,7 +518,7 @@ export function getWebContents(identity: Shapes.Identity): webContents|undefined
     }
 }
 
-export function getSession(identity: Shapes.Identity): session|undefined {
+export function getSession(identity: Shapes.Identity): Session|undefined {
     const webContents = getWebContents(identity);
 
     if (webContents) {

@@ -235,14 +235,14 @@ async function download(identity: Identity, url: string, saveToPath: string, app
         });
 
         if (session) {
-            session.cookies.get({}, (error, cookies) => {
+            session.cookies.get({}, (error: any, cookies: any) => {
                 if (error) {
                     log.writeToLog(1, 'Error getting session cookies for identity '
                         + `${identity.uuid}-${identity.name} while trying to fetch a `
                         + `resource from URL ${url}. Will attempt to fetch the resource `
                         + `without cookies. Error received: ${error}`, true);
                 } else {
-                    const cookiesNameValue = cookies.map((e) => `${e.name}=${e.value}`);
+                    const cookiesNameValue = cookies.map((e: any) => `${e.name}=${e.value}`);
                     request.setHeader('cookie', cookiesNameValue);
                 }
                 request.end();
