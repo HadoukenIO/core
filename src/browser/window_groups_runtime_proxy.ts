@@ -9,8 +9,9 @@ import * as coreState from './core_state';
 import { _Window } from '../../js-adapter/src/api/window/window';
 import { EventEmitter } from 'events';
 import { writeToLog } from './log';
-import { WindowGroupChanged, WindowOptionsChanged, WindowOptionDiffObject } from '../../js-adapter/src/api/events/window';
+import { WindowGroupChanged, WindowOptionsChangedEvent} from '../../js-adapter/src/api/events/window';
 import { argo } from './core_state';
+import { WindowOption } from '../../js-adapter/src/api/window/windowOption';
 
 //Only allow window proxies to >=.35 runtimes.
 const MIN_API_VER = 37;
@@ -197,11 +198,15 @@ export class RuntimeProxyWindow {
         }
     };
 
-    private onOptionsChanged = (evt: WindowOptionsChanged<'window', 'group-changed'>) => {
+    private onOptionsChanged = (evt: WindowOptionsChangedEvent<'window', 'options-changed'>) => {
         if (this.window.uuid === evt.uuid && this.window.name === evt.name) {
-            const optionsToUpdate: {[name: string]: WindowOptionDiffObject} = {};
-            evt.diff.forEach(option => optionsToUpdate[option.optionName] = option.newVal);
+            const optionsToUpdate: {[name: string]: any} = {};
+            let option: keyof WindowOption;
 
+            for(option in evt.diff) {
+                optionsToUpdate[option] = evt.diff[option].newVal;
+            }
+            
             this.window._options = Object.assign({}, this.window._options, optionsToUpdate);
             writeToLog('info', 'Options changed event');
             writeToLog('info', evt);
