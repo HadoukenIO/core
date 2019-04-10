@@ -101,6 +101,7 @@ declare namespace Electron {
 
         activate(): void;
         bringToFront(): any;
+        isUserMovementEnabled(): boolean;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         removeAllListeners(eventName?: string): any;
