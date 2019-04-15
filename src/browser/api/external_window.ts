@@ -34,7 +34,7 @@ export function animateExternalWindow(identity: Identity): void {
 
 export function bringExternalWindowToFront(identity: Identity): void {
   const externalWindow = getExternalWindow(identity);
-  NativeWindowModule.bringToFront(externalWindow);
+  NativeWindowModule.setAsForeground(externalWindow);
 }
 
 export function closeExternalWindow(identity: Identity): void {
