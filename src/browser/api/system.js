@@ -29,39 +29,6 @@ import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
 
-const defaultProc = {
-    getCpuUsage: function() {
-        return 0;
-    },
-    getNonPagedPoolUsage: function() {
-        return 0;
-    },
-    getPagedPoolUsage: function() {
-        return 0;
-    },
-    getPageFaultCount: function() {
-        return 0;
-    },
-    getPagefileUsage: function() {
-        return 0;
-    },
-    getPeakNonPagedPoolUsage: function() {
-        return 0;
-    },
-    getPeakPagedPoolUsage: function() {
-        return 0;
-    },
-    getPeakPagefileUsage: function() {
-        return 0;
-    },
-    getPeakWorkingSetSize: function() {
-        return 0;
-    },
-    getWorkingSetSize: function() {
-        return 0;
-    }
-};
-
 let MonitorInfo;
 let Session;
 let rvmBus;
@@ -392,36 +359,41 @@ exports.System = {
     getMousePosition: function() {
         return MonitorInfo.getMousePosition();
     },
+
     getProcessList: function() {
+        let localConfig = this.getConfig();
+        let { 'runtime': { version: runtimeVersion }, 'startup_app': { uuid, name } } = localConfig && localConfig.data;
 
-        let allApps = coreState.getAllApplications();
-        let runningAps = allApps.filter(app => {
-            return app.isRunning;
-        });
+        return electronApp
+            .getAppMetrics()
+            .filter(proc => proc.type.toLowerCase() !== 'utility') // results with 'utility' type are not actual processess
+            .map(proc => {
+                let procInfo = new electron.processInfo(proc.pid);
 
-        let processList = runningAps.map(app => {
-            var appObj = coreState.getAppObjByUuid(app.uuid),
-                name = appObj._options.name,
-                proc = appObj._processInfo || defaultProc;
-
-            return {
-                cpuUsage: proc.getCpuUsage(),
-                name: name,
-                nonPagedPoolUsage: proc.getNonPagedPoolUsage(),
-                pageFaultCount: proc.getPageFaultCount(),
-                pagedPoolUsage: proc.getPagedPoolUsage(),
-                pagefileUsage: proc.getPagefileUsage(),
-                peakNonPagedPoolUsage: proc.getPeakNonPagedPoolUsage(),
-                peakPagedPoolUsage: proc.getPeakPagedPoolUsage(),
-                peakPagefileUsage: proc.getPeakPagefileUsage(),
-                peakWorkingSetSize: proc.getPeakWorkingSetSize(),
-                processId: appObj.mainWindow.webContents.processId,
-                uuid: appObj.uuid,
-                workingSetSize: proc.getWorkingSetSize()
-            };
-        });
-
-        return processList;
+                return procInfo ? {
+                    uuid,
+                    name,
+                    runtimeVersion,
+                    processId: proc.pid,
+                    type: proc.type,
+                    cpuUsage: procInfo.getCpuUsage(),
+                    nonPagedPoolUsage: procInfo.getNonPagedPoolUsage(),
+                    pageFaultCount: procInfo.getPageFaultCount(),
+                    pagedPoolUsage: procInfo.getPagedPoolUsage(),
+                    pagefileUsage: procInfo.getPagefileUsage(),
+                    peakNonPagedPoolUsage: procInfo.getPeakNonPagedPoolUsage(),
+                    peakPagedPoolUsage: procInfo.getPeakPagedPoolUsage(),
+                    peakPagefileUsage: procInfo.getPeakPagefileUsage(),
+                    peakWorkingSetSize: procInfo.getPeakWorkingSetSize(),
+                    workingSetSize: procInfo.getWorkingSetSize()
+                } : {
+                    err: `Error: couldn't retrieve process data. Here's what we do have: 
+                    uuid: ${uuid}, 
+                    name: ${name}, 
+                    runtime version: ${runtimeVersion}, 
+                    process id: ${proc.pid}`
+                };
+            });
     },
 
     getProxySettings: function() {
