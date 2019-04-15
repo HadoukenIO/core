@@ -943,8 +943,8 @@ Window.create = function(id, opts) {
             return;
         }
 
-        // If enableAppLogging not set or false, skip sending to RVM
-        if (!app._options || !app._options.enableAppLogging) {
+        // If enableAppLogging is false, skip sending to RVM
+        if (app._options.enableAppLogging === false) {
             return;
         }
 
