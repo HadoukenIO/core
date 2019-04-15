@@ -39,7 +39,8 @@ export function bringExternalWindowToFront(identity: Identity): void {
 
 export function closeExternalWindow(identity: Identity): void {
   const externalWindow = getExternalWindow(identity);
-  NativeWindowModule.close(externalWindow);
+  externalWindowCloseCleanup(externalWindow);
+  externalWindow.forceExternalWindowClose();
 }
 
 export async function disableExternalWindowUserMovement(identity: Identity): Promise<void> {
@@ -212,7 +213,7 @@ function getKey(externalWindow: Shapes.ExternalWindow): string {
 /*
   Finds and returns registerd external window
 */
-export function findExternalWindow(identity: Identity): Shapes.ExternalWindow|undefined {
+export function findExternalWindow(identity: Identity): Shapes.ExternalWindow | undefined {
   const { uuid } = identity;
   return externalWindows.get(uuid);
 }
@@ -385,24 +386,7 @@ function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   }));
 
   winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    const key = getKey(externalWindow);
-    const injectionBus = injectionBuses.get(key);
-    const externalWindowEventAdapter = externalWindowEventAdapters.get(key);
-
-    externalWindow.emit('closing');
-
-    winEventHooks.removeAllListeners();
-    winEventHooksEmitters.delete(key);
-
-    injectionBus.removeAllListeners();
-    injectionBuses.delete(key);
-
-    externalWindowEventAdapter.removeAllListeners();
-    externalWindowEventAdapters.delete(key);
-
-    externalWindow.emit('closed');
-    externalWindow.removeAllListeners();
-    externalWindows.delete(nativeId);
+    externalWindowCloseCleanup(externalWindow);
   }));
 
   winEventHooks.on('EVENT_OBJECT_FOCUS', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
@@ -575,4 +559,30 @@ export function isValidExternalWindow(nativeWindowInfo: Shapes.NativeWindowInfo,
   const validVisibility = ignoreVisibility ? true : visible;
 
   return classNameOk && !!title && titleOk && (validVisibility || registered);
+}
+
+/*
+    Perform a cleanup on external window's close
+*/
+function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void {
+  const key = getKey(externalWindow);
+  const { nativeId } = externalWindow;
+  const winEventHooks = winEventHooksEmitters.get(key);
+  const injectionBus = injectionBuses.get(key);
+  const externalWindowEventAdapter = externalWindowEventAdapters.get(key);
+
+  externalWindow.emit('closing');
+
+  winEventHooks.removeAllListeners();
+  winEventHooksEmitters.delete(key);
+
+  injectionBus.removeAllListeners();
+  injectionBuses.delete(key);
+
+  externalWindowEventAdapter.removeAllListeners();
+  externalWindowEventAdapters.delete(key);
+
+  externalWindow.emit('closed');
+  externalWindow.removeAllListeners();
+  externalWindows.delete(nativeId);
 }
