@@ -1697,12 +1697,31 @@ Window.defineDraggableArea = function() {};
 
 Window.updateOptions = function(identity, updateObj) {
     let browserWindow = getElectronBrowserWindow(identity, 'update settings for');
+    let { uuid, name } = identity;
+    let diff = {},
+        invalidOptions = [];
+    let clone = obj => JSON.parse(JSON.stringify(obj)); // this works here, but has limitations; reuse with caution.
 
     try {
         for (var opt in updateObj) {
+
             if (optionSetters[opt]) {
+                let oldVal = clone(getOptFromBrowserWin(opt, browserWindow));
                 optionSetters[opt](updateObj[opt], browserWindow);
+                let newVal = clone(getOptFromBrowserWin(opt, browserWindow));
+
+
+                if (!_.isEqual(oldVal, newVal)) {
+                    diff[opt] = { oldVal, newVal };
+                }
+            } else {
+                invalidOptions.push(opt);
             }
+        }
+
+        let options = browserWindow && clone(browserWindow._options);
+        if (Object.keys(diff).length) {
+            ofEvents.emit(route.window('options-changed', uuid, name), { uuid, name, options, diff, invalidOptions });
         }
     } catch (e) {
         console.log(e.message);

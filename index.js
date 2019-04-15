@@ -6,6 +6,7 @@
 let fs = require('fs');
 let path = require('path');
 let electron = require('electron');
+let os = require('os');
 let app = electron.app; // Module to control application life.
 let BrowserWindow = electron.BrowserWindow;
 let crashReporter = electron.crashReporter;
@@ -166,7 +167,10 @@ errors.initSafeErrors(coreState.argo);
 // Has a local copy of an app config
 if (coreState.argo['local-startup-url']) {
     try {
-        let localConfig = JSON.parse(fs.readFileSync(coreState.argo['local-startup-url']));
+        // Use this version of the fs module because the decorated version checks if the file
+        // has a matching signature file
+        const originalFs = require('original-fs');
+        let localConfig = JSON.parse(originalFs.readFileSync(coreState.argo['local-startup-url']));
 
         if (typeof localConfig['devtools_port'] === 'number') {
             if (!coreState.argo['remote-debugging-port']) {
@@ -177,7 +181,7 @@ if (coreState.argo['local-startup-url']) {
             }
         }
     } catch (err) {
-        console.error(err);
+        log.writeToLog(1, err, true);
     }
 }
 
@@ -397,6 +401,7 @@ app.on('ready', function() {
         log.writeToLog('info', err);
     }
     handleDeferredLaunches();
+    logSystemMemoryInfo();
 }); // end app.ready
 
 function staggerPortBroadcast(myPortInfo) {
@@ -862,4 +867,14 @@ function validatePreloadScripts(options) {
     }
 
     return true;
+}
+
+function logSystemMemoryInfo() {
+    const systemMemoryInfo = process.getSystemMemoryInfo();
+
+    log.writeToLog('info', `System memory info for: ${process.platform} ${os.release()} ${electron.app.getSystemArch()}`);
+
+    for (const i of Object.keys(systemMemoryInfo)) {
+        log.writeToLog('info', `${i}: ${systemMemoryInfo[i]} KB`);
+    }
 }
