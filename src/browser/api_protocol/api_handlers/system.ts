@@ -69,6 +69,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-entity-info': getEntityInfo,
     'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
     'get-focused-window': getFocusedWindow,
+    'get-focused-external-window': getFocusedExternalWindow,
     'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
     'get-machine-id': { apiFunc: getMachineId, apiPath: '.getMachineId' },
     'get-min-log-level': getMinLogLevel,
@@ -324,6 +325,12 @@ function getFocusedWindow(identity: Identity, message: APIMessage, ack: Acker): 
        }
     }
     dataAck.data = System.getFocusedWindow();
+    ack(dataAck);
+}
+
+function getFocusedExternalWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+    const dataAck = Object.assign({}, successAck);
+    dataAck.data = System.getFocusedExternalWindow();
     ack(dataAck);
 }
 

@@ -210,6 +210,14 @@ function getKey(externalWindow: Shapes.ExternalWindow): string {
 }
 
 /*
+  Finds and returns registerd external window
+*/
+export function findExternalWindow(identity: Identity): Shapes.ExternalWindow|undefined {
+  const { uuid } = identity;
+  return externalWindows.get(uuid);
+}
+
+/*
   Returns a registered native window or creates a new one if not found.
 */
 export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {

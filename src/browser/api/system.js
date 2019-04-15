@@ -283,6 +283,10 @@ exports.System = {
         const { uuid, name } = coreState.getWinObjById(id) || {};
         return uuid ? { uuid, name } : null;
     },
+    getFocusedExternalWindow: function() {
+        let { uuid } = electronBrowserWindow.getFocusedWindow() || {};
+        return uuid ? { uuid } : null;
+    },
     getHostSpecs: function() {
         let state = new idleState();
         const theme = (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {};
