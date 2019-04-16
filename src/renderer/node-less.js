@@ -61,7 +61,7 @@ const hookWebFrame = (webFrame, renderFrameId) => {
 const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOriginIframe, isChildMainFrame) => {
 
     const teardownHandlers = [];
-    teardownHandlers.push(hookWebFrame(defaultWebFrame.createForRenderFrame(routingId), routingId));
+    teardownHandlers.push(hookWebFrame(defaultWebFrame.findFrameByRoutingId(routingId), routingId));
 
     try {
         if (window.location.protocol === 'chrome-devtools:') {
