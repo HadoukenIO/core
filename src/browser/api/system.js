@@ -455,6 +455,27 @@ exports.System = {
         let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js');
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
     },
+    getServiceConfiguration: function(serviceIdentifier) {
+
+        const rvmMessage = {
+            topic: 'application',
+            action: 'get-service-settings',
+            sourceUrl: 'https://openfin.co'
+        };
+
+        return new Promise((resolve, reject) => {
+            rvmBus.publish(rvmMessage, response => {
+                if (!response || !response.payload) {
+                    reject('Bad Response from RVM');
+                }
+                if (response.payload.success === false) {
+                    reject(new Error(response.payload.error));
+                } else {
+                    resolve(response.payload.settings);
+                }
+            });
+        });
+    },
     launchExternalProcess: function(identity, options, errDataCallback) { // Node-style callback used here
         options.srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
 

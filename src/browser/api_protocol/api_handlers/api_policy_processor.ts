@@ -296,7 +296,7 @@ function registerDelegate(apiPath: ApiPath, delegate: ApiPolicyDelegate) {
     delegateMap.set(apiPath, delegate);
 }
 
-function retrieveAPIPolicyContent(): Promise<any> {
+export function retrieveAPIPolicyContent(): Promise<any> {
     writeToLog(1, 'retrieveAPIPolicyContent', true);
     return new Promise((resolve, reject) => {
         const msg: GetDesktopOwnerSettings = {
