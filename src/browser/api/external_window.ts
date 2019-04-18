@@ -10,16 +10,17 @@ import ExternalWindowEventAdapter from '../external_window_event_adapter';
 import InjectionBus from '../transports/injection_bus';
 import ofEvents from '../of_events';
 import route from '../../common/route';
-import WindowGroups from '../window_groups';
+import WindowGroups, { GroupChangedEvent, GroupEvent } from '../window_groups';
 
 electronApp.on('ready', () => {
   subToGlobalWinEventHooks();
 });
 
 export const externalWindows = new Map<string, Shapes.ExternalWindow>();
-const winEventHooksEmitters = new Map<string, WinEventHookEmitter>();
-const injectionBuses = new Map<string, InjectionBus>();
 const externalWindowEventAdapters = new Map<string, ExternalWindowEventAdapter>();
+const injectionBuses = new Map<string, InjectionBus>();
+const windowGroupUnSubscriptions = new Map<string, () => void>();
+const winEventHooksEmitters = new Map<string, WinEventHookEmitter>();
 
 export async function addEventListener(identity: Identity, eventName: string, listener: Shapes.Listener): Promise<() => void> {
   const externalWindow = getExternalWindow(identity);
@@ -228,14 +229,10 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
   if (!externalWindow) {
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: uuid }));
 
-    // Window grouping stub
     applyWindowGroupingStub(externalWindow);
-
-    // Injection events subscription
     subscribeToInjectionEvents(externalWindow);
-
-    // Windows event hooks subscriptions
-    subToWinEventHooks(externalWindow);
+    subscribeToWinEventHooks(externalWindow);
+    subscribeToWindowGroupEvents(externalWindow);
 
     externalWindows.set(uuid, externalWindow);
   }
@@ -348,7 +345,7 @@ function subToGlobalWinEventHooks(): void {
   Subscribe to win32 events and propogate appropriate events to native window.
 */
 // tslint:disable-next-line
-function subToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
+function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   const { nativeId } = externalWindow;
   const pid = electronApp.getProcessIdForNativeId(nativeId);
   const key = getKey(externalWindow);
@@ -570,6 +567,7 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
   const winEventHooks = winEventHooksEmitters.get(key);
   const injectionBus = injectionBuses.get(key);
   const externalWindowEventAdapter = externalWindowEventAdapters.get(key);
+  const windowGroupUnSubscription = windowGroupUnSubscriptions.get(key);
 
   externalWindow.emit('closing');
 
@@ -579,10 +577,50 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
   injectionBus.removeAllListeners();
   injectionBuses.delete(key);
 
+  windowGroupUnSubscription();
+  windowGroupUnSubscriptions.delete(key);
+
   externalWindowEventAdapter.removeAllListeners();
   externalWindowEventAdapters.delete(key);
 
   externalWindow.emit('closed');
   externalWindow.removeAllListeners();
   externalWindows.delete(nativeId);
+}
+
+/*
+    Subscribe to window group events
+*/
+function subscribeToWindowGroupEvents(externalWindow: Shapes.ExternalWindow): void {
+  const key = getKey(externalWindow);
+  const { nativeId } = externalWindow;
+  const listener = (event: GroupChangedEvent) => {
+    if (event.groupUuid !== externalWindow.groupUuid) {
+      return;
+    }
+
+    const payload: GroupEvent = {
+      ...event.payload,
+      memberOf: '',
+      name: nativeId,
+      uuid: nativeId
+    };
+    const { reason, sourceGroup, sourceWindowName } = payload;
+
+    if (reason === 'disband') {
+      payload.memberOf = 'nothing';
+    } else if (reason === 'leave') {
+      payload.memberOf = sourceWindowName === nativeId ? 'nothing' : 'source';
+    } else {
+      const isSource = sourceGroup.find((e: any) => e.windowName === nativeId);
+      payload.memberOf = isSource ? 'source' : 'target';
+    }
+
+    externalWindow.emit('group-changed', payload);
+  };
+
+  WindowGroups.on('group-changed', listener);
+  windowGroupUnSubscriptions.set(key, () => {
+    WindowGroups.removeListener('group-changed', listener);
+  });
 }

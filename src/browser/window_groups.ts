@@ -329,6 +329,12 @@ export interface WindowIdentifier {
     appUuid: string;
     windowName: string;
 }
+
+export interface GroupChangedEvent {
+    groupUuid: string;
+    payload: GroupChangedPayload;
+}
+
 export interface GroupChangedPayload {
     reason: string;
     sourceGroup: WindowIdentifier[];
@@ -339,6 +345,10 @@ export interface GroupChangedPayload {
     targetWindowName: string;
     topic: 'window';
     type: 'group-changed';
+}
+
+export interface GroupEvent extends GroupChangedPayload, Identity {
+    memberOf: string;
 }
 
 function generatePayload(reason: string,
