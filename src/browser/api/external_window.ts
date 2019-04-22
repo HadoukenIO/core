@@ -28,11 +28,6 @@ export async function addEventListener(identity: Identity, eventName: string, li
   return () => externalWindow.removeListener(eventName, listener);
 }
 
-export function animateExternalWindow(identity: Identity): void {
-  const externalWindow = getExternalWindow(identity);
-  NativeWindowModule.noop(externalWindow);
-}
-
 export function bringExternalWindowToFront(identity: Identity): void {
   const externalWindow = getExternalWindow(identity);
   NativeWindowModule.setAsForeground(externalWindow);

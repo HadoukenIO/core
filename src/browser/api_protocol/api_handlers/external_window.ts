@@ -5,7 +5,6 @@ import { hijackMovesForGroupedWindows } from './grouped_window_moves';
 import * as ExternalWindow from '../../api/external_window';
 
 export const ExternalWindowApiMap: APIHandlerMap = {
-  'animate-external-window': animateExternalWindow,
   'bring-external-window-to-front': bringExternalWindowToFront,
   'close-external-window': closeExternalWindow,
   'disable-external-window-user-movement': disableExternalWindowUserMovement,
@@ -44,12 +43,6 @@ export function init(): void {
     : hijackMovesForGroupedWindows(ExternalWindowApiMap);
 
   registerActionMap(registrationMap);
-}
-
-async function animateExternalWindow(identity: Identity, message: APIMessage) {
-  const { payload } = message;
-  const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.animateExternalWindow(targetIdentity);
 }
 
 async function bringExternalWindowToFront(identity: Identity, message: APIMessage) {
