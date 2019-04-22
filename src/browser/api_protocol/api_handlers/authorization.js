@@ -11,7 +11,7 @@ import socketServer from '../../transports/socket_server';
 let ProcessTracker = require('../../process_tracker.js');
 const rvmMessageBus = require('../../rvm/rvm_message_bus').rvmMessageBus;
 import route from '../../../common/route';
-import { lockUuid } from '../../uuid_availability';
+import { lockUuid, releaseUuid } from '../../uuid_availability';
 const successAck = {
     success: true
 };
@@ -203,6 +203,7 @@ module.exports.init = function() {
         externalConnection = ExternalApplication.getExternalConnectionById(id);
         if (externalConnection) {
             ExternalApplication.removeExternalConnection(externalConnection);
+            releaseUuid(externalConnection.uuid);
             ofEvents.emit(route('externalconn', 'closed'), externalConnection);
         }
 
