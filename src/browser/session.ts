@@ -50,7 +50,7 @@ class Session extends EventEmitter {
             const WM_WTSSESSION_CHANGE = 0x02B1;
 
             // Listen to session changes using hidden Electron's browser window
-            bw.hookWindowMessage(WM_WTSSESSION_CHANGE, wParam => {
+            bw.hookWindowMessage(WM_WTSSESSION_CHANGE, (wParam: any) => {
                 let reason: string;
 
                 switch (wParam.readIntLE()) {
