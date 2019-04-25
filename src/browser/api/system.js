@@ -682,8 +682,8 @@ exports.System = {
         });
     },
     getAllExternalWindows: function() {
-        const skipOwnWindows = true;
-        const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOwnWindows);
+        const skipOpenFinWindows = true;
+        const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOpenFinWindows);
         const externalWindows = [];
 
         allNativeWindows.forEach(e => {

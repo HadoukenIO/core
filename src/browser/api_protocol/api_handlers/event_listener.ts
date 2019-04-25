@@ -162,7 +162,12 @@ const subChannel = async (identity: Identity, eventName: string, payload: EventP
 const subSystem = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
     const localUnsub = System.addEventListener(eventName, listener);
     const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
-    const ignoredMultiRuntimeEvents = ['external-window-created'];
+    const ignoredMultiRuntimeEvents = [
+        'external-window-closed',
+        'external-window-created',
+        'external-window-hidden',
+        'external-window-shown'
+    ];
     let remoteUnSub = noop;
 
     if (!isExternalClient && !ignoredMultiRuntimeEvents.includes(eventName)) {

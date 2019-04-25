@@ -313,13 +313,13 @@ function subToGlobalWinEventHooks(): void {
     }
   };
 
-  winEventHooks.on('EVENT_OBJECT_CREATE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    const routeName = route.system('external-window-created');
+  winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    const routeName = route.system('external-window-closed');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    const routeName = route.system('external-window-closed');
+  winEventHooks.on('EVENT_OBJECT_CREATE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    const routeName = route.system('external-window-created');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
