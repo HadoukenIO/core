@@ -267,7 +267,7 @@ app.on('ready', function() {
     rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
 
 
-    app.allowNTLMCredentialsForAllDomains(true);
+    electron.session.defaultSession.allowNTLMCredentialsForDomains('*');
 
     if (process.platform === 'win32') {
         let integrityLevel = app.getIntegrityLevel();
