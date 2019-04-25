@@ -18,7 +18,7 @@ export class Rule extends Lint.Rules.AbstractRule {
         typescriptOnly: false
     };
 
-    public static FAILURE_STRING = 'Use original-fs instead of fs';
+    public static FAILURE_STRING = 'Use `original-fs` instead of `fs` when importing readFileSync';
 
     public apply(sourceFile: ts.SourceFile): Lint.RuleFailure[] {
         return this.applyWithFunction(sourceFile, walk);
@@ -30,16 +30,24 @@ function walk(ctx: Lint.WalkContext<void>) {
     // Call the function `cb` (defined below) for each child.
     return ts.forEachChild(ctx.sourceFile, cb);
 
-    function cb(node: ts.Node): void {
-        if (node.kind === ts.SyntaxKind.CallExpression) {
-            const callChild = node.getChildAt(0);
-            if (callChild.kind === ts.SyntaxKind.PropertyAccessExpression) {
-                const propertyAccessFirstIdentifier = callChild.getChildAt(0);
-                if (propertyAccessFirstIdentifier.getText() === 'fs') {
-                    return ctx.addFailureAtNode(propertyAccessFirstIdentifier, Rule.FAILURE_STRING);
+    function cb(node: ts.ImportDeclaration): void {
+        if (node.kind === ts.SyntaxKind.ImportDeclaration) {
+            if ((<ts.StringLiteral>node.moduleSpecifier).text === 'fs') {
+                // check if we have any named imports
+                if (node.importClause) {
+                    hasReadFileSync(node.importClause);
                 }
             }
         }
         return ts.forEachChild(node, cb);
+    }
+
+    function hasReadFileSync(node: ts.Node): void {
+        if (node.kind === ts.SyntaxKind.Identifier) {
+            if (node.getText() === 'readFileSync') {
+                return ctx.addFailureAtNode(node, Rule.FAILURE_STRING);
+            }
+        }
+        return ts.forEachChild(node, hasReadFileSync);
     }
 }
