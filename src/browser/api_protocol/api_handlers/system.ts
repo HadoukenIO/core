@@ -120,10 +120,10 @@ const dosURL = 'https://openfin.co/documentation/desktop-owner-settings/';
 
 async function getServiceConfiguration(identity: Identity, message: APIMessage) {
     const { name } = message.payload;
-    const response = await System.getServiceConfiguration(message);
+    const response = await System.getServiceConfiguration();
 
-    if (!response) {
-        throw new Error('Services not configured in desktop owner settings');
+    if (didFail(response)) {
+        throw response;
     }
 
     if (!Array.isArray(response)) {
