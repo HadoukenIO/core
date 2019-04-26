@@ -161,6 +161,7 @@ let optionSetters = {
         const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
             newVal);
         setOptOnBrowserWin('contextMenuSettings', val, browserWin);
+        setOptOnBrowserWin('contextMenu', val.enable, browserWin); // support for old api
         browserWin.setMenu(null);
         browserWin.webContents.updateContextMenuSettings(val);
     },
@@ -1700,7 +1701,7 @@ Window.updateOptions = function(identity, updateObj) {
     let { uuid, name } = identity;
     let diff = {},
         invalidOptions = [];
-    let clone = obj => JSON.parse(JSON.stringify(obj)); // this works here, but has limitations; reuse with caution.
+    let clone = obj => typeof obj === 'undefined' ? obj : JSON.parse(JSON.stringify(obj)); // this works here, but has limitations; reuse with caution.
 
     try {
         for (var opt in updateObj) {
