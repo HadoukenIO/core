@@ -446,7 +446,7 @@ exports.System = {
         const cachePath = electronApp.getPath('userData');
         const args = Object.assign({}, coreState.argo);
         args._ = undefined;
-        return { manifestUrl, port, securityRealm, version, architecture, cachePath, arguments: args };
+        return { manifestUrl, port, securityRealm, version, architecture, cachePath, args };
     },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
