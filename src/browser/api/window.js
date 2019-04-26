@@ -1502,8 +1502,27 @@ Window.moveTo = function(identity, left, top) {
 };
 
 Window.navigate = function(identity, url) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
-    browserWindow.webContents.loadURL(url);
+    return new Promise((resolve, reject) => {
+        let browserWindow = getElectronBrowserWindow(identity, 'navigate');
+
+        let handleLoadFinished = success => {
+            browserWindow.webContents.removeListener('did-fail-load', didFail);
+            browserWindow.webContents.removeListener('did-finish-load', didSucceed);
+            if (success) {
+                resolve();
+            } else {
+                reject();
+            }
+        };
+
+        let didFail = () => handleLoadFinished(false);
+        let didSucceed = () => handleLoadFinished(true);
+        // todo: remove this when we get to electron 5.* - this promise's logic is natively implemented in loadURL
+        browserWindow.webContents.on('did-fail-load', didFail);
+        browserWindow.webContents.on('did-finish-load', didSucceed);
+
+        browserWindow.webContents.loadURL(url);
+    });
 };
 
 Window.navigateBack = function(identity) {
