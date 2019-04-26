@@ -116,6 +116,7 @@ declare namespace Electron {
 
 
     export interface screen {
+        screenToDIPRect(rect: Rectangle): Rectangle;
         getDisplayMatching(rect: Rectangle): Display;
     }
 

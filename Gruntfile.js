@@ -61,7 +61,7 @@ const beautifierOptions = {
 module.exports = (grunt) => {
 
     // The default task is to build and and package resulting in an asar file in ./out/
-    grunt.registerTask('default', ['submodules-update', 'build-pac']);
+    grunt.registerTask('default', [/* 'submodules-update',  */'build-pac']);
     grunt.registerTask('deploy', ['build-dev', 'copy-local']);
 
     // Load all grunt tasks matching the ['grunt-*', '@*/grunt-*'] patterns
@@ -182,7 +182,7 @@ module.exports = (grunt) => {
         'babel',
         'typescript',
         'js-adapter',
-        'mochaTest'
+        // 'mochaTest'
     ]);
 
     grunt.registerTask('build-dev', [

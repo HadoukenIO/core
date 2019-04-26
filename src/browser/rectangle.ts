@@ -241,11 +241,17 @@ export class Rectangle {
 
     public delta = (rect: RectangleBase): RectangleBase => {
         return {
-            x: rect.x - this.x,
-            y: rect.y - this.y,
-            width: rect.width - this.width,
-            height: rect.height - this.height
+            x: rect.x - this.x >= 0 ? Math.ceil(rect.x - this.x) : Math.floor(rect.x - this.x),
+            y: rect.y - this.y >= 0 ? Math.ceil(rect.y - this.y) : Math.floor(rect.y - this.y),
+            width: rect.width - this.width >= 0 ? Math.ceil(rect.width - this.width) : Math.floor(rect.width - this.width),
+            height: rect.height - this.height >= 0 ? Math.ceil(rect.height - this.height) : Math.floor(rect.height - this.height)
         };
+        // return {
+        //     x: rect.x - this.x,
+        //     y: rect.y - this.y,
+        //     width: rect.width - this.width,
+        //     height: rect.height - this.height
+        // };
     }
 
     public outerBounds = (rect: RectangleBase) => {
