@@ -1520,7 +1520,8 @@ Window.navigate = function(identity, url) {
         browserWindow.webContents.on('did-fail-load', didFail);
         browserWindow.webContents.on('did-finish-load', didSucceed);
 
-        // todo: replace everything here with "return browserWindow.webContents.loadURL(url)" once we get to electron 5.* - this promise's logic is implemented in loadURL starting electron v5
+        // todo: replace everything here with "return browserWindow.webContents.loadURL(url)" once we get to electron 5.* 
+        // reason: starting electron v5, loadUrl returns a promise that resolves according to the same logic we apply here
         browserWindow.webContents.loadURL(url);        
     });
 };
