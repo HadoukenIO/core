@@ -224,17 +224,14 @@ function moveWindowBy(identity: Identity, message: APIMessage, ack: Acker): void
     ack(successAck);
 }
 
-function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
+function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const { url } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
     return Window.navigate(windowIdentity, url)
         .then(() => ack(successAck))
-        .catch((err: any) => nack({
-            success: false,
-            error: new Error('Navigation failed. This is usually caused by an incomplete url or an unavailable website')
-        }));
+        .catch((err: any) => nack(new Error('Navigation failed. This is usually caused by an incomplete url or an unavailable website')));
 }
 
 function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker): void {
