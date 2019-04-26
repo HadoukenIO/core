@@ -1517,11 +1517,11 @@ Window.navigate = function(identity, url) {
 
         let didFail = () => handleLoadFinished(false);
         let didSucceed = () => handleLoadFinished(true);
-        // todo: remove this when we get to electron 5.* - this promise's logic is natively implemented in loadURL
         browserWindow.webContents.on('did-fail-load', didFail);
         browserWindow.webContents.on('did-finish-load', didSucceed);
 
-        browserWindow.webContents.loadURL(url);
+        // todo: replace everything here with "return browserWindow.webContents.loadURL(url)" once we get to electron 5.* - this promise's logic is implemented in loadURL starting electron v5
+        browserWindow.webContents.loadURL(url);        
     });
 };
 
