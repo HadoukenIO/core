@@ -507,27 +507,26 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
   });
 }
 
-const classNamesToIgnore = [
-  // TODO: Edge, calculator, etc (looks like they are always
-  // "opened" and "visible", but at least visiblity part is wrong)
-  'ApplicationFrameWindow',
-
-  'TaskListOverlayWnd',
-  'Windows.UI.Core.CoreWindow'
-];
-const titlesToIgnore = [
-  'Cortana',
-  'Microsoft Store',
-  'Program Manager',
-  'Settings',
-  'Start',
-  'Window Search'
-];
-
 /*
     Decides whether external window is valid (external window filtering)
 */
 export function isValidExternalWindow(nativeWindowInfo: Shapes.NativeWindowInfo, ignoreVisibility?: boolean) {
+  const classNamesToIgnore = [
+    // TODO: Edge, calculator, etc (looks like they are always
+    // "opened" and "visible", but at least visiblity part is wrong)
+    'ApplicationFrameWindow',
+
+    'TaskListOverlayWnd',
+    'Windows.UI.Core.CoreWindow'
+  ];
+  const titlesToIgnore = [
+    'Cortana',
+    'Microsoft Store',
+    'Program Manager',
+    'Settings',
+    'Start',
+    'Window Search'
+  ];
   const { title, visible } = nativeWindowInfo;
   const classNameOk = !classNamesToIgnore.includes(nativeWindowInfo.className);
   const titleOk = !titlesToIgnore.includes(nativeWindowInfo.title);
