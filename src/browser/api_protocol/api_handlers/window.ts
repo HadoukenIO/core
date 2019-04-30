@@ -228,15 +228,11 @@ function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nac
     const { payload } = message;
     const { url } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
+    const chromeErrLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
 
     return Window.navigate(windowIdentity, url)
         .then(() => ack(Object.assign(successAck)))
-        .catch((e: any) => nack(new Error(`
-            Navigation failed.
-            error code: ${e.errCode}
-            error description: ${e.errDesc}
-            See https://cs.chromium.org/chromium/src/net/base/net_error_list.h for more details.
-        `)));
+        .catch((e: any) => nack(new Error(`error #${e.errCode}. See ${chromeErrLink} for details`)));
 }
 
 function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker): void {
