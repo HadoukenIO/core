@@ -230,8 +230,13 @@ function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nac
     const windowIdentity = getTargetWindowIdentity(payload);
 
     return Window.navigate(windowIdentity, url)
-        .then(() => ack(successAck))
-        .catch((err: any) => nack(new Error('Navigation failed. This is usually caused by an incomplete url or an unavailable website')));
+        .then(() => ack(Object.assign(successAck)))
+        .catch((e: any) => nack(new Error(`
+            Navigation failed.
+            error code: ${e.errCode}
+            error description: ${e.errDesc}
+            See https://cs.chromium.org/chromium/src/net/base/net_error_list.h for more details.
+        `)));
 }
 
 function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker): void {

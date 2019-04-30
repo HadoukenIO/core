@@ -1505,24 +1505,24 @@ Window.navigate = function(identity, url) {
     return new Promise((resolve, reject) => {
         let browserWindow = getElectronBrowserWindow(identity, 'navigate');
 
-        let handleLoadFinished = success => {
+        let handleLoadFinished = (success, e) => {
             browserWindow.webContents.removeListener('did-fail-load', didFail);
             browserWindow.webContents.removeListener('did-finish-load', didSucceed);
             if (success) {
                 resolve();
             } else {
-                reject();
+                reject(e);
             }
         };
 
-        let didFail = () => handleLoadFinished(false);
+        let didFail = (event, errCode, errDesc) => handleLoadFinished(false, { errCode, errDesc });
         let didSucceed = () => handleLoadFinished(true);
         browserWindow.webContents.on('did-fail-load', didFail);
         browserWindow.webContents.on('did-finish-load', didSucceed);
 
         // todo: replace everything here with "return browserWindow.webContents.loadURL(url)" once we get to electron 5.* 
         // reason: starting electron v5, loadUrl returns a promise that resolves according to the same logic we apply here
-        browserWindow.webContents.loadURL(url);        
+        browserWindow.webContents.loadURL(url);
     });
 };
 
