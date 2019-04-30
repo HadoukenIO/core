@@ -261,22 +261,22 @@ function getInjectionBus(externalWindow: Shapes.ExternalWindow): InjectionBus {
 function emitBoundsChangedEvent(identity: Identity, previousNativeWindowInfo: Shapes.NativeWindowInfo): void {
   const externalWindow = getExternalWindow(identity);
   const currentWindowInfo = getExternalWindowInfo(identity);
+  const curBounds = currentWindowInfo.bounds;
+  const prevBounds = previousNativeWindowInfo.bounds;
   const boundsChanged =
-    previousNativeWindowInfo.bounds.height !== currentWindowInfo.bounds.height ||
-    previousNativeWindowInfo.bounds.width !== currentWindowInfo.bounds.width ||
-    previousNativeWindowInfo.bounds.x !== currentWindowInfo.bounds.x ||
-    previousNativeWindowInfo.bounds.y !== currentWindowInfo.bounds.y;
+    prevBounds.height !== curBounds.height ||
+    prevBounds.width !== curBounds.width ||
+    prevBounds.x !== curBounds.x ||
+    prevBounds.y !== curBounds.y;
 
   if (boundsChanged) {
     externalWindow.once('bounds-changing', () => {
+      const {
+        changeType, deferred, height, left, reason, top, width
+      } = getEventData(currentWindowInfo);
+
       externalWindow.emit('bounds-changed', {
-        changeType: 0, // TODO: use real value
-        // deferred: false, // TODO
-        height: currentWindowInfo.bounds.height,
-        left: currentWindowInfo.bounds.x,
-        // reason: 'self', // TODO
-        top: currentWindowInfo.bounds.y,
-        width: currentWindowInfo.bounds.width
+        changeType, deferred, height, left, reason, top, width
       });
     });
   }
@@ -339,7 +339,6 @@ function subToGlobalWinEventHooks(): void {
 /*
   Subscribe to win32 events and propogate appropriate events to native window.
 */
-// tslint:disable-next-line
 function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   const { nativeId } = externalWindow;
   const pid = electronApp.getProcessIdForNativeId(nativeId);
@@ -367,56 +366,43 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
     previousNativeWindowInfo = nativeWindowInfo;
   };
 
-  winEventHooks.on('EVENT_OBJECT_SHOW', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  winEventHooks.on('EVENT_OBJECT_SHOW', listener.bind(null, () => {
     externalWindow.emit('shown');
   }));
 
-  winEventHooks.on('EVENT_OBJECT_HIDE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
-    externalWindow.emit('hidden', {
-      reason: 'hide' // TOOD: use real value
-    });
+  winEventHooks.on('EVENT_OBJECT_HIDE', listener.bind(null, () => {
+    externalWindow.emit('hidden', { reason: 'hide' });
   }));
 
-  winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, () => {
     externalWindowCloseCleanup(externalWindow);
   }));
 
-  winEventHooks.on('EVENT_OBJECT_FOCUS', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  winEventHooks.on('EVENT_OBJECT_FOCUS', listener.bind(null, () => {
     externalWindow.emit('focused');
   }));
 
   winEventHooks.on('EVENT_SYSTEM_MOVESIZESTART', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    const {
+      frame, height, left, top, width, windowState, x, y
+    } = getEventData(nativeWindowInfo);
+
     externalWindow.emit('begin-user-bounds-changing', {
-      frame: true, // TODO: use real value
-      height: nativeWindowInfo.bounds.height,
-      left: nativeWindowInfo.bounds.x,
-      top: nativeWindowInfo.bounds.y,
-      width: nativeWindowInfo.bounds.width,
-      windowState: 'normal', // TODO: use real value
-      x: nativeWindowInfo.bounds.x,
-      y: nativeWindowInfo.bounds.y
+      frame, height, left, top, width, windowState, x, y
     });
   }));
 
   winEventHooks.on('EVENT_SYSTEM_MOVESIZEEND', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    const {
+      changeType, deferred, frame, height, left, reason, top, width, windowState, x, y
+    } = getEventData(nativeWindowInfo);
+
     externalWindow.emit('end-user-bounds-changing', {
-      frame: true, // TODO: use real value
-      height: nativeWindowInfo.bounds.height,
-      left: nativeWindowInfo.bounds.x,
-      top: nativeWindowInfo.bounds.y,
-      width: nativeWindowInfo.bounds.width,
-      windowState: 'normal', // TODO: use real value
-      x: nativeWindowInfo.bounds.x,
-      y: nativeWindowInfo.bounds.y
+      frame, height, left, top, width, windowState, x, y
     });
+
     externalWindow.emit('bounds-changed', {
-      changeType: 0, // TODO: use real value
-      // deferred: false, // TODO
-      height: nativeWindowInfo.bounds.height,
-      left: nativeWindowInfo.bounds.x,
-      // reason: 'self', // TODO
-      top: nativeWindowInfo.bounds.y,
-      width: nativeWindowInfo.bounds.width
+      changeType, deferred, height, left, reason, top, width
     });
   }));
 
@@ -434,14 +420,12 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
       // not being restored first automatically like for a maximized window,
       // and so the event is being triggerred even though the window's bounds
       // are not changing.
+      const {
+        changeType, deferred, height, left, reason, top, width
+      } = getEventData(nativeWindowInfo);
+
       externalWindow.emit('bounds-changing', {
-        changeType: 0, // TODO: use real value
-        // deferred: false, // TODO
-        height: nativeWindowInfo.bounds.height,
-        left: nativeWindowInfo.bounds.x,
-        // reason: 'self', // TODO
-        top: nativeWindowInfo.bounds.y,
-        width: nativeWindowInfo.bounds.width
+        changeType, deferred, height, left, reason, top, width
       });
     }
   }));
@@ -618,4 +602,30 @@ function subscribeToWindowGroupEvents(externalWindow: Shapes.ExternalWindow): vo
   windowGroupUnSubscriptions.set(key, () => {
     WindowGroups.removeListener('group-changed', listener);
   });
+}
+
+/*
+    Use raw native window info to generate various OpenFin event data that
+    individual events can use for its properties.
+*/
+function getEventData(nativeWindowInfo: Shapes.NativeWindowInfo) {
+  const windowState = nativeWindowInfo.maximized
+    ? 'maximized'
+    : nativeWindowInfo.minimized
+      ? 'minimized'
+      : 'normal';
+
+  return {
+    changeType: 2, // TOOD: use real value
+    deferred: false,
+    frame: true, // TODO: use real value
+    height: nativeWindowInfo.bounds.height,
+    left: nativeWindowInfo.bounds.x,
+    reason: 'self',
+    top: nativeWindowInfo.bounds.y,
+    width: nativeWindowInfo.bounds.width,
+    windowState,
+    x: nativeWindowInfo.bounds.x,
+    y: nativeWindowInfo.bounds.y
+  };
 }
