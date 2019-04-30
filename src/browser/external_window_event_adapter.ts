@@ -8,9 +8,13 @@ electronApp.on('ready', () => {
     MonitorInfo = require('./monitor_info.js');
 });
 
+interface BoundsChangeEventData extends Shapes.CoordinatesXY {
+    userMovement?: boolean;
+}
+
 export default class ExternalWindowEventAdapter {
     private _beginUserBoundsChangeEvent: string;
-    private _beginUserBoundsChangeListener: (coords: Shapes.CoordinatesXY) => void;
+    private _beginUserBoundsChangeListener: (data: BoundsChangeEventData) => void;
     private _blurEvent: string;
     private _blurListener: () => void;
     private _boundsChangedEvent: string;
@@ -54,11 +58,13 @@ export default class ExternalWindowEventAdapter {
 
         // Begin user bounds changing
         this._beginUserBoundsChangeEvent = route.externalWindow('begin-user-bounds-change', uuid, name);
-        this._beginUserBoundsChangeListener = (coords) => {
-            const isUserMovementEnabled = browserWindow.isUserMovementEnabled();
+        this._beginUserBoundsChangeListener = (data) => {
+            const { userMovement, x, y } = data;
+            const isUserMovementEnabled = typeof userMovement === 'boolean'
+                ? userMovement
+                : browserWindow.isUserMovementEnabled();
 
             if (!this._leftButtonDown && !isUserMovementEnabled) {
-                const { x, y } = coords;
                 const bounds = browserWindow.getBounds();
 
                 // left mouse button is now in the down position
@@ -237,5 +243,7 @@ export default class ExternalWindowEventAdapter {
         ofEvents.removeListener(this._sizingEvent, this._sizingListener);
         ofEvents.removeListener(this._stateChangeEvent, this._stateChangeListener);
         ofEvents.removeListener(this._visibilityChangedEvent, this._visibilityChangedListener);
+
+        this._addedAllListeners = false;
     }
 }

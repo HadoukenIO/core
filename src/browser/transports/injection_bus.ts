@@ -110,7 +110,8 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       }
 
       const { payload: originalPayload } = <BroadcastMessage>parsedMessage;
-      const { data: { type: eventAsInteger, ...payload }, dpi: injectionDpi, nativeId } = originalPayload;
+      const { data: { type: eventAsInteger, ...rest }, dpi: injectionDpi, nativeId, state } = originalPayload;
+      const payload = { ...rest, ...state };
       const windowsEvent = <string>WINDOWS_MESSAGE_MAP[eventAsInteger];
       const { dpi: runtimeDpi } = electronApp.getNativeWindowInfoForNativeId(nativeId);
 

@@ -452,7 +452,6 @@ function applyWindowGroupingStub(externalWindow: Shapes.ExternalWindow): Shapes.
   externalWindow.app_uuid = nativeId;
   externalWindow.name = nativeId;
   externalWindow.uuid = nativeId;
-  externalWindow.isUserMovementEnabled = () => false; // TODO: implement this
   externalWindow.setUserMovementEnabled = async (enableUserMovement: boolean): Promise<void> => {
     if (enableUserMovement) {
       await enableExternaWindowUserMovement(identity);
@@ -470,34 +469,36 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
   const injectionBus = getInjectionBus(externalWindow);
 
   injectionBus.on('WM_SIZING', (data: any) => {
-    const { bottom, left, right, top } = data;
+    const { bottom, left, right, top, userMovement } = data;
     const bounds = { x: left, y: top, width: right - left, height: bottom - top };
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_SIZING, uuid, name);
     ofEvents.emit(routeName, bounds);
-    if (!externalWindow.isUserMovementEnabled()) {
+    if (!userMovement) {
       externalWindow.emit('disabled-movement-bounds-changing');
     }
   });
 
-  injectionBus.on('WM_MOVING', () => {
+  injectionBus.on('WM_MOVING', (data: any) => {
+    const { userMovement } = data;
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_MOVING, uuid, name);
     ofEvents.emit(routeName);
-    if (!externalWindow.isUserMovementEnabled()) {
+    if (!userMovement) {
       externalWindow.emit('disabled-movement-bounds-changing');
     }
   });
 
   injectionBus.on('WM_ENTERSIZEMOVE', (data: any) => {
-    const { mouseX, mouseY } = data;
-    const coordinates = { x: mouseX, y: mouseY };
+    const { mouseX, mouseY, userMovement } = data;
+    const eventPayload = { userMovement, x: mouseX, y: mouseY };
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_ENTERSIZEMOVE, uuid, name);
-    ofEvents.emit(routeName, coordinates);
+    ofEvents.emit(routeName, eventPayload);
   });
 
-  injectionBus.on('WM_EXITSIZEMOVE', () => {
+  injectionBus.on('WM_EXITSIZEMOVE', (data: any) => {
+    const { userMovement } = data;
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, uuid, name);
     ofEvents.emit(routeName);
-    if (!externalWindow.isUserMovementEnabled()) {
+    if (!userMovement) {
       externalWindow.emit('disabled-movement-bounds-changed');
     }
   });
