@@ -3,8 +3,8 @@
  */
 
 import * as _ from 'underscore';
-import * as animations from './animations.js';
-import * as coreState from './core_state.js';
+const animations = require('./animations.js');
+import * as coreState from './core_state';
 import * as Deferred from './deferred';
 import WindowGroups from './window_groups';
 import WindowGroupTransactionTracker, { ITransaction } from './window_group_transaction_tracker';

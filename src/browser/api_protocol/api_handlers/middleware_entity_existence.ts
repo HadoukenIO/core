@@ -1,7 +1,7 @@
 
 import RequestHandler from '../transport_strategy/base_handler';
 import { appByUuid, windowExists } from '../../core_state';
-import { applicationApiMap } from './application.js';
+const { applicationApiMap } = require('./application.js');
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { windowApiMap } from './window.js';
 import { webContentsApiMap } from './webcontents';

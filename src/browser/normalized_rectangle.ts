@@ -1,6 +1,6 @@
 import { Rectangle, RectangleBase } from './rectangle';
 import { GroupWindow } from '../shapes';
-import { System } from './api/system';
+const { System } = require('./api/system');
 import { Move } from './disabled_frame_group_tracker';
 
 const osName: string = System.getHostSpecs().name;

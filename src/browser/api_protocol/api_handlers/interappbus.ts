@@ -1,5 +1,5 @@
 import * as apiProtocolBase from './api_protocol_base';
-import { InterApplicationBus } from '../../api/interappbus';
+const { InterApplicationBus } = require('../../api/interappbus');
 import ofEvents from '../../of_events';
 import route from '../../../common/route';
 import {

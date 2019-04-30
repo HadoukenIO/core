@@ -1,5 +1,5 @@
 import { rvmMessageBus, ConsoleMessage } from '../rvm/rvm_message_bus';
-import { System } from '../api/system';
+const { System } = require('../api/system');
 import { setTimeout } from 'timers';
 /**
  * Interface for [sendToRVM] method

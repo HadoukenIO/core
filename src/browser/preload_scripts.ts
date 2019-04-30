@@ -1,7 +1,7 @@
 
-import { Window } from './api/window';
+const { Window } = require('./api/window');
 import { cachedFetch } from './cached_resource_fetcher';
-import { normalizePreloadScripts } from './convert_options';
+const { normalizePreloadScripts } =  require('./convert_options');
 import { Identity, PreloadScript } from '../shapes';
 import { readFile } from 'fs';
 import { writeToLog } from './log';

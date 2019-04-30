@@ -1,6 +1,6 @@
 import { getMeshUuid } from '../../connection_manager';
 import { registerActionMap } from './api_protocol_base.js';
-import { System } from '../../api/system.js';
+const { System } = require('../../api/system.js');
 import * as log from '../../log';
 import {
     Acker,

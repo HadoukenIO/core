@@ -6,8 +6,7 @@ import ofEvents from '../of_events';
 import * as log from '../log';
 import route from '../../common/route';
 
-//require here because of missing definitions.
-const { globalShortcut } = require('electron');
+import { globalShortcut } from 'electron';
 
 const subscriptionManager = new SubscriptionManager();
 const hotkeyOwnershipMap: Map<string, string> = new Map();

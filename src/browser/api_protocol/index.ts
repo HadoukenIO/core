@@ -1,11 +1,11 @@
 declare var require: any;
 
-import { init as initApplicationApiHandler } from './api_handlers/application';
+const { init: initApplicationApiHandler } = require('./api_handlers/application');
 import { ExternalApplicationApiHandler } from './api_handlers/external_application';
-import {
-    init as initAuthorizationApiHandler,
-    registerMiddleware as registerExternalConnAuthMiddleware
-} from './api_handlers/authorization';
+const {
+    init: initAuthorizationApiHandler,
+    registerMiddleware: registerExternalConnAuthMiddleware
+} = require('./api_handlers/authorization');
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
 import { FrameApiHandler } from './api_handlers/frame';
 import { ChannelApiHandler } from './api_handlers/channel';
