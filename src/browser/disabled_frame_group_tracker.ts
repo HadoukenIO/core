@@ -23,12 +23,6 @@ enum ChangeType {
 }
 type MoveAccumulator = { otherWindows: Move[], leader?: Move };
 type WinId = string;
-interface GroupInfo {
-    boundsChanging: boolean;
-    payloadCache: [OpenFinWindow, any, RectangleBase, number][];
-    interval?: any;
-}
-const groupInfoCache: Map<string, GroupInfo> = new Map();
 const listenerCache: Map<WinId, Array<(...args: any[]) => void>> = new Map();
 export interface Move { ofWin: OpenFinWindow; rect: Rectangle; offset: RectangleBase; }
 
@@ -38,17 +32,16 @@ function emitBoundsChanged({ ofWin, rect, offset }: Move, changeType: ChangeType
     raiseEvent(ofWin, 'bounds-changed', eventArgs);
 }
 async function raiseEvent(ofWin: OpenFinWindow, topic: string, payload: any) {
-    const { uuid, name } = ofWin;
+    const { uuid, name, isProxy } = ofWin;
     const id = { uuid, name };
     const eventName = route.window(topic, uuid, name);
     const eventArgs = {
         ...payload,
-        uuid,
-        name,
+        ...id,
         topic,
         type: 'window'
     };
-    if (ofWin.isProxy) {
+    if (isProxy) {
         const rt = await getRuntimeProxyWindow(id);
         const fin = rt.hostRuntime.fin;
         await fin.System.executeOnRemote(id, { action: 'raise-event', payload: { eventName, eventArgs } });
@@ -88,7 +81,7 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
         : ChangeType.POSITION;
     const moves = handleBoundsChanging(win, applyOffset(newBounds, offset), changeType);
     const { leader, otherWindows } = moves.reduce((accum: MoveAccumulator, move) => {
-        // REMOVE LATER - DOES THIS WORK? IS WIN SAME REF AS OFWIN?
+        // REMOVE COMMENT LATER - DOES THIS WORK? IS WIN SAME REF AS OFWIN?
         move.ofWin === win ? accum.leader = move : accum.otherWindows.push(move);
         return accum;
     }, <MoveAccumulator>{ otherWindows: [] });
@@ -108,16 +101,18 @@ function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFro
         let flags = noZorder + noActivate;
         flags = changeType === 0 ? flags + noSize : flags;
         const wt = new WindowTransaction.Transaction(0);
-        moves.forEach(({ ofWin, rect, offset }) => {
-            const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
+        moves.forEach(({ ofWin: {browserWindow}, rect, offset }) => {
+            if (browserWindow.isMaximized()) { browserWindow.unmaximize(); }
+            const hwnd = parseInt(browserWindow.nativeId, 16);
             wt.setWindowPos(hwnd, { ...getTransactionBounds(rect, offset), flags });
-            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
+            if (bringWinsToFront) { browserWindow.bringToFront(); }
         });
         wt.commit();
     } else {
-        moves.forEach(({ ofWin, rect, offset }) => {
-            ofWin.browserWindow.setBounds(applyOffset(rect, offset));
-            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
+        moves.forEach(({ ofWin: {browserWindow}, rect, offset }) => {
+            if (browserWindow.isMaximized()) { browserWindow.unmaximize(); }
+            browserWindow.setBounds(applyOffset(rect, offset));
+            if (bringWinsToFront) { browserWindow.bringToFront(); }
         });
     }
 }
@@ -205,6 +200,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
     const MonitorInfo = require('./monitor_info.js');
     const scaleFactor = MonitorInfo.getInfo().deviceScaleFactor;
     let moved = new Set<OpenFinWindow>();
+    let boundsChanging = false;
 
     const genericListener = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
@@ -213,15 +209,14 @@ export function addWindowToGroup(win: OpenFinWindow) {
                 //@ts-ignore
                 rawPayloadBounds[key] = rawPayloadBounds[key] / scaleFactor;
             });
-            const groupInfo = getGroupInfoCacheForWindow(win);
-            if (!groupInfo.boundsChanging) {
-                groupInfo.boundsChanging = true;
+            if (!boundsChanging) {
+                boundsChanging = true;
                 moved = new Set<OpenFinWindow>();
                 const moves = handleBoundsChanging(win, rawPayloadBounds, changeType, true);
                 handleBatchedMove(moves, changeType, true);
-                moves.forEach((move) => moved.add(move.ofWin));
+                moves.forEach(({ofWin}) => moved.add(ofWin));
                 win.browserWindow.once('end-user-bounds-change', () => {
-                    groupInfo.boundsChanging = false;
+                    boundsChanging = false;
                     moved.forEach((movedWin) => {
                         const isLeader = movedWin === win;
                         if (!isLeader) {
@@ -242,33 +237,18 @@ export function addWindowToGroup(win: OpenFinWindow) {
     const moveListener = (e: any, newBounds: RectangleBase) => genericListener(e, newBounds, 0);
     const resizeListener = (e: any, newBounds: RectangleBase) => genericListener(e, newBounds, 1);
 
-    listenerCache.set(win.browserWindow.nativeId, [moveListener, resizeListener]);
     win.browserWindow.on('will-move', moveListener);
     win.browserWindow.on('will-resize', resizeListener);
+    listenerCache.set(win.browserWindow.nativeId, [moveListener, resizeListener]);
 }
 
-export function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
-    let groupInfo: GroupInfo = groupInfoCache.get(win.groupUuid);
-    if (!groupInfo) {
-        groupInfo = {
-            boundsChanging: false,
-            payloadCache: []
-        };
-        //merging of groups of windows that are not in a group will be late in producing a window group.
-        if (win.groupUuid) {
-            groupInfoCache.set(win.groupUuid, groupInfo);
-        }
-    }
-    return groupInfo;
-}
-
-export function removeWindowFromGroup(win: OpenFinWindow) {
-    if (!win.browserWindow.isDestroyed()) {
-        const winId = win.browserWindow.nativeId;
+export function removeWindowFromGroup({browserWindow}: OpenFinWindow) {
+    if (!browserWindow.isDestroyed()) {
+        const winId = browserWindow.nativeId;
         const listeners = listenerCache.get(winId);
         if (listeners) {
-            win.browserWindow.removeListener('will-move', listeners[0]);
-            win.browserWindow.removeListener('will-resize', listeners[1]);
+            browserWindow.removeListener('will-move', listeners[0]);
+            browserWindow.removeListener('will-resize', listeners[1]);
         }
         listenerCache.delete(winId);
     }

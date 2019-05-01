@@ -42,7 +42,7 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
                     const wrapped = getWindowByUuidName(uuid, name);
                     if (wrapped && wrapped.groupUuid) {
                         const changeType = hijackThese[action](payload);
-                        changeType.change === 'delta'
+                        const moved = changeType.change === 'delta'
                             ? updateGroupedWindowBounds(wrapped, changeType)
                             : setNewGroupedWindowBounds(wrapped, changeType);
                         if (action === 'show-at-window') {
