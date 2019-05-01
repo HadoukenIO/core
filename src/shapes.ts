@@ -440,6 +440,7 @@ interface BrowserWindowMock extends BrowserWindowElectron {
 
 export interface ExternalWindow extends BrowserWindowElectron {
     _options: WindowOptions;
+    _userMovement?: boolean;
     _window?: {};
     app_uuid?: string;
     browserWindow: BrowserWindowMock;

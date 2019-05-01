@@ -44,7 +44,6 @@ export async function disableExternalWindowUserMovement(identity: Identity): Pro
   const injectionBus = getInjectionBus(externalWindow);
   await injectionBus.set({ userMovement: false });
   externalWindow.emit('user-movement-disabled');
-  // TODO: enable user movement when requestors go away
 }
 
 export async function enableExternaWindowUserMovement(identity: Identity): Promise<void> {
@@ -383,6 +382,10 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   }));
 
   winEventHooks.on('EVENT_SYSTEM_MOVESIZESTART', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    if (!externalWindow._userMovement) {
+      return;
+    }
+
     const {
       frame, height, left, top, width, windowState, x, y
     } = getEventData(nativeWindowInfo);
@@ -393,6 +396,10 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   }));
 
   winEventHooks.on('EVENT_SYSTEM_MOVESIZEEND', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+    if (!externalWindow._userMovement) {
+      return;
+    }
+
     const {
       changeType, deferred, frame, height, left, reason, top, width, windowState, x, y
     } = getEventData(nativeWindowInfo);
@@ -437,6 +444,7 @@ function applyWindowGroupingStub(externalWindow: Shapes.ExternalWindow): Shapes.
   const { nativeId } = externalWindow;
   const identity = { uuid: nativeId };
 
+  externalWindow._userMovement = true;
   externalWindow._options = {
     alwaysOnTop: false,
     frame: true,
@@ -467,44 +475,72 @@ function applyWindowGroupingStub(externalWindow: Shapes.ExternalWindow): Shapes.
 async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow): Promise<void> {
   const { uuid, name } = externalWindow;
   const injectionBus = getInjectionBus(externalWindow);
+  const parseEvent = (data: any) => {
+    const { userMovement, bottom, left, right, top, mouseX, mouseY } = data;
+    return {
+      changeType: 2, // TODO: use real value
+      deferred: false, // TODO: use real value
+      frame: true, // TODO: use real value
+      height: bottom - top,
+      left,
+      top,
+      userMovement,
+      width: right - left,
+      x: typeof left === 'number' ? left : mouseX,
+      y: typeof top === 'number' ? top : mouseY
+    };
+  };
+
+  injectionBus.on('*', (data: any) => {
+    const { userMovement } = data;
+    externalWindow._userMovement = userMovement;
+  });
 
   injectionBus.on('WM_SIZING', (data: any) => {
-    const { bottom, left, right, top, userMovement } = data;
-    const bounds = { x: left, y: top, width: right - left, height: bottom - top };
+    const { changeType, deferred, userMovement, height, left, top, width, x, y } = parseEvent(data);
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_SIZING, uuid, name);
-    ofEvents.emit(routeName, bounds);
     if (!userMovement) {
-      externalWindow.emit('disabled-movement-bounds-changing');
+      ofEvents.emit(routeName, { x, y, width, height });
+      externalWindow.emit('disabled-movement-bounds-changing', {
+        changeType, deferred, height, left, top, width
+      });
     }
   });
 
   injectionBus.on('WM_MOVING', (data: any) => {
-    const { userMovement } = data;
+    const { changeType, deferred, userMovement, height, left, top, width } = parseEvent(data);
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_MOVING, uuid, name);
-    ofEvents.emit(routeName);
     if (!userMovement) {
-      externalWindow.emit('disabled-movement-bounds-changing');
+      ofEvents.emit(routeName);
+      externalWindow.emit('disabled-movement-bounds-changing', {
+        changeType, deferred, height, left, top, width
+      });
     }
   });
 
   injectionBus.on('WM_ENTERSIZEMOVE', (data: any) => {
-    const { mouseX, mouseY, userMovement } = data;
-    const eventPayload = { userMovement, x: mouseX, y: mouseY };
+    const { userMovement, x, y } = parseEvent(data);
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_ENTERSIZEMOVE, uuid, name);
-    ofEvents.emit(routeName, eventPayload);
-  });
-
-  injectionBus.on('WM_EXITSIZEMOVE', (data: any) => {
-    const { userMovement } = data;
-    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, uuid, name);
-    ofEvents.emit(routeName);
     if (!userMovement) {
-      externalWindow.emit('disabled-movement-bounds-changed');
+      ofEvents.emit(routeName, { userMovement, x, y });
     }
   });
 
-  injectionBus.on('WM_KILLFOCUS', (data: any) => {
-    externalWindow.emit('blurred', data);
+  injectionBus.on('WM_EXITSIZEMOVE', (data: any) => {
+    const { changeType, deferred, userMovement, height, left, top, width } = parseEvent(data);
+    const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, uuid, name);
+    if (!userMovement) {
+      ofEvents.emit(routeName);
+      externalWindow.emit('disabled-movement-bounds-changed', {
+        // TODO: height, left, top, width are currently undefined here as
+        // we are not receiving them in this event's data
+        changeType, deferred, height, left, top, width
+      });
+    }
+  });
+
+  injectionBus.on('WM_KILLFOCUS', () => {
+    externalWindow.emit('blurred');
   });
 }
 
@@ -616,8 +652,8 @@ function getEventData(nativeWindowInfo: Shapes.NativeWindowInfo) {
       : 'normal';
 
   return {
-    changeType: 2, // TOOD: use real value
-    deferred: false,
+    changeType: 2, // TODO: use real value
+    deferred: false, // TODO: use real value
     frame: true, // TODO: use real value
     height: nativeWindowInfo.bounds.height,
     left: nativeWindowInfo.bounds.x,

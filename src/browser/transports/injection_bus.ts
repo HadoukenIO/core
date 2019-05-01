@@ -118,6 +118,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       adjustCoordsScaling(payload, runtimeDpi, injectionDpi);
 
       this.emit(windowsEvent, payload);
+      this.emit('*', payload);
     };
 
     copyDataTransport.on('message', this._messageListener);
