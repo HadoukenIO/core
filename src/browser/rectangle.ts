@@ -246,12 +246,6 @@ export class Rectangle {
             width: rect.width - this.width >= 0 ? Math.ceil(rect.width - this.width) : Math.floor(rect.width - this.width),
             height: rect.height - this.height >= 0 ? Math.ceil(rect.height - this.height) : Math.floor(rect.height - this.height)
         };
-        // return {
-        //     x: rect.x - this.x,
-        //     y: rect.y - this.y,
-        //     width: rect.width - this.width,
-        //     height: rect.height - this.height
-        // };
     }
 
     public outerBounds = (rect: RectangleBase) => {

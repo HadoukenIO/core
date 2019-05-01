@@ -660,49 +660,41 @@ Window.create = function(id, opts) {
             });
         };
 
-        // browserWindow.on('will-move', (e, nb) => {
-        //     const dipBounds = Object.assign({}, nb);
-        //     const allBounds = electron.screen.screenToDIPRect(dipBounds);
-        //     const { x, y } = allBounds;
-        //     const bounds = { x, y };
-        //     let payload = {
+        browserWindow.on('will-move', (e, nb) => {
+            const bounds = Object.assign({}, nb);
 
-        //         // todo: remove this hard-code
-        //         //reason: 'self',z
-        //         name,
-        //         uuid,
-        //         topic: 'window',
-        //         type: 'will-move',
-        //         /* May be overridden by decorator */
-        //         test: bounds
-        //     };
+            let payload = {
 
-        //     ofEvents.emit(route.window(payload.type, uuid, name), payload);
+                // todo: remove this hard-code
+                //reason: 'self',z
+                name,
+                uuid,
+                topic: 'window',
+                type: 'will-move',
+                /* May be overridden by decorator */
+                test: bounds
+            };
 
-        // browserWindow.setPosition(x, y);
-        // e.preventDefault();
-        // });
+            ofEvents.emit(route.window(payload.type, uuid, name), payload);
+        });
 
-        // browserWindow.on('will-resize', (e, nb) => {
-        //     const bounds = Object.assign({}, nb);
+        browserWindow.on('will-resize', (e, nb) => {
+            const bounds = Object.assign({}, nb);
 
-        //     let payload = {
+            let payload = {
 
-        //         // todo: remove this hard-code
-        //         //reason: 'self',z
-        //         name,
-        //         uuid,
-        //         topic: 'window',
-        //         type: 'will-resize',
-        //         /* May be overridden by decorator */
-        //         test: nb
-        //     };
+                // todo: remove this hard-code
+                //reason: 'self',z
+                name,
+                uuid,
+                topic: 'window',
+                type: 'will-resize',
+                /* May be overridden by decorator */
+                test: bounds
+            };
 
-        //     ofEvents.emit(route.window(payload.type, uuid, name), payload);
-
-        //     browserWindow.setBounds(electron.screen.dipToScreenRect(null, bounds));
-        //     e.preventDefault();
-        // });
+            ofEvents.emit(route.window(payload.type, uuid, name), payload);
+        });
 
         mapEvents(browserWindowEventMap, browserWindow);
         mapEvents(webContentsEventMap, webContents);
