@@ -797,6 +797,10 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
 
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
     const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
+    return getOptionsFromOpenFinWindow(ofWin);
+}
+
+function getOptionsFromOpenFinWindow(ofWin: Shapes.OpenFinWindow) {
     const options = ofWin._options;
     const { uuid, name } = options;
     const entityInfo = getEntityInfo({ uuid, name });
@@ -805,7 +809,6 @@ export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitia
     };
     const socketServerState = <PortInfo>getSocketServerState();
     const enableChromiumBuild = isEnableChromiumBuild();
-
     return {
         options,
         entityInfo,
