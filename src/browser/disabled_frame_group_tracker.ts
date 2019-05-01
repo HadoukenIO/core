@@ -95,14 +95,25 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     return leader.rect;
 }
 
+
+function restoreWindows(ofWin: OpenFinWindow) {
+    // moves.forEach((ofWin) => {
+        if (ofWin.browserWindow.isMaximized()) {
+            ofWin.browserWindow.unmaximize();
+        } else if (ofWin.browserWindow.isMinimized()) {
+            ofWin.browserWindow.restore();
+        }
+    // });
+}
+
 function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFront: boolean = false) {
+    // restoreWindows(moves);
     if (isWin32) {
         const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
         let flags = noZorder + noActivate;
         flags = changeType === 0 ? flags + noSize : flags;
         const wt = new WindowTransaction.Transaction(0);
         moves.forEach(({ ofWin: {browserWindow}, rect, offset }) => {
-            if (browserWindow.isMaximized()) { browserWindow.unmaximize(); }
             const hwnd = parseInt(browserWindow.nativeId, 16);
             wt.setWindowPos(hwnd, { ...getTransactionBounds(rect, offset), flags });
             if (bringWinsToFront) { browserWindow.bringToFront(); }
@@ -110,7 +121,6 @@ function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFro
         wt.commit();
     } else {
         moves.forEach(({ ofWin: {browserWindow}, rect, offset }) => {
-            if (browserWindow.isMaximized()) { browserWindow.unmaximize(); }
             browserWindow.setBounds(applyOffset(rect, offset));
             if (bringWinsToFront) { browserWindow.bringToFront(); }
         });
@@ -236,10 +246,12 @@ export function addWindowToGroup(win: OpenFinWindow) {
     };
     const moveListener = (e: any, newBounds: RectangleBase) => genericListener(e, newBounds, 0);
     const resizeListener = (e: any, newBounds: RectangleBase) => genericListener(e, newBounds, 1);
+    const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(restoreWindows);
 
     win.browserWindow.on('will-move', moveListener);
     win.browserWindow.on('will-resize', resizeListener);
-    listenerCache.set(win.browserWindow.nativeId, [moveListener, resizeListener]);
+    win.browserWindow.on('begin-user-bounds-change', restoreListener);
+    listenerCache.set(win.browserWindow.nativeId, [moveListener, resizeListener, restoreListener]);
 }
 
 export function removeWindowFromGroup({browserWindow}: OpenFinWindow) {
@@ -249,6 +261,7 @@ export function removeWindowFromGroup({browserWindow}: OpenFinWindow) {
         if (listeners) {
             browserWindow.removeListener('will-move', listeners[0]);
             browserWindow.removeListener('will-resize', listeners[1]);
+            browserWindow.removeListener('begin-user-bounds-change', listeners[2]);
         }
         listenerCache.delete(winId);
     }
