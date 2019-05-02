@@ -10,7 +10,7 @@
 * */
 
 import * as minimist from 'minimist';
-import { app, webContents, session, Session, WebContents } from 'electron';
+import { app, webContents, session, Session, WebContents, BrowserView } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
@@ -18,6 +18,8 @@ import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
 import { getIdentityFromObject, isEnableChromiumBuild } from '../common/main';
+import { BrowserViewOptions } from './api/browser_view';
+import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 
 interface ProxySettingsArgs {
     proxyAddress?: string;
@@ -794,9 +796,22 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
         }
     }
 }
+<<<<<<< HEAD
 function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
     return win.openfinWindow;
+=======
+const views: OfView[] = [];
+interface OfView extends Identity {
+    view: BrowserView;
+}
+export function addBrowserView (opts: BrowserViewOptions, view: BrowserView) {
+    const {uuid, name} = opts;
+    views.push({uuid, name, view});
+}
+export function browserViewByIdentity({uuid, name}: Identity) {
+   return views.find(v => v.uuid === uuid && v.name === name);
+>>>>>>> hold
 }
 
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
