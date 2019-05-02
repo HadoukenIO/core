@@ -794,9 +794,17 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
         }
     }
 }
+function getWinObjByWebcontentsId(webContentsId: number) {
+    const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
+    return win.openfinWindow;
+}
 
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
     const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
+    return getOptionsFromOpenFinWindow(ofWin);
+}
+export function getWebContentsInitialOptionSet(webContentsId: number) {
+    const ofWin = getWinObjByWebcontentsId(webContentsId);
     return getOptionsFromOpenFinWindow(ofWin);
 }
 
