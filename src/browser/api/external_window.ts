@@ -290,13 +290,7 @@ function subToGlobalWinEventHooks(): void {
     return;
   }
 
-  // TODO: remove this when it is in runtime's develop branch
-  if (!WinEventHookEmitter) {
-    return;
-  }
-
   const winEventHooks = new WinEventHookEmitter();
-
   const listener = (
     parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
     sender: EventEmitter,
