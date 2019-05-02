@@ -92,7 +92,7 @@ let browserWindowEventMap = {
     },
     'opacity-changed': {
         decorator: opacityChangedDecorator
-    }, 
+    },
     'user-movement-disabled': {
         topic: 'frame-disabled'
     },
