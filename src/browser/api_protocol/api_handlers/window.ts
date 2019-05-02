@@ -228,27 +228,28 @@ function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nac
     const { payload } = message;
     const { url } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
-    const chromeErrLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
 
     return Window.navigate(windowIdentity, url)
-        .then(() => ack(Object.assign(successAck)))
-        .catch((e: any) => nack(new Error(`error #${e.errCode}. See ${chromeErrLink} for details`)));
+        .then(() => ack(successAck))
+        .catch(nack);
 }
 
-function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker): void {
+function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.navigateBack(windowIdentity);
-    ack(successAck);
+    Window.navigateBack(windowIdentity)
+        .then(() => ack(successAck))
+        .catch(nack);
 }
 
-function navigateWindowForward(identity: Identity, message: APIMessage, ack: Acker): void {
+function navigateWindowForward(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.navigateForward(windowIdentity);
-    ack(successAck);
+    Window.navigateForward(windowIdentity)
+        .then(() => ack(successAck))
+        .catch(nack);
 }
 
 function stopWindowNavigation(identity: Identity, message: APIMessage, ack: Acker): void {
