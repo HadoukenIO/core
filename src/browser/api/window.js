@@ -1,6 +1,6 @@
-/*
+/**
     src/browser/api/window.js
- */
+ **/
 
 // build-in modules
 let fs = require('fs');
@@ -92,7 +92,7 @@ let browserWindowEventMap = {
     },
     'opacity-changed': {
         decorator: opacityChangedDecorator
-    },
+    }, 
     'user-movement-disabled': {
         topic: 'frame-disabled'
     },
