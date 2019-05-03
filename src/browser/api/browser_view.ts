@@ -1,7 +1,8 @@
-import { BrowserView, BrowserViewConstructorOptions } from "electron";
-import { Identity } from "../api_protocol/transport_strategy/api_transport_base";
-import { addBrowserView, browserViewByIdentity, getWindowByUuidName } from "../core_state";
-import { getRuntimeProxyWindow } from "../window_groups_runtime_proxy";
+import { BrowserView, BrowserViewConstructorOptions, Rectangle } from 'electron';
+import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
+import { addBrowserView, browserViewByIdentity, getWindowByUuidName } from '../core_state';
+import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
+const convertOptions = require('../convert_options');
 
 export interface BrowserViewOptions extends Identity {
     opts: BrowserViewConstructorOptions;
@@ -9,7 +10,7 @@ export interface BrowserViewOptions extends Identity {
 }
 
 export function create(options: BrowserViewOptions) {
-    const view = new BrowserView(options.opts);
+    const view = new BrowserView(convertOptions.convertToElectron(options.opts || {}, false));
     addBrowserView(options, view);
     view.webContents.loadURL(options.url);
 }
@@ -27,4 +28,9 @@ export async function attach(identity: Identity, toIdentity: Identity) {
        }
        bWin.setBrowserView(view);
    }
+}
+
+export async function setBounds(identity: Identity, bounds: Rectangle) {
+    const view = browserViewByIdentity(identity);
+    view.view.setBounds(bounds);
 }

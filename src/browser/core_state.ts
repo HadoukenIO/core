@@ -796,11 +796,10 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
         }
     }
 }
-<<<<<<< HEAD
 function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
     return win.openfinWindow;
-=======
+}
 const views: OfView[] = [];
 interface OfView extends Identity {
     view: BrowserView;
@@ -811,7 +810,6 @@ export function addBrowserView (opts: BrowserViewOptions, view: BrowserView) {
 }
 export function browserViewByIdentity({uuid, name}: Identity) {
    return views.find(v => v.uuid === uuid && v.name === name);
->>>>>>> hold
 }
 
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
