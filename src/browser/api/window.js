@@ -1505,11 +1505,6 @@ Window.navigate = function(identity, url) {
     return new Promise((resolve, reject) => {
         const browserWindow = getElectronBrowserWindow(identity);
 
-        if (!browserWindow) {
-            const error = new Error(`Unknown window named '${identity.name}'`);
-            return reject(error);
-        }
-
         onceNavigationFinished(browserWindow, resolve, reject);
 
         // todo: replace everything here with "return browserWindow.webContents.loadURL(url)" once we get to electron 5.* 
@@ -1522,13 +1517,8 @@ Window.navigateBack = function(identity) {
     return new Promise((resolve, reject) => {
         const browserWindow = getElectronBrowserWindow(identity);
 
-        if (!browserWindow) {
-            const error = new Error(`Unknown window named '${identity.name}'`);
-            return reject(error);
-        }
-
         if (!browserWindow.webContents.canGoBack()) {
-            const error = new Error(`Can't navigate back - history is empty`);
+            const error = new Error(`Cannot navigate back`);
             return reject(error);
         }
 
@@ -1542,13 +1532,8 @@ Window.navigateForward = function(identity) {
     return new Promise((resolve, reject) => {
         const browserWindow = getElectronBrowserWindow(identity);
 
-        if (!browserWindow) {
-            const error = new Error(`Unknown window named '${identity.name}'`);
-            return reject(error);
-        }
-
         if (!browserWindow.webContents.canGoForward()) {
-            const error = new Error(`Can't navigate forward - there is nothing there`);
+            const error = new Error(`Cannot navigate forward`);
             return reject(error);
         }
 
