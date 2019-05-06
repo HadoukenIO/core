@@ -105,7 +105,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
 
       // Broadcast message
       if (!(<BroadcastMessage>parsedMessage).payload || !(<BroadcastMessage>parsedMessage).payload.data) {
-        writeToLog('info', `Injection event without payload: ${JSON.stringify(parsedMessage)}`); // TODO
+        writeToLog('info', `[NWI] Injection event without payload: ${JSON.stringify(parsedMessage)}`); // TODO
         return;
       }
 
@@ -143,11 +143,17 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       });
 
       if (!messageSent) {
-        return reject(`Failed to send message to injected window ${target}.`);
+        const errorMsg = `[NWI] Failed to send message to injected window ${target}. `
+          + `Action: ${action}. Payload: ${JSON.stringify(payload)}`;
+        writeToLog('info', errorMsg);
+        return reject(errorMsg);
       }
 
       const nackTimeout = setTimeout(() => {
-        reject(`Timed out waiting for a response from injected window ${target}.`);
+        const errorMsg = `[NWI] Timed out waiting for a response from injected window ${target}.`
+          + `Action: ${action}. Payload: ${JSON.stringify(payload)}`;
+        writeToLog('info', errorMsg);
+        reject(errorMsg);
       }, nackTimeoutDelay);
 
       this._pendingRequests.set(messageId, {
