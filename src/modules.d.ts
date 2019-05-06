@@ -83,7 +83,6 @@ declare namespace Electron {
     interface WebContents {
         fromProcessAndFrameIds: (processId: number, frameId: number) => WebContents;
         getOwnerBrowserWindow: () => BrowserWindow | void;
-        hasFrame: (frameName: string) => boolean;
         mainFrameRoutingId: number;
         session: Session;
     }

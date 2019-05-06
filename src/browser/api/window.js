@@ -162,6 +162,7 @@ let optionSetters = {
         const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
             newVal);
         setOptOnBrowserWin('contextMenuSettings', val, browserWin);
+        setOptOnBrowserWin('contextMenu', val.enable, browserWin); // support for old api
         browserWin.setMenu(null);
         browserWin.webContents.updateContextMenuSettings(val);
     },
@@ -1833,6 +1834,10 @@ Window.defineDraggableArea = function() {};
 
 Window.updateOptions = function(identity, updateObj) {
     let browserWindow = getElectronBrowserWindow(identity, 'update settings for');
+    let { uuid, name } = identity;
+    let diff = {},
+        invalidOptions = [];
+    let clone = obj => typeof obj === 'undefined' ? obj : JSON.parse(JSON.stringify(obj)); // this works here, but has limitations; reuse with caution.
 
     try {
         for (var opt in updateObj) {
