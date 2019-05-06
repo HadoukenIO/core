@@ -472,7 +472,7 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
   const parseEvent = (data: any) => {
     const { userMovement, bottom, left, right, top, mouseX, mouseY } = data;
     return {
-      changeType: 2, // TODO: use real value
+      changeType: 0, // TODO: use real value
       deferred: false, // TODO: use real value
       frame: true, // TODO: use real value
       height: bottom - top,
@@ -646,7 +646,7 @@ function getEventData(nativeWindowInfo: Shapes.NativeWindowInfo) {
       : 'normal';
 
   return {
-    changeType: 2, // TODO: use real value
+    changeType: 0, // TODO: use real value
     deferred: false, // TODO: use real value
     frame: true, // TODO: use real value
     height: nativeWindowInfo.bounds.height,
