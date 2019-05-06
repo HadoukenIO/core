@@ -126,7 +126,7 @@ function stopFlashWindow(identity: Identity, message: APIMessage, ack: Acker): v
 
 function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
-    const { top, left, width, height } = payload;
+    const { top, left, width, height } = payload.bounds;
     const {uuid, name} = getTargetWindowIdentity(payload);
     Window.setBounds({uuid, name}, left, top, width, height);
     ack(successAck);
