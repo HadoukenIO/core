@@ -664,14 +664,10 @@ Window.create = function(id, opts) {
             const bounds = Object.assign({}, nb);
 
             let payload = {
-
-                // todo: remove this hard-code
-                //reason: 'self',z
                 name,
                 uuid,
                 topic: 'window',
                 type: 'will-move',
-                /* May be overridden by decorator */
                 test: bounds
             };
 
@@ -682,14 +678,10 @@ Window.create = function(id, opts) {
             const bounds = Object.assign({}, nb);
 
             let payload = {
-
-                // todo: remove this hard-code
-                //reason: 'self',z
                 name,
                 uuid,
                 topic: 'window',
                 type: 'will-resize',
-                /* May be overridden by decorator */
                 test: bounds
             };
 
