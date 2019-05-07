@@ -666,34 +666,6 @@ Window.create = function(id, opts) {
             });
         };
 
-        // browserWindow.on('will-move', (e, nb) => {
-        //     const bounds = Object.assign({}, nb);
-
-        //     let payload = {
-        //         name,
-        //         uuid,
-        //         topic: 'window',
-        //         type: 'will-move',
-        //         test: bounds
-        //     };
-
-        //     ofEvents.emit(route.window(payload.type, uuid, name), payload);
-        // });
-
-        // browserWindow.on('will-resize', (e, nb) => {
-        //     const bounds = Object.assign({}, nb);
-
-        //     let payload = {
-        //         name,
-        //         uuid,
-        //         topic: 'window',
-        //         type: 'will-resize',
-        //         test: bounds
-        //     };
-
-        //     ofEvents.emit(route.window(payload.type, uuid, name), payload);
-        // });
-
         mapEvents(browserWindowEventMap, browserWindow);
         mapEvents(webContentsEventMap, webContents);
 
