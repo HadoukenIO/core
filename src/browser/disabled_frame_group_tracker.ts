@@ -5,6 +5,7 @@ import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
 import { getRuntimeProxyWindow } from './window_groups_runtime_proxy';
 import { RectangleBase, Rectangle } from './rectangle';
+import { restore } from './api/native_window';
 import {
     moveFromOpenFinWindow,
     zeroDelta,
@@ -26,17 +27,23 @@ type WinId = string;
 const listenerCache: Map<WinId, Array<(...args: any[]) => void>> = new Map();
 export interface Move { ofWin: OpenFinWindow; rect: Rectangle; offset: RectangleBase; }
 
-async function emitBoundsChanged({ ofWin, rect, offset }: Move, changeType: ChangeType, reason: string) {
-    const { uuid, name, isProxy } = ofWin;
-    const identity = { uuid, name };
-    const topic = 'bounds-changed';
-    const eventName = route.window(topic, uuid, name);
+function emitChange(topic: string, { ofWin, rect, offset }: Move, changeType: ChangeType, reason: string) {
+    const eventBounds = getEventBounds(rect, offset);
     const eventArgs = {
-        ...getEventBounds(rect, offset),
-        ...identity,
+        ...eventBounds,
         changeType,
         reason,
-        deferred: true,
+        deferred: true
+    };
+    raiseEvent(ofWin, topic, eventArgs);
+}
+async function raiseEvent(ofWin: OpenFinWindow, topic: string, payload: Object) {
+    const { uuid, name, isProxy} = ofWin;
+    const identity = { uuid, name };
+    const eventName = route.window(topic, uuid, name);
+    const eventArgs = {
+        ...payload,
+        ...identity,
         topic,
         type: 'window'
     };
@@ -80,7 +87,6 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
         : ChangeType.POSITION;
     const moves = handleBoundsChanging(win, applyOffset(newBounds, offset), changeType);
     const { leader, otherWindows } = moves.reduce((accum: MoveAccumulator, move) => {
-        // REMOVE COMMENT LATER - DOES THIS WORK? IS WIN SAME REF AS OFWIN?
         move.ofWin === win ? accum.leader = move : accum.otherWindows.push(move);
         return accum;
     }, <MoveAccumulator>{ otherWindows: [] });
@@ -89,18 +95,9 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
         throw new Error('Attempted move violates group constraints');
     }
     handleBatchedMove(moves, changeType);
-    emitBoundsChanged(leader, changeType, 'self');
-    otherWindows.map(move => emitBoundsChanged(move, changeType, 'group'));
+    emitChange('bounds-changed', leader, changeType, 'self');
+    otherWindows.map(move => emitChange('bounds-changed', move, changeType, 'group'));
     return leader.rect;
-}
-
-
-function restoreWindow(ofWin: OpenFinWindow) {
-        if (ofWin.browserWindow.isMaximized()) {
-            ofWin.browserWindow.unmaximize();
-        } else if (ofWin.browserWindow.isMinimized()) {
-            ofWin.browserWindow.restore();
-        }
 }
 
 function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFront: boolean = false) {
@@ -212,6 +209,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
         try {
             e.preventDefault();
             Object.keys(rawPayloadBounds).map(key => {
+                // CHECK IF THE DIP FORMULA WORKS HERE!
                 //@ts-ignore
                 rawPayloadBounds[key] = rawPayloadBounds[key] / scaleFactor;
             });
@@ -226,8 +224,9 @@ export function addWindowToGroup(win: OpenFinWindow) {
                     moved.forEach((movedWin) => {
                         const isLeader = movedWin === win;
                         if (!isLeader) {
+                            // bounds-changed is emitted for the leader, but not other windows
                             const endPosition = moveFromOpenFinWindow(movedWin);
-                            emitBoundsChanged(endPosition, changeType, 'group');
+                            emitChange('bounds-changed', endPosition, changeType, 'group');
                         }
                     });
                 });
@@ -235,14 +234,17 @@ export function addWindowToGroup(win: OpenFinWindow) {
                 const moves = handleBoundsChanging(win, rawPayloadBounds, changeType, true);
                 handleBatchedMove(moves, changeType, true);
                 moves.forEach((move) => moved.add(move.ofWin));
+                // bounds-changing is not emitted for the leader, but is for the other windows
+                const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
+                emitChange('bounds-changing', leaderMove, changeType, 'self');
             }
         } catch (error) {
             writeToLog('error', error);
         }
     };
-    const moveListener = (e: any, newBounds: RectangleBase) => genericListener(e, newBounds, 0);
-    const resizeListener = (e: any, newBounds: RectangleBase) => genericListener(e, newBounds, 1);
-    const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(restoreWindow);
+    const moveListener = (e: any, bounds: RectangleBase) => genericListener(e, bounds, 0);
+    const resizeListener = (e: any, bounds: RectangleBase) => genericListener(e, bounds, 1);
+    const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(w => restore(w.browserWindow));
 
     win.browserWindow.on('will-move', moveListener);
     win.browserWindow.on('will-resize', resizeListener);
@@ -251,14 +253,14 @@ export function addWindowToGroup(win: OpenFinWindow) {
 }
 
 export function removeWindowFromGroup({browserWindow}: OpenFinWindow) {
+    const winId = browserWindow.nativeId;
     if (!browserWindow.isDestroyed()) {
-        const winId = browserWindow.nativeId;
         const listeners = listenerCache.get(winId);
         if (listeners) {
             browserWindow.removeListener('will-move', listeners[0]);
             browserWindow.removeListener('will-resize', listeners[1]);
             browserWindow.removeListener('begin-user-bounds-change', listeners[2]);
         }
-        listenerCache.delete(winId);
     }
+    listenerCache.delete(winId);
 }
