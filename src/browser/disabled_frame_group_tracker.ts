@@ -26,25 +26,24 @@ type WinId = string;
 const listenerCache: Map<WinId, Array<(...args: any[]) => void>> = new Map();
 export interface Move { ofWin: OpenFinWindow; rect: Rectangle; offset: RectangleBase; }
 
-function emitBoundsChanged({ ofWin, rect, offset }: Move, changeType: ChangeType, reason: string) {
-    const eventBounds = getEventBounds(rect, offset);
-    const eventArgs = { ...eventBounds, changeType, reason, deferred: true };
-    raiseEvent(ofWin, 'bounds-changed', eventArgs);
-}
-async function raiseEvent(ofWin: OpenFinWindow, topic: string, payload: any) {
+async function emitBoundsChanged({ ofWin, rect, offset }: Move, changeType: ChangeType, reason: string) {
     const { uuid, name, isProxy } = ofWin;
-    const id = { uuid, name };
+    const identity = { uuid, name };
+    const topic = 'bounds-changed';
     const eventName = route.window(topic, uuid, name);
     const eventArgs = {
-        ...payload,
-        ...id,
+        ...getEventBounds(rect, offset),
+        ...identity,
+        changeType,
+        reason,
+        deferred: true,
         topic,
         type: 'window'
     };
     if (isProxy) {
-        const rt = await getRuntimeProxyWindow(id);
+        const rt = await getRuntimeProxyWindow(identity);
         const fin = rt.hostRuntime.fin;
-        await fin.System.executeOnRemote(id, { action: 'raise-event', payload: { eventName, eventArgs } });
+        await fin.System.executeOnRemote(identity, { action: 'raise-event', payload: { eventName, eventArgs } });
     } else {
         of_events.emit(eventName, eventArgs);
     }
@@ -96,18 +95,15 @@ function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
 }
 
 
-function restoreWindows(ofWin: OpenFinWindow) {
-    // moves.forEach((ofWin) => {
+function restoreWindow(ofWin: OpenFinWindow) {
         if (ofWin.browserWindow.isMaximized()) {
             ofWin.browserWindow.unmaximize();
         } else if (ofWin.browserWindow.isMinimized()) {
             ofWin.browserWindow.restore();
         }
-    // });
 }
 
 function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFront: boolean = false) {
-    // restoreWindows(moves);
     if (isWin32) {
         const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
         let flags = noZorder + noActivate;
@@ -246,7 +242,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
     };
     const moveListener = (e: any, newBounds: RectangleBase) => genericListener(e, newBounds, 0);
     const resizeListener = (e: any, newBounds: RectangleBase) => genericListener(e, newBounds, 1);
-    const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(restoreWindows);
+    const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(restoreWindow);
 
     win.browserWindow.on('will-move', moveListener);
     win.browserWindow.on('will-resize', resizeListener);

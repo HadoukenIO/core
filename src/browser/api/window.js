@@ -119,10 +119,15 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
+    },
+    'will-move': {
+        topic: 'will-move',
+        decorator: willMoveOrResizeDecorator
+    },
+    'will-resize': {
+        topic: 'will-resize',
+        decorator: willMoveOrResizeDecorator
     }
-    // 'move': {
-    //     topic: 'bounds-changing'
-    // }
 };
 
 let webContentsEventMap = {
@@ -661,33 +666,33 @@ Window.create = function(id, opts) {
             });
         };
 
-        browserWindow.on('will-move', (e, nb) => {
-            const bounds = Object.assign({}, nb);
+        // browserWindow.on('will-move', (e, nb) => {
+        //     const bounds = Object.assign({}, nb);
 
-            let payload = {
-                name,
-                uuid,
-                topic: 'window',
-                type: 'will-move',
-                test: bounds
-            };
+        //     let payload = {
+        //         name,
+        //         uuid,
+        //         topic: 'window',
+        //         type: 'will-move',
+        //         test: bounds
+        //     };
 
-            ofEvents.emit(route.window(payload.type, uuid, name), payload);
-        });
+        //     ofEvents.emit(route.window(payload.type, uuid, name), payload);
+        // });
 
-        browserWindow.on('will-resize', (e, nb) => {
-            const bounds = Object.assign({}, nb);
+        // browserWindow.on('will-resize', (e, nb) => {
+        //     const bounds = Object.assign({}, nb);
 
-            let payload = {
-                name,
-                uuid,
-                topic: 'window',
-                type: 'will-resize',
-                test: bounds
-            };
+        //     let payload = {
+        //         name,
+        //         uuid,
+        //         topic: 'window',
+        //         type: 'will-resize',
+        //         test: bounds
+        //     };
 
-            ofEvents.emit(route.window(payload.type, uuid, name), payload);
-        });
+        //     ofEvents.emit(route.window(payload.type, uuid, name), payload);
+        // });
 
         mapEvents(browserWindowEventMap, browserWindow);
         mapEvents(webContentsEventMap, webContents);
@@ -1834,10 +1839,6 @@ Window.defineDraggableArea = function() {};
 
 Window.updateOptions = function(identity, updateObj) {
     let browserWindow = getElectronBrowserWindow(identity, 'update settings for');
-    let { uuid, name } = identity;
-    let diff = {},
-        invalidOptions = [];
-    let clone = obj => typeof obj === 'undefined' ? obj : JSON.parse(JSON.stringify(obj)); // this works here, but has limitations; reuse with caution.
 
     try {
         for (var opt in updateObj) {
@@ -2230,7 +2231,6 @@ function boundsChangeDecorator(payload, args) {
     }
 }
 
-
 function disabledFrameBoundsChangeDecorator(payload, args) {
     var propogate = false;
 
@@ -2248,6 +2248,17 @@ function disabledFrameBoundsChangeDecorator(payload, args) {
     }
 
     return propogate;
+}
+
+function willMoveOrResizeDecorator(payload, args) {
+    const { x, y, height, width } = args[1];
+    Object.assign(payload, {
+        left: x,
+        top: y,
+        height,
+        width
+    });
+    return true;
 }
 
 function opacityChangedDecorator(payload, args) {
