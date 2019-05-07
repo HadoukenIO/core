@@ -9,7 +9,7 @@ import {
 import { init as initClipboardAPIHandler } from './api_handlers/clipboard';
 import { FrameApiHandler } from './api_handlers/frame';
 import { ChannelApiHandler } from './api_handlers/channel';
-import { BrowserViewApiHandler } from './api_handlers/browser_view';
+import { init as initBrowserViewHandler } from './api_handlers/browser_view';
 import { GlobalHotkeyApiHandler } from './api_handlers/global_hotkey';
 
 import { init as initEventListenerApiHandler } from './api_handlers/event_listener';
@@ -47,7 +47,7 @@ export function initApiHandlers() {
     initClipboardAPIHandler();
     const frameApiHandler = new FrameApiHandler();
     const channelApiHandler = new ChannelApiHandler();
-    const browserViewApiHandler = new BrowserViewApiHandler();
+    initBrowserViewHandler();
     initEventListenerApiHandler();
     initIabApiHandler();
     const notificationApiHandler = new NotificationApiHandler();

@@ -3,37 +3,37 @@ import { ActionSpecMap } from '../shapes';
 import { Channel } from '../../api/channel';
 import { Identity, APIMessage, ProviderIdentity } from '../../../shapes';
 import { AckFunc, NackFunc } from '../transport_strategy/ack';
-import { create, attach, setBounds } from '../../api/browser_view';
+import * as browser_view from '../../api/browser_view';
+import { getBrowserViewByIdentity } from '../../core_state';
 
 const successAck = {
     success: true
 };
 
-export class BrowserViewApiHandler {
+function create (identity: Identity, message: APIMessage, ack: AckFunc) {
+    const { payload } = message;
+    browser_view.create(payload);
+    ack(successAck);
+}
+async function attach (identity: Identity, message: APIMessage, ack: AckFunc) {
+    const { payload } = message;
+    const { uuid, name, target } = payload;
+    const view = getBrowserViewByIdentity({uuid, name});
+    await browser_view.attach(view, target);
+    ack(successAck);
+}
+function setBounds (identity: Identity, message: APIMessage, ack: AckFunc) {
+    const { payload } = message;
+    const { uuid, name, bounds } = payload;
+    const view = getBrowserViewByIdentity({uuid, name});
+    browser_view.setBounds(view, bounds);
+}
+export const browserViewActionMap: ActionSpecMap = {
+    'create-browser-view': create,
+    'attach-browser-view': attach,
+    'set-browser-view-bounds': setBounds
+};
 
-    constructor() {
-        apiProtocolBase.registerActionMap(this.actionMap);
-    }
-    private create = (identity: Identity, message: APIMessage, ack: AckFunc) => {
-        const { payload } = message;
-        create(payload);
-        ack(successAck);
-    }
-    private attach = (identity: Identity, message: APIMessage, ack: AckFunc) => {
-        const { payload } = message;
-        const {uuid, name, target} = payload;
-        attach({uuid, name}, target);
-        ack(successAck);
-    }
-    private setBounds = (identity: Identity, message: APIMessage, ack: AckFunc) => {
-        const { payload } = message;
-        const { uuid, name, bounds } = payload;
-        setBounds({uuid, name}, bounds);
-    }
-    private readonly actionMap: ActionSpecMap = {
-        'create-browser-view': this.create,
-        'attach-browser-view': this.attach,
-        'set-browser-view-bounds': this.setBounds
-    };
-
+export function init() {
+    apiProtocolBase.registerActionMap(browserViewActionMap);
 }

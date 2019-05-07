@@ -801,24 +801,29 @@ function getWinObjByWebcontentsId(webContentsId: number) {
     return win.openfinWindow;
 }
 const views: OfView[] = [];
-interface OfView extends Identity {
+export interface OfView extends Identity {
     view: BrowserView;
 }
 export function addBrowserView (opts: BrowserViewOptions, view: BrowserView) {
     const {uuid, name} = opts;
     views.push({uuid, name, view});
 }
-export function browserViewByIdentity({uuid, name}: Identity) {
+export function getBrowserViewByIdentity({uuid, name}: Identity) {
    return views.find(v => v.uuid === uuid && v.name === name);
 }
-
+function getBrowserViewByWebContentsId(webContentsId: number) {
+    return views.find(v => v.view.webContents.id === webContentsId);
+}
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
     const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
     return getOptionsFromOpenFinWindow(ofWin);
 }
 export function getWebContentsInitialOptionSet(webContentsId: number) {
     const ofWin = getWinObjByWebcontentsId(webContentsId);
-    return getOptionsFromOpenFinWindow(ofWin);
+    if (ofWin) {
+        return getOptionsFromOpenFinWindow(ofWin);
+    }
+    const bview = getBrowserViewByWebContentsId(webContentsId);
 }
 
 function getOptionsFromOpenFinWindow(ofWin: Shapes.OpenFinWindow) {
