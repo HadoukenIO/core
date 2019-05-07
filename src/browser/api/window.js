@@ -441,6 +441,22 @@ Window.create = function(id, opts) {
         ofEvents.emit(route.window('openfin-diagnostic/unload', uuid, name, true), url);
     };
 
+    // Hack: closing a window before content is finish loading in 10.66.40.* causes the renderer to crash.
+    // Hide the window instead, and close from the core when it's safe.
+    let wasCloseRequested = false;
+    const preventClose = (event) => {
+        wasCloseRequested = true;
+        browserWindow.hide();
+    };
+    ofEvents.on(route.window('close-requested', uuid, name), preventClose);
+    ofEvents.once(route.window('initialized', uuid, name), () => {
+        ofEvents.removeListener(route.window('close-requested', uuid, name), preventClose);
+        if (wasCloseRequested) {
+            Window.close({ uuid, name });
+        }
+    });
+    // End hack
+
     let _externalWindowEventAdapter;
 
     // we need to be able to handle the wrapped case, ie. don't try to
