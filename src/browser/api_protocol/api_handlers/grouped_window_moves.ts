@@ -40,6 +40,7 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
                     const { payload } = message;
                     const { uuid, name } = getTargetWindowIdentity(payload);
                     const wrapped = getWindowByUuidName(uuid, name);
+                    payload.options = payload.options || { moveIndependently: false };
                     if (wrapped && wrapped.groupUuid && !payload.options.moveIndependently) {
                         const changeType = hijackThese[action](payload);
                         const moved = changeType.change === 'delta'
