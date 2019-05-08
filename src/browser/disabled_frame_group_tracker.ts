@@ -106,16 +106,16 @@ function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFro
         let flags = noZorder + noActivate;
         flags = changeType === 0 ? flags + noSize : flags;
         const wt = new WindowTransaction.Transaction(0);
-        moves.forEach(({ ofWin: {browserWindow}, rect, offset }) => {
-            const hwnd = parseInt(browserWindow.nativeId, 16);
+        moves.forEach(({ ofWin, rect, offset }) => {
+            const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
             wt.setWindowPos(hwnd, { ...getTransactionBounds(rect, offset), flags });
-            if (bringWinsToFront) { browserWindow.bringToFront(); }
+            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
         wt.commit();
     } else {
-        moves.forEach(({ ofWin: {browserWindow}, rect, offset }) => {
-            browserWindow.setBounds(applyOffset(rect, offset));
-            if (bringWinsToFront) { browserWindow.bringToFront(); }
+        moves.forEach(({ ofWin, rect, offset }) => {
+            ofWin.browserWindow.setBounds(applyOffset(rect, offset));
+            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
     }
 }
