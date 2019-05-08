@@ -11,6 +11,8 @@
         "allowJs": true
     },
     "exclude": [
-        "node_modules", "staging", "js-adapter"
+        "node_modules",
+        "staging",
+        "js-adapter"
     ]
 }
