@@ -5,7 +5,6 @@
 // build-in modules
 let fs = require('fs');
 let path = require('path');
-let url = require('url');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
@@ -1200,7 +1199,7 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
         return;
     }
 
-    WebContents.executeJavascript(browserWindow.webcontents);
+    WebContents.executeJavascript(browserWindow.webContents, code, callback);
 };
 
 Window.flash = function(identity) {
@@ -1279,7 +1278,7 @@ Window.getWindowInfo = function(identity) {
     const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
     const windowInfo = Object.assign({
         preloadScripts,
-    }, WebContents.getInfo(browserWindow.webcontents));
+    }, WebContents.getInfo(browserWindow.webContents));
     return windowInfo;
 };
 
@@ -1496,7 +1495,7 @@ Window.moveTo = function(identity, left, top) {
 
 Window.navigate = function(identity, url) {
     let browserWindow = getElectronBrowserWindow(identity, 'navigate');
-    WebContents.loadURL(browserWindow.webContents, url);
+    WebContents.navigate(browserWindow.webContents, url);
 };
 
 Window.navigateBack = function(identity) {
@@ -1511,12 +1510,12 @@ Window.navigateForward = function(identity) {
 
 Window.reload = function(identity, ignoreCache = false) {
     let browserWindow = getElectronBrowserWindow(identity, 'reload');
-    WebContents.navigate(browserWindow.webContents, ignoreCache);
+    WebContents.reload(browserWindow.webContents, ignoreCache);
 };
 
 Window.stopNavigation = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
-    WebContents.stop(browserWindow.webContents);
+    WebContents.stopNavigation(browserWindow.webContents);
 };
 
 Window.removeEventListener = function(identity, type, listener) {
@@ -1756,15 +1755,12 @@ Window.authenticate = function(identity, username, password, callback) {
 
 Window.getZoomLevel = function(identity, callback) {
     let browserWindow = getElectronBrowserWindow(identity, 'get zoom level for');
-
-    browserWindow.webContents.getZoomLevel(callback);
+    WebContents.getZoomLevel(browserWindow.webContents, callback);
 };
 
 Window.setZoomLevel = function(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
-
-    // browserWindow.webContents.setZoomLevel(level); // zooms all windows loaded from same domain
-    browserWindow.webContents.send('zoom', { level }); // zoom just this window
+    WebContents.setZoomLevel(browserWindow.webContents, level);
 };
 
 Window.onUnload = (identity) => {
