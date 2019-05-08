@@ -71,7 +71,7 @@ export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Par
     const delta = getLeaderDelta(win, partialBounds);
     return handleApiMove(win, delta);
 }
-//REMEMBER - this being async means you never nack.... (REMOVE COMMENT IN PR)
+
 function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
     const { rect, offset } = moveFromOpenFinWindow(win);
     const newBounds = rect.shift(delta);
@@ -199,9 +199,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
     const genericListener = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
             e.preventDefault();
-            Object.keys(rawPayloadBounds).map(key => {
-                // CHECK IF THE DIP FORMULA WORKS HERE!
-                //@ts-ignore
+            Object.keys(rawPayloadBounds).map((key: keyof RectangleBase) => {
                 rawPayloadBounds[key] = rawPayloadBounds[key] / scaleFactor;
             });
             if (!boundsChanging) {
