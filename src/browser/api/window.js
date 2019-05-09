@@ -2143,10 +2143,10 @@ function disabledFrameBoundsChangeDecorator(payload, args) {
 
 function willMoveOrResizeDecorator(payload, args) {
     const { x, y, height, width } = args[1];
-    const MonitorInfo = require('./monitor_info.js');
-    const monitorScaleFactor = MonitorInfo.getInfo().deviceScaleFactor;
+    const monitorInfo = System.getMonitorInfo();
+    const monitorScaleFactor = monitorInfo.deviceScaleFactor;
     Object.assign(payload, {
-        monitorScaleFactor, 
+        monitorScaleFactor,
         left: x,
         top: y,
         height,
