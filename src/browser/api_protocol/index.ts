@@ -24,6 +24,7 @@ import {
     registerMiddleware as registerProcessExternalAppMiddleware,
     legacyWindowingEnabled
 } from './api_handlers/deprecated_external_windowing_middleware';
+import { init as initWebContentsHandler } from './api_handlers/webcontents';
 
 
 // Middleware registration. The order is important.
@@ -52,7 +53,7 @@ export function initApiHandlers() {
     initSystemApiHandler();
     const globalHotkeyApiHandler = new GlobalHotkeyApiHandler();
     initWindowApiHandler();
-
+    initWebContentsHandler();
     initApiProtocol();
 
     const apiPolicyProcessor = require('./api_handlers/api_policy_processor');
