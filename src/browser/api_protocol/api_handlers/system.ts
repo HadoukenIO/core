@@ -58,6 +58,7 @@ export const SystemApiMap: APIHandlerMap = {
     'generate-guid': generateGuid,
     'get-all-applications': getAllApplications,
     'get-all-external-applications': getAllExternalApplications,
+    'get-all-external-windows': getAllExternalWindows,
     'get-all-windows': getAllWindows,
     'get-app-asset-info': getAppAssetInfo,
     'get-command-line-arguments': { apiFunc: getCommandLineArguments, apiPath: '.getCommandLineArguments' },
@@ -68,6 +69,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-entity-info': getEntityInfo,
     'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
     'get-focused-window': getFocusedWindow,
+    'get-focused-external-window': getFocusedExternalWindow,
     'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
     'get-machine-id': { apiFunc: getMachineId, apiPath: '.getMachineId' },
     'get-min-log-level': getMinLogLevel,
@@ -269,6 +271,12 @@ function getAllExternalApplications(identity: Identity, message: APIMessage, ack
     ack(dataAck);
 }
 
+function getAllExternalWindows(identity: Identity, message: APIMessage, ack: Acker): void {
+    const dataAck = Object.assign({}, successAck);
+    dataAck.data = System.getAllExternalWindows();
+    ack(dataAck);
+}
+
 function getAllWindows(identity: Identity, message: APIMessage, ack: Acker): void {
     const { locals } = message;
     const dataAck = Object.assign({}, successAck);
@@ -317,6 +325,12 @@ function getFocusedWindow(identity: Identity, message: APIMessage, ack: Acker): 
        }
     }
     dataAck.data = System.getFocusedWindow();
+    ack(dataAck);
+}
+
+function getFocusedExternalWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+    const dataAck = Object.assign({}, successAck);
+    dataAck.data = System.getFocusedExternalWindow();
     ack(dataAck);
 }
 
