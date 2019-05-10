@@ -11,8 +11,6 @@ const unsupported = (payload: any) => {
 };
 const hijackThese: { [key: string]: (payload: any) => ChangeType } = {
     'animate-window': unsupported,
-    'disable-window-frame': unsupported,
-    'enable-window-frame': unsupported,
     'move-window': makeGetChangeType(['left', 'top'], ['x', 'y'], 'absolute'),
     'move-window-by': makeGetChangeType(['deltaLeft', 'deltaTop'], ['x', 'y'], 'delta'),
     'resize-window': makeGetChangeType(['height', 'width'], ['height', 'width'], 'absolute'),
