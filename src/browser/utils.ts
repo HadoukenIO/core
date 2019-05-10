@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+import { basename } from 'path';
 import { BrowserWindow as OFBrowserWindow } from '../shapes';
 import { BrowserWindow, Rectangle, screen } from 'electron';
 import * as Shapes from '../shapes';
@@ -72,9 +73,26 @@ function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEG
   return Math.min(Math.max(num, min, 0), max);
 }
 
+/*
+  Extends raw native window info.
+*/
 export function extendNativeWindowInfo(rawNativeWindowInfo: Shapes.RawNativeWindowInfo): Shapes.NativeWindowInfo {
+  let name = capitalize(basename(rawNativeWindowInfo.process.imageName, '.exe'));
+
+  if (name === 'ApplicationFrameHost') {
+    name = rawNativeWindowInfo.title;
+  }
+
   return {
     ...rawNativeWindowInfo,
+    name,
     uuid: rawNativeWindowInfo.id
   };
+}
+
+/*
+  Capitalizes a string.
+*/
+export function capitalize(string: string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }

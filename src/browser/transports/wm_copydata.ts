@@ -4,6 +4,12 @@ import BaseTransport from './base';
 import * as coreState from '../core_state';
 import * as log from '../log';
 
+interface Send {
+    data: any;
+    maskPayload?: boolean;
+    target?: string;
+}
+
 class WMCopyDataTransport extends BaseTransport {
     private _messageWindow: MessageWindow;
     private senderClass: string;
@@ -37,21 +43,26 @@ class WMCopyDataTransport extends BaseTransport {
         }
 
         this._messageWindow.on('data', (sender: any, data: any) => {
-            this.eventEmitter.emit('message', data.sender,  data.message);
+            this.eventEmitter.emit('message', data.sender, data.message);
         });
     }
 
     public publish(data: any, maskPayload?: boolean): boolean {
+        return this.send({ data, maskPayload });
+    }
+
+    public send({ data, maskPayload = false, target = this.targetClass }: Send) {
         if (!this._messageWindow || this._messageWindow.isDestroyed()) {
             this.initMessageWindow();
         }
 
         let sent = false;
         let i = 0;
+
         for (i = 0; i < this.messageRetry && !sent; i++) {
-            sent = this._messageWindow.sendbyname(this.targetClass, '', JSON.stringify(data), !!maskPayload);
+            sent = this._messageWindow.sendbyname(target, '', JSON.stringify(data), maskPayload);
             if (!sent) {
-                log.writeToLog(1, `${this.senderClass}: error sending message to ${this.targetClass}', retry=${i}`, true);
+                log.writeToLog(1, `${this.senderClass}: error sending message to ${target}', retry=${i}`, true);
             }
         }
 

@@ -15,6 +15,7 @@ import route from '../../../common/route';
 import { lockUuid } from '../../uuid_availability';
 import duplicateUuidTransport from '../../duplicate_uuid_delegation';
 import { writeToLog } from '../../log';
+import { WINDOWS_MESSAGE_MAP } from '../../../common/windows_messages';
 
 const SetWindowPosition = {
     SWP_HIDEWINDOW: 0x0080,
@@ -25,19 +26,6 @@ const SysCommands = {
     SC_MAXIMIZE: 0xF030,
     SC_MINIMIZE: 0xF020,
     SC_RESTORE: 0xF120
-};
-
-const WindowsMessages = {
-    WM_DESTROY: 0x0002,
-    WM_SETFOCUS: 0x0007,
-    WM_KILLFOCUS: 0x0008,
-    WM_WINDOWPOSCHANGED: 0x0047,
-    WM_SYSCOMMAND: 0x0112,
-    WM_NCLBUTTONDBLCLK: 0x00A3,
-    WM_SIZING: 0x0214,
-    WM_MOVING: 0x0216,
-    WM_ENTERSIZEMOVE: 0x0231,
-    WM_EXITSIZEMOVE: 0x0232
 };
 
 let successAck = {
@@ -422,16 +410,16 @@ function externalWindowAction(identity, message, ack) {
     const { payload, payload: { type, uuid, name } } = message;
 
     switch (type) {
-        case WindowsMessages.WM_DESTROY:
+        case WINDOWS_MESSAGE_MAP.WM_DESTROY:
             ofEvents.emit(route.externalWindow('close', uuid, name));
             break;
-        case WindowsMessages.WM_SETFOCUS:
+        case WINDOWS_MESSAGE_MAP.WM_SETFOCUS:
             ofEvents.emit(route.externalWindow('focus', uuid, name));
             break;
-        case WindowsMessages.WM_KILLFOCUS:
+        case WINDOWS_MESSAGE_MAP.WM_KILLFOCUS:
             ofEvents.emit(route.externalWindow('blur', uuid, name));
             break;
-        case WindowsMessages.WM_WINDOWPOSCHANGED:
+        case WINDOWS_MESSAGE_MAP.WM_WINDOWPOSCHANGED:
             let flags = payload.flags;
 
             ofEvents.emit(route.externalWindow('bounds-changed', uuid, name));
@@ -443,7 +431,7 @@ function externalWindowAction(identity, message, ack) {
                 ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), false);
             }
             break;
-        case WindowsMessages.WM_SYSCOMMAND:
+        case WINDOWS_MESSAGE_MAP.WM_SYSCOMMAND:
             let commandType = payload.wParam;
             let stateChange = (
                 commandType === SysCommands.SC_MAXIMIZE ||
@@ -455,22 +443,22 @@ function externalWindowAction(identity, message, ack) {
                 break;
             }
             /* falls through */
-        case WindowsMessages.WM_NCLBUTTONDBLCLK:
+        case WINDOWS_MESSAGE_MAP.WM_NCLBUTTONDBLCLK:
             ofEvents.emit(route.externalWindow('state-change', uuid, name));
             break;
-        case WindowsMessages.WM_SIZING:
+        case WINDOWS_MESSAGE_MAP.WM_SIZING:
             ofEvents.emit(route.externalWindow('sizing', uuid, name));
             break;
-        case WindowsMessages.WM_MOVING:
+        case WINDOWS_MESSAGE_MAP.WM_MOVING:
             ofEvents.emit(route.externalWindow('moving', uuid, name));
             break;
-        case WindowsMessages.WM_ENTERSIZEMOVE:
+        case WINDOWS_MESSAGE_MAP.WM_ENTERSIZEMOVE:
             ofEvents.emit(route.externalWindow('begin-user-bounds-change', uuid, name), {
                 x: payload.mouseX,
                 y: payload.mouseY
             });
             break;
-        case WindowsMessages.WM_EXITSIZEMOVE:
+        case WINDOWS_MESSAGE_MAP.WM_EXITSIZEMOVE:
             ofEvents.emit(route.externalWindow('end-user-bounds-change', uuid, name));
             break;
         default:

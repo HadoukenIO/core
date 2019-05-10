@@ -14,6 +14,7 @@ import { Window } from '../../api/window';
 import * as _ from 'underscore';
 import * as apiProtocolBase from './api_protocol_base';
 import ofEvents from '../../of_events';
+import * as ExternalWindow from '../../api/external_window';
 
 type Subscribe = (
     identity: Identity | NoteIdentity,
@@ -161,9 +162,15 @@ const subChannel = async (identity: Identity, eventName: string, payload: EventP
 const subSystem = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
     const localUnsub = System.addEventListener(eventName, listener);
     const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+    const ignoredMultiRuntimeEvents = [
+        'external-window-closed',
+        'external-window-created',
+        'external-window-hidden',
+        'external-window-shown'
+    ];
     let remoteUnSub = noop;
 
-    if (!isExternalClient) {
+    if (!isExternalClient && !ignoredMultiRuntimeEvents.includes(eventName)) {
         const subscription: RemoteSubscriptionProps = {
             className: 'system',
             eventName,
@@ -196,6 +203,14 @@ const subExternalApp = async (identity: Identity, eventName: string, payload: Ev
 };
 
 /*
+    Subscribe to an external window event
+*/
+const subExternalWindow = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
+    const externalWindowIdentity = apiProtocolBase.getTargetExternalWindowIdentity(payload);
+    return await ExternalWindow.addEventListener(externalWindowIdentity, eventName, listener);
+};
+
+/*
     Subscribe to a global hotkey event
 */
 const subGlobalHotkey = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
@@ -206,6 +221,7 @@ const subscriptionMap: SubscriptionMap = {
     'application': subApplication,
     'channel': subChannel,
     'external-application': subExternalApp,
+    'external-window': subExternalWindow,
     'frame': subFrame,
     'global-hotkey': subGlobalHotkey,
     'notifications': subNotifications,

@@ -13,7 +13,8 @@ import {
     FrameInfo,
     Identity,
     Nacker,
-    SavedDiskBounds
+    SavedDiskBounds,
+    GroupWindow
 } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
 import {hijackMovesForGroupedWindows} from './grouped_window_moves';
@@ -383,17 +384,18 @@ function getWindowGroup(identity: Identity, message: APIMessage, ack: Acker): vo
     const { crossApp } = payload;
     const dataAck = Object.assign({}, successAck);
     const windowIdentity = getTargetWindowIdentity(payload);
-    const windowGroup = Window.getGroup(windowIdentity);
+    const windowGroup: GroupWindow[] = Window.getGroup(windowIdentity);
 
     // NOTE: the Window API returns a wrapped window with 'name' as a member,
     // while the adaptor expects it to be 'windowName'
-    dataAck.data = windowGroup.map((window: Identity) => {
+    dataAck.data = windowGroup.map(({ uuid, name, isExternalWindow }) => {
         if (crossApp === true) {
-            return { uuid: window.uuid, name: window.name, windowName: window.name };
+            return { uuid, name, windowName: name, isExternalWindow };
         } else {
-            return window.name; // backwards compatible
+            return name; // backwards compatible
         }
     });
+
     ack(dataAck);
 }
 

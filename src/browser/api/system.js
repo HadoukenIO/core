@@ -28,6 +28,8 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
+import { extendNativeWindowInfo } from '../utils';
+import { isValidExternalWindow } from './external_window';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -280,6 +282,10 @@ exports.System = {
         const { id } = electronBrowserWindow.getFocusedWindow() || {};
         const { uuid, name } = coreState.getWinObjById(id) || {};
         return uuid ? { uuid, name } : null;
+    },
+    getFocusedExternalWindow: function() {
+        let { uuid } = electronBrowserWindow.getFocusedWindow() || {};
+        return uuid ? { uuid } : null;
     },
     getHostSpecs: function() {
         let state = new idleState();
@@ -674,6 +680,22 @@ exports.System = {
                 uuid: eApp.uuid
             };
         });
+    },
+    getAllExternalWindows: function() {
+        const skipOpenFinWindows = true;
+        const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOpenFinWindows);
+        const externalWindows = [];
+
+        allNativeWindows.forEach(e => {
+            const externalWindow = extendNativeWindowInfo(e);
+            const isValid = isValidExternalWindow(externalWindow);
+
+            if (isValid) {
+                externalWindows.push(externalWindow);
+            }
+        });
+
+        return externalWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);
