@@ -80,6 +80,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
     'get-runtime-info': getRuntimeInfo,
     'get-rvm-info': getRvmInfo,
+    'get-service-configuration': getServiceConfiguration,
     'get-preload-scripts': getPreloadScripts,
     'get-version': getVersion,
     'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
@@ -115,6 +116,30 @@ export function init(): void {
 
 function didFail(e: any): boolean {
     return e !== undefined && e.constructor === Error;
+}
+
+const dosURL = 'https://openfin.co/documentation/desktop-owner-settings/';
+
+async function getServiceConfiguration(identity: Identity, message: APIMessage) {
+    const { name } = message.payload;
+    const response = await System.getServiceConfiguration();
+
+    if (didFail(response)) {
+        throw response;
+    }
+
+    if (!Array.isArray(response)) {
+        throw new Error(`Settings in desktop owner settings are not configured correctly, please see
+         ${dosURL} for configuration information`);
+    }
+
+    const config = response.find(service => service.name === name);
+
+    if (!config) {
+        throw new Error(`Service configuration for ${name} not available`);
+    }
+
+    return config;
 }
 
 function readRegistryValue(identity: Identity, message: APIMessage, ack: Acker): void {
