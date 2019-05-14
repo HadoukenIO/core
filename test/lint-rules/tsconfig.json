@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "outDir": "./out",
+        "module": "commonjs",
+        "target": "es5",
+        "lib": [
+            "es6",
+            "dom"
+        ],
+        "skipLibCheck": false,
+        "sourceMap": false,
+        "allowJs": true,
+        "moduleResolution": "node",
+        "rootDir": ".",
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "suppressImplicitAnyIndexErrors": true,
+        "noUnusedLocals": true
+    },
+    "include": [
+        "*.ts"
+    ],
+    "exclude": []
+}

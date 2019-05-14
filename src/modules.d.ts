@@ -10,7 +10,9 @@ declare namespace Electron {
         generateGUID(): string;
         getCommandLineArguments(): string;
         getCommandLineArgv(): string[];
+        getNativeWindowInfoForNativeId(nativeId: string): import('./shapes').RawNativeWindowInfo;
         getPath(str: string): string;
+        getProcessIdForNativeId(nativeId: string): number;
         getTickCount(): number;
         isAeroGlassEnabled(): boolean;
         log(level: string, message: any): any;
@@ -22,6 +24,7 @@ declare namespace Electron {
         setMinLogLevel(level: number): void;
         vlog(level: number, message: any, thirdArg?: any): any;
     }
+    
     namespace windowTransaction {
         export class Transaction {
             on(arg0: string, arg1: (event: any, payload: any) => void): any;
@@ -51,6 +54,7 @@ declare namespace Electron {
         isDestroyed(): boolean;
         on(event: string, callback: (...args: any[]) => any): void;
         sendbyname(classname: string, windowname: string, message: string, maskPayload?: boolean): boolean;
+        sendbyid(id: number, message: string, maskPayload?: boolean): boolean;
         setmessagetimeout(timeout: number): void;
     }
 
@@ -83,18 +87,25 @@ declare namespace Electron {
     interface WebContents {
         fromProcessAndFrameIds: (processId: number, frameId: number) => WebContents;
         getOwnerBrowserWindow: () => BrowserWindow | void;
-        hasFrame: (frameName: string) => boolean;
         mainFrameRoutingId: number;
         session: Session;
     }
+
+    export interface BrowserWindowConstructorOptions {
+        hwnd?: string;
+    }
+
     export interface BrowserWindow {
         id: number;
         nativeId: string;
 
         activate(): void;
         bringToFront(): any;
+        forceExternalWindowClose(): void;
+        isUserMovementEnabled(): boolean;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
+        removeAllListeners(eventName?: string): any;
         removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         setUserMovementEnabled(enabled: boolean): void;
         setWindowPlacement(bounds: Rectangle): void;
@@ -114,12 +125,11 @@ declare namespace Electron {
         };
     }
 
+    export class ExternalWindow extends BrowserWindow { }
 
     export interface screen {
         getDisplayMatching(rect: Rectangle): Display;
     }
-
-
 
     export interface cookies {
         get: (filter: Object, callback: (error: Error, cookies: any[]) => any) => void;
@@ -151,7 +161,8 @@ declare namespace Electron {
         const tryLock: (key: string) => number;
         const releaseLock: (key: string) => number;
     }
-    export class winEventHookEmitter extends EventEmitter {
-        constructor(opts: { pid?: number });
+
+    export class WinEventHookEmitter extends EventEmitter {
+        constructor(opts?: { pid?: number });
     }
 }

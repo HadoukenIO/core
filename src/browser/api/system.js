@@ -28,6 +28,8 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
+import { extendNativeWindowInfo } from '../utils';
+import { isValidExternalWindow } from './external_window';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -281,6 +283,10 @@ exports.System = {
         const { uuid, name } = coreState.getWinObjById(id) || {};
         return uuid ? { uuid, name } : null;
     },
+    getFocusedExternalWindow: function() {
+        let { uuid } = electronBrowserWindow.getFocusedWindow() || {};
+        return uuid ? { uuid } : null;
+    },
     getHostSpecs: function() {
         let state = new idleState();
         const theme = (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {};
@@ -444,7 +450,9 @@ exports.System = {
         const manifestUrl = coreState.getConfigUrlByUuid(identity.uuid);
         const architecture = process.arch;
         const cachePath = electronApp.getPath('userData');
-        return { manifestUrl, port, securityRealm, version, architecture, cachePath };
+        const args = Object.assign({}, coreState.argo);
+        args._ = undefined;
+        return { manifestUrl, port, securityRealm, version, architecture, cachePath, args };
     },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
@@ -672,6 +680,22 @@ exports.System = {
                 uuid: eApp.uuid
             };
         });
+    },
+    getAllExternalWindows: function() {
+        const skipOpenFinWindows = true;
+        const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOpenFinWindows);
+        const externalWindows = [];
+
+        allNativeWindows.forEach(e => {
+            const externalWindow = extendNativeWindowInfo(e);
+            const isValid = isValidExternalWindow(externalWindow);
+
+            if (isValid) {
+                externalWindows.push(externalWindow);
+            }
+        });
+
+        return externalWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);

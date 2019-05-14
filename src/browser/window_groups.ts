@@ -2,11 +2,12 @@ import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
 
 import * as _ from 'underscore';
-import { OpenFinWindow, Identity } from '../shapes';
+import { ExternalWindow, OpenFinWindow, Identity, GroupWindow } from '../shapes';
 import * as coreState from './core_state';
 import * as windowGroupsProxy from './window_groups_runtime_proxy';
 import * as groupTracker from './disabled_frame_group_tracker';
 import { argo } from './core_state';
+import { getExternalWindow } from './api/external_window';
 
 let uuidSeed = 0;
 
@@ -39,12 +40,13 @@ export class WindowGroups extends EventEmitter {
         });
     }
 
-    private _windowGroups: { [groupUuid: string]: { [windowName: string]: OpenFinWindow; } } = {};
-    public getGroup = (groupUuid: string): OpenFinWindow[] => {
+    private _windowGroups: { [groupUuid: string]: { [windowName: string]: GroupWindow; } } = {};
+
+    public getGroup = (groupUuid: string): GroupWindow[] => {
         return _.values(this._windowGroups[groupUuid]);
     };
 
-    public getGroups = (): OpenFinWindow[][] => {
+    public getGroups = (): GroupWindow[][] => {
         return _.map(_.keys(this._windowGroups), (groupUuid) => {
             return this.getGroup(groupUuid);
         });
@@ -81,15 +83,27 @@ export class WindowGroups extends EventEmitter {
     }
 
     public joinGroup = async (source: Identity, target: Identity): Promise<void> => {
-        const sourceWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
-        let targetWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
+        let sourceWindow: GroupWindow;
+        let targetWindow: GroupWindow;
+
+        sourceWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
+        targetWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
+
+        // Check if missing source and target windows are external windows
+        if (!sourceWindow) {
+            sourceWindow = <ExternalWindow>getExternalWindow(source);
+        }
+        if (!targetWindow) {
+            targetWindow = <ExternalWindow>getExternalWindow(target);
+        }
 
         let runtimeProxyWindow;
         const sourceGroupUuid = sourceWindow.groupUuid;
+
         //identify if either the target or the source belong to a different runtime:
         if (!targetWindow) {
             runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
-            targetWindow = runtimeProxyWindow.window;
+            targetWindow = <OpenFinWindow>runtimeProxyWindow.window;
         }
         let targetGroupUuid = targetWindow.groupUuid;
         // cannot join a group with yourself
@@ -137,7 +151,7 @@ export class WindowGroups extends EventEmitter {
 
     };
 
-    public leaveGroup = async (win: OpenFinWindow): Promise<void> => {
+    public leaveGroup = async (win: GroupWindow): Promise<void> => {
         const groupUuid = win && win.groupUuid;
 
         // cannot leave a group if you don't belong to one
@@ -162,10 +176,23 @@ export class WindowGroups extends EventEmitter {
     };
 
     public mergeGroups = async (source: Identity, target: Identity): Promise<void> => {
-        const sourceWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
-        let targetWindow: OpenFinWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
-        let sourceGroupUuid = sourceWindow.groupUuid;
+        let sourceWindow: GroupWindow;
+        let targetWindow: GroupWindow;
+
+        sourceWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
+        targetWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
+
+        // Check if missing source and target windows are external windows
+        if (!sourceWindow) {
+            sourceWindow = <ExternalWindow>getExternalWindow(source);
+        }
+        if (!targetWindow) {
+            targetWindow = <ExternalWindow>getExternalWindow(target);
+        }
+
         let runtimeProxyWindow;
+        let sourceGroupUuid = sourceWindow.groupUuid;
+
         //identify if either the target or the source belong to a different runtime:
         if (!targetWindow) {
             runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
@@ -225,7 +252,7 @@ export class WindowGroups extends EventEmitter {
         }
     };
 
-    private _addWindowToGroup = async (groupUuid: string, win: OpenFinWindow): Promise<string> => {
+    private _addWindowToGroup = async (groupUuid: string, win: GroupWindow): Promise<string> => {
         const windowGroupId = this.getWindowGroupId(win);
         const _groupUuid = groupUuid || generateUuid();
         this._windowGroups[_groupUuid] = this._windowGroups[_groupUuid] || {};
@@ -246,7 +273,7 @@ export class WindowGroups extends EventEmitter {
         return _groupUuid;
     };
 
-    private _removeWindowFromGroup = async (groupUuid: string, win: OpenFinWindow): Promise<void> => {
+    private _removeWindowFromGroup = async (groupUuid: string, win: GroupWindow): Promise<void> => {
         const windowGroupId = this.getWindowGroupId(win);
         if (!argo['use-legacy-window-groups']) {
             groupTracker.removeWindowFromGroup(win);
@@ -302,6 +329,12 @@ export interface WindowIdentifier {
     appUuid: string;
     windowName: string;
 }
+
+export interface GroupChangedEvent {
+    groupUuid: string;
+    payload: GroupChangedPayload;
+}
+
 export interface GroupChangedPayload {
     reason: string;
     sourceGroup: WindowIdentifier[];
@@ -314,11 +347,15 @@ export interface GroupChangedPayload {
     type: 'group-changed';
 }
 
+export interface GroupEvent extends GroupChangedPayload, Identity {
+    memberOf: string;
+}
+
 function generatePayload(reason: string,
-    sourceWindow: OpenFinWindow,
-    targetWindow: OpenFinWindow,
-    sourceGroup: OpenFinWindow[],
-    targetGroup: OpenFinWindow[]
+    sourceWindow: GroupWindow,
+    targetWindow: GroupWindow,
+    sourceGroup: GroupWindow[],
+    targetGroup: GroupWindow[]
 ): GroupChangedPayload {
     return {
         reason,
@@ -333,7 +370,7 @@ function generatePayload(reason: string,
     };
 }
 
-function mapEventWindowGroups(group: OpenFinWindow[]): WindowIdentifier[] {
+function mapEventWindowGroups(group: GroupWindow[]): WindowIdentifier[] {
     return _.map(group, (win) => {
         return {
             appUuid: win.app_uuid,

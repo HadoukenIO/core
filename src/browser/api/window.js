@@ -23,7 +23,7 @@ import { deletePendingAuthRequest, getPendingAuthRequest } from '../authenticati
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 let convertOptions = require('../convert_options.js');
 let coreState = require('../core_state.js');
-let ExternalWindowEventAdapter = require('../external_window_event_adapter.js');
+import ExternalWindowEventAdapter from '../external_window_event_adapter';
 import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
 import ofEvents from '../of_events';
@@ -47,17 +47,11 @@ import {
     showErrorBox
 } from '../../common/errors';
 import * as NativeWindow from './native_window';
+import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-const WindowsMessages = {
-    WM_KEYDOWN: 0x0100,
-    WM_KEYUP: 0x0101,
-    WM_SYSKEYDOWN: 0x0104,
-    WM_SYSKEYUP: 0x0105,
-};
-
 let Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
@@ -161,6 +155,7 @@ let optionSetters = {
         const val = Object.assign({}, getOptFromBrowserWin('contextMenuSettings', browserWin),
             newVal);
         setOptOnBrowserWin('contextMenuSettings', val, browserWin);
+        setOptOnBrowserWin('contextMenu', val.enable, browserWin); // support for old api
         browserWin.setMenu(null);
         browserWin.webContents.updateContextMenuSettings(val);
     },
@@ -1119,7 +1114,7 @@ Window.close = function(identity, force, callback = () => {}) {
         if (!browserWindow.isDestroyed()) {
             let openfinWindow = Window.wrap(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
-            NativeWindow.close(browserWindow);
+            browserWindow.close();
         }
     };
 
@@ -1164,10 +1159,10 @@ Window.embed = function(identity, parentHwnd) {
     }
 
     if (isWin32) {
-        browserWindow.setMessageObserver(WindowsMessages.WM_KEYDOWN, parentHwnd);
-        browserWindow.setMessageObserver(WindowsMessages.WM_KEYUP, parentHwnd);
-        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYDOWN, parentHwnd);
-        browserWindow.setMessageObserver(WindowsMessages.WM_SYSKEYUP, parentHwnd);
+        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_KEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_KEYUP, parentHwnd);
+        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_SYSKEYDOWN, parentHwnd);
+        browserWindow.setMessageObserver(WINDOWS_MESSAGE_MAP.WM_SYSKEYUP, parentHwnd);
     }
 
     ofEvents.emit(route.window('embedded', identity.uuid, identity.name), {
@@ -1697,7 +1692,7 @@ Window.updateOptions = function(identity, updateObj) {
     let { uuid, name } = identity;
     let diff = {},
         invalidOptions = [];
-    let clone = obj => JSON.parse(JSON.stringify(obj)); // this works here, but has limitations; reuse with caution.
+    let clone = obj => typeof obj === 'undefined' ? obj : JSON.parse(JSON.stringify(obj)); // this works here, but has limitations; reuse with caution.
 
     try {
         for (var opt in updateObj) {

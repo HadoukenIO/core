@@ -234,7 +234,7 @@ export interface WindowOptions {
     toShowOnRun?: boolean;
     transparent?: boolean;
     _type?: ERROR_BOX_TYPES;
-    url: string;
+    url?: string;
     uuid: string;
     waitForPageLoad?: boolean;
     webPreferences?: {
@@ -422,16 +422,40 @@ export interface Bounds {
     y: number;
 }
 
+export interface CoordinatesXY {
+    x: number;
+    y: number;
+}
+
 export interface ProcessInfo {
     imageName: string;
     injected: boolean;
     pid: number;
 }
 
+// This mock is for window grouping accepting external windows
+interface BrowserWindowMock extends BrowserWindowElectron {
+    _options: WindowOptions;
+}
+
+export interface ExternalWindow extends BrowserWindowElectron {
+    _options: WindowOptions;
+    _userMovement?: boolean;
+    _window?: {};
+    app_uuid?: string;
+    browserWindow: BrowserWindowMock;
+    groupUuid?: string;
+    isExternalWindow: boolean;
+    isProxy?: boolean;
+    name: string;
+    uuid: string;
+}
+
 export interface RawNativeWindowInfo {
     alwaysOnTop: boolean;
     bounds: Bounds;
     className: string;
+    dpi: number;
     focused: boolean;
     id: string;
     maximized: boolean;
@@ -442,5 +466,14 @@ export interface RawNativeWindowInfo {
 }
 
 export interface NativeWindowInfo extends RawNativeWindowInfo {
+    name: string;
     uuid: string;
+}
+
+export type GroupWindow = (ExternalWindow | OpenFinWindow) & {
+    isExternalWindow?: boolean;
+};
+
+export interface GroupWindowIdentity extends Identity {
+    isExternalWindow?: boolean;
 }

@@ -116,7 +116,10 @@ module.exports = (grunt) => {
                 // when transition to TypeScript is fully done
                 configuration: grunt.file.readJSON('tslint.json'),
                 project: 'tslint.json',
-                rulesDirectory: 'node_modules/tslint-microsoft-contrib',
+                rulesDirectory: [
+                    'node_modules/tslint-microsoft-contrib',
+                    'test/lint-rules/out'
+                ],
                 force: false
             },
             files: {
@@ -124,7 +127,7 @@ module.exports = (grunt) => {
                     'src/**/*.ts',
                     '!src/**/*.d.ts',
                     'test/**/*.ts',
-                    '!test/**/*.d.ts',
+                    '!test/**/*.d.ts'
                 ]
             }
         },
@@ -201,6 +204,7 @@ module.exports = (grunt) => {
     ]);
 
     grunt.registerTask('typescript', [
+        'tslint-rules',
         'tslint',
         'ts'
     ]);
@@ -372,5 +376,14 @@ module.exports = (grunt) => {
         const gruntSubmodPath = path.resolve('./js-adapter/node_modules/.bin/grunt');
         grunt.log.subhead('Building js-adapter...');
         childProcess.execSync(`cd js-adapter && ${gruntSubmodPath} webpack`);
+    });
+
+    /*
+        Build custom TSLint rules
+    */
+    grunt.registerTask('tslint-rules', () => {
+        const tscPath = path.resolve('./node_modules/typescript/bin/tsc');
+        grunt.log.subhead('Building custom TSLint rules...');
+        childProcess.execSync(`cd test/lint-rules && node ${tscPath}`);
     });
 };
