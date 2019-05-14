@@ -440,20 +440,16 @@ Window.create = function(id, opts) {
         ofEvents.emit(route.window('openfin-diagnostic/unload', uuid, name, true), url);
     };
 
-    // Hack: closing a window before content is finish loading in 10.66.40.* causes the renderer to crash.
-    // Hide the window instead, and close from the core when it's safe.
-    let wasCloseRequested = false;
-    const preventClose = (event) => {
-        wasCloseRequested = true;
-        browserWindow.hide();
-    };
-    ofEvents.on(route.window('close-requested', uuid, name), preventClose);
-    ofEvents.once(route.window('initialized', uuid, name), () => {
-        ofEvents.removeListener(route.window('close-requested', uuid, name), preventClose);
-        if (wasCloseRequested) {
-            Window.close({ uuid, name });
+    // Hack: Closing a window before content is finished loading can cause the renderer to crash.
+    // Route all closes through Window.close, where we can apply a workaround.
+    const dodgeRenderCrash = () => {
+        const listenerCount = ofEvents.listenerCount(route.window('close-requested', uuid, name));
+        if (listenerCount === 1) {
+            // This is the only listener, force close. Else, other handlers determine whether to close.
+            Window.close({ uuid, name }, true);
         }
-    });
+    };
+    ofEvents.on(route.window('close-requested', uuid, name), dodgeRenderCrash);
     // End hack
 
     let _externalWindowEventAdapter;
@@ -1135,7 +1131,11 @@ Window.close = function(identity, force, callback = () => {}) {
         if (!browserWindow.isDestroyed()) {
             let openfinWindow = Window.wrap(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
-            NativeWindow.close(browserWindow);
+            // Hack: Active iframes can cause renderer to wipe out. Flush DOM before close.
+            // TODO: Remove if/when we get a Chromium fix in place.
+            browserWindow.webContents.executeJavaScript('document.body.innerHTML = "";', false, () => {
+                NativeWindow.close(browserWindow);
+            });
         }
     };
 
