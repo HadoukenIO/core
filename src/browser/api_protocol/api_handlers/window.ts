@@ -125,12 +125,11 @@ function stopFlashWindow(identity: Identity, message: APIMessage, ack: Acker): v
     ack(successAck);
 }
 
-function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker): void {
+function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { top, left, width, height } = payload;
     const {uuid, name} = getTargetWindowIdentity(payload);
-    Window.setBounds({uuid, name}, left, top, width, height);
-    ack(successAck);
+    Window.setBounds({uuid, name}, left, top, width, height, ack, nack);
 }
 
 function setWindowPreloadState(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -184,22 +183,20 @@ function restoreWindow(identity: Identity, message: APIMessage, ack: Acker): voi
     ack(successAck);
 }
 
-function resizeWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+function resizeWindow(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { width, height, anchor } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.resizeTo(windowIdentity, width, height, anchor);
-    ack(successAck);
+    Window.resizeTo(windowIdentity, width, height, anchor, ack, nack);
 }
 
-function resizeWindowBy(identity: Identity, message: APIMessage, ack: Acker): void {
+function resizeWindowBy(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { deltaHeight, deltaWidth, anchor } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.resizeBy(windowIdentity, deltaWidth, deltaHeight, anchor);
-    ack(successAck);
+    Window.resizeBy(windowIdentity, deltaWidth, deltaHeight, anchor, ack, nack);
 }
 
 function undockWindow(identity: Identity, message: APIMessage, ack: Acker): void {
