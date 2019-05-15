@@ -54,7 +54,7 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
                     if (!window) {
                         window = findExternalWindow({ uuid });
                     }
-                    
+
                     const options = payload.options || { moveIndependently: false };
 
                     if (window && window.groupUuid && !options.moveIndependently) {
