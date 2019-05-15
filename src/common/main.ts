@@ -1,6 +1,7 @@
 
 import { parse as parseUrl } from 'url';
 import { Identity } from '../shapes';
+import { Rectangle } from 'electron';
 
 const chromePageWhiteList : string[] = [
     'chrome://about',
@@ -138,4 +139,14 @@ export function mergeDeep(target: any, ...sources: any[]): any {
     }
 
     return mergeDeep(target, ...sources);
+}
+
+// Adjust coordinates of payloads based on scaling. **Mutates** the object!
+export function adjustCoordsScaling(coords: any, runtimeDpi: number, sourceDpi: number): any {
+    const propsToAdjust = ['mouseX', 'mouseY', 'x', 'y', 'left', 'right', 'top', 'bottom'];
+    propsToAdjust.forEach(prop => {
+        if (typeof coords[prop] === 'number') {
+            coords[prop] = coords[prop] * runtimeDpi / sourceDpi;
+        }
+    });
 }
