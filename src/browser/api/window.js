@@ -452,6 +452,9 @@ Window.create = function(id, opts) {
     ofEvents.once(route.window('initialized', uuid, name), () => {
         ofEvents.removeListener(route.window('close-requested', uuid, name), handleEarlyClose);
     });
+    ofEvents.on(route.window('closed', uuid, name), () => {
+        ofEvents.removeListener(route.window('close-requested', uuid, name), handleEarlyClose);
+    });
     // End hack
 
     let _externalWindowEventAdapter;
