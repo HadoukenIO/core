@@ -246,7 +246,7 @@ exports.System = {
         }
 
         hash.update(hostToken);
-        hash.update(username);
+        hash.update(username.toLowerCase());
 
         return hash.digest('hex');
     },
