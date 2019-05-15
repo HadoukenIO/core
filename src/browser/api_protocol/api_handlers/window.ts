@@ -129,7 +129,7 @@ function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker, na
     const { payload } = message;
     const { top, left, width, height } = payload;
     const {uuid, name} = getTargetWindowIdentity(payload);
-    Window.setBounds({uuid, name}, left, top, width, height, ack, nack);
+    Window.setBounds({ uuid, name }, left, top, width, height, () => ack(successAck), nack);
 }
 
 function setWindowPreloadState(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -188,7 +188,7 @@ function resizeWindow(identity: Identity, message: APIMessage, ack: Acker, nack:
     const { width, height, anchor } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.resizeTo(windowIdentity, width, height, anchor, ack, nack);
+    Window.resizeTo(windowIdentity, width, height, anchor, () => ack(successAck), nack);
 }
 
 function resizeWindowBy(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
@@ -196,7 +196,7 @@ function resizeWindowBy(identity: Identity, message: APIMessage, ack: Acker, nac
     const { deltaHeight, deltaWidth, anchor } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.resizeBy(windowIdentity, deltaWidth, deltaHeight, anchor, ack, nack);
+    Window.resizeBy(windowIdentity, deltaWidth, deltaHeight, anchor, () => ack(successAck), nack);
 }
 
 function undockWindow(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -501,14 +501,12 @@ function blurWindow(identity: Identity, message: APIMessage, ack: Acker): void {
     ack(successAck);
 }
 
-function animateWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+function animateWindow(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { options, transitions } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.animate(windowIdentity, transitions, options, () => {
-        ack(successAck);
-    });
+    Window.animate(windowIdentity, transitions, options, () => ack(successAck), nack);
 }
 
 function dockWindow(identity: Identity, message: APIMessage, ack: Acker): void {

@@ -1067,6 +1067,11 @@ Window.animate = function(identity, transitions, options = {}, callback = () => 
         return;
     }
 
+    if (!('_options' in browserWindow)) {
+        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
+        return;
+    }
+
     let animationMeta = transitions || {};
     let animationTween = (options && options.tween) || 'ease-in-out';
     animationMeta.interrupt = (options || {}).interrupt;
@@ -1074,7 +1079,14 @@ Window.animate = function(identity, transitions, options = {}, callback = () => 
         animationMeta.interrupt = true;
     }
 
-    animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
+    const newBoundsAcceptable = areNewBoundsWithinConstraints(browserWindow._options, transitions.size.width, transitions.size.width);
+
+    if (newBoundsAcceptable) {
+        animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
+        callback();
+    } else {
+        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
+    }
 };
 
 Window.blur = function(identity) {
@@ -1594,7 +1606,7 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor, callback, 
 
     if (newBoundsAcceptable) {
         NativeWindow.resizeBy(browserWindow, opts);
-        callback({ success: true });
+        callback();
     } else {
         errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
     }
@@ -1617,7 +1629,7 @@ Window.resizeTo = function(identity, width, height, anchor, callback, errorCallb
 
     if (newBoundsAcceptable) {
         NativeWindow.resizeTo(browserWindow, opts);
-        callback({ success: true });
+        callback();
     } else {
         errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
     }
@@ -1655,7 +1667,7 @@ Window.setBounds = function(identity, left, top, width, height, callback, errorC
 
     if (newBoundsAcceptable) {
         NativeWindow.setBounds(browserWindow, opts);
-        callback({ success: true });
+        callback();
     } else {
         errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
     }
