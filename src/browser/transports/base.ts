@@ -17,6 +17,14 @@ abstract class BaseTransport {
         this.eventEmitter.on.call(this.eventEmitter, eventName, listener);
     }
 
+    public removeAllListeners(): void {
+        this.eventEmitter.removeAllListeners();
+    }
+
+    public removeListener(eventName: string, listener: (...args: any[]) => void): void {
+        this.eventEmitter.removeListener(eventName, listener);
+    }
+
     // not implemented in base
     public abstract publish(data: any): boolean;
 }

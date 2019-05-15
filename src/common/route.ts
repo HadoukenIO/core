@@ -21,26 +21,24 @@ export interface Route {
         hyphenateUuidName?: boolean
     ): string;
 
-    application: SimpleRoute;
-    externalApplication: SimpleRoute;
+    'application': SimpleRoute;
+    'channel': SimpleRoute;
+    'connection': SimpleRoute;
     'external-application': SimpleRoute;
-
-    frame: WindowRoute;
-    window: WindowRoute;
-    externalWindow: WindowRoute;
     'external-window': WindowRoute;
-
-    system: SimpleRoute;
-    channel: SimpleRoute;
-    server: SimpleRoute;
-    connection: SimpleRoute;
-    runtime: SimpleRoute;
-
-    rvmMessageBus: SimpleRoute;
-    'rvm-message-bus': SimpleRoute;
-
-    globalHotkey: SimpleRoute;
+    'externalApplication': SimpleRoute;
+    'externalWindow': WindowRoute;
+    'frame': WindowRoute;
     'global-hotkey': SimpleRoute;
+    'globalHotkey': SimpleRoute;
+    'native-window': SimpleRoute;
+    'nativeWindow': SimpleRoute;
+    'runtime': SimpleRoute;
+    'rvm-message-bus': SimpleRoute;
+    'rvmMessageBus': SimpleRoute;
+    'server': SimpleRoute;
+    'system': SimpleRoute;
+    'window': WindowRoute;
 
     [key: string]: SimpleRoute;
 }
@@ -81,18 +79,17 @@ function router(
 const route: Route = <Route>router.bind(null);
 
 route.application = <SimpleRoute>route.bind(null, 'application');
-route.externalApplication = route['external-application'] = <SimpleRoute>router.bind(null, 'external-application');
-
-route.frame = <WindowRoute>router.bind(HYPHEN, 'frame');
-route.window = <WindowRoute>router.bind(HYPHEN, 'window');
-route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
-
 route.channel = <WindowRoute>router.bind(HYPHEN, 'channel');
-route.system = <SimpleRoute>router.bind(null, 'system');
+route.connection = <SimpleRoute>router.bind(null, 'connection');
+route.externalApplication = route['external-application'] = <SimpleRoute>router.bind(null, 'external-application');
+route.externalWindow = route['external-window'] = <WindowRoute>router.bind(HYPHEN, 'external-window');
+route.frame = <WindowRoute>router.bind(HYPHEN, 'frame');
+route.globalHotkey = route['global-hotkey'] = <SimpleRoute>router.bind(null, 'global-hotkey');
+route.nativeWindow = route['native-window'] = <SimpleRoute>router.bind(HYPHEN, 'native-window');
+route.runtime = <SimpleRoute>router.bind(null, 'runtime');
 route.rvmMessageBus = route['rvm-message-bus'] = <SimpleRoute>router.bind(null, 'rvm-message-bus');
 route.server = <SimpleRoute>router.bind(null, 'server');
-route.connection = <SimpleRoute>router.bind(null, 'connection');
-route.runtime = <SimpleRoute>router.bind(null, 'runtime');
-route.globalHotkey = route['global-hotkey'] = <SimpleRoute>router.bind(null, 'global-hotkey');
+route.system = <SimpleRoute>router.bind(null, 'system');
+route.window = <WindowRoute>router.bind(HYPHEN, 'window');
 
 export default route;

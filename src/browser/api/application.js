@@ -37,6 +37,7 @@ import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 import { releaseUuid } from '../uuid_availability';
 import { launch } from '../../../js-adapter/src/main';
+import { externalWindows } from './external_window';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -719,6 +720,12 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 
                 //deregister all proxy windows
                 deregisterAllRuntimeProxyWindows();
+
+                // Release all external windows to prevent bringing them
+                // down when the runtime closes.
+                externalWindows.forEach((nativeWindow) => {
+                    nativeWindow.setExternalWindowNativeId('');
+                });
 
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {
