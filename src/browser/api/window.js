@@ -441,15 +441,17 @@ Window.create = function(id, opts) {
     };
 
     // Hack: Closing a window before content is finished loading can cause the renderer to crash.
-    // Route all closes through Window.close, where we can apply a workaround.
-    const dodgeRenderCrash = () => {
-        const listenerCount = ofEvents.listenerCount(route.window('close-requested', uuid, name));
-        if (listenerCount === 1) {
-            // This is the only listener, force close. Else, other handlers determine whether to close.
+    // TODO: Remove if/when we get a Chromium fix in place.
+    const handleEarlyClose = () => {
+        // Active iframes can cause crash. Flush DOM before close.
+        browserWindow.webContents.executeJavaScript('document.removeChild(document.documentElement);').then(() => {
             Window.close({ uuid, name }, true);
-        }
+        });
     };
-    ofEvents.on(route.window('close-requested', uuid, name), dodgeRenderCrash);
+    ofEvents.on(route.window('close-requested', uuid, name), handleEarlyClose);
+    ofEvents.once(route.window('initialized', uuid, name), () => {
+        ofEvents.removeListener(route.window('close-requested', uuid, name), handleEarlyClose);
+    });
     // End hack
 
     let _externalWindowEventAdapter;
@@ -1131,11 +1133,7 @@ Window.close = function(identity, force, callback = () => {}) {
         if (!browserWindow.isDestroyed()) {
             let openfinWindow = Window.wrap(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
-            // Hack: Active iframes can cause renderer to wipe out. Flush DOM before close.
-            // TODO: Remove if/when we get a Chromium fix in place.
-            browserWindow.webContents.executeJavaScript('document.body.innerHTML = "";', false, () => {
-                NativeWindow.close(browserWindow);
-            });
+            NativeWindow.close(browserWindow);
         }
     };
 
