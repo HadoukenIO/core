@@ -22,7 +22,7 @@ const AUTH_TYPE = {
 };
 
 var pendingAuthentications = new Map(),
-    electronApp = require('app'),
+    electronApp = require('electron').app,
     authenticationApiMap = {
         'request-external-authorization': onRequestExternalAuth,
         'request-authorization': onRequestAuthorization,
