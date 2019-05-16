@@ -441,6 +441,23 @@ Window.create = function(id, opts) {
         ofEvents.emit(route.window('openfin-diagnostic/unload', uuid, name, true), url);
     };
 
+    // Hack: Closing a window before content is finished loading can cause the renderer to crash.
+    // TODO: Remove if/when we get a Chromium fix in place.
+    const handleEarlyClose = () => {
+        // Active iframes can cause crash. Flush DOM before close.
+        browserWindow.webContents.executeJavaScript('document.removeChild(document.documentElement);').then(() => {
+            Window.close({ uuid, name }, true);
+        });
+    };
+    ofEvents.on(route.window('close-requested', uuid, name), handleEarlyClose);
+    ofEvents.once(route.window('initialized', uuid, name), () => {
+        ofEvents.removeListener(route.window('close-requested', uuid, name), handleEarlyClose);
+    });
+    ofEvents.on(route.window('closed', uuid, name), () => {
+        ofEvents.removeListener(route.window('close-requested', uuid, name), handleEarlyClose);
+    });
+    // End hack
+
     let _externalWindowEventAdapter;
 
     // we need to be able to handle the wrapped case, ie. don't try to
