@@ -1067,11 +1067,6 @@ Window.animate = function(identity, transitions, options = {}, callback = () => 
         return;
     }
 
-    if (!('_options' in browserWindow)) {
-        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
-        return;
-    }
-
     let animationMeta = transitions || {};
     let animationTween = (options && options.tween) || 'ease-in-out';
     animationMeta.interrupt = (options || {}).interrupt;
@@ -1079,9 +1074,32 @@ Window.animate = function(identity, transitions, options = {}, callback = () => 
         animationMeta.interrupt = true;
     }
 
-    const newBoundsAcceptable = areNewBoundsWithinConstraints(browserWindow._options, transitions.size.width, transitions.size.width);
+    const { size } = transitions;
 
-    if (newBoundsAcceptable) {
+    if (!size) {
+        animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
+        callback();
+        return;
+    }
+
+    if (!('_options' in browserWindow)) {
+        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
+        return;
+    }
+
+    let finalWidth = browserWindow._options.width;
+    if (size.width) {
+        finalWidth = size.relative ? finalWidth + size.width : size.width;
+    }
+
+    let finalHeight = browserWindow._options.height;
+    if (size.height) {
+        finalHeight = size.relative ? finalHeight + size.height : size.height;
+    }
+
+    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, finalWidth, finalHeight);
+
+    if (newBoundsWithinConstraints) {
         animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
         callback();
     } else {
@@ -1602,9 +1620,9 @@ Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor, callback, 
     const newWidth = browserWindow._options.width + deltaWidth;
     const newHeight = browserWindow._options.height + deltaHeight;
 
-    const newBoundsAcceptable = areNewBoundsWithinConstraints(browserWindow._options, newWidth, newHeight);
+    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, newWidth, newHeight);
 
-    if (newBoundsAcceptable) {
+    if (newBoundsWithinConstraints) {
         NativeWindow.resizeBy(browserWindow, opts);
         callback();
     } else {
@@ -1625,9 +1643,9 @@ Window.resizeTo = function(identity, width, height, anchor, callback, errorCallb
         return;
     }
 
-    const newBoundsAcceptable = areNewBoundsWithinConstraints(browserWindow._options, width, height);
+    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, width, height);
 
-    if (newBoundsAcceptable) {
+    if (newBoundsWithinConstraints) {
         NativeWindow.resizeTo(browserWindow, opts);
         callback();
     } else {
@@ -1663,9 +1681,9 @@ Window.setBounds = function(identity, left, top, width, height, callback, errorC
         return;
     }
 
-    const newBoundsAcceptable = areNewBoundsWithinConstraints(browserWindow._options, width, height);
+    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, width, height);
 
-    if (newBoundsAcceptable) {
+    if (newBoundsWithinConstraints) {
         NativeWindow.setBounds(browserWindow, opts);
         callback();
     } else {
