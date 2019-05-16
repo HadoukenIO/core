@@ -384,6 +384,6 @@ module.exports = (grunt) => {
     grunt.registerTask('tslint-rules', () => {
         const tscPath = path.resolve('./node_modules/typescript/bin/tsc');
         grunt.log.subhead('Building custom TSLint rules...');
-        childProcess.execSync(`cd test/lint-rules && ${tscPath}`);
+        childProcess.execSync(`cd test/lint-rules && node ${tscPath}`);
     });
 };
