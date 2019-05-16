@@ -202,6 +202,9 @@ export function addWindowToGroup(win: GroupWindow) {
     const scaleFactor = MonitorInfo.getInfo().deviceScaleFactor;
     let moved = new Set<GroupWindow>();
     let boundsChanging = false;
+    if (win.isExternalWindow) {
+        win.browserWindow.setUserMovementEnabled(false);
+    }
 
     const genericListener = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
@@ -222,7 +225,7 @@ export function addWindowToGroup(win: GroupWindow) {
                         if (!isLeader) {
                             // bounds-changed is emitted for the leader, but not other windows
                             const endPosition = moveFromOpenFinWindow(movedWin);
-                            emitChange('bounds-changed', endPosition, changeType, 'group');
+                            // emitChange('bounds-changed', endPosition, changeType, 'group');
                         }
                     });
                 });
@@ -232,7 +235,7 @@ export function addWindowToGroup(win: GroupWindow) {
                 moves.forEach((move) => moved.add(move.ofWin));
                 // bounds-changing is not emitted for the leader, but is for the other windows
                 const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
-                emitChange('bounds-changing', leaderMove, changeType, 'self');
+                // emitChange('bounds-changing', leaderMove, changeType, 'self');
             }
         } catch (error) {
             writeToLog('error', error);
@@ -242,20 +245,30 @@ export function addWindowToGroup(win: GroupWindow) {
     const resizeListener = (e: any, bounds: RectangleBase) => genericListener(e, bounds, 1);
     const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(w => restore(w.browserWindow));
 
-    win.browserWindow.on('will-move', moveListener);
-    win.browserWindow.on('will-resize', resizeListener);
-    win.browserWindow.on('begin-user-bounds-change', restoreListener);
-    listenerCache.set(win.browserWindow.nativeId, [moveListener, resizeListener, restoreListener]);
+    if (!win.isExternalWindow) {
+        win.browserWindow.on('will-move', moveListener);
+        win.browserWindow.on('will-resize', resizeListener);
+        win.browserWindow.on('begin-user-bounds-change', restoreListener);
+        listenerCache.set(win.browserWindow.nativeId, [moveListener, resizeListener, restoreListener]);
+    } else {
+        win.browserWindow.on('disabled-frame-bounds-changing', (e: any, r: any, changeType: ChangeType) => {
+            writeToLog('error', `8888888 ${JSON.stringify(r)}`);
+            // tslint:disable-next-line:no-empty
+            genericListener({preventDefault: () => {}}, r, changeType);
+        });
+    }
 }
 
-export function removeWindowFromGroup({browserWindow}: GroupWindow) {
-    const winId = browserWindow.nativeId;
-    if (!browserWindow.isDestroyed()) {
+export function removeWindowFromGroup(win: GroupWindow) {
+    const winId = win.browserWindow.nativeId;
+    if (!win.browserWindow.isDestroyed()) {
         const listeners = listenerCache.get(winId);
-        if (listeners) {
-            browserWindow.removeListener('will-move', listeners[0]);
-            browserWindow.removeListener('will-resize', listeners[1]);
-            browserWindow.removeListener('begin-user-bounds-change', listeners[2]);
+        if (listeners && !win.isExternalWindow) {
+            win.browserWindow.removeListener('will-move', listeners[0]);
+            win.browserWindow.removeListener('will-resize', listeners[1]);
+            win.browserWindow.removeListener('begin-user-bounds-change', listeners[2]);
+        } else {
+            win.browserWindow.setUserMovementEnabled(true);
         }
     }
     listenerCache.delete(winId);

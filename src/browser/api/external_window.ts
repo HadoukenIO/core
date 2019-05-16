@@ -491,23 +491,23 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
   });
 
   injectionBus.on('WM_SIZING', (data: any) => {
-    const { changeType, deferred, userMovement, height, left, top, width, x, y } = parseEvent(data);
+    const { deferred, userMovement, height, left, top, width, x, y } = parseEvent(data);
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_SIZING, uuid, name);
     if (!userMovement) {
       ofEvents.emit(routeName, { x, y, width, height });
       externalWindow.emit('disabled-movement-bounds-changing', {
-        changeType, deferred, height, left, top, width
+        changeType: 1, deferred, height, left, top, width
       });
     }
   });
 
   injectionBus.on('WM_MOVING', (data: any) => {
-    const { changeType, deferred, userMovement, height, left, top, width } = parseEvent(data);
+    const { deferred, userMovement, height, left, top, width } = parseEvent(data);
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_MOVING, uuid, name);
     if (!userMovement) {
       ofEvents.emit(routeName);
       externalWindow.emit('disabled-movement-bounds-changing', {
-        changeType, deferred, height, left, top, width
+        changeType: 0, deferred, height, left, top, width
       });
     }
   });
