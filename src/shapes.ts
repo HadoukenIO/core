@@ -374,7 +374,8 @@ export interface APIHandlerMap {
         apiPath?: string;
         apiPolicyDelegate?: {
             checkPermissions: (args: any) => boolean;
-        }
+        },
+        defaultPermission?: boolean
     };
 }
 

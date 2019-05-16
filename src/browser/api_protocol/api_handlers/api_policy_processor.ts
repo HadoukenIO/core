@@ -40,6 +40,14 @@ function getApiPath(action: string) : string {
     return actionMap[action] ? actionMap[action].apiPath : '';
 }
 
+function getApiDefaultPermission(action: string) : boolean {
+    if (actionMap[action]) {
+        return actionMap[action].defaultPermission === undefined || actionMap[action].defaultPermission;
+    } else {
+        return true;
+    }
+}
+
 function searchPolicyByConfigUrl(url: string): any {
     writeToLog(1, `searchPolicyByConfigUrl ${url}`, true);
     if (apiPolicies) {
@@ -75,18 +83,14 @@ function searchPolicyByConfigUrl(url: string): any {
  *                 }
  *  }
  *
- * For an app, if an API is not listed in its 'permissions' section, reject.
- *
- * For a child window, if an API is not listed in its 'permissions' section, check parent app.
  *
  * @param apiPath array of strings such as  ['Window', 'getNativeId']
  * @param windowPermissions permissions options for the window or app
- * @param isChildWindow true if being called for a child window
  * @param payload API message payload
  * @returns {boolean} true means permitted
  */
-function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, isChildWindow: boolean, payload: any) : boolean {
-    let permitted: boolean = isChildWindow;  // defaults to true of child window
+function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, payload: any) : boolean {
+    let permitted: boolean = true;  // defaults to true
     if (windowPermissions) {
         const parts: string[] = apiPath.split('.');
         const levels: number = parts.length;
@@ -133,24 +137,21 @@ function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, a
     writeToLog(1, `authorizeAction ${logSuffix}`, true);
 
     const apiPath: ApiPath = getApiPath(action);
-    let allowed: boolean = true;
+    let allowed: boolean = getApiDefaultPermission(action);
 
     if (apiPath) {  // if listed in the map, has to be checked
-        const isChildWindow = uuid !== name;
-        allowed = isChildWindow;
         if (permissions) {
-            allowed = checkWindowPermissions(apiPath, permissions, isChildWindow, payload);
+            allowed = checkWindowPermissions(apiPath, permissions, payload);
         }
     }
 
     if (allowed && parentUuid) {  // check parent if there is one
-        const parentObject = coreState.getAppObjByUuid(parentUuid);
+        const parentObject = coreState.getAppByUuid(parentUuid);
         if (parentObject) {
             const parentOpts = parentObject._options;
             if (parentOpts) {
                 writeToLog(1, `authorizeAction checks parent ${parentUuid} ${logSuffix}`, true);
                 allowed = authorizeActionFromWindowOptions(parentOpts, parentObject.parentUuid, action, payload);
-                return;
             } else {
                 writeToLog(1, `authorizeAction missing parent options ${parentUuid} ${logSuffix}`, true);
             }
@@ -183,13 +184,13 @@ function authorizeActionFromPolicy(windowOpts: any, action: string, payload: any
                 writeToLog(1, `authorizeActionFromPolicy checking with config url ${configUrl} ${logSuffix}`, true);
                 requestAppPermissions(configUrl).then((resultByUrl: any) => {
                     if (resultByUrl.permissions) {
-                        resolve(checkWindowPermissions(apiPath, resultByUrl.permissions, false, payload) ?
+                        resolve(checkWindowPermissions(apiPath, resultByUrl.permissions, payload) ?
                             POLICY_AUTH_RESULT.Allowed : POLICY_AUTH_RESULT.Denied);
                     } else {  // check default permissions defined with CONFIG_URL_WILDCARD
                         writeToLog(1, `authorizeActionFromPolicy checking with RVM ${CONFIG_URL_WILDCARD} ${logSuffix}`, true);
                         requestAppPermissions(CONFIG_URL_WILDCARD).then((resultByDefault: any) => {
                             if (resultByDefault.permissions) {
-                                resolve(checkWindowPermissions(apiPath, resultByDefault.permissions, false, payload) ?
+                                resolve(checkWindowPermissions(apiPath, resultByDefault.permissions, payload) ?
                                     POLICY_AUTH_RESULT.Allowed :
                                     POLICY_AUTH_RESULT.Denied);
                             } else {
@@ -236,7 +237,7 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
 
         const originWindow = coreState.getWindowByUuidName(uuid, name);
         if (originWindow) {
-            const appObject = coreState.getAppObjByUuid(uuid);
+            const appObject = coreState.getAppByUuid(uuid);
             // parentUuid for child windows is uuid of the app
             const parentUuid = uuid === name ? appObject.parentUuid : uuid;
             authorizeActionFromPolicy(coreState.getWindowOptionsById(originWindow.id), action, payload).
@@ -303,7 +304,8 @@ function retrieveAPIPolicyContent(): Promise<any> {
             topic: 'application',
             action: 'get-desktop-owner-settings',
             sourceUrl: 'https://openfin.co', // ignored by RVM if isGlobal is true
-            isGlobal: true // get all polices
+            isGlobal: true, // get all polices
+            timeToLive: desktopOwnerSettingsTimeout / 1000
         };
         rvmBus.publish(msg, (rvmResponse: any) => {
             writeToLog('info', `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
@@ -314,33 +316,31 @@ function retrieveAPIPolicyContent(): Promise<any> {
                 writeToLog('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
                 reject(rvmResponse);  // false indicates request to RVM failed
             }
-        }, desktopOwnerSettingsTimeout / 1000);
+        }, false);
     });
 }
 
-if (coreState.argo['enable-strict-api-permissions']) {
-    writeToLog('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
-    getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
-    desktopOwnerSettingEnabled = !!coreState.argo[ENABLE_DESKTOP_OWNER_SETTINGS];
-    writeToLog(1, `desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`, true);
-    if (desktopOwnerSettingEnabled === true && coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
-        desktopOwnerSettingsTimeout = Number(coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]);
-        writeToLog(1, `desktopOwnerSettingsTimeout ${desktopOwnerSettingsTimeout}`, true);
+writeToLog('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
+getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
+desktopOwnerSettingEnabled = !!coreState.argo[ENABLE_DESKTOP_OWNER_SETTINGS];
+writeToLog(1, `desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`, true);
+if (desktopOwnerSettingEnabled === true && coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
+    desktopOwnerSettingsTimeout = Number(coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]);
+    writeToLog(1, `desktopOwnerSettingsTimeout ${desktopOwnerSettingsTimeout}`, true);
+}
+for (const key of Object.keys(actionMap)) {
+    const endPoint: Endpoint = actionMap[key];
+    if (endPoint.apiPolicyDelegate) {
+        registerDelegate(endPoint.apiPath, endPoint.apiPolicyDelegate);
     }
-    for (const key of Object.keys(actionMap)) {
-        const endPoint: Endpoint = actionMap[key];
-        if (endPoint.apiPolicyDelegate) {
-            registerDelegate(endPoint.apiPath, endPoint.apiPolicyDelegate);
-        }
-    }
+}
 
-    if (desktopOwnerSettingEnabled === true) {
-        retrieveAPIPolicyContent().then((content: ApiPolicy) => {
-            apiPolicies = content;
-        }).catch(e => {
-            writeToLog(1, `Error retrieveAPIPolicies ${e}`, true);
-        });
-    }
+if (desktopOwnerSettingEnabled === true) {
+    retrieveAPIPolicyContent().then((content: ApiPolicy) => {
+        apiPolicies = content;
+    }).catch(e => {
+        writeToLog(1, `Error retrieveAPIPolicies ${e}`, true);
+    });
 }
 
 export {apiPolicyPreProcessor};
