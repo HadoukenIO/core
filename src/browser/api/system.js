@@ -28,6 +28,8 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
+import { extendNativeWindowInfo } from '../utils';
+import { isValidExternalWindow } from './external_window';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -281,6 +283,10 @@ exports.System = {
         const { uuid, name } = coreState.getWinObjById(id) || {};
         return uuid ? { uuid, name } : null;
     },
+    getFocusedExternalWindow: function() {
+        let { uuid } = electronBrowserWindow.getFocusedWindow() || {};
+        return uuid ? { uuid } : null;
+    },
     getHostSpecs: function() {
         let state = new idleState();
         const theme = (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {};
@@ -456,6 +462,25 @@ exports.System = {
         // Must require here otherwise runtime error Cannot create browser window before app is ready
         let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js');
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
+    },
+    getServiceConfiguration: function() {
+        const rvmMessage = {
+            topic: 'application',
+            action: 'get-service-settings',
+            sourceUrl: 'https://openfin.co'
+        };
+
+        return new Promise((resolve) => {
+            rvmBus.publish(rvmMessage, response => {
+                if (!response || !response.payload) {
+                    resolve(new Error('Bad Response from RVM'));
+                } else if (response.payload.success === false) {
+                    resolve(new Error(response.payload.error || 'get-service-settings failed'));
+                } else {
+                    resolve(response.payload.settings);
+                }
+            });
+        });
     },
     launchExternalProcess: function(identity, options, errDataCallback) { // Node-style callback used here
         options.srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
@@ -674,6 +699,22 @@ exports.System = {
                 uuid: eApp.uuid
             };
         });
+    },
+    getAllExternalWindows: function() {
+        const skipOpenFinWindows = true;
+        const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOpenFinWindows);
+        const externalWindows = [];
+
+        allNativeWindows.forEach(e => {
+            const externalWindow = extendNativeWindowInfo(e);
+            const isValid = isValidExternalWindow(externalWindow);
+
+            if (isValid) {
+                externalWindows.push(externalWindow);
+            }
+        });
+
+        return externalWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);

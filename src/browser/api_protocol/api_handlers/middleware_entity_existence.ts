@@ -5,6 +5,7 @@ import { applicationApiMap } from './application.js';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { windowApiMap } from './window.js';
 import { browserViewActionMap } from './browser_view';
+import { webContentsApiMap } from './webcontents';
 
 const apisToIgnore = new Set([
     // Application
@@ -56,6 +57,14 @@ function verifyEntityExistence(msg: MessagePackage, next: () => void): void {
             return nack('Could not locate the requested application');
         }
 
+    } else if (webContentsApiMap.hasOwnProperty(action)) {
+         // Window API
+
+        const wndExists = windowExists(uuid, name);
+
+        if (!wndExists) {
+            return nack('Could not locate the requested contents');
+        }
     } else if (windowApiMap.hasOwnProperty(action)) {
         // Window API
 

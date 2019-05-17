@@ -1,4 +1,4 @@
-import { OpenFinWindow } from '../shapes';
+import { OpenFinWindow, GroupWindow } from '../shapes';
 import of_events from './of_events';
 import route from '../common/route';
 import { BrowserWindow } from 'electron';
@@ -42,13 +42,15 @@ event propagation
 type WinId = string;
 interface GroupInfo {
     boundsChanging: boolean;
-    payloadCache: [OpenFinWindow, any, RectangleBase, number][];
+    payloadCache: [GroupWindow, any, RectangleBase, number][];
     interval?: any;
 }
 const listenerCache: Map<WinId, (...args: any[]) => void> = new Map();
 const groupInfoCache: Map<string, GroupInfo> = new Map();
 export interface Move {
-    ofWin: OpenFinWindow; rect: Rectangle; offset: RectangleBase;
+    ofWin: GroupWindow;
+    rect: Rectangle;
+    offset: RectangleBase;
 }
 async function emitChange(
     { ofWin, rect, offset }: Move,
@@ -65,11 +67,17 @@ async function emitChange(
     raiseEvent(ofWin, 'bounds-changed', eventArgs);
 
 }
-async function raiseEvent(ofWin: OpenFinWindow, topic: string, payload: any) {
-    const uuid = ofWin.uuid;
-    const name = ofWin.name;
+async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: any) {
+    const { uuid, name } = groupWindow;
     const id = { uuid, name };
-    const eventName = route.window(topic, uuid, name);
+    let eventName;
+
+    if (groupWindow.isExternalWindow) {
+        eventName = route.nativeWindow(topic, uuid, name);
+    } else {
+        eventName = route.window(topic, uuid, name);
+    }
+
     const eventArgs = {
         ...payload,
         uuid,
@@ -77,7 +85,8 @@ async function raiseEvent(ofWin: OpenFinWindow, topic: string, payload: any) {
         topic,
         type: 'window'
     };
-    if (ofWin.isProxy) {
+
+    if (groupWindow.isProxy) {
         const rt = await getRuntimeProxyWindow(id);
         const fin = rt.hostRuntime.fin;
         await fin.System.executeOnRemote(id, { action: 'raise-event', payload: { eventName, eventArgs } });
@@ -86,11 +95,11 @@ async function raiseEvent(ofWin: OpenFinWindow, topic: string, payload: any) {
     }
 }
 
-export function updateGroupedWindowBounds(win: OpenFinWindow, delta: Partial<RectangleBase>) {
+export function updateGroupedWindowBounds(win: GroupWindow, delta: Partial<RectangleBase>) {
     const shift = { ...zeroDelta, ...delta };
     return handleApiMove(win, shift);
 }
-export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Partial<RectangleBase>) {
+export function setNewGroupedWindowBounds(win: GroupWindow, partialBounds: Partial<RectangleBase>) {
     const { rect, offset } = moveFromOpenFinWindow(win);
     const bounds = { ...applyOffset(rect, offset), ...partialBounds };
     const newBounds = normalizeExternalBounds(bounds, offset);
@@ -98,7 +107,7 @@ export function setNewGroupedWindowBounds(win: OpenFinWindow, partialBounds: Par
     return handleApiMove(win, delta);
 }
 type MoveAccumulator = { otherWindows: Move[], leader?: Move };
-async function handleApiMove(win: OpenFinWindow, delta: RectangleBase) {
+async function handleApiMove(win: GroupWindow, delta: RectangleBase) {
     const { rect, offset } = moveFromOpenFinWindow(win);
     const newBounds = rect.shift(delta);
     if (!rect.moved(newBounds)) {
@@ -149,11 +158,11 @@ function handleBatchedMove(moves: Move[], bringWinsToFront: boolean = false) {
 const makeTranslate = (delta: RectangleBase) => ({ ofWin, rect, offset }: Move): Move => {
     return { ofWin, rect: rect.shift(delta), offset };
 };
-function getInitialPositions(win: OpenFinWindow) {
+function getInitialPositions(win: GroupWindow) {
     return WindowGroups.getGroup(win.groupUuid).map(moveFromOpenFinWindow);
 }
 function handleBoundsChanging(
-    win: OpenFinWindow,
+    win: GroupWindow,
     e: any,
     rawPayloadBounds: RectangleBase,
     changeType: ChangeType,
@@ -234,7 +243,7 @@ function handleMoveOnly(start: Rectangle, end: RectangleBase, initialPositions: 
         .map(makeTranslate(delta));
 }
 
-export function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
+export function getGroupInfoCacheForWindow(win: GroupWindow): GroupInfo {
     let groupInfo: GroupInfo = groupInfoCache.get(win.groupUuid);
     if (!groupInfo) {
         groupInfo = {
@@ -250,7 +259,7 @@ export function getGroupInfoCacheForWindow(win: OpenFinWindow): GroupInfo {
     return groupInfo;
 }
 
-export function addWindowToGroup(win: OpenFinWindow) {
+export function addWindowToGroup(win: GroupWindow) {
     win.browserWindow.setUserMovementEnabled(false);
     const listener = async (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
@@ -261,7 +270,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
                 const uuid = win.uuid;
                 const name = win.name;
                 const eventBounds = getEventBounds(win.browserWindow.getBounds());
-                const moved = new Set<OpenFinWindow>();
+                const moved = new Set<GroupWindow>();
                 groupInfo.boundsChanging = true;
                 await raiseEvent(win, 'begin-user-bounds-changing', { ...eventBounds, windowState: getState(win.browserWindow) });
                 const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
@@ -316,7 +325,7 @@ export function addWindowToGroup(win: OpenFinWindow) {
     win.browserWindow.on('disabled-frame-bounds-changing', listener);
 }
 
-export function removeWindowFromGroup(win: OpenFinWindow) {
+export function removeWindowFromGroup(win: GroupWindow) {
     if (!win.browserWindow.isDestroyed()) {
         win.browserWindow.setUserMovementEnabled(true);
         const winId = win.browserWindow.nativeId;

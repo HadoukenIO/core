@@ -58,6 +58,7 @@ export const SystemApiMap: APIHandlerMap = {
     'generate-guid': generateGuid,
     'get-all-applications': getAllApplications,
     'get-all-external-applications': getAllExternalApplications,
+    'get-all-external-windows': getAllExternalWindows,
     'get-all-windows': getAllWindows,
     'get-app-asset-info': getAppAssetInfo,
     'get-command-line-arguments': { apiFunc: getCommandLineArguments, apiPath: '.getCommandLineArguments' },
@@ -68,6 +69,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-entity-info': getEntityInfo,
     'get-environment-variable': { apiFunc: getEnvironmentVariable, apiPath: '.getEnvironmentVariable' },
     'get-focused-window': getFocusedWindow,
+    'get-focused-external-window': getFocusedExternalWindow,
     'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
     'get-machine-id': { apiFunc: getMachineId, apiPath: '.getMachineId' },
     'get-min-log-level': getMinLogLevel,
@@ -78,6 +80,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-remote-config': { apiFunc: getRemoteConfig, apiPath: '.getRemoteConfig' },
     'get-runtime-info': getRuntimeInfo,
     'get-rvm-info': getRvmInfo,
+    'get-service-configuration': getServiceConfiguration,
     'get-preload-scripts': getPreloadScripts,
     'get-version': getVersion,
     'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
@@ -113,6 +116,30 @@ export function init(): void {
 
 function didFail(e: any): boolean {
     return e !== undefined && e.constructor === Error;
+}
+
+const dosURL = 'https://openfin.co/documentation/desktop-owner-settings/';
+
+async function getServiceConfiguration(identity: Identity, message: APIMessage) {
+    const { name } = message.payload;
+    const response = await System.getServiceConfiguration();
+
+    if (didFail(response)) {
+        throw response;
+    }
+
+    if (!Array.isArray(response)) {
+        throw new Error(`Settings in desktop owner settings are not configured correctly, please see
+         ${dosURL} for configuration information`);
+    }
+
+    const config = response.find(service => service.name === name);
+
+    if (!config) {
+        throw new Error(`Service configuration for ${name} not available`);
+    }
+
+    return config;
 }
 
 function readRegistryValue(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -269,6 +296,12 @@ function getAllExternalApplications(identity: Identity, message: APIMessage, ack
     ack(dataAck);
 }
 
+function getAllExternalWindows(identity: Identity, message: APIMessage, ack: Acker): void {
+    const dataAck = Object.assign({}, successAck);
+    dataAck.data = System.getAllExternalWindows();
+    ack(dataAck);
+}
+
 function getAllWindows(identity: Identity, message: APIMessage, ack: Acker): void {
     const { locals } = message;
     const dataAck = Object.assign({}, successAck);
@@ -317,6 +350,12 @@ function getFocusedWindow(identity: Identity, message: APIMessage, ack: Acker): 
        }
     }
     dataAck.data = System.getFocusedWindow();
+    ack(dataAck);
+}
+
+function getFocusedExternalWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+    const dataAck = Object.assign({}, successAck);
+    dataAck.data = System.getFocusedExternalWindow();
     ack(dataAck);
 }
 
