@@ -18,7 +18,7 @@ import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
 import { getIdentityFromObject, isEnableChromiumBuild } from '../common/main';
-import { BrowserViewOptions } from './api/browser_view';
+import { BrowserViewOpts } from './api/browser_view';
 import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 
 interface ProxySettingsArgs {
@@ -804,7 +804,7 @@ const views: OfView[] = [];
 export interface OfView extends Identity {
     view: BrowserView;
 }
-export function addBrowserView (opts: BrowserViewOptions, view: BrowserView) {
+export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
     const {uuid, name} = opts;
     views.push({uuid, name, view});
 }

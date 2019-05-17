@@ -1,8 +1,9 @@
-import { BrowserView, BrowserViewConstructorOptions, Rectangle } from 'electron';
+import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions } from 'electron';
 import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
 import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView } from '../core_state';
 import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
-const convertOptions = require('../convert_options');
+import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
+import convertOptions = require('../convert_options');
 
 
 // import { BrowserWindow, BrowserView, app } from 'electron';
@@ -27,15 +28,17 @@ const convertOptions = require('../convert_options');
 //     view.setAutoResize(Object.assign({ width: true, height: true }, options.autoResize));
 //     win.setBrowserView(view);
 // }
-export interface BrowserViewOptions extends Identity {
-    opts: BrowserViewConstructorOptions;
-    url: string;
+export interface BrowserViewOpts extends BrowserViewCreationOptions {
+    uuid: string;
 }
 
-export function create(options: BrowserViewOptions) {
-    const view = new BrowserView(convertOptions.convertToElectron(options.opts || {}, false));
+export function create(options: BrowserViewOpts) {
+    const view = new BrowserView(convertOptions.convertToElectron({}, false));
     addBrowserView(options, view);
     view.webContents.loadURL(options.url);
+    if (options.autoResize) {
+        view.setAutoResize(options.autoResize);
+    }
 }
 
 export async function attach(ofView: OfView, toIdentity: Identity) {
@@ -53,9 +56,6 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
    }
 }
 
-export async function updateOptions(ofView, opts) {
-    
-}
 
 export async function setBounds(ofView: OfView, bounds: Rectangle) {
     const {view} = ofView;
