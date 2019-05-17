@@ -55,7 +55,9 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
                         window = findExternalWindow({ uuid });
                     }
 
-                    if (window && window.groupUuid) {
+                    const options = payload.options || { moveIndependently: false };
+
+                    if (window && window.groupUuid && !options.moveIndependently) {
                         const changeType = hijackThese[action](payload);
                         const moved = changeType.change === 'delta'
                             ? updateGroupedWindowBounds(window, changeType)
