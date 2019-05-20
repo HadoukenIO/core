@@ -26,8 +26,8 @@ process.versions.openfin = electron.remote.app.getRuntimeVersion();
 process.versions.mainFrameRoutingId = electron.ipcRenderer.getFrameRoutingID();
 process.versions.cachePath = electron.remote.app.getPath('userData');
 
-const mainWindowId = electron.remote.getCurrentWindow(process.versions.mainFrameRoutingId).id;
-const apiInfo = electron.remote.require('./src/renderer/main').apiWithOptions(mainWindowId);
+const webContentsId = electron.remote.getCurrentWebContents().id;
+const apiInfo = electron.remote.require('./src/renderer/main').apiWithOptions(webContentsId);
 const { apiString, initialOptions } = JSON.parse(apiInfo);
 
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');
@@ -136,4 +136,4 @@ const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOrigi
     susbcribeForTeardown(routingId, teardownHandlers);
 };
 
-registerAPI(window, routingId, isMainFrame, isSameOriginIframe, isCrossOriginIframe, isChildMainFrame, initialOptions);
+registerAPI(window, routingId, isMainFrame, isSameOriginIframe, isCrossOriginIframe, isChildMainFrame);
