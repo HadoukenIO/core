@@ -798,15 +798,18 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
 }
 function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
-    return win.openfinWindow;
+    return win && win.openfinWindow;
 }
 const views: OfView[] = [];
 export interface OfView extends Identity {
+    name: string;
     view: BrowserView;
+    frames: Map<string, Shapes.ChildFrameInfo>;
+    _options: Shapes.WebOptions;
 }
 export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
     const {uuid, name} = opts;
-    views.push({uuid, name, view});
+    views.push({ frames: new Map(), uuid, _options: {uuid, name}, name, view});
 }
 export function getBrowserViewByIdentity({uuid, name}: Identity) {
    return views.find(v => v.uuid === uuid && v.name === name);
@@ -824,11 +827,14 @@ export function getWebContentsInitialOptionSet(webContentsId: number) {
         return getOptionsFromOpenFinWindow(ofWin);
     }
     const bview = getBrowserViewByWebContentsId(webContentsId);
+    if (bview) {
+        return getOptionsFromOpenFinWindow(bview);
+    }
 }
 
-function getOptionsFromOpenFinWindow(ofWin: Shapes.OpenFinWindow) {
+function getOptionsFromOpenFinWindow(ofWin: Shapes.InjectableContext) {
     const options = ofWin._options;
-    const { uuid, name } = options;
+    const { uuid, name } = ofWin;
     const entityInfo = getEntityInfo({ uuid, name });
     const elIPCConfig = {
         channels: electronIPC.channels
