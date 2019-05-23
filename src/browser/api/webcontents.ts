@@ -1,6 +1,5 @@
 import * as url from 'url';
 
-
 export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {
     webContents.executeJavaScript(code, true, (result) => {
         callback(undefined, result);
@@ -18,7 +17,6 @@ export function getInfo(webContents: Electron.WebContents) {
 
 export function getAbsolutePath(webContents: Electron.WebContents, path: string) {
     const windowURL = webContents.getURL();
-
     return  url.resolve(windowURL, path);
 }
 
@@ -41,8 +39,7 @@ export async function navigateBack (webContents: Electron.WebContents) {
 
 export async function navigateForward (webContents: Electron.WebContents) {
     if (!webContents.canGoForward()) {
-        const error = new Error('Cannot navigate forward');
-        throw error;
+        throw new Error('Cannot navigate forward');
     }
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goForward();
@@ -73,14 +70,13 @@ export function stopNavigation(webContents: Electron.WebContents) {
 function createNavigationEndPromise(webContents: Electron.WebContents): Promise<void> {
     return new Promise((resolve, reject) => {
         const chromeErrCodesLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
-        // tslint:disable-next-line:no-empty
-        let didSucceed = () => { };
         const didFail = (event: Electron.Event, errCode: number) => {
+            // tslint:disable-next-line: no-use-before-declare
             webContents.removeListener('did-finish-load', didSucceed);
             const error = new Error(`error #${errCode}. See ${chromeErrCodesLink} for details`);
             reject(error);
         };
-        didSucceed = () => {
+        const didSucceed = () => {
             webContents.removeListener('did-fail-load', didFail);
             resolve();
         };
