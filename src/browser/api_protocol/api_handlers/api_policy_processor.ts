@@ -87,10 +87,11 @@ function searchPolicyByConfigUrl(url: string): any {
  * @param apiPath array of strings such as  ['Window', 'getNativeId']
  * @param windowPermissions permissions options for the window or app
  * @param payload API message payload
+ * @param defaultPermission default permission for the API
  * @returns {boolean} true means permitted
  */
-function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, payload: any) : boolean {
-    let permitted: boolean = true;  // defaults to true
+function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, payload: any, defaultPermission: boolean) : boolean {
+    let permitted: boolean = defaultPermission;
     if (windowPermissions) {
         const parts: string[] = apiPath.split('.');
         const levels: number = parts.length;
@@ -141,7 +142,7 @@ function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, a
 
     if (apiPath) {  // if listed in the map, has to be checked
         if (permissions) {
-            allowed = checkWindowPermissions(apiPath, permissions, payload);
+            allowed = checkWindowPermissions(apiPath, permissions, payload, allowed);
         }
     }
 
@@ -180,17 +181,18 @@ function authorizeActionFromPolicy(windowOpts: any, action: string, payload: any
     return new Promise((resolve, reject) => {
         if (desktopOwnerSettingEnabled === true) {
             const configUrl = coreState.getConfigUrlByUuid(uuid);
+            const defaultPermission: boolean = getApiDefaultPermission(action);
             if (configUrl) {
                 writeToLog(1, `authorizeActionFromPolicy checking with config url ${configUrl} ${logSuffix}`, true);
                 requestAppPermissions(configUrl).then((resultByUrl: any) => {
                     if (resultByUrl.permissions) {
-                        resolve(checkWindowPermissions(apiPath, resultByUrl.permissions, payload) ?
+                        resolve(checkWindowPermissions(apiPath, resultByUrl.permissions, payload, defaultPermission) ?
                             POLICY_AUTH_RESULT.Allowed : POLICY_AUTH_RESULT.Denied);
                     } else {  // check default permissions defined with CONFIG_URL_WILDCARD
                         writeToLog(1, `authorizeActionFromPolicy checking with RVM ${CONFIG_URL_WILDCARD} ${logSuffix}`, true);
                         requestAppPermissions(CONFIG_URL_WILDCARD).then((resultByDefault: any) => {
                             if (resultByDefault.permissions) {
-                                resolve(checkWindowPermissions(apiPath, resultByDefault.permissions, payload) ?
+                                resolve(checkWindowPermissions(apiPath, resultByDefault.permissions, payload, defaultPermission) ?
                                     POLICY_AUTH_RESULT.Allowed :
                                     POLICY_AUTH_RESULT.Denied);
                             } else {
