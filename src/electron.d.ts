@@ -2777,24 +2777,27 @@ declare namespace Electron {
                                      */
                                     removed: boolean) => void): this;
     /**
+     * A promise which resolves when the cookie store has been flushed
      * Writes any unwritten cookies data to disk.
      */
-    flushStore(callback: Function): void;
+    flushStore(): Promise<void>;
     /**
-     * Sends a request to get all cookies matching filter, callback will be called with
-     * callback(error, cookies) on complete.
+     * A promise which resolves an array of cookie objects.
+     *
+     * Sends a request to get all cookies matching `filter`, and resolves a promise
+     * with the response.
      */
-    get(filter: Filter, callback: (error: Error, cookies: Cookie[]) => void): void;
+    get(filter: Filter): Promise<Electron.Cookie[]>;
     /**
-     * Removes the cookies matching url and name, callback will called with callback()
-     * on complete.
+     * A promise which resolves when the cookie has been removed
+     * Removes the cookies matching `url` and `name`
      */
-    remove(url: string, name: string, callback: Function): void;
+    remove(url: string, name: string): Promise<void>;
     /**
-     * Sets a cookie with details, callback will be called with callback(error) on
-     * complete.
+     * A promise which resolves when the cookie has been set
+     * Sets a cookie with `details`.
      */
-    set(details: Details, callback: (error: Error) => void): void;
+    set(details: Details): Promise<void>;
   }
 
   interface CPUUsage {

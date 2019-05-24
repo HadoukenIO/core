@@ -1193,7 +1193,7 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
         return;
     }
 
-    browserWindow.webContents.executeJavaScript(code, true, (result) => {
+    browserWindow.webContents.executeJavaScript(code, true).then(result => {
         callback(undefined, result);
     });
 };
@@ -1761,7 +1761,7 @@ Window.authenticate = function(identity, username, password, callback) {
 Window.getZoomLevel = function(identity, callback) {
     let browserWindow = getElectronBrowserWindow(identity, 'get zoom level for');
 
-    browserWindow.webContents.getZoomLevel(callback);
+    callback(browserWindow.webContents.getZoomLevel());
 };
 
 Window.setZoomLevel = function(identity, level) {
@@ -1846,16 +1846,15 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     function handleSaveStateAlwaysResolve() {
         return new Promise((resolve, reject) => {
             if (browserWindow._options.saveWindowState) {
-                browserWindow.webContents.getZoomLevel(zoomLevel => {
-                    const cachedBounds = _boundsChangedHandler.getCachedBounds();
-                    saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
-                        if (err) {
-                            log.writeToLog('info', err);
-                        }
-                        // These were causing an exception on close if the window was reloaded
-                        _boundsChangedHandler.teardown();
-                        resolve();
-                    });
+                const zoomLevel = browserWindow.webContents.getZoomLevel();
+                const cachedBounds = _boundsChangedHandler.getCachedBounds();
+                saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
+                    if (err) {
+                        log.writeToLog('info', err);
+                    }
+                    // These were causing an exception on close if the window was reloaded
+                    _boundsChangedHandler.teardown();
+                    resolve();
                 });
             } else {
                 _boundsChangedHandler.teardown();
