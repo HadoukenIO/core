@@ -225,29 +225,32 @@ function moveWindowBy(identity: Identity, message: APIMessage, ack: Acker): void
     ack(successAck);
 }
 
-function navigateWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const { url } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.navigate(windowIdentity, url);
-    ack(successAck);
+    return Window.navigate(windowIdentity, url)
+        .then(() => ack(successAck))
+        .catch(nack);
 }
 
-function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker): void {
+function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.navigateBack(windowIdentity);
-    ack(successAck);
+    Window.navigateBack(windowIdentity)
+        .then(() => ack(successAck))
+        .catch(nack);
 }
 
-function navigateWindowForward(identity: Identity, message: APIMessage, ack: Acker): void {
+function navigateWindowForward(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.navigateForward(windowIdentity);
-    ack(successAck);
+    Window.navigateForward(windowIdentity)
+        .then(() => ack(successAck))
+        .catch(nack);
 }
 
 function stopWindowNavigation(identity: Identity, message: APIMessage, ack: Acker): void {

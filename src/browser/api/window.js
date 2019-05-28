@@ -1,6 +1,6 @@
-/*
+/**
     src/browser/api/window.js
- */
+ **/
 
 // build-in modules
 let fs = require('fs');
@@ -1502,18 +1502,45 @@ Window.moveTo = function(identity, left, top) {
 };
 
 Window.navigate = function(identity, url) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
-    browserWindow.webContents.loadURL(url);
+    return new Promise((resolve, reject) => {
+        const browserWindow = getElectronBrowserWindow(identity);
+
+        onceNavigationFinished(browserWindow, resolve, reject);
+
+        // todo: replace everything here with "return browserWindow.webContents.loadURL(url)" once we get to electron 5.* 
+        // reason: starting electron v5, loadUrl returns a promise that resolves according to the same logic we apply here
+        browserWindow.webContents.loadURL(url);
+    });
 };
 
 Window.navigateBack = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate back');
-    browserWindow.webContents.goBack();
+    return new Promise((resolve, reject) => {
+        const browserWindow = getElectronBrowserWindow(identity);
+
+        if (!browserWindow.webContents.canGoBack()) {
+            const error = new Error(`Cannot navigate back`);
+            return reject(error);
+        }
+
+        onceNavigationFinished(browserWindow, resolve, reject);
+
+        browserWindow.webContents.goBack();
+    });
 };
 
 Window.navigateForward = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
-    browserWindow.webContents.goForward();
+    return new Promise((resolve, reject) => {
+        const browserWindow = getElectronBrowserWindow(identity);
+
+        if (!browserWindow.webContents.canGoForward()) {
+            const error = new Error(`Cannot navigate forward`);
+            return reject(error);
+        }
+
+        onceNavigationFinished(browserWindow, resolve, reject);
+
+        browserWindow.webContents.goForward();
+    });
 };
 
 Window.reload = function(identity, ignoreCache = false) {
@@ -2440,6 +2467,26 @@ function boundsVisible(bounds, monitorInfo) {
         }
     }
     return visible;
+}
+
+function onceNavigationFinished(browserWindow, successCB, failureCB) {
+    const chromeErrCodesLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
+
+    let handleLoadFinished = (success, e) => {
+        browserWindow.webContents.removeListener('did-fail-load', didFail);
+        browserWindow.webContents.removeListener('did-finish-load', didSucceed);
+        if (success) {
+            successCB();
+        } else {
+            const error = new Error(`error #${e.errCode}. See ${chromeErrCodesLink} for details`);
+            failureCB(error);
+        }
+    };
+
+    let didFail = (event, errCode, errDesc) => handleLoadFinished(false, { errCode, errDesc });
+    let didSucceed = () => handleLoadFinished(true);
+    browserWindow.webContents.on('did-fail-load', didFail);
+    browserWindow.webContents.on('did-finish-load', didSucceed);
 }
 
 module.exports.Window = Window;
