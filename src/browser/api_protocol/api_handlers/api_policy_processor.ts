@@ -53,7 +53,9 @@ function searchPolicyByConfigUrl(url: string): any {
     if (apiPolicies) {
         for (const policyName of Object.keys(apiPolicies)) {
             const policy = apiPolicies[policyName];
-            if (Array.isArray(policy.urls) &&
+            if (url === CONFIG_URL_WILDCARD && url === policyName) {
+                return policy;
+            } else if (Array.isArray(policy.urls) &&
                     electronApp.matchesURL(url, policy.urls)) {
                 writeToLog(1, `searchPolicyByConfigUrl matched by policy name ${policyName}`, true);
                 return policy;
@@ -68,9 +70,9 @@ function searchPolicyByConfigUrl(url: string): any {
 }
 
 /**
- * Checks if action needs to be listed in permissions option of the window
+ * Checks if action is allowed based on permission definitions
  *
- * Example of permissions
+ * Example of permission definitions
  *
  *  permissions": {
  *      "System": { "launchExternalProcess": true },
@@ -85,18 +87,18 @@ function searchPolicyByConfigUrl(url: string): any {
  *
  *
  * @param apiPath array of strings such as  ['Window', 'getNativeId']
- * @param windowPermissions permissions options for the window or app
+ * @param permissionDefinitions permissions options
  * @param payload API message payload
  * @param defaultPermission default permission for the API
  * @returns {boolean} true means permitted
  */
-function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, payload: any, defaultPermission: boolean) : boolean {
+function checkPermissionDefinitions(apiPath: ApiPath, permissionDefinitions: any, payload: any, defaultPermission: boolean) : boolean {
     let permitted: boolean = defaultPermission;
-    if (windowPermissions) {
+    if (permissionDefinitions) {
         const parts: string[] = apiPath.split('.');
         const levels: number = parts.length;
         let level: number;
-        let lastValue: any = windowPermissions;
+        let lastValue: any = permissionDefinitions;
         for (level = 0; level < levels; level += 1) {
             const part: string = parts[level];
             if (lastValue.hasOwnProperty(part)) {
@@ -105,17 +107,17 @@ function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, payloa
                 break;
             }
         }
-        writeToLog(1, `checkWindowPermissions level ${level} ${apiPath}`, true);
+        writeToLog(1, `checkPermissionDefinitions level ${level} ${apiPath}`, true);
         if (level === levels) {
             if (typeof lastValue === 'boolean') {
                 // simple true or false
                 permitted = lastValue;
             } else if (delegateMap.has(apiPath)) {
-                writeToLog(1, `checkWindowPermissions calling delegate ${apiPath}`, true);
+                writeToLog(1, `checkPermissionDefinitions calling delegate ${apiPath}`, true);
                 permitted = delegateMap.get(apiPath).checkPermissions({apiPath,
                                                     permissionSettings: lastValue, payload});
             } else {
-                writeToLog(1, `checkWindowPermissions api path not defined ${apiPath}`, true);
+                writeToLog(1, `checkPermissionDefinitions api path not defined ${apiPath}`, true);
             }
         }
     }
@@ -142,7 +144,7 @@ function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, a
 
     if (apiPath) {  // if listed in the map, has to be checked
         if (permissions) {
-            allowed = checkWindowPermissions(apiPath, permissions, payload, allowed);
+            allowed = checkPermissionDefinitions(apiPath, permissions, payload, allowed);
         }
     }
 
@@ -186,13 +188,13 @@ function authorizeActionFromPolicy(windowOpts: any, action: string, payload: any
                 writeToLog(1, `authorizeActionFromPolicy checking with config url ${configUrl} ${logSuffix}`, true);
                 requestAppPermissions(configUrl).then((resultByUrl: any) => {
                     if (resultByUrl.permissions) {
-                        resolve(checkWindowPermissions(apiPath, resultByUrl.permissions, payload, defaultPermission) ?
+                        resolve(checkPermissionDefinitions(apiPath, resultByUrl.permissions, payload, defaultPermission) ?
                             POLICY_AUTH_RESULT.Allowed : POLICY_AUTH_RESULT.Denied);
                     } else {  // check default permissions defined with CONFIG_URL_WILDCARD
                         writeToLog(1, `authorizeActionFromPolicy checking with RVM ${CONFIG_URL_WILDCARD} ${logSuffix}`, true);
                         requestAppPermissions(CONFIG_URL_WILDCARD).then((resultByDefault: any) => {
                             if (resultByDefault.permissions) {
-                                resolve(checkWindowPermissions(apiPath, resultByDefault.permissions, payload, defaultPermission) ?
+                                resolve(checkPermissionDefinitions(apiPath, resultByDefault.permissions, payload, defaultPermission) ?
                                     POLICY_AUTH_RESULT.Allowed :
                                     POLICY_AUTH_RESULT.Denied);
                             } else {
@@ -244,16 +246,19 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
             const parentUuid = uuid === name ? appObject.parentUuid : uuid;
             authorizeActionFromPolicy(coreState.getWindowOptionsById(originWindow.id), action, payload).
               then((result: POLICY_AUTH_RESULT) => {
-                if (result === POLICY_AUTH_RESULT.Allowed) {
-                    next();
-                } else if (result === POLICY_AUTH_RESULT.Denied) {
+                if (result === POLICY_AUTH_RESULT.Denied) {
                     writeToLog(1, `apiPolicyPreProcessor rejecting from policy ${logSuffix}`, true);
                     nack('Rejected, action is not authorized');
-                } else if (authorizeActionFromWindowOptions(coreState.getWindowOptionsById(originWindow.id), parentUuid, action, payload)) {
-                    next();
                 } else {
-                    writeToLog(1, `apiPolicyPreProcessor rejecting from win opts ${logSuffix}`, true);
-                    nack('Rejected, action is not authorized');
+                    if (result === POLICY_AUTH_RESULT.Allowed) {
+                        writeToLog(1, `apiPolicyPreProcessor allowed from policy, still need to check window options ${logSuffix}`, true);
+                    }
+                    if (authorizeActionFromWindowOptions(coreState.getWindowOptionsById(originWindow.id), parentUuid, action, payload)) {
+                        next();
+                    } else {
+                        writeToLog(1, `apiPolicyPreProcessor rejecting from win opts ${logSuffix}`, true);
+                        nack('Rejected, action is not authorized');
+                    }
                 }
             }).catch(() => {
                 writeToLog(1, `apiPolicyPreProcessor rejecting from error ${logSuffix}`, true);
