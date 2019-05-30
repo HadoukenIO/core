@@ -14064,6 +14064,10 @@ declare namespace Electron {
      * to receive events from all processes on the current desktop. Defaults to 0.
      */
     pid?: number;
+    /**
+     * Excludes windows owned by the current runtime process. Defaults to true.
+     */
+    skipOwnWindows?: boolean;
   }
 
   interface EditFlags {
