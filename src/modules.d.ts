@@ -162,7 +162,4 @@ declare namespace Electron {
         const releaseLock: (key: string) => number;
     }
 
-    export class WinEventHookEmitter extends EventEmitter {
-        constructor(opts?: { pid?: number });
-    }
 }
