@@ -222,24 +222,23 @@ export function addWindowToGroup(win: GroupWindow) {
             moves.forEach(({ofWin}) => moved.add(ofWin));
             if (!boundsChanging) {
                 boundsChanging = true;
-                    win.browserWindow.once('end-user-bounds-change', () => {
-                        // Reset flags for native windows and mac OS
-                        boundsChanging = false;
-                        payloadCache = [];
-                        clearInterval(interval);
-                        interval = null;
-                        // Emit expected events that aren't automatically emitted
-                        moved.forEach((movedWin) => {
-                            const isLeader = movedWin === win;
-                            if (!isLeader || win.isExternalWindow) {
-                                // bounds-changed is emitted for the leader, but not other windows
-                                const endPosition = moveFromOpenFinWindow(movedWin);
-                                emitChange('bounds-changed', endPosition, changeType, 'group');
-                            }
-                        });
-                        moved = new Set<GroupWindow>();
+                win.browserWindow.once('end-user-bounds-change', () => {
+                    // Emit expected events that aren't automatically emitted
+                    moved.forEach((movedWin) => {
+                        const isLeader = movedWin === win;
+                        if (!isLeader || win.isExternalWindow) {
+                            // bounds-changed is emitted for the leader, but not other windows
+                            const endPosition = moveFromOpenFinWindow(movedWin);
+                            emitChange('bounds-changed', endPosition, changeType, 'group');
+                        }
                     });
-                // }
+                    // Reset map of moved windows and flags for native windows and mac OS
+                    boundsChanging = false;
+                    payloadCache = [];
+                    clearInterval(interval);
+                    interval = null;
+                    moved = new Set<GroupWindow>();
+                });
             } else {
                 // bounds-changing is not emitted for the leader, but is for the other windows
                 const leaderMove = moves[0] && moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
