@@ -185,7 +185,7 @@ seqs.isAnimating
         ofEvents.emit(route('notifications', 'listener/'), payload); // legacy trailing slash; do not remove!
     });
 
-seqs.removes.subscribe((removedOpts: Object) => {
+seqs.removes.subscribe((removedOpts: object) => {
     cleanPendingNotes ();
 
     try {
@@ -348,7 +348,7 @@ function createQCounterNumPendingMessage() {
     };
 }
 
-function positionWindowsImmediate(liveNotes: Object[]) {
+function positionWindowsImmediate(liveNotes: object[]) {
     try {
         const {bottom} = getPrimaryMonitorAvailableRect();
         const defaultTop = bottom - 100;

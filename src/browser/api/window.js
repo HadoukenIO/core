@@ -5,7 +5,6 @@
 // build-in modules
 let fs = require('fs');
 let path = require('path');
-let url = require('url');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
@@ -35,6 +34,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
+import * as WebContents from './webcontents';
 import { isFileUrl, isHttpUrl, getIdentityFromObject, isObject, mergeDeep } from '../../common/main';
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -1198,9 +1198,7 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
         return;
     }
 
-    browserWindow.webContents.executeJavaScript(code, true, (result) => {
-        callback(undefined, result);
-    });
+    WebContents.executeJavascript(browserWindow.webContents, code, callback);
 };
 
 Window.flash = function(identity) {
@@ -1277,23 +1275,16 @@ Window.getGroup = function(identity) {
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
     const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
-    const webContents = browserWindow.webContents;
-    const windowInfo = {
-        canNavigateBack: webContents.canGoBack(),
-        canNavigateForward: webContents.canGoForward(),
+    const windowInfo = Object.assign({
         preloadScripts,
-        title: webContents.getTitle(),
-        url: webContents.getURL()
-    };
+    }, WebContents.getInfo(browserWindow.webContents));
     return windowInfo;
 };
 
 
 Window.getAbsolutePath = function(identity, path) {
     let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
-    let windowURL = browserWindow.webContents.getURL();
-
-    return (path || path === 0) ? url.resolve(windowURL, path) : '';
+    return (path || path === 0) ? WebContents.getAbsolutePath(browserWindow.webContents, path) : '';
 };
 
 
@@ -1502,60 +1493,28 @@ Window.moveTo = function(identity, left, top) {
 };
 
 Window.navigate = function(identity, url) {
-    return new Promise((resolve, reject) => {
-        const browserWindow = getElectronBrowserWindow(identity);
-
-        onceNavigationFinished(browserWindow, resolve, reject);
-
-        // todo: replace everything here with "return browserWindow.webContents.loadURL(url)" once we get to electron 5.* 
-        // reason: starting electron v5, loadUrl returns a promise that resolves according to the same logic we apply here
-        browserWindow.webContents.loadURL(url);
-    });
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate');
+    return WebContents.navigate(browserWindow.webContents, url);
 };
 
 Window.navigateBack = function(identity) {
-    return new Promise((resolve, reject) => {
-        const browserWindow = getElectronBrowserWindow(identity);
-
-        if (!browserWindow.webContents.canGoBack()) {
-            const error = new Error(`Cannot navigate back`);
-            return reject(error);
-        }
-
-        onceNavigationFinished(browserWindow, resolve, reject);
-
-        browserWindow.webContents.goBack();
-    });
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate back');
+    return WebContents.navigateBack(browserWindow.webContents);
 };
 
 Window.navigateForward = function(identity) {
-    return new Promise((resolve, reject) => {
-        const browserWindow = getElectronBrowserWindow(identity);
-
-        if (!browserWindow.webContents.canGoForward()) {
-            const error = new Error(`Cannot navigate forward`);
-            return reject(error);
-        }
-
-        onceNavigationFinished(browserWindow, resolve, reject);
-
-        browserWindow.webContents.goForward();
-    });
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
+    return WebContents.navigateForward(browserWindow.webContents);
 };
 
 Window.reload = function(identity, ignoreCache = false) {
-    let browserWindow = getElectronBrowserWindow(identity, 'reload');
-
-    if (!ignoreCache) {
-        browserWindow.webContents.reload();
-    } else {
-        browserWindow.webContents.reloadIgnoringCache();
-    }
+    const browserWindow = getElectronBrowserWindow(identity, 'reload');
+    WebContents.reload(browserWindow.webContents, ignoreCache);
 };
 
 Window.stopNavigation = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
-    browserWindow.webContents.stop();
+    const browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
+    WebContents.stopNavigation(browserWindow.webContents);
 };
 
 Window.removeEventListener = function(identity, type, listener) {
@@ -1795,15 +1754,12 @@ Window.authenticate = function(identity, username, password, callback) {
 
 Window.getZoomLevel = function(identity, callback) {
     let browserWindow = getElectronBrowserWindow(identity, 'get zoom level for');
-
-    browserWindow.webContents.getZoomLevel(callback);
+    WebContents.getZoomLevel(browserWindow.webContents, callback);
 };
 
 Window.setZoomLevel = function(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
-
-    // browserWindow.webContents.setZoomLevel(level); // zooms all windows loaded from same domain
-    browserWindow.webContents.send('zoom', { level }); // zoom just this window
+    WebContents.setZoomLevel(browserWindow.webContents, level);
 };
 
 Window.onUnload = (identity) => {
@@ -2467,26 +2423,6 @@ function boundsVisible(bounds, monitorInfo) {
         }
     }
     return visible;
-}
-
-function onceNavigationFinished(browserWindow, successCB, failureCB) {
-    const chromeErrCodesLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
-
-    let handleLoadFinished = (success, e) => {
-        browserWindow.webContents.removeListener('did-fail-load', didFail);
-        browserWindow.webContents.removeListener('did-finish-load', didSucceed);
-        if (success) {
-            successCB();
-        } else {
-            const error = new Error(`error #${e.errCode}. See ${chromeErrCodesLink} for details`);
-            failureCB(error);
-        }
-    };
-
-    let didFail = (event, errCode, errDesc) => handleLoadFinished(false, { errCode, errDesc });
-    let didSucceed = () => handleLoadFinished(true);
-    browserWindow.webContents.on('did-fail-load', didFail);
-    browserWindow.webContents.on('did-finish-load', didSucceed);
 }
 
 module.exports.Window = Window;

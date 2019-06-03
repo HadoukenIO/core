@@ -50,7 +50,7 @@ interface OfWindowOptions {
     alwaysOnTop: boolean;
     autoShow: boolean;
     contextMenu: boolean;
-    cornerRounding: Object;
+    cornerRounding: object;
     defaultHeight: number;
     defaultWidth: number;
     draggable: boolean;
