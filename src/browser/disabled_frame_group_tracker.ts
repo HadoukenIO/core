@@ -42,13 +42,7 @@ function emitChange(topic: string, { ofWin, rect, offset }: Move, changeType: Ch
 async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: Object) {
     const { uuid, name, isProxy, isExternalWindow } = groupWindow;
     const identity = { uuid, name };
-    let eventName;
-
-    if (isExternalWindow) {
-        eventName = route.externalWindow(topic, uuid, name);
-    } else {
-        eventName = route.window(topic, uuid, name);
-    }
+    const eventName = isExternalWindow ? route.externalWindow(topic, uuid, name) : route.window(topic, uuid, name);
 
     const eventArgs = {
         ...payload,
@@ -94,7 +88,7 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
             ? ChangeType.POSITION_AND_SIZE
             : ChangeType.SIZE
         : ChangeType.POSITION;
-    const moves = handleBoundsChanging(win, applyOffset(newBounds, offset), changeType);
+    const moves = generateWindowMoves(win, applyOffset(newBounds, offset), changeType);
     const { leader, otherWindows } = moves.reduce((accum: MoveAccumulator, move) => {
         move.ofWin === win ? accum.leader = move : accum.otherWindows.push(move);
         return accum;
@@ -134,7 +128,7 @@ const makeTranslate = (delta: RectangleBase) => ({ ofWin, rect, offset }: Move):
 function getInitialPositions(win: GroupWindow) {
     return WindowGroups.getGroup(win.groupUuid).map(moveFromOpenFinWindow);
 }
-function handleBoundsChanging(win: GroupWindow, rawBounds: RectangleBase, changeType: ChangeType): Move[] {
+function generateWindowMoves(win: GroupWindow, rawBounds: RectangleBase, changeType: ChangeType): Move[] {
     const initialPositions: Move[] = getInitialPositions(win);
     let moves = initialPositions;
     const delta = getLeaderDelta(win, rawBounds);
@@ -210,48 +204,49 @@ export function addWindowToGroup(win: GroupWindow) {
         win.browserWindow.setUserMovementEnabled(false);
     }
 
-    const genericListener = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
+    const handleEndBoundsChanging = (changeType: ChangeType) => {
+        // Emit expected events that aren't automatically emitted
+        moved.forEach((movedWin) => {
+            const isLeader = movedWin === win;
+            if (!isLeader || win.isExternalWindow) {
+                // bounds-changed is emitted for the leader, but not other windows
+                const endPosition = moveFromOpenFinWindow(movedWin);
+                emitChange('bounds-changed', endPosition, changeType, 'group');
+            }
+        });
+        // Reset map of moved windows and flags for native windows and mac OS
+        boundsChanging = false;
+        payloadCache = [];
+        clearInterval(interval);
+        interval = null;
+        moved = new Set<GroupWindow>();
+    };
+
+    const handleBoundsChanging = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
             e.preventDefault();
             Object.keys(rawPayloadBounds).map((key: keyof RectangleBase) => {
                 rawPayloadBounds[key] = rawPayloadBounds[key] / scaleFactor;
             });
-            const moves = handleBoundsChanging(win, rawPayloadBounds, changeType);
+            const moves = generateWindowMoves(win, rawPayloadBounds, changeType);
             handleBatchedMove(moves, changeType, true);
             // Keep track of which windows have moved in order to emit events
             moves.forEach(({ofWin}) => moved.add(ofWin));
             if (!boundsChanging) {
                 boundsChanging = true;
-                win.browserWindow.once('end-user-bounds-change', () => {
-                    // Emit expected events that aren't automatically emitted
-                    moved.forEach((movedWin) => {
-                        const isLeader = movedWin === win;
-                        if (!isLeader || win.isExternalWindow) {
-                            // bounds-changed is emitted for the leader, but not other windows
-                            const endPosition = moveFromOpenFinWindow(movedWin);
-                            emitChange('bounds-changed', endPosition, changeType, 'group');
-                        }
-                    });
-                    // Reset map of moved windows and flags for native windows and mac OS
-                    boundsChanging = false;
-                    payloadCache = [];
-                    clearInterval(interval);
-                    interval = null;
-                    moved = new Set<GroupWindow>();
-                });
-            } else {
+                const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changing';
+                win.browserWindow.once(endingEvent, handleEndBoundsChanging);
+            } else if (moves.length) {
                 // bounds-changing is not emitted for the leader, but is for the other windows
-                const leaderMove = moves[0] && moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
-                if (leaderMove) {
-                    emitChange('bounds-changing', leaderMove, changeType, 'self');
-                }
+                const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
+                emitChange('bounds-changing', leaderMove, changeType, 'self');
             }
         } catch (error) {
             writeToLog('error', error);
         }
     };
-    const moveListener = (e: any, bounds: RectangleBase) => genericListener(e, bounds, 0);
-    const resizeListener = (e: any, bounds: RectangleBase) => genericListener(e, bounds, 1);
+    const moveListener = (e: any, bounds: RectangleBase) => handleBoundsChanging(e, bounds, 0);
+    const resizeListener = (e: any, bounds: RectangleBase) => handleBoundsChanging(e, bounds, 1);
     const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(w => restore(w.browserWindow));
 
     const nativeWindowChangingListener = (e: any, rawBounds: RectangleBase, changeType: ChangeType) => {
@@ -262,8 +257,8 @@ export function addWindowToGroup(win: GroupWindow) {
                 if (payloadCache.length) {
                     const bounds = payloadCache.pop();
                     changeType = changeType !== 2 ? changeType : 1;
-                    // tslint:disable-next-line:no-empty
-                    genericListener({preventDefault: () => {}}, bounds, changeType);
+                    // tslint:disable-next-line:no-empty - need to mock prevent default
+                    handleBoundsChanging({preventDefault: () => {}}, bounds, changeType);
                     payloadCache = [];
                 }
             }, 30);
