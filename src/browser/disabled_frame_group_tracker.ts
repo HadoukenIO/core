@@ -234,7 +234,7 @@ export function addWindowToGroup(win: GroupWindow) {
             moves.forEach(({ofWin}) => moved.add(ofWin));
             if (!boundsChanging) {
                 boundsChanging = true;
-                const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changing';
+                const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changed';
                 win.browserWindow.once(endingEvent, handleEndBoundsChanging);
             } else if (moves.length) {
                 // bounds-changing is not emitted for the leader, but is for the other windows
