@@ -4,6 +4,7 @@ import { EventEmitter } from 'events';
 import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 import { writeToLog } from '../log';
 import WMCopyData from './wm_copydata';
+import { getMeshUuid } from '../connection_manager';
 
 const copyDataTransport = new WMCopyData('OpenFin-NativeWindowManager-Client', '');
 
@@ -63,6 +64,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
   private _pendingRequests: Map<string, PendingRequest>;
   private _pid: number; // process ID of the external window
   private _senderId: string; // ID of the injected DLL
+  private _meshUuid: string; // ID of core instance
 
   constructor(params: ConstructorParams) {
     super();
@@ -71,6 +73,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
     this._nativeId = nativeId;
     this._pendingRequests = new Map();
     this._pid = pid;
+    this._meshUuid = getMeshUuid();
 
     // Subscribe to all events
     this.send({
@@ -135,7 +138,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
           action,
           messageId,
           payload,
-          senderId: '0x0000',
+          senderId: this._meshUuid,
           sequence: 0,
           time: 0
         },
