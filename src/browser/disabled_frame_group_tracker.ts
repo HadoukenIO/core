@@ -249,7 +249,7 @@ export function addWindowToGroup(win: GroupWindow) {
     const resizeListener = (e: any, bounds: RectangleBase) => handleBoundsChanging(e, bounds, 1);
     const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(w => restore(w.browserWindow));
 
-    const nativeWindowChangingListener = (e: any, rawBounds: RectangleBase, changeType: ChangeType) => {
+    const disabledFrameListener = (e: any, rawBounds: RectangleBase, changeType: ChangeType) => {
         payloadCache.push(rawBounds);
         // Setup an interval to get around aero-shake issues in native
         if (!interval) {
@@ -267,8 +267,8 @@ export function addWindowToGroup(win: GroupWindow) {
     };
 
     if (usesDisabledFrameEvents(win)) {
-        win.browserWindow.on('disabled-frame-bounds-changing', nativeWindowChangingListener);
-        listenerCache.set(win.browserWindow.nativeId, [nativeWindowChangingListener]);
+        win.browserWindow.on('disabled-frame-bounds-changing', disabledFrameListener);
+        listenerCache.set(win.browserWindow.nativeId, [disabledFrameListener]);
     } else {
         win.browserWindow.on('will-move', moveListener);
         win.browserWindow.on('will-resize', resizeListener);
