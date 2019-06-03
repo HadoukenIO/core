@@ -1,10 +1,10 @@
 import { adjustCoordsScaling } from '../../common/main';
 import { app as electronApp } from 'electron';
 import { EventEmitter } from 'events';
+import { getMeshUuid } from '../connection_manager';
 import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 import { writeToLog } from '../log';
 import WMCopyData from './wm_copydata';
-import { getMeshUuid } from '../connection_manager';
 
 const copyDataTransport = new WMCopyData('OpenFin-NativeWindowManager-Client', '');
 
@@ -59,21 +59,21 @@ interface PendingRequest {
 }
 
 export default class NativeWindowInjectionBus extends EventEmitter {
+  private _meshUuid: string; // ID of core instance
   private _messageListener: (sender: number, rawMessage: string) => void;
   private _nativeId: string; // HWND of the external window
   private _pendingRequests: Map<string, PendingRequest>;
   private _pid: number; // process ID of the external window
   private _senderId: string; // ID of the injected DLL
-  private _meshUuid: string; // ID of core instance
 
   constructor(params: ConstructorParams) {
     super();
 
     const { nativeId, pid } = params;
+    this._meshUuid = getMeshUuid();
     this._nativeId = nativeId;
     this._pendingRequests = new Map();
     this._pid = pid;
-    this._meshUuid = getMeshUuid();
 
     // Subscribe to all events
     this.send({
