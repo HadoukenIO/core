@@ -1078,7 +1078,6 @@ Window.animate = function(identity, transitions, options = {}, callback = () => 
 
     if (!size) {
         animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
-        callback();
         return;
     }
 
@@ -1101,7 +1100,6 @@ Window.animate = function(identity, transitions, options = {}, callback = () => 
 
     if (newBoundsWithinConstraints) {
         animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
-        callback();
     } else {
         errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
     }
@@ -1597,8 +1595,20 @@ function areNewBoundsWithinConstraints(options, width, height) {
         aspectRatio
     } = options;
 
-    const acceptableWidth = width >= minWidth && width <= maxWidth;
-    const acceptableHeight = height >= minHeight && height <= maxHeight;
+    if (width === undefined && height === undefined) {
+        return true;
+    }
+
+    if (height === undefined) {
+        return (width >= minWidth) && (maxWidth === -1 || width <= maxWidth);
+    }
+
+    if (width === undefined) {
+        return (height >= minHeight) && (maxHeight === -1 || height <= maxHeight);
+    }
+
+    const acceptableWidth = (width >= minWidth) && (maxWidth === -1 || width <= maxWidth);
+    const acceptableHeight = (height >= minHeight) && (maxHeight === -1 || height <= maxHeight);
     const roundedProposedRatio = Math.round(100 * (width / height)) / 100;
     const roundedAspectRatio = Math.round(100 * aspectRatio) / 100;
 
