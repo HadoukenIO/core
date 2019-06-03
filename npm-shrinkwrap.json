@@ -4330,6 +4330,7 @@
       "version": "2.7.1",
       "resolved": "https://registry.npmjs.org/node-abi/-/node-abi-2.7.1.tgz",
       "integrity": "sha512-OV8Bq1OrPh6z+Y4dqwo05HqrRL9YNF7QVMRfq1/pguwKLG+q9UB/Lk0x5qXjO23JjJg+/jqCHSTaG1P3tfKfuw==",
+      "dev": true,
       "requires": {
         "semver": "^5.4.1"
       }
@@ -6295,9 +6296,9 @@
       "dev": true
     },
     "typescript": {
-      "version": "2.9.2",
-      "resolved": "https://registry.npmjs.org/typescript/-/typescript-2.9.2.tgz",
-      "integrity": "sha512-Gr4p6nFNaoufRIY4NMdpQRNmgxVIGMs4Fcu/ujdYk3nAZqk7supzBE9idmvfZIlH/Cuj//dvi+019qEue9lV0w==",
+      "version": "3.5.1",
+      "resolved": "https://registry.npmjs.org/typescript/-/typescript-3.5.1.tgz",
+      "integrity": "sha512-64HkdiRv1yYZsSe4xC1WVgamNigVYjlssIoaH2HcZF0+ijsk5YK2g0G34w9wJkze8+5ow4STd22AynfO6ZYYLw==",
       "dev": true
     },
     "ultron": {
