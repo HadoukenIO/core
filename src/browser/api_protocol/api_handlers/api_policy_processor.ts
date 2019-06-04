@@ -20,9 +20,9 @@ let desktopOwnerSettingsTimeout: number = 2000;  // in ms
 let desktopOwnerSettingEnabled: boolean = false;
 
 type ApiPolicy = {
-    // for backwards compatible, policyName can be config URL
+    // for backwards compatible, policyName can be a single config URL
     [policyName: string]: {
-        urls?: [string];  // support wildcard patterns. If missing, policyName is URL (no wildcard)
+        urls?: [string];  // support wildcard patterns. If missing, policyName should a single URL (no wildcard)
         permissions: any;
     }
 };
@@ -345,6 +345,14 @@ for (const key of Object.keys(actionMap)) {
 if (desktopOwnerSettingEnabled === true) {
     retrieveAPIPolicyContent().then((content: ApiPolicy) => {
         apiPolicies = content;
+        if (apiPolicies && Object.keys(apiPolicies).length > 0) {
+            if (!apiPolicies.hasOwnProperty(CONFIG_URL_WILDCARD)) {
+                apiPolicies[CONFIG_URL_WILDCARD] = { permissions: {} };
+                writeToLog(1, `requestAppPermissions ${CONFIG_URL_WILDCARD}`, true);
+                writeToLog('info', 'default policy missing, setting to {} ');
+            }
+        }
+
     }).catch(e => {
         writeToLog(1, `Error retrieveAPIPolicies ${e}`, true);
     });
