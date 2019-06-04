@@ -46,10 +46,10 @@ interface NackMessage extends MessageBase {
 interface SendMessage {
   action: string;
   payload: {
-    data: {
+    data?: {
       [nativeId: string]: string[] | { userMovement: boolean; };
     },
-    type: string;
+    type?: string;
   };
 }
 
@@ -59,12 +59,17 @@ interface PendingRequest {
 }
 
 export default class NativeWindowInjectionBus extends EventEmitter {
+  private _connected: boolean; // Indicates whether the core is connected to the message window
+  private _listenerAck: (message: MessageBase) => void; // Listener called for ack/nack
+  private _listenerBroadcastMsg: (message: MessageBase) => void; // Listener called for broadcast messages
+  private _listenerHeartbeat: (message: MessageBase) => void; // Hearbeat listener
+  private _messageListener: (sender: number, rawMessage: string) => void; // Main message window listener
   private _meshUuid: string; // ID of core instance
-  private _messageListener: (sender: number, rawMessage: string) => void;
   private _nativeId: string; // HWND of the external window
   private _pendingRequests: Map<string, PendingRequest>;
   private _pid: number; // process ID of the external window
-  private _senderId: string; // ID of the injected DLL
+  private _previousDllSequence: number; // Last recorded sequence number from the message window
+  private _senderId: string; // ID of the message window of the injected process
 
   constructor(params: ConstructorParams) {
     super();
@@ -75,11 +80,9 @@ export default class NativeWindowInjectionBus extends EventEmitter {
     this._pendingRequests = new Map();
     this._pid = pid;
 
-    // Subscribe to all events
-    this.send({
-      action: 'window/subscription/request',
-      payload: { data: { [this._nativeId]: ['*'] }, type: 'set' }
-    });
+    this.setupHeartbeat();
+    this.setupListenerAck();
+    this.setupListenerBroadcastMsg();
 
     // Listen to messages from the transport and
     // forward broadcast messages locally
@@ -91,28 +94,84 @@ export default class NativeWindowInjectionBus extends EventEmitter {
         return;
       }
 
-      // Ack / Nack
+      this._listenerHeartbeat(parsedMessage);
+
       if (this._pendingRequests.has(messageId)) {
-        const isNack = parsedMessage.action.includes('error');
-        const pendingRequest = this._pendingRequests.get(messageId);
+        this._listenerAck(parsedMessage);
+      } else {
+        this._listenerBroadcastMsg(parsedMessage);
+      }
+    };
 
-        isNack
-          ? pendingRequest.reject((<NackMessage>parsedMessage).payload.reason)
-          : pendingRequest.resolve();
+    copyDataTransport.on('message', this._messageListener);
 
-        this._senderId = senderId;
-        this._pendingRequests.delete(messageId);
+    this.subscribe();
+  }
 
+  // Setup heartbeat
+  private setupHeartbeat() {
+    this._connected = false;
+    this._previousDllSequence = -1;
+
+    this._listenerHeartbeat = (message: MessageBase): void => {
+      const { sequence } = message;
+
+      if (this._previousDllSequence + 1 !== sequence) {
+        // At least one message has been missed
+        const msg = `[NWI] Missed message(s) from ${this._senderId}: `
+          + `previous sequence ${this._previousDllSequence}, `
+          + `current sequence: ${sequence}`;
+        writeToLog('info', msg);
+      }
+
+      this._previousDllSequence = sequence;
+    };
+
+    // Ping message window every second and update current connection status
+    setInterval(() => {
+      this.send({
+        action: 'status/ping/request',
+        payload: {}
+      }).then(() => {
+        if (!this._connected) {
+          // This indicates that the core re-connected,
+          // so we need to subscribe to events again
+          this.subscribe();
+        }
+        this._connected = true;
+      }).catch(() => {
+        this._connected = false;
+      });
+    }, 1000);
+  }
+
+  // Setup listener responsible for parsing acks
+  private setupListenerAck() {
+    this._listenerAck = (message: MessageBase): void => {
+      const { messageId, senderId } = message;
+      const isNack = message.action.includes('error');
+      const pendingRequest = this._pendingRequests.get(messageId);
+
+      if (isNack) {
+        pendingRequest.reject((<NackMessage>message).payload.reason);
+      } else {
+        pendingRequest.resolve();
+      }
+
+      this._senderId = senderId;
+      this._pendingRequests.delete(messageId);
+    };
+  }
+
+  // Setup listener responsible for parsing broadcast messages
+  private setupListenerBroadcastMsg() {
+    this._listenerBroadcastMsg = (message: MessageBase): void => {
+      if (!(<BroadcastMessage>message).payload || !(<BroadcastMessage>message).payload.data) {
+        writeToLog('info', `[NWI] Injection event without payload: ${JSON.stringify(message)}`);
         return;
       }
 
-      // Broadcast message
-      if (!(<BroadcastMessage>parsedMessage).payload || !(<BroadcastMessage>parsedMessage).payload.data) {
-        writeToLog('info', `[NWI] Injection event without payload: ${JSON.stringify(parsedMessage)}`); // TODO
-        return;
-      }
-
-      const { payload: originalPayload } = <BroadcastMessage>parsedMessage;
+      const { payload: originalPayload } = <BroadcastMessage>message;
       const { data: { type: eventAsInteger, ...rest }, dpi: injectionDpi, nativeId, state } = originalPayload;
       const payload = { ...rest, ...state };
       const windowsEvent = <string>WINDOWS_MESSAGE_MAP[eventAsInteger];
@@ -123,8 +182,6 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       this.emit(windowsEvent, payload);
       this.emit('*', payload);
     };
-
-    copyDataTransport.on('message', this._messageListener);
   }
 
   // Sends a message to the injected window
@@ -169,6 +226,14 @@ export default class NativeWindowInjectionBus extends EventEmitter {
           resolve();
         }
       });
+    });
+  }
+
+  // Request message window to subscribe to all events
+  private subscribe() {
+    this.send({
+      action: 'window/subscription/request',
+      payload: { data: { [this._nativeId]: ['*'] }, type: 'set' }
     });
   }
 
