@@ -3842,7 +3842,7 @@ declare namespace Electron {
     /**
      * The window's bounds.
      */
-    Bounds: Rectangle;
+    bounds: Rectangle;
     /**
      * The className of the window.
      */
