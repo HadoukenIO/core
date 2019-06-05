@@ -1,6 +1,6 @@
 
 import { PortInfo } from './browser/port_discovery';
-import { BrowserWindow as BrowserWindowElectron, NativeWindowInfo } from 'electron';
+import { BrowserWindow as BrowserWindowElectron, NativeWindowInfo as NativeWindowInfoElectron } from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
 import { AnchorType } from '../js-adapter/src/shapes';
 
@@ -451,7 +451,7 @@ export interface ExternalWindow extends BrowserWindowElectron {
     uuid: string;
 }
 
-export interface NativeWindowInfo extends NativeWindowInfo {
+export interface NativeWindowInfo extends NativeWindowInfoElectron {
     name: string;
     uuid: string;
 }
