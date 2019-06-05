@@ -1,4 +1,4 @@
-// Type definitions for Electron 4.1.4
+// Type definitions for Electron 4.2.0
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -75,6 +75,7 @@ declare namespace Electron {
     Tray: typeof Tray;
     webContents: typeof WebContents;
     WebRequest: typeof WebRequest;
+    WinEventHookEmitter: typeof WinEventHookEmitter;
   }
 
   interface RendererInterface extends CommonInterface {
@@ -832,6 +833,7 @@ declare namespace Electron {
      * and macOS, icons depend on the application associated with file mime type.
      */
     getFileIcon(path: string, callback: (error: Error, icon: NativeImage) => void): void;
+    getFocusedNativeId(): string;
     getGPUFeatureStatus(): GPUFeatureStatus;
     /**
      * For infoType equal to complete: Promise is fulfilled with Object containing all
@@ -925,7 +927,6 @@ declare namespace Electron {
      * the Windows Registry and LSCopyDefaultHandlerForURLScheme internally.
      */
     isDefaultProtocolClient(protocol: string, path?: string, args?: string[]): boolean;
-    isGroupPolicyBuild(): boolean;
     isInApplicationsFolder(): boolean;
     isReady(): boolean;
     isUnityRunning(): boolean;
@@ -1126,6 +1127,14 @@ declare namespace Electron {
      * production environments.
      */
     isPackaged?: boolean;
+    /**
+     * A String which is the user agent string Electron will use as a global fallback.
+     * This is the user agent that will be used when no user agent is set at the
+     * webContents or session level.  Useful for ensuring your entire app has the same
+     * user agent.  Set to a custom value as early as possible in your apps
+     * initialization to ensure that your overridden value is used.
+     */
+    userAgentFallback?: string;
   }
 
   interface AutoUpdater extends EventEmitter {
@@ -3271,7 +3280,7 @@ declare namespace Electron {
      * on macOS 10.14 Mojave unless the app has been authorized as a trusted
      * accessibility client:
      */
-    register(accelerator: Accelerator, callback: Function): void;
+    register(accelerator: Accelerator, callback: Function): boolean;
     /**
      * Unregisters the global shortcut of accelerator.
      */
@@ -3767,7 +3776,14 @@ declare namespace Electron {
      * Creates a new NativeImage instance from the NSImage that maps to the given image
      * name. See NSImageName for a list of possible values. The hslShift is applied to
      * the image with the following rules This means that [-1, 0, 1] will make the
-     * image completely white and [-1, 1, 0] will make the image completely black.
+     * image completely white and [-1, 1, 0] will make the image completely black. In
+     * some cases, the NSImageName doesn't match its string representation; one example
+     * of this is NSFolderImageName, whose string representation would actually be
+     * NSFolder. Therefore, you'll need to determine the correct string representation
+     * for your image before passing it in. This can be done with the following: echo
+     * -e '#import <Cocoa/Cocoa.h>\nint main() { NSLog(@"%@", SYSTEM_IMAGE_NAME); }' |
+     * clang -otest -x objective-c -framework Cocoa - && ./test where SYSTEM_IMAGE_NAME
+     * should be replaced with any value from this list.
      */
     static createFromNamedImage(imageName: string, hslShift: number[]): NativeImage;
     /**
@@ -3828,15 +3844,23 @@ declare namespace Electron {
      */
     Bounds: Rectangle;
     /**
-     * The className of the window
+     * The className of the window.
      */
     className: string;
+    /**
+     * The DPI scaling applied for the window.
+     */
+    dpi: number;
+    /**
+     * The DPI awareness of the window.
+     */
+    dpiAwareness: number;
     /**
      * Whether the window is focused.
      */
     focused: boolean;
     /**
-     * A hex representation of the window's handle
+     * A hex representation of the window's handle.
      */
     id: string;
     /**
@@ -3848,11 +3872,11 @@ declare namespace Electron {
      */
     minimized: boolean;
     /**
-     * Properties associated with the window's process
+     * Properties associated with the window's process.
      */
     process: Process;
     /**
-     * The title of the window
+     * The title of the window.
      */
     title: string;
     /**
@@ -7450,11 +7474,6 @@ declare namespace Electron {
     addEventListener(event: 'crashed', listener: (event: Event) => void, useCapture?: boolean): this;
     removeEventListener(event: 'crashed', listener: (event: Event) => void): this;
     /**
-     * Fired when the gpu process is crashed.
-     */
-    addEventListener(event: 'gpu-crashed', listener: (event: Event) => void, useCapture?: boolean): this;
-    removeEventListener(event: 'gpu-crashed', listener: (event: Event) => void): this;
-    /**
      * Fired when a plugin process is crashed.
      */
     addEventListener(event: 'plugin-crashed', listener: (event: PluginCrashedEvent) => void, useCapture?: boolean): this;
@@ -7819,6 +7838,3993 @@ declare namespace Electron {
      * yes and 1 are interpreted as true, while no and 0 are interpreted as false.
      */
     webpreferences?: string;
+  }
+
+  class WinEventHookEmitter extends EventEmitter {
+
+    // Docs: http://electronjs.org/docs/api/win-event-hook-emitter
+
+    on(event: 'error', listener: (event: Event,
+                                  code: number,
+                                  reason: string) => void): this;
+    once(event: 'error', listener: (event: Event,
+                                  code: number,
+                                  reason: string) => void): this;
+    addListener(event: 'error', listener: (event: Event,
+                                  code: number,
+                                  reason: string) => void): this;
+    removeListener(event: 'error', listener: (event: Event,
+                                  code: number,
+                                  reason: string) => void): this;
+    on(event: 'EVENT_AIA_END', listener: (event: Event,
+                                          /**
+                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                           * for.
+                                           */
+                                          nativeWindowInfo: NativeWindowInfo,
+                                          /**
+                                           * Specifies the time, in milliseconds, that the event was generated. The range of
+                                           * WinEvent constant values specified by the Accessibility Interoperability
+                                           * Alliance (AIA) for use across the industry. For more information, see Allocation
+                                           * of WinEvent IDs.
+                                           */
+                                          eventTime: number) => void): this;
+    once(event: 'EVENT_AIA_END', listener: (event: Event,
+                                          /**
+                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                           * for.
+                                           */
+                                          nativeWindowInfo: NativeWindowInfo,
+                                          /**
+                                           * Specifies the time, in milliseconds, that the event was generated. The range of
+                                           * WinEvent constant values specified by the Accessibility Interoperability
+                                           * Alliance (AIA) for use across the industry. For more information, see Allocation
+                                           * of WinEvent IDs.
+                                           */
+                                          eventTime: number) => void): this;
+    addListener(event: 'EVENT_AIA_END', listener: (event: Event,
+                                          /**
+                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                           * for.
+                                           */
+                                          nativeWindowInfo: NativeWindowInfo,
+                                          /**
+                                           * Specifies the time, in milliseconds, that the event was generated. The range of
+                                           * WinEvent constant values specified by the Accessibility Interoperability
+                                           * Alliance (AIA) for use across the industry. For more information, see Allocation
+                                           * of WinEvent IDs.
+                                           */
+                                          eventTime: number) => void): this;
+    removeListener(event: 'EVENT_AIA_END', listener: (event: Event,
+                                          /**
+                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                           * for.
+                                           */
+                                          nativeWindowInfo: NativeWindowInfo,
+                                          /**
+                                           * Specifies the time, in milliseconds, that the event was generated. The range of
+                                           * WinEvent constant values specified by the Accessibility Interoperability
+                                           * Alliance (AIA) for use across the industry. For more information, see Allocation
+                                           * of WinEvent IDs.
+                                           */
+                                          eventTime: number) => void): this;
+    on(event: 'EVENT_AIA_START', listener: (event: Event,
+                                            /**
+                                             * A `NativeWindowInfo` object for the window or control that the was generated
+                                             * for.
+                                             */
+                                            nativeWindowInfo: NativeWindowInfo,
+                                            /**
+                                             * Specifies the time, in milliseconds, that the event was generated. The range of
+                                             * WinEvent constant values specified by the Accessibility Interoperability
+                                             * Alliance (AIA) for use across the industry. For more information, see Allocation
+                                             * of WinEvent
+                                             */
+                                            eventTime: number) => void): this;
+    once(event: 'EVENT_AIA_START', listener: (event: Event,
+                                            /**
+                                             * A `NativeWindowInfo` object for the window or control that the was generated
+                                             * for.
+                                             */
+                                            nativeWindowInfo: NativeWindowInfo,
+                                            /**
+                                             * Specifies the time, in milliseconds, that the event was generated. The range of
+                                             * WinEvent constant values specified by the Accessibility Interoperability
+                                             * Alliance (AIA) for use across the industry. For more information, see Allocation
+                                             * of WinEvent
+                                             */
+                                            eventTime: number) => void): this;
+    addListener(event: 'EVENT_AIA_START', listener: (event: Event,
+                                            /**
+                                             * A `NativeWindowInfo` object for the window or control that the was generated
+                                             * for.
+                                             */
+                                            nativeWindowInfo: NativeWindowInfo,
+                                            /**
+                                             * Specifies the time, in milliseconds, that the event was generated. The range of
+                                             * WinEvent constant values specified by the Accessibility Interoperability
+                                             * Alliance (AIA) for use across the industry. For more information, see Allocation
+                                             * of WinEvent
+                                             */
+                                            eventTime: number) => void): this;
+    removeListener(event: 'EVENT_AIA_START', listener: (event: Event,
+                                            /**
+                                             * A `NativeWindowInfo` object for the window or control that the was generated
+                                             * for.
+                                             */
+                                            nativeWindowInfo: NativeWindowInfo,
+                                            /**
+                                             * Specifies the time, in milliseconds, that the event was generated. The range of
+                                             * WinEvent constant values specified by the Accessibility Interoperability
+                                             * Alliance (AIA) for use across the industry. For more information, see Allocation
+                                             * of WinEvent
+                                             */
+                                            eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                            * KeyboardShortcut property has changed. Server applications send this event for
+                                                            * their accessible objects.
+                                                            */
+                                                           eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                            * KeyboardShortcut property has changed. Server applications send this event for
+                                                            * their accessible objects.
+                                                            */
+                                                           eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                            * KeyboardShortcut property has changed. Server applications send this event for
+                                                            * their accessible objects.
+                                                            */
+                                                           eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                            * KeyboardShortcut property has changed. Server applications send this event for
+                                                            * their accessible objects.
+                                                            */
+                                                           eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. Sent when a
+                                                  * window is cloaked. A cloaked window still exists, but is invisible to the user.
+                                                  */
+                                                 eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. Sent when a
+                                                  * window is cloaked. A cloaked window still exists, but is invisible to the user.
+                                                  */
+                                                 eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. Sent when a
+                                                  * window is cloaked. A cloaked window still exists, but is invisible to the user.
+                                                  */
+                                                 eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. Sent when a
+                                                  * window is cloaked. A cloaked window still exists, but is invisible to the user.
+                                                  */
+                                                 eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. A window
+                                                          * object's scrolling has ended. Unlike EVENT_SYSTEM_SCROLLEND, this event is
+                                                          * associated with the scrolling window. Whether the scrolling is horizontal or
+                                                          * vertical scrolling, this event should be sent whenever the scroll action is
+                                                          * completed. The hwnd parameter of the WinEventProc callback function describes
+                                                          * the scrolling window; the idObject parameter is OBJID_CLIENT, and the idChild
+                                                          * parameter is CHILDID_SELF.
+                                                          */
+                                                         eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. A window
+                                                          * object's scrolling has ended. Unlike EVENT_SYSTEM_SCROLLEND, this event is
+                                                          * associated with the scrolling window. Whether the scrolling is horizontal or
+                                                          * vertical scrolling, this event should be sent whenever the scroll action is
+                                                          * completed. The hwnd parameter of the WinEventProc callback function describes
+                                                          * the scrolling window; the idObject parameter is OBJID_CLIENT, and the idChild
+                                                          * parameter is CHILDID_SELF.
+                                                          */
+                                                         eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. A window
+                                                          * object's scrolling has ended. Unlike EVENT_SYSTEM_SCROLLEND, this event is
+                                                          * associated with the scrolling window. Whether the scrolling is horizontal or
+                                                          * vertical scrolling, this event should be sent whenever the scroll action is
+                                                          * completed. The hwnd parameter of the WinEventProc callback function describes
+                                                          * the scrolling window; the idObject parameter is OBJID_CLIENT, and the idChild
+                                                          * parameter is CHILDID_SELF.
+                                                          */
+                                                         eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. A window
+                                                          * object's scrolling has ended. Unlike EVENT_SYSTEM_SCROLLEND, this event is
+                                                          * associated with the scrolling window. Whether the scrolling is horizontal or
+                                                          * vertical scrolling, this event should be sent whenever the scroll action is
+                                                          * completed. The hwnd parameter of the WinEventProc callback function describes
+                                                          * the scrolling window; the idObject parameter is OBJID_CLIENT, and the idChild
+                                                          * parameter is CHILDID_SELF.
+                                                          */
+                                                         eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
+                                                /**
+                                                 * A `NativeWindowInfo` object for the window or control that the was generated
+                                                 * for.
+                                                 */
+                                                nativeWindowInfo: NativeWindowInfo,
+                                                /**
+                                                 * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                 * been created. The system sends this event for the following user interface
+                                                 * elements: caret, header control, list-view control, tab control, toolbar
+                                                 * control, tree view control, and window object. Server applications send this
+                                                 * event for their accessible objects. Before sending the event for the parent
+                                                 * object, servers must send it for all of an object's child objects. Servers must
+                                                 * ensure that all child objects are fully created and ready to accept IAccessible
+                                                 * calls from clients before the parent object sends this event. Because a parent
+                                                 * object is created after its child objects, clients must make sure that an
+                                                 * object's parent has been created before calling IAccessible::get_accParent,
+                                                 * particularly if in-context hook functions are used.
+                                                 */
+                                                eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
+                                                /**
+                                                 * A `NativeWindowInfo` object for the window or control that the was generated
+                                                 * for.
+                                                 */
+                                                nativeWindowInfo: NativeWindowInfo,
+                                                /**
+                                                 * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                 * been created. The system sends this event for the following user interface
+                                                 * elements: caret, header control, list-view control, tab control, toolbar
+                                                 * control, tree view control, and window object. Server applications send this
+                                                 * event for their accessible objects. Before sending the event for the parent
+                                                 * object, servers must send it for all of an object's child objects. Servers must
+                                                 * ensure that all child objects are fully created and ready to accept IAccessible
+                                                 * calls from clients before the parent object sends this event. Because a parent
+                                                 * object is created after its child objects, clients must make sure that an
+                                                 * object's parent has been created before calling IAccessible::get_accParent,
+                                                 * particularly if in-context hook functions are used.
+                                                 */
+                                                eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
+                                                /**
+                                                 * A `NativeWindowInfo` object for the window or control that the was generated
+                                                 * for.
+                                                 */
+                                                nativeWindowInfo: NativeWindowInfo,
+                                                /**
+                                                 * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                 * been created. The system sends this event for the following user interface
+                                                 * elements: caret, header control, list-view control, tab control, toolbar
+                                                 * control, tree view control, and window object. Server applications send this
+                                                 * event for their accessible objects. Before sending the event for the parent
+                                                 * object, servers must send it for all of an object's child objects. Servers must
+                                                 * ensure that all child objects are fully created and ready to accept IAccessible
+                                                 * calls from clients before the parent object sends this event. Because a parent
+                                                 * object is created after its child objects, clients must make sure that an
+                                                 * object's parent has been created before calling IAccessible::get_accParent,
+                                                 * particularly if in-context hook functions are used.
+                                                 */
+                                                eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
+                                                /**
+                                                 * A `NativeWindowInfo` object for the window or control that the was generated
+                                                 * for.
+                                                 */
+                                                nativeWindowInfo: NativeWindowInfo,
+                                                /**
+                                                 * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                 * been created. The system sends this event for the following user interface
+                                                 * elements: caret, header control, list-view control, tab control, toolbar
+                                                 * control, tree view control, and window object. Server applications send this
+                                                 * event for their accessible objects. Before sending the event for the parent
+                                                 * object, servers must send it for all of an object's child objects. Servers must
+                                                 * ensure that all child objects are fully created and ready to accept IAccessible
+                                                 * calls from clients before the parent object sends this event. Because a parent
+                                                 * object is created after its child objects, clients must make sure that an
+                                                 * object's parent has been created before calling IAccessible::get_accParent,
+                                                 * particularly if in-context hook functions are used.
+                                                 */
+                                                eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                          * DefaultAction property has changed. The system sends this event for dialog
+                                                          * boxes. Server applications send this event for their accessible objects.
+                                                          */
+                                                         eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                          * DefaultAction property has changed. The system sends this event for dialog
+                                                          * boxes. Server applications send this event for their accessible objects.
+                                                          */
+                                                         eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                          * DefaultAction property has changed. The system sends this event for dialog
+                                                          * boxes. Server applications send this event for their accessible objects.
+                                                          */
+                                                         eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                          * DefaultAction property has changed. The system sends this event for dialog
+                                                          * boxes. Server applications send this event for their accessible objects.
+                                                          */
+                                                         eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                            * Description property has changed. Server applications send this event for their
+                                                            * accessible objects.
+                                                            */
+                                                           eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                            * Description property has changed. Server applications send this event for their
+                                                            * accessible objects.
+                                                            */
+                                                           eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                            * Description property has changed. Server applications send this event for their
+                                                            * accessible objects.
+                                                            */
+                                                           eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                            * Description property has changed. Server applications send this event for their
+                                                            * accessible objects.
+                                                            */
+                                                           eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                  * been destroyed. The system sends this event for the following user interface
+                                                  * elements: caret, header control, list-view control, tab control, toolbar
+                                                  * control, tree view control, and window object. Server applications send this
+                                                  * event for their accessible objects. Clients assume that all of an object's
+                                                  * children are destroyed when the parent object sends this event. After receiving
+                                                  * this event, clients do not call an object's IAccessible properties or methods.
+                                                  * However, the interface pointer must remain valid as long as there is a reference
+                                                  * count on it (due to COM rules), but the UI element may no longer be present.
+                                                  * Further calls on the interface pointer may return failure errors; to prevent
+                                                  * this, servers create proxy objects and monitor their life spans.
+                                                  */
+                                                 eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                  * been destroyed. The system sends this event for the following user interface
+                                                  * elements: caret, header control, list-view control, tab control, toolbar
+                                                  * control, tree view control, and window object. Server applications send this
+                                                  * event for their accessible objects. Clients assume that all of an object's
+                                                  * children are destroyed when the parent object sends this event. After receiving
+                                                  * this event, clients do not call an object's IAccessible properties or methods.
+                                                  * However, the interface pointer must remain valid as long as there is a reference
+                                                  * count on it (due to COM rules), but the UI element may no longer be present.
+                                                  * Further calls on the interface pointer may return failure errors; to prevent
+                                                  * this, servers create proxy objects and monitor their life spans.
+                                                  */
+                                                 eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                  * been destroyed. The system sends this event for the following user interface
+                                                  * elements: caret, header control, list-view control, tab control, toolbar
+                                                  * control, tree view control, and window object. Server applications send this
+                                                  * event for their accessible objects. Clients assume that all of an object's
+                                                  * children are destroyed when the parent object sends this event. After receiving
+                                                  * this event, clients do not call an object's IAccessible properties or methods.
+                                                  * However, the interface pointer must remain valid as long as there is a reference
+                                                  * count on it (due to COM rules), but the UI element may no longer be present.
+                                                  * Further calls on the interface pointer may return failure errors; to prevent
+                                                  * this, servers create proxy objects and monitor their life spans.
+                                                  */
+                                                 eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                  * been destroyed. The system sends this event for the following user interface
+                                                  * elements: caret, header control, list-view control, tab control, toolbar
+                                                  * control, tree view control, and window object. Server applications send this
+                                                  * event for their accessible objects. Clients assume that all of an object's
+                                                  * children are destroyed when the parent object sends this event. After receiving
+                                                  * this event, clients do not call an object's IAccessible properties or methods.
+                                                  * However, the interface pointer must remain valid as long as there is a reference
+                                                  * count on it (due to COM rules), but the UI element may no longer be present.
+                                                  * Further calls on the interface pointer may return failure errors; to prevent
+                                                  * this, servers create proxy objects and monitor their life spans.
+                                                  */
+                                                 eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                     * ended a drag operation before dropping the dragged element on a drop target. The
+                                                     * hwnd, idObject, and idChild parameters of the WinEventProc callback function
+                                                     * identify the object being dragged.
+                                                     */
+                                                    eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                     * ended a drag operation before dropping the dragged element on a drop target. The
+                                                     * hwnd, idObject, and idChild parameters of the WinEventProc callback function
+                                                     * identify the object being dragged.
+                                                     */
+                                                    eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                     * ended a drag operation before dropping the dragged element on a drop target. The
+                                                     * hwnd, idObject, and idChild parameters of the WinEventProc callback function
+                                                     * identify the object being dragged.
+                                                     */
+                                                    eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                     * ended a drag operation before dropping the dragged element on a drop target. The
+                                                     * hwnd, idObject, and idChild parameters of the WinEventProc callback function
+                                                     * identify the object being dragged.
+                                                     */
+                                                    eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. The user
+                                                       * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
+                                                       * of the WinEventProc callback function identify the object being dragged.
+                                                       */
+                                                      eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. The user
+                                                       * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
+                                                       * of the WinEventProc callback function identify the object being dragged.
+                                                       */
+                                                      eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. The user
+                                                       * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
+                                                       * of the WinEventProc callback function identify the object being dragged.
+                                                       */
+                                                      eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. The user
+                                                       * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
+                                                       * of the WinEventProc callback function identify the object being dragged.
+                                                       */
+                                                      eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The user
+                                                      * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
+                                                      * of the WinEventProc callback function identify the drop target.
+                                                      */
+                                                     eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The user
+                                                      * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
+                                                      * of the WinEventProc callback function identify the drop target.
+                                                      */
+                                                     eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The user
+                                                      * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
+                                                      * of the WinEventProc callback function identify the drop target.
+                                                      */
+                                                     eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The user
+                                                      * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
+                                                      * of the WinEventProc callback function identify the drop target.
+                                                      */
+                                                     eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * dragged an element into a drop target's boundary. The hwnd, idObject, and
+                                                    * idChild parameters of the WinEventProc callback function identify the drop
+                                                    * target.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * dragged an element into a drop target's boundary. The hwnd, idObject, and
+                                                    * idChild parameters of the WinEventProc callback function identify the drop
+                                                    * target.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * dragged an element into a drop target's boundary. The hwnd, idObject, and
+                                                    * idChild parameters of the WinEventProc callback function identify the drop
+                                                    * target.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * dragged an element into a drop target's boundary. The hwnd, idObject, and
+                                                    * idChild parameters of the WinEventProc callback function identify the drop
+                                                    * target.
+                                                    */
+                                                   eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * dragged an element out of a drop target's boundary. The hwnd, idObject, and
+                                                    * idChild parameters of the WinEventProc callback function identify the drop
+                                                    * target.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * dragged an element out of a drop target's boundary. The hwnd, idObject, and
+                                                    * idChild parameters of the WinEventProc callback function identify the drop
+                                                    * target.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * dragged an element out of a drop target's boundary. The hwnd, idObject, and
+                                                    * idChild parameters of the WinEventProc callback function identify the drop
+                                                    * target.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * dragged an element out of a drop target's boundary. The hwnd, idObject, and
+                                                    * idChild parameters of the WinEventProc callback function identify the drop
+                                                    * target.
+                                                    */
+                                                   eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * started to drag an element. The hwnd, idObject, and idChild parameters of the
+                                                    * WinEventProc callback function identify the object being dragged.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * started to drag an element. The hwnd, idObject, and idChild parameters of the
+                                                    * WinEventProc callback function identify the object being dragged.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * started to drag an element. The hwnd, idObject, and idChild parameters of the
+                                                    * WinEventProc callback function identify the object being dragged.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user
+                                                    * started to drag an element. The hwnd, idObject, and idChild parameters of the
+                                                    * WinEventProc callback function identify the object being dragged.
+                                                    */
+                                                   eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_END', listener: (event: Event,
+                                             /**
+                                              * A `NativeWindowInfo` object for the window or control that the was generated
+                                              * for.
+                                              */
+                                             nativeWindowInfo: NativeWindowInfo,
+                                             /**
+                                              * Specifies the time, in milliseconds, that the event was generated. The highest
+                                              * object event value.
+                                              */
+                                             eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_END', listener: (event: Event,
+                                             /**
+                                              * A `NativeWindowInfo` object for the window or control that the was generated
+                                              * for.
+                                              */
+                                             nativeWindowInfo: NativeWindowInfo,
+                                             /**
+                                              * Specifies the time, in milliseconds, that the event was generated. The highest
+                                              * object event value.
+                                              */
+                                             eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_END', listener: (event: Event,
+                                             /**
+                                              * A `NativeWindowInfo` object for the window or control that the was generated
+                                              * for.
+                                              */
+                                             nativeWindowInfo: NativeWindowInfo,
+                                             /**
+                                              * Specifies the time, in milliseconds, that the event was generated. The highest
+                                              * object event value.
+                                              */
+                                             eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_END', listener: (event: Event,
+                                             /**
+                                              * A `NativeWindowInfo` object for the window or control that the was generated
+                                              * for.
+                                              */
+                                             nativeWindowInfo: NativeWindowInfo,
+                                             /**
+                                              * Specifies the time, in milliseconds, that the event was generated. The highest
+                                              * object event value.
+                                              */
+                                             eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                * received the keyboard focus. The system sends this event for the following user
+                                                * interface elements: list-view control, menu bar, pop-up menu, switch window, tab
+                                                * control, tree view control, and window object. Server applications send this
+                                                * event for their accessible objects. The hwnd parameter of the WinEventProc
+                                                * callback function identifies the window that receives the keyboard focus.
+                                                */
+                                               eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                * received the keyboard focus. The system sends this event for the following user
+                                                * interface elements: list-view control, menu bar, pop-up menu, switch window, tab
+                                                * control, tree view control, and window object. Server applications send this
+                                                * event for their accessible objects. The hwnd parameter of the WinEventProc
+                                                * callback function identifies the window that receives the keyboard focus.
+                                                */
+                                               eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                * received the keyboard focus. The system sends this event for the following user
+                                                * interface elements: list-view control, menu bar, pop-up menu, switch window, tab
+                                                * control, tree view control, and window object. Server applications send this
+                                                * event for their accessible objects. The hwnd parameter of the WinEventProc
+                                                * callback function identifies the window that receives the keyboard focus.
+                                                */
+                                               eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                * received the keyboard focus. The system sends this event for the following user
+                                                * interface elements: list-view control, menu bar, pop-up menu, switch window, tab
+                                                * control, tree view control, and window object. Server applications send this
+                                                * event for their accessible objects. The hwnd parameter of the WinEventProc
+                                                * callback function identifies the window that receives the keyboard focus.
+                                                */
+                                               eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                     * Help property has changed. Server applications send this event for their
+                                                     * accessible objects.
+                                                     */
+                                                    eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                     * Help property has changed. Server applications send this event for their
+                                                     * accessible objects.
+                                                     */
+                                                    eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                     * Help property has changed. Server applications send this event for their
+                                                     * accessible objects.
+                                                     */
+                                                    eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                     * Help property has changed. Server applications send this event for their
+                                                     * accessible objects.
+                                                     */
+                                                    eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
+                                              /**
+                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                               * for.
+                                               */
+                                              nativeWindowInfo: NativeWindowInfo,
+                                              /**
+                                               * Specifies the time, in milliseconds, that the event was generated. An object is
+                                               * hidden. The system sends this event for the following user interface elements:
+                                               * caret and cursor. Server applications send this event for their accessible
+                                               * objects. When this event is generated for a parent object, all child objects are
+                                               * already hidden. Server applications do not send this event for the child
+                                               * objects. Hidden objects include the STATE_SYSTEM_INVISIBLE flag; shown objects
+                                               * do not include this flag. The EVENT_OBJECT_HIDE event also indicates that the
+                                               * STATE_SYSTEM_INVISIBLE flag is set. Therefore, servers do not send the
+                                               * EVENT_STATE_CHANGE event in this case.
+                                               */
+                                              eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
+                                              /**
+                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                               * for.
+                                               */
+                                              nativeWindowInfo: NativeWindowInfo,
+                                              /**
+                                               * Specifies the time, in milliseconds, that the event was generated. An object is
+                                               * hidden. The system sends this event for the following user interface elements:
+                                               * caret and cursor. Server applications send this event for their accessible
+                                               * objects. When this event is generated for a parent object, all child objects are
+                                               * already hidden. Server applications do not send this event for the child
+                                               * objects. Hidden objects include the STATE_SYSTEM_INVISIBLE flag; shown objects
+                                               * do not include this flag. The EVENT_OBJECT_HIDE event also indicates that the
+                                               * STATE_SYSTEM_INVISIBLE flag is set. Therefore, servers do not send the
+                                               * EVENT_STATE_CHANGE event in this case.
+                                               */
+                                              eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
+                                              /**
+                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                               * for.
+                                               */
+                                              nativeWindowInfo: NativeWindowInfo,
+                                              /**
+                                               * Specifies the time, in milliseconds, that the event was generated. An object is
+                                               * hidden. The system sends this event for the following user interface elements:
+                                               * caret and cursor. Server applications send this event for their accessible
+                                               * objects. When this event is generated for a parent object, all child objects are
+                                               * already hidden. Server applications do not send this event for the child
+                                               * objects. Hidden objects include the STATE_SYSTEM_INVISIBLE flag; shown objects
+                                               * do not include this flag. The EVENT_OBJECT_HIDE event also indicates that the
+                                               * STATE_SYSTEM_INVISIBLE flag is set. Therefore, servers do not send the
+                                               * EVENT_STATE_CHANGE event in this case.
+                                               */
+                                              eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
+                                              /**
+                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                               * for.
+                                               */
+                                              nativeWindowInfo: NativeWindowInfo,
+                                              /**
+                                               * Specifies the time, in milliseconds, that the event was generated. An object is
+                                               * hidden. The system sends this event for the following user interface elements:
+                                               * caret and cursor. Server applications send this event for their accessible
+                                               * objects. When this event is generated for a parent object, all child objects are
+                                               * already hidden. Server applications do not send this event for the child
+                                               * objects. Hidden objects include the STATE_SYSTEM_INVISIBLE flag; shown objects
+                                               * do not include this flag. The EVENT_OBJECT_HIDE event also indicates that the
+                                               * STATE_SYSTEM_INVISIBLE flag is set. Therefore, servers do not send the
+                                               * EVENT_STATE_CHANGE event in this case.
+                                               */
+                                              eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
+                                                                  /**
+                                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                                   * for.
+                                                                   */
+                                                                  nativeWindowInfo: NativeWindowInfo,
+                                                                  /**
+                                                                   * Specifies the time, in milliseconds, that the event was generated. A window that
+                                                                   * hosts other accessible objects has changed the hosted objects. A client might
+                                                                   * need to query the host window to discover the new hosted objects, especially if
+                                                                   * the client has been monitoring events from the window. A hosted object is an
+                                                                   * object from an accessibility framework (MSAA or UI Automation) that is different
+                                                                   * from that of the host. Changes in hosted objects that are from the same
+                                                                   * framework as the host should be handed with the structural change events, such
+                                                                   * as EVENT_OBJECT_CREATE for MSAA. For more info see comments within winuser.h.
+                                                                   */
+                                                                  eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
+                                                                  /**
+                                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                                   * for.
+                                                                   */
+                                                                  nativeWindowInfo: NativeWindowInfo,
+                                                                  /**
+                                                                   * Specifies the time, in milliseconds, that the event was generated. A window that
+                                                                   * hosts other accessible objects has changed the hosted objects. A client might
+                                                                   * need to query the host window to discover the new hosted objects, especially if
+                                                                   * the client has been monitoring events from the window. A hosted object is an
+                                                                   * object from an accessibility framework (MSAA or UI Automation) that is different
+                                                                   * from that of the host. Changes in hosted objects that are from the same
+                                                                   * framework as the host should be handed with the structural change events, such
+                                                                   * as EVENT_OBJECT_CREATE for MSAA. For more info see comments within winuser.h.
+                                                                   */
+                                                                  eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
+                                                                  /**
+                                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                                   * for.
+                                                                   */
+                                                                  nativeWindowInfo: NativeWindowInfo,
+                                                                  /**
+                                                                   * Specifies the time, in milliseconds, that the event was generated. A window that
+                                                                   * hosts other accessible objects has changed the hosted objects. A client might
+                                                                   * need to query the host window to discover the new hosted objects, especially if
+                                                                   * the client has been monitoring events from the window. A hosted object is an
+                                                                   * object from an accessibility framework (MSAA or UI Automation) that is different
+                                                                   * from that of the host. Changes in hosted objects that are from the same
+                                                                   * framework as the host should be handed with the structural change events, such
+                                                                   * as EVENT_OBJECT_CREATE for MSAA. For more info see comments within winuser.h.
+                                                                   */
+                                                                  eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
+                                                                  /**
+                                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                                   * for.
+                                                                   */
+                                                                  nativeWindowInfo: NativeWindowInfo,
+                                                                  /**
+                                                                   * Specifies the time, in milliseconds, that the event was generated. A window that
+                                                                   * hosts other accessible objects has changed the hosted objects. A client might
+                                                                   * need to query the host window to discover the new hosted objects, especially if
+                                                                   * the client has been monitoring events from the window. A hosted object is an
+                                                                   * object from an accessibility framework (MSAA or UI Automation) that is different
+                                                                   * from that of the host. Changes in hosted objects that are from the same
+                                                                   * framework as the host should be handed with the structural change events, such
+                                                                   * as EVENT_OBJECT_CREATE for MSAA. For more info see comments within winuser.h.
+                                                                   */
+                                                                  eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The size or
+                                                     * position of an IME window has changed.
+                                                     */
+                                                    eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The size or
+                                                     * position of an IME window has changed.
+                                                     */
+                                                    eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The size or
+                                                     * position of an IME window has changed.
+                                                     */
+                                                    eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The size or
+                                                     * position of an IME window has changed.
+                                                     */
+                                                    eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
+                                                   * has become hidden.
+                                                   */
+                                                  eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
+                                                   * has become hidden.
+                                                   */
+                                                  eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
+                                                   * has become hidden.
+                                                   */
+                                                  eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
+                                                   * has become hidden.
+                                                   */
+                                                  eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
+                                                   * has become visible.
+                                                   */
+                                                  eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
+                                                   * has become visible.
+                                                   */
+                                                  eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
+                                                   * has become visible.
+                                                   */
+                                                  eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
+                                                   * has become visible.
+                                                   */
+                                                  eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                  * been invoked; for example, the user has clicked a button. This event is
+                                                  * supported by common controls and is used by UI Automation. For this event, the
+                                                  * hwnd, ID, and idChild parameters of the WinEventProc callback function identify
+                                                  * the item that is invoked.
+                                                  */
+                                                 eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                  * been invoked; for example, the user has clicked a button. This event is
+                                                  * supported by common controls and is used by UI Automation. For this event, the
+                                                  * hwnd, ID, and idChild parameters of the WinEventProc callback function identify
+                                                  * the item that is invoked.
+                                                  */
+                                                 eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                  * been invoked; for example, the user has clicked a button. This event is
+                                                  * supported by common controls and is used by UI Automation. For this event, the
+                                                  * hwnd, ID, and idChild parameters of the WinEventProc callback function identify
+                                                  * the item that is invoked.
+                                                  */
+                                                 eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                  * been invoked; for example, the user has clicked a button. This event is
+                                                  * supported by common controls and is used by UI Automation. For this event, the
+                                                  * hwnd, ID, and idChild parameters of the WinEventProc callback function identify
+                                                  * the item that is invoked.
+                                                  */
+                                                 eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object
+                                                            * that is part of a live region has changed. A live region is an area of an
+                                                            * application that changes frequently and/or asynchronously.
+                                                            */
+                                                           eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object
+                                                            * that is part of a live region has changed. A live region is an area of an
+                                                            * application that changes frequently and/or asynchronously.
+                                                            */
+                                                           eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object
+                                                            * that is part of a live region has changed. A live region is an area of an
+                                                            * application that changes frequently and/or asynchronously.
+                                                            */
+                                                           eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. An object
+                                                            * that is part of a live region has changed. A live region is an area of an
+                                                            * application that changes frequently and/or asynchronously.
+                                                            */
+                                                           eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                         * changed location, shape, or size. The system sends this event for the following
+                                                         * user interface elements: caret and window objects. Server applications send this
+                                                         * event for their accessible objects. This event is generated in response to a
+                                                         * change in the top-level object within the object hierarchy; it is not generated
+                                                         * for any children that the object might have. For example, if the user resizes a
+                                                         * window, the system sends this notification for the window, but not for the menu
+                                                         * bar, title bar, scroll bar, or other objects that have also changed. The system
+                                                         * does not send this event for every non-floating child window when the parent
+                                                         * moves. However, if an application explicitly resizes child windows as a result
+                                                         * of resizing the parent window, the system sends multiple events for the resized
+                                                         * children. If an object's State property is set to STATE_SYSTEM_FLOATING, the
+                                                         * server sends EVENT_OBJECT_LOCATIONCHANGE whenever the object changes location.
+                                                         * If an object does not have this state, servers only trigger this event when the
+                                                         * object moves in relation to its parent. For this event notification, the idChild
+                                                         * parameter of the WinEventProc callback function identifies the child object that
+                                                         * has changed.
+                                                         */
+                                                        eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                         * changed location, shape, or size. The system sends this event for the following
+                                                         * user interface elements: caret and window objects. Server applications send this
+                                                         * event for their accessible objects. This event is generated in response to a
+                                                         * change in the top-level object within the object hierarchy; it is not generated
+                                                         * for any children that the object might have. For example, if the user resizes a
+                                                         * window, the system sends this notification for the window, but not for the menu
+                                                         * bar, title bar, scroll bar, or other objects that have also changed. The system
+                                                         * does not send this event for every non-floating child window when the parent
+                                                         * moves. However, if an application explicitly resizes child windows as a result
+                                                         * of resizing the parent window, the system sends multiple events for the resized
+                                                         * children. If an object's State property is set to STATE_SYSTEM_FLOATING, the
+                                                         * server sends EVENT_OBJECT_LOCATIONCHANGE whenever the object changes location.
+                                                         * If an object does not have this state, servers only trigger this event when the
+                                                         * object moves in relation to its parent. For this event notification, the idChild
+                                                         * parameter of the WinEventProc callback function identifies the child object that
+                                                         * has changed.
+                                                         */
+                                                        eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                         * changed location, shape, or size. The system sends this event for the following
+                                                         * user interface elements: caret and window objects. Server applications send this
+                                                         * event for their accessible objects. This event is generated in response to a
+                                                         * change in the top-level object within the object hierarchy; it is not generated
+                                                         * for any children that the object might have. For example, if the user resizes a
+                                                         * window, the system sends this notification for the window, but not for the menu
+                                                         * bar, title bar, scroll bar, or other objects that have also changed. The system
+                                                         * does not send this event for every non-floating child window when the parent
+                                                         * moves. However, if an application explicitly resizes child windows as a result
+                                                         * of resizing the parent window, the system sends multiple events for the resized
+                                                         * children. If an object's State property is set to STATE_SYSTEM_FLOATING, the
+                                                         * server sends EVENT_OBJECT_LOCATIONCHANGE whenever the object changes location.
+                                                         * If an object does not have this state, servers only trigger this event when the
+                                                         * object moves in relation to its parent. For this event notification, the idChild
+                                                         * parameter of the WinEventProc callback function identifies the child object that
+                                                         * has changed.
+                                                         */
+                                                        eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                         * changed location, shape, or size. The system sends this event for the following
+                                                         * user interface elements: caret and window objects. Server applications send this
+                                                         * event for their accessible objects. This event is generated in response to a
+                                                         * change in the top-level object within the object hierarchy; it is not generated
+                                                         * for any children that the object might have. For example, if the user resizes a
+                                                         * window, the system sends this notification for the window, but not for the menu
+                                                         * bar, title bar, scroll bar, or other objects that have also changed. The system
+                                                         * does not send this event for every non-floating child window when the parent
+                                                         * moves. However, if an application explicitly resizes child windows as a result
+                                                         * of resizing the parent window, the system sends multiple events for the resized
+                                                         * children. If an object's State property is set to STATE_SYSTEM_FLOATING, the
+                                                         * server sends EVENT_OBJECT_LOCATIONCHANGE whenever the object changes location.
+                                                         * If an object does not have this state, servers only trigger this event when the
+                                                         * object moves in relation to its parent. For this event notification, the idChild
+                                                         * parameter of the WinEventProc callback function identifies the child object that
+                                                         * has changed.
+                                                         */
+                                                        eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                     * Name property has changed. The system sends this event for the following user
+                                                     * interface elements: check box, cursor, list-view control, push button, radio
+                                                     * button, status bar control, tree view control, and window object. Server
+                                                     * applications send this event for their accessible objects.
+                                                     */
+                                                    eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                     * Name property has changed. The system sends this event for the following user
+                                                     * interface elements: check box, cursor, list-view control, push button, radio
+                                                     * button, status bar control, tree view control, and window object. Server
+                                                     * applications send this event for their accessible objects.
+                                                     */
+                                                    eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                     * Name property has changed. The system sends this event for the following user
+                                                     * interface elements: check box, cursor, list-view control, push button, radio
+                                                     * button, status bar control, tree view control, and window object. Server
+                                                     * applications send this event for their accessible objects.
+                                                     */
+                                                    eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                     * Name property has changed. The system sends this event for the following user
+                                                     * interface elements: check box, cursor, list-view control, push button, radio
+                                                     * button, status bar control, tree view control, and window object. Server
+                                                     * applications send this event for their accessible objects.
+                                                     */
+                                                    eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                       * a new parent object. Server applications send this event for their accessible
+                                                       * objects.
+                                                       */
+                                                      eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                       * a new parent object. Server applications send this event for their accessible
+                                                       * objects.
+                                                       */
+                                                      eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                       * a new parent object. Server applications send this event for their accessible
+                                                       * objects.
+                                                       */
+                                                      eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. An object has
+                                                       * a new parent object. Server applications send this event for their accessible
+                                                       * objects.
+                                                       */
+                                                      eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. A container
+                                                  * object has added, removed, or reordered its children. The system sends this
+                                                  * event for the following user interface elements: header control, list-view
+                                                  * control, toolbar control, and window object. Server applications send this event
+                                                  * as appropriate for their accessible objects. For example, this event is
+                                                  * generated by a list-view object when the number of child elements or the order
+                                                  * of the elements changes. This event is also sent by a parent window when the
+                                                  * Z-order for the child windows changes.
+                                                  */
+                                                 eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. A container
+                                                  * object has added, removed, or reordered its children. The system sends this
+                                                  * event for the following user interface elements: header control, list-view
+                                                  * control, toolbar control, and window object. Server applications send this event
+                                                  * as appropriate for their accessible objects. For example, this event is
+                                                  * generated by a list-view object when the number of child elements or the order
+                                                  * of the elements changes. This event is also sent by a parent window when the
+                                                  * Z-order for the child windows changes.
+                                                  */
+                                                 eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. A container
+                                                  * object has added, removed, or reordered its children. The system sends this
+                                                  * event for the following user interface elements: header control, list-view
+                                                  * control, toolbar control, and window object. Server applications send this event
+                                                  * as appropriate for their accessible objects. For example, this event is
+                                                  * generated by a list-view object when the number of child elements or the order
+                                                  * of the elements changes. This event is also sent by a parent window when the
+                                                  * Z-order for the child windows changes.
+                                                  */
+                                                 eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. A container
+                                                  * object has added, removed, or reordered its children. The system sends this
+                                                  * event for the following user interface elements: header control, list-view
+                                                  * control, toolbar control, and window object. Server applications send this event
+                                                  * as appropriate for their accessible objects. For example, this event is
+                                                  * generated by a list-view object when the number of child elements or the order
+                                                  * of the elements changes. This event is also sent by a parent window when the
+                                                  * Z-order for the child windows changes.
+                                                  */
+                                                 eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The selection
+                                                    * within a container object has changed. The system sends this event for the
+                                                    * following user interface elements: list-view control, tab control, tree view
+                                                    * control, and window object. Server applications send this event for their
+                                                    * accessible objects. This event signals a single selection: either a child is
+                                                    * selected in a container that previously did not contain any selected children,
+                                                    * or the selection has changed from one child to another. The hwnd and idObject
+                                                    * parameters of the WinEventProc callback function describe the container; the
+                                                    * idChild parameter identifies the object that is selected. If the selected child
+                                                    * is a window that also contains objects, the idChild parameter is OBJID_WINDOW.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The selection
+                                                    * within a container object has changed. The system sends this event for the
+                                                    * following user interface elements: list-view control, tab control, tree view
+                                                    * control, and window object. Server applications send this event for their
+                                                    * accessible objects. This event signals a single selection: either a child is
+                                                    * selected in a container that previously did not contain any selected children,
+                                                    * or the selection has changed from one child to another. The hwnd and idObject
+                                                    * parameters of the WinEventProc callback function describe the container; the
+                                                    * idChild parameter identifies the object that is selected. If the selected child
+                                                    * is a window that also contains objects, the idChild parameter is OBJID_WINDOW.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The selection
+                                                    * within a container object has changed. The system sends this event for the
+                                                    * following user interface elements: list-view control, tab control, tree view
+                                                    * control, and window object. Server applications send this event for their
+                                                    * accessible objects. This event signals a single selection: either a child is
+                                                    * selected in a container that previously did not contain any selected children,
+                                                    * or the selection has changed from one child to another. The hwnd and idObject
+                                                    * parameters of the WinEventProc callback function describe the container; the
+                                                    * idChild parameter identifies the object that is selected. If the selected child
+                                                    * is a window that also contains objects, the idChild parameter is OBJID_WINDOW.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The selection
+                                                    * within a container object has changed. The system sends this event for the
+                                                    * following user interface elements: list-view control, tab control, tree view
+                                                    * control, and window object. Server applications send this event for their
+                                                    * accessible objects. This event signals a single selection: either a child is
+                                                    * selected in a container that previously did not contain any selected children,
+                                                    * or the selection has changed from one child to another. The hwnd and idObject
+                                                    * parameters of the WinEventProc callback function describe the container; the
+                                                    * idChild parameter identifies the object that is selected. If the selected child
+                                                    * is a window that also contains objects, the idChild parameter is OBJID_WINDOW.
+                                                    */
+                                                   eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A child
+                                                       * within a container object has been added to an existing selection. The system
+                                                       * sends this event for the following user interface elements: list box, list-view
+                                                       * control, and tree view control. Server applications send this event for their
+                                                       * accessible objects. The hwnd and idObject parameters of the WinEventProc
+                                                       * callback function describe the container. The idChild parameter is the child
+                                                       * that is added to the selection.
+                                                       */
+                                                      eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A child
+                                                       * within a container object has been added to an existing selection. The system
+                                                       * sends this event for the following user interface elements: list box, list-view
+                                                       * control, and tree view control. Server applications send this event for their
+                                                       * accessible objects. The hwnd and idObject parameters of the WinEventProc
+                                                       * callback function describe the container. The idChild parameter is the child
+                                                       * that is added to the selection.
+                                                       */
+                                                      eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A child
+                                                       * within a container object has been added to an existing selection. The system
+                                                       * sends this event for the following user interface elements: list box, list-view
+                                                       * control, and tree view control. Server applications send this event for their
+                                                       * accessible objects. The hwnd and idObject parameters of the WinEventProc
+                                                       * callback function describe the container. The idChild parameter is the child
+                                                       * that is added to the selection.
+                                                       */
+                                                      eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A child
+                                                       * within a container object has been added to an existing selection. The system
+                                                       * sends this event for the following user interface elements: list box, list-view
+                                                       * control, and tree view control. Server applications send this event for their
+                                                       * accessible objects. The hwnd and idObject parameters of the WinEventProc
+                                                       * callback function describe the container. The idChild parameter is the child
+                                                       * that is added to the selection.
+                                                       */
+                                                      eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. An item
+                                                          * within a container object has been removed from the selection. The system sends
+                                                          * this event for the following user interface elements: list box, list-view
+                                                          * control, and tree view control. Server applications send this event for their
+                                                          * accessible objects. This event signals that a child is removed from an existing
+                                                          * selection. The hwnd and idObject parameters of the WinEventProc callback
+                                                          * function describe the container; the idChild parameter identifies the child that
+                                                          * has been removed from the selection.
+                                                          */
+                                                         eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. An item
+                                                          * within a container object has been removed from the selection. The system sends
+                                                          * this event for the following user interface elements: list box, list-view
+                                                          * control, and tree view control. Server applications send this event for their
+                                                          * accessible objects. This event signals that a child is removed from an existing
+                                                          * selection. The hwnd and idObject parameters of the WinEventProc callback
+                                                          * function describe the container; the idChild parameter identifies the child that
+                                                          * has been removed from the selection.
+                                                          */
+                                                         eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. An item
+                                                          * within a container object has been removed from the selection. The system sends
+                                                          * this event for the following user interface elements: list box, list-view
+                                                          * control, and tree view control. Server applications send this event for their
+                                                          * accessible objects. This event signals that a child is removed from an existing
+                                                          * selection. The hwnd and idObject parameters of the WinEventProc callback
+                                                          * function describe the container; the idChild parameter identifies the child that
+                                                          * has been removed from the selection.
+                                                          */
+                                                         eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. An item
+                                                          * within a container object has been removed from the selection. The system sends
+                                                          * this event for the following user interface elements: list box, list-view
+                                                          * control, and tree view control. Server applications send this event for their
+                                                          * accessible objects. This event signals that a child is removed from an existing
+                                                          * selection. The hwnd and idObject parameters of the WinEventProc callback
+                                                          * function describe the container; the idChild parameter identifies the child that
+                                                          * has been removed from the selection.
+                                                          */
+                                                         eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. Numerous
+                                                          * selection changes have occurred within a container object. The system sends this
+                                                          * event for list boxes; server applications send it for their accessible objects.
+                                                          * This event is sent when the selected items within a control have changed
+                                                          * substantially. The event informs the client that many selection changes have
+                                                          * occurred, and it is sent instead of several EVENT_OBJECT_SELECTIONADD or
+                                                          * EVENT_OBJECT_SELECTIONREMOVE events. The client queries for the selected items
+                                                          * by calling the container object's IAccessible::get_accSelection method and
+                                                          * enumerating the selected items. For this event notification, the hwnd and
+                                                          * idObject parameters of the WinEventProc callback function describe the container
+                                                          * in which the changes occurred.
+                                                          */
+                                                         eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. Numerous
+                                                          * selection changes have occurred within a container object. The system sends this
+                                                          * event for list boxes; server applications send it for their accessible objects.
+                                                          * This event is sent when the selected items within a control have changed
+                                                          * substantially. The event informs the client that many selection changes have
+                                                          * occurred, and it is sent instead of several EVENT_OBJECT_SELECTIONADD or
+                                                          * EVENT_OBJECT_SELECTIONREMOVE events. The client queries for the selected items
+                                                          * by calling the container object's IAccessible::get_accSelection method and
+                                                          * enumerating the selected items. For this event notification, the hwnd and
+                                                          * idObject parameters of the WinEventProc callback function describe the container
+                                                          * in which the changes occurred.
+                                                          */
+                                                         eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. Numerous
+                                                          * selection changes have occurred within a container object. The system sends this
+                                                          * event for list boxes; server applications send it for their accessible objects.
+                                                          * This event is sent when the selected items within a control have changed
+                                                          * substantially. The event informs the client that many selection changes have
+                                                          * occurred, and it is sent instead of several EVENT_OBJECT_SELECTIONADD or
+                                                          * EVENT_OBJECT_SELECTIONREMOVE events. The client queries for the selected items
+                                                          * by calling the container object's IAccessible::get_accSelection method and
+                                                          * enumerating the selected items. For this event notification, the hwnd and
+                                                          * idObject parameters of the WinEventProc callback function describe the container
+                                                          * in which the changes occurred.
+                                                          */
+                                                         eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
+                                                         /**
+                                                          * A `NativeWindowInfo` object for the window or control that the was generated
+                                                          * for.
+                                                          */
+                                                         nativeWindowInfo: NativeWindowInfo,
+                                                         /**
+                                                          * Specifies the time, in milliseconds, that the event was generated. Numerous
+                                                          * selection changes have occurred within a container object. The system sends this
+                                                          * event for list boxes; server applications send it for their accessible objects.
+                                                          * This event is sent when the selected items within a control have changed
+                                                          * substantially. The event informs the client that many selection changes have
+                                                          * occurred, and it is sent instead of several EVENT_OBJECT_SELECTIONADD or
+                                                          * EVENT_OBJECT_SELECTIONREMOVE events. The client queries for the selected items
+                                                          * by calling the container object's IAccessible::get_accSelection method and
+                                                          * enumerating the selected items. For this event notification, the hwnd and
+                                                          * idObject parameters of the WinEventProc callback function describe the container
+                                                          * in which the changes occurred.
+                                                          */
+                                                         eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
+                                              /**
+                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                               * for.
+                                               */
+                                              nativeWindowInfo: NativeWindowInfo,
+                                              /**
+                                               * Specifies the time, in milliseconds, that the event was generated. A hidden
+                                               * object is shown. The system sends this event for the following user interface
+                                               * elements: caret, cursor, and window object. Server applications send this event
+                                               * for their accessible objects. Clients assume that when this event is sent by a
+                                               * parent object, all child objects are already displayed. Therefore, server
+                                               * applications do not send this event for the child objects. Hidden objects
+                                               * include the STATE_SYSTEM_INVISIBLE flag; shown objects do not include this flag.
+                                               * The EVENT_OBJECT_SHOW event also indicates that the STATE_SYSTEM_INVISIBLE flag
+                                               * is cleared. Therefore, servers do not send the EVENT_STATE_CHANGE event in this
+                                               * case.
+                                               */
+                                              eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
+                                              /**
+                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                               * for.
+                                               */
+                                              nativeWindowInfo: NativeWindowInfo,
+                                              /**
+                                               * Specifies the time, in milliseconds, that the event was generated. A hidden
+                                               * object is shown. The system sends this event for the following user interface
+                                               * elements: caret, cursor, and window object. Server applications send this event
+                                               * for their accessible objects. Clients assume that when this event is sent by a
+                                               * parent object, all child objects are already displayed. Therefore, server
+                                               * applications do not send this event for the child objects. Hidden objects
+                                               * include the STATE_SYSTEM_INVISIBLE flag; shown objects do not include this flag.
+                                               * The EVENT_OBJECT_SHOW event also indicates that the STATE_SYSTEM_INVISIBLE flag
+                                               * is cleared. Therefore, servers do not send the EVENT_STATE_CHANGE event in this
+                                               * case.
+                                               */
+                                              eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
+                                              /**
+                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                               * for.
+                                               */
+                                              nativeWindowInfo: NativeWindowInfo,
+                                              /**
+                                               * Specifies the time, in milliseconds, that the event was generated. A hidden
+                                               * object is shown. The system sends this event for the following user interface
+                                               * elements: caret, cursor, and window object. Server applications send this event
+                                               * for their accessible objects. Clients assume that when this event is sent by a
+                                               * parent object, all child objects are already displayed. Therefore, server
+                                               * applications do not send this event for the child objects. Hidden objects
+                                               * include the STATE_SYSTEM_INVISIBLE flag; shown objects do not include this flag.
+                                               * The EVENT_OBJECT_SHOW event also indicates that the STATE_SYSTEM_INVISIBLE flag
+                                               * is cleared. Therefore, servers do not send the EVENT_STATE_CHANGE event in this
+                                               * case.
+                                               */
+                                              eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
+                                              /**
+                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                               * for.
+                                               */
+                                              nativeWindowInfo: NativeWindowInfo,
+                                              /**
+                                               * Specifies the time, in milliseconds, that the event was generated. A hidden
+                                               * object is shown. The system sends this event for the following user interface
+                                               * elements: caret, cursor, and window object. Server applications send this event
+                                               * for their accessible objects. Clients assume that when this event is sent by a
+                                               * parent object, all child objects are already displayed. Therefore, server
+                                               * applications do not send this event for the child objects. Hidden objects
+                                               * include the STATE_SYSTEM_INVISIBLE flag; shown objects do not include this flag.
+                                               * The EVENT_OBJECT_SHOW event also indicates that the STATE_SYSTEM_INVISIBLE flag
+                                               * is cleared. Therefore, servers do not send the EVENT_STATE_CHANGE event in this
+                                               * case.
+                                               */
+                                              eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                      * state has changed. The system sends this event for the following user interface
+                                                      * elements: check box, combo box, header control, push button, radio button,
+                                                      * scroll bar, toolbar control, tree view control, up-down control, and window
+                                                      * object. Server applications send this event for their accessible objects. For
+                                                      * example, a state change occurs when a button object is clicked or released, or
+                                                      * when an object is enabled or disabled. For this event notification, the idChild
+                                                      * parameter of the WinEventProc callback function identifies the child object
+                                                      * whose state has changed.
+                                                      */
+                                                     eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                      * state has changed. The system sends this event for the following user interface
+                                                      * elements: check box, combo box, header control, push button, radio button,
+                                                      * scroll bar, toolbar control, tree view control, up-down control, and window
+                                                      * object. Server applications send this event for their accessible objects. For
+                                                      * example, a state change occurs when a button object is clicked or released, or
+                                                      * when an object is enabled or disabled. For this event notification, the idChild
+                                                      * parameter of the WinEventProc callback function identifies the child object
+                                                      * whose state has changed.
+                                                      */
+                                                     eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                      * state has changed. The system sends this event for the following user interface
+                                                      * elements: check box, combo box, header control, push button, radio button,
+                                                      * scroll bar, toolbar control, tree view control, up-down control, and window
+                                                      * object. Server applications send this event for their accessible objects. For
+                                                      * example, a state change occurs when a button object is clicked or released, or
+                                                      * when an object is enabled or disabled. For this event notification, the idChild
+                                                      * parameter of the WinEventProc callback function identifies the child object
+                                                      * whose state has changed.
+                                                      */
+                                                     eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                      * state has changed. The system sends this event for the following user interface
+                                                      * elements: check box, combo box, header control, push button, radio button,
+                                                      * scroll bar, toolbar control, tree view control, up-down control, and window
+                                                      * object. Server applications send this event for their accessible objects. For
+                                                      * example, a state change occurs when a button object is clicked or released, or
+                                                      * when an object is enabled or disabled. For this event notification, the idChild
+                                                      * parameter of the WinEventProc callback function identifies the child object
+                                                      * whose state has changed.
+                                                      */
+                                                     eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
+                                                                          /**
+                                                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                                                           * for.
+                                                                           */
+                                                                          nativeWindowInfo: NativeWindowInfo,
+                                                                          /**
+                                                                           * Specifies the time, in milliseconds, that the event was generated. The
+                                                                           * conversion target within an IME composition has changed. The conversion target
+                                                                           * is the subset of the IME composition which is actively selected as the target
+                                                                           * for user-initiated conversions.
+                                                                           */
+                                                                          eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
+                                                                          /**
+                                                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                                                           * for.
+                                                                           */
+                                                                          nativeWindowInfo: NativeWindowInfo,
+                                                                          /**
+                                                                           * Specifies the time, in milliseconds, that the event was generated. The
+                                                                           * conversion target within an IME composition has changed. The conversion target
+                                                                           * is the subset of the IME composition which is actively selected as the target
+                                                                           * for user-initiated conversions.
+                                                                           */
+                                                                          eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
+                                                                          /**
+                                                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                                                           * for.
+                                                                           */
+                                                                          nativeWindowInfo: NativeWindowInfo,
+                                                                          /**
+                                                                           * Specifies the time, in milliseconds, that the event was generated. The
+                                                                           * conversion target within an IME composition has changed. The conversion target
+                                                                           * is the subset of the IME composition which is actively selected as the target
+                                                                           * for user-initiated conversions.
+                                                                           */
+                                                                          eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
+                                                                          /**
+                                                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                                                           * for.
+                                                                           */
+                                                                          nativeWindowInfo: NativeWindowInfo,
+                                                                          /**
+                                                                           * Specifies the time, in milliseconds, that the event was generated. The
+                                                                           * conversion target within an IME composition has changed. The conversion target
+                                                                           * is the subset of the IME composition which is actively selected as the target
+                                                                           * for user-initiated conversions.
+                                                                           */
+                                                                          eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
+                                                              /**
+                                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                                               * for.
+                                                               */
+                                                              nativeWindowInfo: NativeWindowInfo,
+                                                              /**
+                                                               * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                               * text selection has changed. This event is supported by common controls and is
+                                                               * used by UI Automation. The hwnd, ID, and idChild parameters of the WinEventProc
+                                                               * callback function describe the item that is contained in the updated text
+                                                               * selection.
+                                                               */
+                                                              eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
+                                                              /**
+                                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                                               * for.
+                                                               */
+                                                              nativeWindowInfo: NativeWindowInfo,
+                                                              /**
+                                                               * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                               * text selection has changed. This event is supported by common controls and is
+                                                               * used by UI Automation. The hwnd, ID, and idChild parameters of the WinEventProc
+                                                               * callback function describe the item that is contained in the updated text
+                                                               * selection.
+                                                               */
+                                                              eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
+                                                              /**
+                                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                                               * for.
+                                                               */
+                                                              nativeWindowInfo: NativeWindowInfo,
+                                                              /**
+                                                               * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                               * text selection has changed. This event is supported by common controls and is
+                                                               * used by UI Automation. The hwnd, ID, and idChild parameters of the WinEventProc
+                                                               * callback function describe the item that is contained in the updated text
+                                                               * selection.
+                                                               */
+                                                              eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
+                                                              /**
+                                                               * A `NativeWindowInfo` object for the window or control that the was generated
+                                                               * for.
+                                                               */
+                                                              nativeWindowInfo: NativeWindowInfo,
+                                                              /**
+                                                               * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                               * text selection has changed. This event is supported by common controls and is
+                                                               * used by UI Automation. The hwnd, ID, and idChild parameters of the WinEventProc
+                                                               * callback function describe the item that is contained in the updated text
+                                                               * selection.
+                                                               */
+                                                              eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. Sent when a
+                                                    * window is uncloaked. A cloaked window still exists, but is invisible to the
+                                                    * user.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. Sent when a
+                                                    * window is uncloaked. A cloaked window still exists, but is invisible to the
+                                                    * user.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. Sent when a
+                                                    * window is uncloaked. A cloaked window still exists, but is invisible to the
+                                                    * user.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. Sent when a
+                                                    * window is uncloaked. A cloaked window still exists, but is invisible to the
+                                                    * user.
+                                                    */
+                                                   eventTime: number) => void): this;
+    on(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                      * Value property has changed. The system sends this event for the user interface
+                                                      * elements that include the scroll bar and the following controls: edit, header,
+                                                      * hot key, progress bar, slider, and up-down. Server applications send this event
+                                                      * for their accessible objects.
+                                                      */
+                                                     eventTime: number) => void): this;
+    once(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                      * Value property has changed. The system sends this event for the user interface
+                                                      * elements that include the scroll bar and the following controls: edit, header,
+                                                      * hot key, progress bar, slider, and up-down. Server applications send this event
+                                                      * for their accessible objects.
+                                                      */
+                                                     eventTime: number) => void): this;
+    addListener(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                      * Value property has changed. The system sends this event for the user interface
+                                                      * elements that include the scroll bar and the following controls: edit, header,
+                                                      * hot key, progress bar, slider, and up-down. Server applications send this event
+                                                      * for their accessible objects.
+                                                      */
+                                                     eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
+                                                      * Value property has changed. The system sends this event for the user interface
+                                                      * elements that include the scroll bar and the following controls: edit, header,
+                                                      * hot key, progress bar, slider, and up-down. Server applications send this event
+                                                      * for their accessible objects.
+                                                      */
+                                                     eventTime: number) => void): this;
+    on(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                   * event constant values reserved for OEMs. For more information, see Allocation of
+                                                   * WinEvent IDs.
+                                                   */
+                                                  eventTime: number) => void): this;
+    once(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                   * event constant values reserved for OEMs. For more information, see Allocation of
+                                                   * WinEvent IDs.
+                                                   */
+                                                  eventTime: number) => void): this;
+    addListener(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                   * event constant values reserved for OEMs. For more information, see Allocation of
+                                                   * WinEvent IDs.
+                                                   */
+                                                  eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                   * event constant values reserved for OEMs. For more information, see Allocation of
+                                                   * WinEvent IDs.
+                                                   */
+                                                  eventTime: number) => void): this;
+    on(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                     * event constant values reserved for OEMs. For more information, see Allocation of
+                                                     * WinEvent IDs.
+                                                     */
+                                                    eventTime: number) => void): this;
+    once(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                     * event constant values reserved for OEMs. For more information, see Allocation of
+                                                     * WinEvent IDs.
+                                                     */
+                                                    eventTime: number) => void): this;
+    addListener(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                     * event constant values reserved for OEMs. For more information, see Allocation of
+                                                     * WinEvent IDs.
+                                                     */
+                                                    eventTime: number) => void): this;
+    removeListener(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                     * event constant values reserved for OEMs. For more information, see Allocation of
+                                                     * WinEvent IDs.
+                                                     */
+                                                    eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. An alert has
+                                                * been generated. Server applications should not send this event.
+                                                */
+                                               eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. An alert has
+                                                * been generated. Server applications should not send this event.
+                                                */
+                                               eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. An alert has
+                                                * been generated. Server applications should not send this event.
+                                                */
+                                               eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. An alert has
+                                                * been generated. Server applications should not send this event.
+                                                */
+                                               eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. A preview
+                                                            * rectangle is being displayed.
+                                                            */
+                                                           eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. A preview
+                                                            * rectangle is being displayed.
+                                                            */
+                                                           eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. A preview
+                                                            * rectangle is being displayed.
+                                                            */
+                                                           eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
+                                                           /**
+                                                            * A `NativeWindowInfo` object for the window or control that the was generated
+                                                            * for.
+                                                            */
+                                                           nativeWindowInfo: NativeWindowInfo,
+                                                           /**
+                                                            * Specifies the time, in milliseconds, that the event was generated. A preview
+                                                            * rectangle is being displayed.
+                                                            */
+                                                           eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                     * lost mouse capture. This event is sent by the system, never by servers.
+                                                     */
+                                                    eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                     * lost mouse capture. This event is sent by the system, never by servers.
+                                                     */
+                                                    eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                     * lost mouse capture. This event is sent by the system, never by servers.
+                                                     */
+                                                    eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                     * lost mouse capture. This event is sent by the system, never by servers.
+                                                     */
+                                                    eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                       * received mouse capture. This event is sent by the system, never by servers.
+                                                       */
+                                                      eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                       * received mouse capture. This event is sent by the system, never by servers.
+                                                       */
+                                                      eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                       * received mouse capture. This event is sent by the system, never by servers.
+                                                       */
+                                                      eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                       * received mouse capture. This event is sent by the system, never by servers.
+                                                       */
+                                                      eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                         * exited context-sensitive Help mode. This event is not sent consistently by the
+                                                         * system.
+                                                         */
+                                                        eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                         * exited context-sensitive Help mode. This event is not sent consistently by the
+                                                         * system.
+                                                         */
+                                                        eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                         * exited context-sensitive Help mode. This event is not sent consistently by the
+                                                         * system.
+                                                         */
+                                                        eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                         * exited context-sensitive Help mode. This event is not sent consistently by the
+                                                         * system.
+                                                         */
+                                                        eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
+                                                          /**
+                                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                                           * for.
+                                                           */
+                                                          nativeWindowInfo: NativeWindowInfo,
+                                                          /**
+                                                           * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                           * entered context-sensitive Help mode. This event is not sent consistently by the
+                                                           * system.
+                                                           */
+                                                          eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
+                                                          /**
+                                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                                           * for.
+                                                           */
+                                                          nativeWindowInfo: NativeWindowInfo,
+                                                          /**
+                                                           * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                           * entered context-sensitive Help mode. This event is not sent consistently by the
+                                                           * system.
+                                                           */
+                                                          eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
+                                                          /**
+                                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                                           * for.
+                                                           */
+                                                          nativeWindowInfo: NativeWindowInfo,
+                                                          /**
+                                                           * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                           * entered context-sensitive Help mode. This event is not sent consistently by the
+                                                           * system.
+                                                           */
+                                                          eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
+                                                          /**
+                                                           * A `NativeWindowInfo` object for the window or control that the was generated
+                                                           * for.
+                                                           */
+                                                          nativeWindowInfo: NativeWindowInfo,
+                                                          /**
+                                                           * Specifies the time, in milliseconds, that the event was generated. A window has
+                                                           * entered context-sensitive Help mode. This event is not sent consistently by the
+                                                           * system.
+                                                           */
+                                                          eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. The active
+                                                        * desktop has been switched.
+                                                        */
+                                                       eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. The active
+                                                        * desktop has been switched.
+                                                        */
+                                                       eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. The active
+                                                        * desktop has been switched.
+                                                        */
+                                                       eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. The active
+                                                        * desktop has been switched.
+                                                        */
+                                                       eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. A dialog box
+                                                    * has been closed. The system sends this event for standard dialog boxes; servers
+                                                    * send it for custom dialog boxes. This event is not sent consistently by the
+                                                    * system.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. A dialog box
+                                                    * has been closed. The system sends this event for standard dialog boxes; servers
+                                                    * send it for custom dialog boxes. This event is not sent consistently by the
+                                                    * system.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. A dialog box
+                                                    * has been closed. The system sends this event for standard dialog boxes; servers
+                                                    * send it for custom dialog boxes. This event is not sent consistently by the
+                                                    * system.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. A dialog box
+                                                    * has been closed. The system sends this event for standard dialog boxes; servers
+                                                    * send it for custom dialog boxes. This event is not sent consistently by the
+                                                    * system.
+                                                    */
+                                                   eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. A dialog box
+                                                      * has been displayed. The system sends this event for standard dialog boxes, which
+                                                      * are created using resource templates or Win32 dialog box functions. Servers send
+                                                      * this event for custom dialog boxes, which are windows that function as dialog
+                                                      * boxes but are not created in the standard way. This event is not sent
+                                                      * consistently by the system.
+                                                      */
+                                                     eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. A dialog box
+                                                      * has been displayed. The system sends this event for standard dialog boxes, which
+                                                      * are created using resource templates or Win32 dialog box functions. Servers send
+                                                      * this event for custom dialog boxes, which are windows that function as dialog
+                                                      * boxes but are not created in the standard way. This event is not sent
+                                                      * consistently by the system.
+                                                      */
+                                                     eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. A dialog box
+                                                      * has been displayed. The system sends this event for standard dialog boxes, which
+                                                      * are created using resource templates or Win32 dialog box functions. Servers send
+                                                      * this event for custom dialog boxes, which are windows that function as dialog
+                                                      * boxes but are not created in the standard way. This event is not sent
+                                                      * consistently by the system.
+                                                      */
+                                                     eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. A dialog box
+                                                      * has been displayed. The system sends this event for standard dialog boxes, which
+                                                      * are created using resource templates or Win32 dialog box functions. Servers send
+                                                      * this event for custom dialog boxes, which are windows that function as dialog
+                                                      * boxes but are not created in the standard way. This event is not sent
+                                                      * consistently by the system.
+                                                      */
+                                                     eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An
+                                                      * application is about to exit drag-and-drop mode. Applications that support
+                                                      * drag-and-drop operations must send this event; the system does not send this
+                                                      * event.
+                                                      */
+                                                     eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An
+                                                      * application is about to exit drag-and-drop mode. Applications that support
+                                                      * drag-and-drop operations must send this event; the system does not send this
+                                                      * event.
+                                                      */
+                                                     eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An
+                                                      * application is about to exit drag-and-drop mode. Applications that support
+                                                      * drag-and-drop operations must send this event; the system does not send this
+                                                      * event.
+                                                      */
+                                                     eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. An
+                                                      * application is about to exit drag-and-drop mode. Applications that support
+                                                      * drag-and-drop operations must send this event; the system does not send this
+                                                      * event.
+                                                      */
+                                                     eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. An
+                                                        * application is about to enter drag-and-drop mode. Applications that support
+                                                        * drag-and-drop operations must send this event because the system does not send
+                                                        * it.
+                                                        */
+                                                       eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. An
+                                                        * application is about to enter drag-and-drop mode. Applications that support
+                                                        * drag-and-drop operations must send this event because the system does not send
+                                                        * it.
+                                                        */
+                                                       eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. An
+                                                        * application is about to enter drag-and-drop mode. Applications that support
+                                                        * drag-and-drop operations must send this event because the system does not send
+                                                        * it.
+                                                        */
+                                                       eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. An
+                                                        * application is about to enter drag-and-drop mode. Applications that support
+                                                        * drag-and-drop operations must send this event because the system does not send
+                                                        * it.
+                                                        */
+                                                       eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_END', listener: (event: Event,
+                                             /**
+                                              * A `NativeWindowInfo` object for the window or control that the was generated
+                                              * for.
+                                              */
+                                             nativeWindowInfo: NativeWindowInfo,
+                                             /**
+                                              * Specifies the time, in milliseconds, that the event was generated. The highest
+                                              * system event value.
+                                              */
+                                             eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_END', listener: (event: Event,
+                                             /**
+                                              * A `NativeWindowInfo` object for the window or control that the was generated
+                                              * for.
+                                              */
+                                             nativeWindowInfo: NativeWindowInfo,
+                                             /**
+                                              * Specifies the time, in milliseconds, that the event was generated. The highest
+                                              * system event value.
+                                              */
+                                             eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_END', listener: (event: Event,
+                                             /**
+                                              * A `NativeWindowInfo` object for the window or control that the was generated
+                                              * for.
+                                              */
+                                             nativeWindowInfo: NativeWindowInfo,
+                                             /**
+                                              * Specifies the time, in milliseconds, that the event was generated. The highest
+                                              * system event value.
+                                              */
+                                             eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_END', listener: (event: Event,
+                                             /**
+                                              * A `NativeWindowInfo` object for the window or control that the was generated
+                                              * for.
+                                              */
+                                             nativeWindowInfo: NativeWindowInfo,
+                                             /**
+                                              * Specifies the time, in milliseconds, that the event was generated. The highest
+                                              * system event value.
+                                              */
+                                             eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The
+                                                     * foreground window has changed. The system sends this event even if the
+                                                     * foreground window has changed to another window in the same thread. Server
+                                                     * applications never send this event. For this event, the WinEventProc callback
+                                                     * function's hwnd parameter is the handle to the window that is in the foreground,
+                                                     * the idObject parameter is OBJID_WINDOW, and the idChild parameter is
+                                                     * CHILDID_SELF.
+                                                     */
+                                                    eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The
+                                                     * foreground window has changed. The system sends this event even if the
+                                                     * foreground window has changed to another window in the same thread. Server
+                                                     * applications never send this event. For this event, the WinEventProc callback
+                                                     * function's hwnd parameter is the handle to the window that is in the foreground,
+                                                     * the idObject parameter is OBJID_WINDOW, and the idChild parameter is
+                                                     * CHILDID_SELF.
+                                                     */
+                                                    eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The
+                                                     * foreground window has changed. The system sends this event even if the
+                                                     * foreground window has changed to another window in the same thread. Server
+                                                     * applications never send this event. For this event, the WinEventProc callback
+                                                     * function's hwnd parameter is the handle to the window that is in the foreground,
+                                                     * the idObject parameter is OBJID_WINDOW, and the idChild parameter is
+                                                     * CHILDID_SELF.
+                                                     */
+                                                    eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The
+                                                     * foreground window has changed. The system sends this event even if the
+                                                     * foreground window has changed to another window in the same thread. Server
+                                                     * applications never send this event. For this event, the WinEventProc callback
+                                                     * function's hwnd parameter is the handle to the window that is in the foreground,
+                                                     * the idObject parameter is OBJID_WINDOW, and the idChild parameter is
+                                                     * CHILDID_SELF.
+                                                     */
+                                                    eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. A menu from
+                                                  * the menu bar has been closed. The system sends this event for standard menus;
+                                                  * servers send it for custom menus. For this event, the WinEventProc callback
+                                                  * function's hwnd, idObject, and idChild parameters refer to the control that
+                                                  * contains the menu bar or the control that activates the context menu. The hwnd
+                                                  * parameter is the handle to the window that is related to the event. The idObject
+                                                  * parameter is OBJID_MENU or OBJID_SYSMENU for a menu, or OBJID_WINDOW for a
+                                                  * pop-up menu. The idChild parameter is CHILDID_SELF.
+                                                  */
+                                                 eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. A menu from
+                                                  * the menu bar has been closed. The system sends this event for standard menus;
+                                                  * servers send it for custom menus. For this event, the WinEventProc callback
+                                                  * function's hwnd, idObject, and idChild parameters refer to the control that
+                                                  * contains the menu bar or the control that activates the context menu. The hwnd
+                                                  * parameter is the handle to the window that is related to the event. The idObject
+                                                  * parameter is OBJID_MENU or OBJID_SYSMENU for a menu, or OBJID_WINDOW for a
+                                                  * pop-up menu. The idChild parameter is CHILDID_SELF.
+                                                  */
+                                                 eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. A menu from
+                                                  * the menu bar has been closed. The system sends this event for standard menus;
+                                                  * servers send it for custom menus. For this event, the WinEventProc callback
+                                                  * function's hwnd, idObject, and idChild parameters refer to the control that
+                                                  * contains the menu bar or the control that activates the context menu. The hwnd
+                                                  * parameter is the handle to the window that is related to the event. The idObject
+                                                  * parameter is OBJID_MENU or OBJID_SYSMENU for a menu, or OBJID_WINDOW for a
+                                                  * pop-up menu. The idChild parameter is CHILDID_SELF.
+                                                  */
+                                                 eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. A menu from
+                                                  * the menu bar has been closed. The system sends this event for standard menus;
+                                                  * servers send it for custom menus. For this event, the WinEventProc callback
+                                                  * function's hwnd, idObject, and idChild parameters refer to the control that
+                                                  * contains the menu bar or the control that activates the context menu. The hwnd
+                                                  * parameter is the handle to the window that is related to the event. The idObject
+                                                  * parameter is OBJID_MENU or OBJID_SYSMENU for a menu, or OBJID_WINDOW for a
+                                                  * pop-up menu. The idChild parameter is CHILDID_SELF.
+                                                  */
+                                                 eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
+                                                       * has been closed. The system sends this event for standard menus; servers send it
+                                                       * for custom menus. When a pop-up menu is closed, the client receives this
+                                                       * message, and then the EVENT_SYSTEM_MENUEND event. This event is not sent
+                                                       * consistently by the system.
+                                                       */
+                                                      eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
+                                                       * has been closed. The system sends this event for standard menus; servers send it
+                                                       * for custom menus. When a pop-up menu is closed, the client receives this
+                                                       * message, and then the EVENT_SYSTEM_MENUEND event. This event is not sent
+                                                       * consistently by the system.
+                                                       */
+                                                      eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
+                                                       * has been closed. The system sends this event for standard menus; servers send it
+                                                       * for custom menus. When a pop-up menu is closed, the client receives this
+                                                       * message, and then the EVENT_SYSTEM_MENUEND event. This event is not sent
+                                                       * consistently by the system.
+                                                       */
+                                                      eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
+                                                       * has been closed. The system sends this event for standard menus; servers send it
+                                                       * for custom menus. When a pop-up menu is closed, the client receives this
+                                                       * message, and then the EVENT_SYSTEM_MENUEND event. This event is not sent
+                                                       * consistently by the system.
+                                                       */
+                                                      eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
+                                                         * has been displayed. The system sends this event for standard menus, which are
+                                                         * identified by HMENU, and are created using menu-template resources or Win32 menu
+                                                         * functions. Servers send this event for custom menus, which are user interface
+                                                         * elements that function as menus but are not created in the standard way. This
+                                                         * event is not sent consistently by the system.
+                                                         */
+                                                        eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
+                                                         * has been displayed. The system sends this event for standard menus, which are
+                                                         * identified by HMENU, and are created using menu-template resources or Win32 menu
+                                                         * functions. Servers send this event for custom menus, which are user interface
+                                                         * elements that function as menus but are not created in the standard way. This
+                                                         * event is not sent consistently by the system.
+                                                         */
+                                                        eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
+                                                         * has been displayed. The system sends this event for standard menus, which are
+                                                         * identified by HMENU, and are created using menu-template resources or Win32 menu
+                                                         * functions. Servers send this event for custom menus, which are user interface
+                                                         * elements that function as menus but are not created in the standard way. This
+                                                         * event is not sent consistently by the system.
+                                                         */
+                                                        eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
+                                                         * has been displayed. The system sends this event for standard menus, which are
+                                                         * identified by HMENU, and are created using menu-template resources or Win32 menu
+                                                         * functions. Servers send this event for custom menus, which are user interface
+                                                         * elements that function as menus but are not created in the standard way. This
+                                                         * event is not sent consistently by the system.
+                                                         */
+                                                        eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. A menu item
+                                                    * on the menu bar has been selected. The system sends this event for standard
+                                                    * menus, which are identified by HMENU, created using menu-template resources or
+                                                    * Win32 menu API elements. Servers send this event for custom menus, which are
+                                                    * user interface elements that function as menus but are not created in the
+                                                    * standard way. For this event, the WinEventProc callback function's hwnd,
+                                                    * idObject, and idChild parameters refer to the control that contains the menu bar
+                                                    * or the control that activates the context menu. The hwnd parameter is the handle
+                                                    * to the window related to the event. The idObject parameter is OBJID_MENU or
+                                                    * OBJID_SYSMENU for a menu, or OBJID_WINDOW for a pop-up menu. The idChild
+                                                    * parameter is CHILDID_SELF. The system triggers more than one
+                                                    * EVENT_SYSTEM_MENUSTART event that does not always correspond with the
+                                                    * EVENT_SYSTEM_MENUEND event.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. A menu item
+                                                    * on the menu bar has been selected. The system sends this event for standard
+                                                    * menus, which are identified by HMENU, created using menu-template resources or
+                                                    * Win32 menu API elements. Servers send this event for custom menus, which are
+                                                    * user interface elements that function as menus but are not created in the
+                                                    * standard way. For this event, the WinEventProc callback function's hwnd,
+                                                    * idObject, and idChild parameters refer to the control that contains the menu bar
+                                                    * or the control that activates the context menu. The hwnd parameter is the handle
+                                                    * to the window related to the event. The idObject parameter is OBJID_MENU or
+                                                    * OBJID_SYSMENU for a menu, or OBJID_WINDOW for a pop-up menu. The idChild
+                                                    * parameter is CHILDID_SELF. The system triggers more than one
+                                                    * EVENT_SYSTEM_MENUSTART event that does not always correspond with the
+                                                    * EVENT_SYSTEM_MENUEND event.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. A menu item
+                                                    * on the menu bar has been selected. The system sends this event for standard
+                                                    * menus, which are identified by HMENU, created using menu-template resources or
+                                                    * Win32 menu API elements. Servers send this event for custom menus, which are
+                                                    * user interface elements that function as menus but are not created in the
+                                                    * standard way. For this event, the WinEventProc callback function's hwnd,
+                                                    * idObject, and idChild parameters refer to the control that contains the menu bar
+                                                    * or the control that activates the context menu. The hwnd parameter is the handle
+                                                    * to the window related to the event. The idObject parameter is OBJID_MENU or
+                                                    * OBJID_SYSMENU for a menu, or OBJID_WINDOW for a pop-up menu. The idChild
+                                                    * parameter is CHILDID_SELF. The system triggers more than one
+                                                    * EVENT_SYSTEM_MENUSTART event that does not always correspond with the
+                                                    * EVENT_SYSTEM_MENUEND event.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. A menu item
+                                                    * on the menu bar has been selected. The system sends this event for standard
+                                                    * menus, which are identified by HMENU, created using menu-template resources or
+                                                    * Win32 menu API elements. Servers send this event for custom menus, which are
+                                                    * user interface elements that function as menus but are not created in the
+                                                    * standard way. For this event, the WinEventProc callback function's hwnd,
+                                                    * idObject, and idChild parameters refer to the control that contains the menu bar
+                                                    * or the control that activates the context menu. The hwnd parameter is the handle
+                                                    * to the window related to the event. The idObject parameter is OBJID_MENU or
+                                                    * OBJID_SYSMENU for a menu, or OBJID_WINDOW for a pop-up menu. The idChild
+                                                    * parameter is CHILDID_SELF. The system triggers more than one
+                                                    * EVENT_SYSTEM_MENUSTART event that does not always correspond with the
+                                                    * EVENT_SYSTEM_MENUEND event.
+                                                    */
+                                                   eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. A window
+                                                      * object is about to be restored. This event is sent by the system, never by
+                                                      * servers.
+                                                      */
+                                                     eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. A window
+                                                      * object is about to be restored. This event is sent by the system, never by
+                                                      * servers.
+                                                      */
+                                                     eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. A window
+                                                      * object is about to be restored. This event is sent by the system, never by
+                                                      * servers.
+                                                      */
+                                                     eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. A window
+                                                      * object is about to be restored. This event is sent by the system, never by
+                                                      * servers.
+                                                      */
+                                                     eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. A window
+                                                        * object is about to be minimized. This event is sent by the system, never by
+                                                        * servers.
+                                                        */
+                                                       eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. A window
+                                                        * object is about to be minimized. This event is sent by the system, never by
+                                                        * servers.
+                                                        */
+                                                       eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. A window
+                                                        * object is about to be minimized. This event is sent by the system, never by
+                                                        * servers.
+                                                        */
+                                                       eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. A window
+                                                        * object is about to be minimized. This event is sent by the system, never by
+                                                        * servers.
+                                                        */
+                                                       eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The movement
+                                                      * or resizing of a window has finished. This event is sent by the system, never by
+                                                      * servers.
+                                                      */
+                                                     eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The movement
+                                                      * or resizing of a window has finished. This event is sent by the system, never by
+                                                      * servers.
+                                                      */
+                                                     eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The movement
+                                                      * or resizing of a window has finished. This event is sent by the system, never by
+                                                      * servers.
+                                                      */
+                                                     eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The movement
+                                                      * or resizing of a window has finished. This event is sent by the system, never by
+                                                      * servers.
+                                                      */
+                                                     eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. A window is
+                                                        * being moved or resized. This event is sent by the system, never by servers.
+                                                        */
+                                                       eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. A window is
+                                                        * being moved or resized. This event is sent by the system, never by servers.
+                                                        */
+                                                       eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. A window is
+                                                        * being moved or resized. This event is sent by the system, never by servers.
+                                                        */
+                                                       eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
+                                                       /**
+                                                        * A `NativeWindowInfo` object for the window or control that the was generated
+                                                        * for.
+                                                        */
+                                                       nativeWindowInfo: NativeWindowInfo,
+                                                       /**
+                                                        * Specifies the time, in milliseconds, that the event was generated. A window is
+                                                        * being moved or resized. This event is sent by the system, never by servers.
+                                                        */
+                                                       eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. Scrolling has
+                                                       * ended on a scroll bar. This event is sent by the system for standard scroll bar
+                                                       * controls and for scroll bars that are attached to a window. Servers send this
+                                                       * event for custom scroll bars, which are user interface elements that function as
+                                                       * scroll bars but are not created in the standard way. The idObject parameter that
+                                                       * is sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
+                                                       * scroll bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                       */
+                                                      eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. Scrolling has
+                                                       * ended on a scroll bar. This event is sent by the system for standard scroll bar
+                                                       * controls and for scroll bars that are attached to a window. Servers send this
+                                                       * event for custom scroll bars, which are user interface elements that function as
+                                                       * scroll bars but are not created in the standard way. The idObject parameter that
+                                                       * is sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
+                                                       * scroll bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                       */
+                                                      eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. Scrolling has
+                                                       * ended on a scroll bar. This event is sent by the system for standard scroll bar
+                                                       * controls and for scroll bars that are attached to a window. Servers send this
+                                                       * event for custom scroll bars, which are user interface elements that function as
+                                                       * scroll bars but are not created in the standard way. The idObject parameter that
+                                                       * is sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
+                                                       * scroll bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                       */
+                                                      eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
+                                                      /**
+                                                       * A `NativeWindowInfo` object for the window or control that the was generated
+                                                       * for.
+                                                       */
+                                                      nativeWindowInfo: NativeWindowInfo,
+                                                      /**
+                                                       * Specifies the time, in milliseconds, that the event was generated. Scrolling has
+                                                       * ended on a scroll bar. This event is sent by the system for standard scroll bar
+                                                       * controls and for scroll bars that are attached to a window. Servers send this
+                                                       * event for custom scroll bars, which are user interface elements that function as
+                                                       * scroll bars but are not created in the standard way. The idObject parameter that
+                                                       * is sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
+                                                       * scroll bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                       */
+                                                      eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. Scrolling has
+                                                         * started on a scroll bar. The system sends this event for standard scroll bar
+                                                         * controls and for scroll bars attached to a window. Servers send this event for
+                                                         * custom scroll bars, which are user interface elements that function as scroll
+                                                         * bars but are not created in the standard way. The idObject parameter that is
+                                                         * sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
+                                                         * scrolls bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                         */
+                                                        eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. Scrolling has
+                                                         * started on a scroll bar. The system sends this event for standard scroll bar
+                                                         * controls and for scroll bars attached to a window. Servers send this event for
+                                                         * custom scroll bars, which are user interface elements that function as scroll
+                                                         * bars but are not created in the standard way. The idObject parameter that is
+                                                         * sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
+                                                         * scrolls bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                         */
+                                                        eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. Scrolling has
+                                                         * started on a scroll bar. The system sends this event for standard scroll bar
+                                                         * controls and for scroll bars attached to a window. Servers send this event for
+                                                         * custom scroll bars, which are user interface elements that function as scroll
+                                                         * bars but are not created in the standard way. The idObject parameter that is
+                                                         * sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
+                                                         * scrolls bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                         */
+                                                        eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
+                                                        /**
+                                                         * A `NativeWindowInfo` object for the window or control that the was generated
+                                                         * for.
+                                                         */
+                                                        nativeWindowInfo: NativeWindowInfo,
+                                                        /**
+                                                         * Specifies the time, in milliseconds, that the event was generated. Scrolling has
+                                                         * started on a scroll bar. The system sends this event for standard scroll bar
+                                                         * controls and for scroll bars attached to a window. Servers send this event for
+                                                         * custom scroll bars, which are user interface elements that function as scroll
+                                                         * bars but are not created in the standard way. The idObject parameter that is
+                                                         * sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
+                                                         * scrolls bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                         */
+                                                        eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. A sound has
+                                                * been played. The system sends this event when a system sound, such as one for a
+                                                * menu, is played even if no sound is audible (for example, due to the lack of a
+                                                * sound file or a sound card). Servers send this event whenever a custom UI
+                                                * element generates a sound. For this event, the WinEventProc callback function
+                                                * receives the OBJID_SOUND value as the idObject parameter.
+                                                */
+                                               eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. A sound has
+                                                * been played. The system sends this event when a system sound, such as one for a
+                                                * menu, is played even if no sound is audible (for example, due to the lack of a
+                                                * sound file or a sound card). Servers send this event whenever a custom UI
+                                                * element generates a sound. For this event, the WinEventProc callback function
+                                                * receives the OBJID_SOUND value as the idObject parameter.
+                                                */
+                                               eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. A sound has
+                                                * been played. The system sends this event when a system sound, such as one for a
+                                                * menu, is played even if no sound is audible (for example, due to the lack of a
+                                                * sound file or a sound card). Servers send this event whenever a custom UI
+                                                * element generates a sound. For this event, the WinEventProc callback function
+                                                * receives the OBJID_SOUND value as the idObject parameter.
+                                                */
+                                               eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
+                                               /**
+                                                * A `NativeWindowInfo` object for the window or control that the was generated
+                                                * for.
+                                                */
+                                               nativeWindowInfo: NativeWindowInfo,
+                                               /**
+                                                * Specifies the time, in milliseconds, that the event was generated. A sound has
+                                                * been played. The system sends this event when a system sound, such as one for a
+                                                * menu, is played even if no sound is audible (for example, due to the lack of a
+                                                * sound file or a sound card). Servers send this event whenever a custom UI
+                                                * element generates a sound. For this event, the WinEventProc callback function
+                                                * receives the OBJID_SOUND value as the idObject parameter.
+                                                */
+                                               eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                    * released ALT+TAB. This event is sent by the system, never by servers. The hwnd
+                                                    * parameter of the WinEventProc callback function identifies the window to which
+                                                    * the user has switched.\ If only one application is running when the user presses
+                                                    * ALT+TAB, the system sends this event without a corresponding
+                                                    * EVENT_SYSTEM_SWITCHSTART event.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                    * released ALT+TAB. This event is sent by the system, never by servers. The hwnd
+                                                    * parameter of the WinEventProc callback function identifies the window to which
+                                                    * the user has switched.\ If only one application is running when the user presses
+                                                    * ALT+TAB, the system sends this event without a corresponding
+                                                    * EVENT_SYSTEM_SWITCHSTART event.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                    * released ALT+TAB. This event is sent by the system, never by servers. The hwnd
+                                                    * parameter of the WinEventProc callback function identifies the window to which
+                                                    * the user has switched.\ If only one application is running when the user presses
+                                                    * ALT+TAB, the system sends this event without a corresponding
+                                                    * EVENT_SYSTEM_SWITCHSTART event.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                    * released ALT+TAB. This event is sent by the system, never by servers. The hwnd
+                                                    * parameter of the WinEventProc callback function identifies the window to which
+                                                    * the user has switched.\ If only one application is running when the user presses
+                                                    * ALT+TAB, the system sends this event without a corresponding
+                                                    * EVENT_SYSTEM_SWITCHSTART event.
+                                                    */
+                                                   eventTime: number) => void): this;
+    on(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                      * pressed ALT+TAB, which activates the switch window. This event is sent by the
+                                                      * system, never by servers. The hwnd parameter of the WinEventProc callback
+                                                      * function identifies the window to which the user is switching. If only one
+                                                      * application is running when the user presses ALT+TAB, the system sends an
+                                                      * EVENT_SYSTEM_SWITCHEND event without a corresponding EVENT_SYSTEM_SWITCHSTART
+                                                      * event.
+                                                      */
+                                                     eventTime: number) => void): this;
+    once(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                      * pressed ALT+TAB, which activates the switch window. This event is sent by the
+                                                      * system, never by servers. The hwnd parameter of the WinEventProc callback
+                                                      * function identifies the window to which the user is switching. If only one
+                                                      * application is running when the user presses ALT+TAB, the system sends an
+                                                      * EVENT_SYSTEM_SWITCHEND event without a corresponding EVENT_SYSTEM_SWITCHSTART
+                                                      * event.
+                                                      */
+                                                     eventTime: number) => void): this;
+    addListener(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                      * pressed ALT+TAB, which activates the switch window. This event is sent by the
+                                                      * system, never by servers. The hwnd parameter of the WinEventProc callback
+                                                      * function identifies the window to which the user is switching. If only one
+                                                      * application is running when the user presses ALT+TAB, the system sends an
+                                                      * EVENT_SYSTEM_SWITCHEND event without a corresponding EVENT_SYSTEM_SWITCHSTART
+                                                      * event.
+                                                      */
+                                                     eventTime: number) => void): this;
+    removeListener(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
+                                                     /**
+                                                      * A `NativeWindowInfo` object for the window or control that the was generated
+                                                      * for.
+                                                      */
+                                                     nativeWindowInfo: NativeWindowInfo,
+                                                     /**
+                                                      * Specifies the time, in milliseconds, that the event was generated. The user has
+                                                      * pressed ALT+TAB, which activates the switch window. This event is sent by the
+                                                      * system, never by servers. The hwnd parameter of the WinEventProc callback
+                                                      * function identifies the window to which the user is switching. If only one
+                                                      * application is running when the user presses ALT+TAB, the system sends an
+                                                      * EVENT_SYSTEM_SWITCHEND event without a corresponding EVENT_SYSTEM_SWITCHSTART
+                                                      * event.
+                                                      */
+                                                     eventTime: number) => void): this;
+    on(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                   * event constant values reserved for UI Automation event identifiers. For more
+                                                   * information, see Allocation of WinEvent IDs.
+                                                   */
+                                                  eventTime: number) => void): this;
+    once(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                   * event constant values reserved for UI Automation event identifiers. For more
+                                                   * information, see Allocation of WinEvent IDs.
+                                                   */
+                                                  eventTime: number) => void): this;
+    addListener(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                   * event constant values reserved for UI Automation event identifiers. For more
+                                                   * information, see Allocation of WinEvent IDs.
+                                                   */
+                                                  eventTime: number) => void): this;
+    removeListener(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
+                                                  /**
+                                                   * A `NativeWindowInfo` object for the window or control that the was generated
+                                                   * for.
+                                                   */
+                                                  nativeWindowInfo: NativeWindowInfo,
+                                                  /**
+                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                   * event constant values reserved for UI Automation event identifiers. For more
+                                                   * information, see Allocation of WinEvent IDs.
+                                                   */
+                                                  eventTime: number) => void): this;
+    on(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                     * event constant values reserved for UI Automation event identifiers. For more
+                                                     * information, see Allocation of WinEvent IDs.
+                                                     */
+                                                    eventTime: number) => void): this;
+    once(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                     * event constant values reserved for UI Automation event identifiers. For more
+                                                     * information, see Allocation of WinEvent IDs.
+                                                     */
+                                                    eventTime: number) => void): this;
+    addListener(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                     * event constant values reserved for UI Automation event identifiers. For more
+                                                     * information, see Allocation of WinEvent IDs.
+                                                     */
+                                                    eventTime: number) => void): this;
+    removeListener(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
+                                                    /**
+                                                     * A `NativeWindowInfo` object for the window or control that the was generated
+                                                     * for.
+                                                     */
+                                                    nativeWindowInfo: NativeWindowInfo,
+                                                    /**
+                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                     * event constant values reserved for UI Automation event identifiers. For more
+                                                     * information, see Allocation of WinEvent IDs.
+                                                     */
+                                                    eventTime: number) => void): this;
+    on(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                  * event constant values reserved for UI Automation property-changed event
+                                                  * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                  */
+                                                 eventTime: number) => void): this;
+    once(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                  * event constant values reserved for UI Automation property-changed event
+                                                  * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                  */
+                                                 eventTime: number) => void): this;
+    addListener(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                  * event constant values reserved for UI Automation property-changed event
+                                                  * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                  */
+                                                 eventTime: number) => void): this;
+    removeListener(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
+                                                 /**
+                                                  * A `NativeWindowInfo` object for the window or control that the was generated
+                                                  * for.
+                                                  */
+                                                 nativeWindowInfo: NativeWindowInfo,
+                                                 /**
+                                                  * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                  * event constant values reserved for UI Automation property-changed event
+                                                  * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                  */
+                                                 eventTime: number) => void): this;
+    on(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                    * event constant values reserved for UI Automation property-changed event
+                                                    * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                    */
+                                                   eventTime: number) => void): this;
+    once(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                    * event constant values reserved for UI Automation property-changed event
+                                                    * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                    */
+                                                   eventTime: number) => void): this;
+    addListener(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                    * event constant values reserved for UI Automation property-changed event
+                                                    * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                    */
+                                                   eventTime: number) => void): this;
+    removeListener(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
+                                                   /**
+                                                    * A `NativeWindowInfo` object for the window or control that the was generated
+                                                    * for.
+                                                    */
+                                                   nativeWindowInfo: NativeWindowInfo,
+                                                   /**
+                                                    * Specifies the time, in milliseconds, that the event was generated. The range of
+                                                    * event constant values reserved for UI Automation property-changed event
+                                                    * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                    */
+                                                   eventTime: number) => void): this;
+    constructor(options?: WinEventHookEmitterConstructorOptions);
   }
 
   interface AboutPanelOptionsOptions {
@@ -9469,16 +13475,16 @@ declare namespace Electron {
 
   interface Process {
     /**
-     * The full path to the process' binary
+     * The full path to the process' binary.
      */
     imageName: string;
     /**
-     * Delineates if the process for the window has been injected with OpenFin's hook
-     * DLL.
+     * Delineates if the process for the window has been injected with OpenFin's Window
+     * Manager.
      */
     injected: boolean;
     /**
-     * The identifier of the process
+     * The identifier of the process.
      */
     pid: number;
   }
@@ -10050,6 +14056,18 @@ declare namespace Electron {
     y: number;
     width: number;
     height: number;
+  }
+
+  interface WinEventHookEmitterConstructorOptions {
+    /**
+     * Specifies the ID of the process from which to receives events. Specify zero (0)
+     * to receive events from all processes on the current desktop. Defaults to 0.
+     */
+    pid?: number;
+    /**
+     * Excludes windows owned by the current runtime process. Defaults to true.
+     */
+    skipOwnWindows?: boolean;
   }
 
   interface EditFlags {
