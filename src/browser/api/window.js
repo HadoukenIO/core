@@ -1609,6 +1609,8 @@ function areNewBoundsWithinConstraints(options, width, height) {
 
     const acceptableWidth = (width >= minWidth) && (maxWidth === -1 || width <= maxWidth);
     const acceptableHeight = (height >= minHeight) && (maxHeight === -1 || height <= maxHeight);
+
+    // Check what the new aspect ratio would be at the proposed width/height. Precise to two decimal places.
     const roundedProposedRatio = Math.round(100 * (width / height)) / 100;
     const roundedAspectRatio = Math.round(100 * aspectRatio) / 100;
 
