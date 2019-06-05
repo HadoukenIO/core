@@ -32,7 +32,7 @@ let successAck = {
     success: true
 };
 
-module.exports.applicationApiMap = {
+export const applicationApiMap = {
     'close-application': closeApplication,
     'create-application': createApplication,
     'create-child-window': createChildWindow,
@@ -66,7 +66,7 @@ module.exports.applicationApiMap = {
     'wait-for-hung-application': waitForHungApplication
 };
 
-module.exports.init = function() {
+export const init = function() {
     apiProtocolBase.registerActionMap(module.exports.applicationApiMap, 'Application');
 };
 

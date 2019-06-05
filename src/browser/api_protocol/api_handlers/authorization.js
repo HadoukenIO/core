@@ -188,7 +188,7 @@ function cleanPendingRequest(authObj) {
     }
 }
 
-module.exports.init = function() {
+export const init = function() {
     socketServer.on(route.connection('close'), id => {
         var keyToDelete,
             externalConnection;
@@ -236,6 +236,6 @@ const isConnectionAuthenticated = (msg, next) => {
     next();
 };
 
-module.exports.registerMiddleware = function(requestHandler) {
+export const registerMiddleware = function(requestHandler) {
     requestHandler.addPreProcessor(isConnectionAuthenticated);
 };

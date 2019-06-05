@@ -410,4 +410,4 @@ function getParentWindowUuidName(winIdentity, lifetime) {
     return result;
 }
 
-module.exports = new ProcessTracker();
+export default new ProcessTracker();

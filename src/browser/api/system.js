@@ -14,14 +14,14 @@ const crypto = require('crypto');
 const _ = require('underscore');
 
 // local modules
-const convertOptions = require('../convert_options.js');
-const coreState = require('../core_state.js');
+import convertOptions from '../convert_options.js';
+import * as coreState from '../core_state.js';
 import { ExternalApplication } from './external_application';
-const log = require('../log.js');
+import * as log from '../log';
 import ofEvents from '../of_events';
-const ProcessTracker = require('../process_tracker.js');
+import ProcessTracker from '../process_tracker.js';
 import socketServer from '../transports/socket_server';
-const portDiscovery = require('../port_discovery').portDiscovery;
+import { portDiscovery } from '../port_discovery';
 
 import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
@@ -69,7 +69,7 @@ let Session;
 let rvmBus;
 let defaultSession;
 electronApp.on('ready', function() {
-    MonitorInfo = require('../monitor_info.js');
+    MonitorInfo = require('../monitor_info.js').default;
     Session = require('../session').default;
     rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
 
@@ -106,7 +106,7 @@ eventPropagationMap.forEach((systemEvent, eventString) => {
     });
 });
 
-exports.System = {
+export const System = {
     addEventListener: function(type, listener) {
         ofEvents.on(route.system(type), listener);
 
@@ -460,7 +460,7 @@ exports.System = {
 
         // TODO: Move this require to the top of file during future 'dependency injection refactor'
         // Must require here otherwise runtime error Cannot create browser window before app is ready
-        let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js');
+        let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js').default;
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
     },
     getServiceConfiguration: function() {
