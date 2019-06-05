@@ -1595,15 +1595,15 @@ function areNewBoundsWithinConstraints(options, width, height) {
         aspectRatio
     } = options;
 
-    if (width === undefined && height === undefined) {
+    if (typeof width !== 'number' && typeof height !== 'number') {
         return true;
     }
 
-    if (height === undefined) {
+    if (typeof height !== 'number') {
         return (width >= minWidth) && (maxWidth === -1 || width <= maxWidth);
     }
 
-    if (width === undefined) {
+    if (typeof width !== 'number') {
         return (height >= minHeight) && (maxHeight === -1 || height <= maxHeight);
     }
 
