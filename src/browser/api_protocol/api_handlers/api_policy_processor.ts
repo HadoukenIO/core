@@ -3,6 +3,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 const coreState = require('../../core_state');
 import { getDefaultRequestHandler, actionMap } from './api_protocol_base';
 import {ApiPath, ApiPolicyDelegate, Endpoint} from '../shapes';
+import {OpenFinWindow} from '../../../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
 import { GetDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
 import { writeToLog } from '../../log';
@@ -239,7 +240,13 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
 
         writeToLog(1, `apiPolicyPreProcessor ${logSuffix}`, true);
 
-        const originWindow = coreState.getWindowByUuidName(uuid, name);
+        let originWindow : OpenFinWindow = coreState.getWindowByUuidName(uuid, name);
+        if (!originWindow && identity.entityType === 'iframe') {
+            const info = coreState.getInfoByUuidFrame(identity);
+            if (info && info.parent) {
+                originWindow = coreState.getWindowByUuidName(info.parent.uuid, info.parent.name);
+            }
+        }
         if (originWindow) {
             const appObject = coreState.getAppByUuid(uuid);
             // parentUuid for child windows is uuid of the app

@@ -8,6 +8,7 @@ export interface Identity {
     uuid: string;
     name?: string;
     runtimeUuid?: string;
+    entityType?: EntityType;
 }
 
 export interface ProviderIdentity extends Identity {
