@@ -521,7 +521,8 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
   });
 
   injectionBus.on('WM_EXITSIZEMOVE', (data: any) => {
-    const { changeType, deferred, userMovement, height, left, top, width } = parseEvent(data);
+    const { changeType, deferred, userMovement } = parseEvent(data);
+    const { height, left, top, width } = getExternalWindowBounds(externalWindow);
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, uuid, name);
     if (!userMovement) {
       ofEvents.emit(routeName);
