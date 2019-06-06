@@ -8,7 +8,7 @@ import ofEvents from '../../of_events';
 let _ = require('underscore');
 let log = require('../../log');
 import socketServer from '../../transports/socket_server';
-let ProcessTracker = require('../../process_tracker.js');
+import ProcessTracker from '../../process_tracker';
 const rvmMessageBus = require('../../rvm/rvm_message_bus').rvmMessageBus;
 import route from '../../../common/route';
 import { lockUuid, releaseUuid } from '../../uuid_availability';
