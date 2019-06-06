@@ -53,7 +53,7 @@ class Session extends EventEmitter {
             bw.hookWindowMessage(WM_WTSSESSION_CHANGE, (wParam: any) => {
                 let reason: string;
 
-                switch (wParam.readIntLE()) {
+                switch (wParam.readIntLE(0,1)) {
                     case 3:
                         reason = 'remote-connect';
                         break;
