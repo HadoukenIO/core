@@ -28,7 +28,7 @@ interface Identity {
 interface APIMessageClipboard extends APIMessage {
     payload: {
         data?: string;
-        type: null | string;
+        type?: 'selection' | 'clipboard';
     };
 }
 
@@ -39,7 +39,7 @@ interface APIMessageClipboardExpanded extends APIMessage {
             rtf?: string;
             text?: string;
         };
-        type: null | string;
+        type?: 'selection' | 'clipboard';
     };
 }
 

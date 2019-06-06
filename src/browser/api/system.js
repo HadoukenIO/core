@@ -6,7 +6,7 @@ const electronApp = electron.app;
 const electronBrowserWindow = electron.BrowserWindow;
 const session = electron.session;
 const shell = electron.shell;
-const { crashReporter, idleState } = electron;
+const { crashReporter, IdleState } = electron;
 
 // npm modules
 const path = require('path');
@@ -283,7 +283,7 @@ exports.System = {
         return uuid ? { uuid } : null;
     },
     getHostSpecs: function() {
-        let state = new idleState();
+        let state = new IdleState();
         const theme = (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {};
         return Object.assign({
             cpus: os.cpus(),
