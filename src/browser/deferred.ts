@@ -3,7 +3,7 @@ import { BrowserWindow as BrowserWindowOF } from '../shapes';
 import { toSafeInt } from '../common/safe_int';
 import { clipBounds } from './utils';
 
-export { handleMove };
+export default { handleMove };
 
 const isWin32 = process.platform === 'win32';
 
@@ -17,7 +17,7 @@ interface Bounds {
     h?: number;
 }
 
-function handleMove(windowId: number, bounds: Bounds): void {
+export function handleMove(windowId: number, bounds: Bounds): void {
     const browserWindow = <BrowserWindowOF>BrowserWindow.fromId(windowId);
 
     if (isWin32 && browserWindow && (browserWindow.isMinimized() || browserWindow.isMaximized())) {

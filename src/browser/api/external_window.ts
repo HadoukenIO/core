@@ -381,11 +381,11 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
     }
 
     const {
-      frame, height, left, top, width, windowState, x, y
+      height, left, top, width, windowState
     } = getEventData(nativeWindowInfo);
 
     externalWindow.emit('begin-user-bounds-changing', {
-      frame, height, left, top, width, windowState, x, y
+      height, left, top, width, windowState
     });
   }));
 
@@ -395,11 +395,11 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
     }
 
     const {
-      changeType, deferred, frame, height, left, reason, top, width, windowState, x, y
+      changeType, deferred, height, left, reason, top, width, windowState
     } = getEventData(nativeWindowInfo);
 
     externalWindow.emit('end-user-bounds-changing', {
-      frame, height, left, top, width, windowState, x, y
+      height, left, top, width, windowState
     });
 
     externalWindow.emit('bounds-changed', {
@@ -521,7 +521,8 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
   });
 
   injectionBus.on('WM_EXITSIZEMOVE', (data: any) => {
-    const { changeType, deferred, userMovement, height, left, top, width } = parseEvent(data);
+    const { changeType, deferred, userMovement } = parseEvent(data);
+    const { height, left, top, width } = getExternalWindowBounds(externalWindow);
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, uuid, name);
     if (!userMovement) {
       ofEvents.emit(routeName);
@@ -602,7 +603,7 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
 */
 function subscribeToWindowGroupEvents(externalWindow: Shapes.ExternalWindow): void {
   const key = getKey(externalWindow);
-  const { nativeId } = externalWindow;
+  const { nativeId, name } = externalWindow;
   const listener = (event: GroupChangedEvent) => {
     if (event.groupUuid !== externalWindow.groupUuid) {
       return;
@@ -611,7 +612,7 @@ function subscribeToWindowGroupEvents(externalWindow: Shapes.ExternalWindow): vo
     const payload: GroupEvent = {
       ...event.payload,
       memberOf: '',
-      name: nativeId,
+      name,
       uuid: nativeId
     };
     const { reason, sourceGroup, sourceWindowName } = payload;

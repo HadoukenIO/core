@@ -47,31 +47,34 @@ function executeJavascript(identity: Identity, message: APIMessage, ack: Acker, 
 
     return nack(new Error('Rejected, target window is not owned by requesting identity'));
 }
-function navigateWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const { url } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
     const browserWin = getElectronBrowserWindow(windowIdentity);
 
-    WebContents.navigate(browserWin.webContents, url);
-    ack(successAck);
+    WebContents.navigate(browserWin.webContents, url)
+        .then(() => ack(successAck))
+        .catch(nack);
 }
-function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker): void {
+function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const browserWin = getElectronBrowserWindow(windowIdentity);
 
-    WebContents.navigateBack(browserWin.webContents);
-    ack(successAck);
+    WebContents.navigateBack(browserWin.webContents)
+        .then(() => ack(successAck))
+        .catch(nack);
 }
 
-function navigateWindowForward(identity: Identity, message: APIMessage, ack: Acker): void {
+function navigateWindowForward(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const browserWin = getElectronBrowserWindow(windowIdentity);
 
-    WebContents.navigateForward(browserWin.webContents);
-    ack(successAck);
+    WebContents.navigateForward(browserWin.webContents)
+        .then(() => ack(successAck))
+        .catch(nack);
 }
 
 function stopWindowNavigation(identity: Identity, message: APIMessage, ack: Acker): void {

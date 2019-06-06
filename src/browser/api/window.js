@@ -1,6 +1,6 @@
-/*
+/**
     src/browser/api/window.js
- */
+ **/
 
 // build-in modules
 let fs = require('fs');
@@ -17,7 +17,7 @@ const crypto = require('crypto');
 import * as Rx from 'rxjs';
 
 // local modules
-let animations = require('../animations.js');
+import animations from '../animations';
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 let convertOptions = require('../convert_options.js');
@@ -52,7 +52,7 @@ import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-let Window = {}; // jshint ignore:line
+export const Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
@@ -1488,27 +1488,27 @@ Window.moveTo = function(identity, left, top) {
 };
 
 Window.navigate = function(identity, url) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
-    WebContents.navigate(browserWindow.webContents, url);
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate');
+    return WebContents.navigate(browserWindow.webContents, url);
 };
 
 Window.navigateBack = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate back');
-    WebContents.navigateBack(browserWindow.webContents);
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate back');
+    return WebContents.navigateBack(browserWindow.webContents);
 };
 
 Window.navigateForward = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
-    WebContents.navigateForward(browserWindow.webContents);
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
+    return WebContents.navigateForward(browserWindow.webContents);
 };
 
 Window.reload = function(identity, ignoreCache = false) {
-    let browserWindow = getElectronBrowserWindow(identity, 'reload');
+    const browserWindow = getElectronBrowserWindow(identity, 'reload');
     WebContents.reload(browserWindow.webContents, ignoreCache);
 };
 
 Window.stopNavigation = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
+    const browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
     WebContents.stopNavigation(browserWindow.webContents);
 };
 
@@ -2405,5 +2405,3 @@ function boundsVisible(bounds, monitorInfo) {
     }
     return visible;
 }
-
-module.exports.Window = Window;
