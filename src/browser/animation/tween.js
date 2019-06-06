@@ -166,4 +166,4 @@ var Tweens = {
     }
 };
 
-module.exports = Tweens;
+export default Tweens;

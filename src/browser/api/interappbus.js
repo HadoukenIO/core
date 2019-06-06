@@ -316,7 +316,7 @@ function raiseSubscriberEvent(eventName, evtObj) {
     busEventing.emit(eventName, evtObj);
 }
 
-module.exports.InterApplicationBus = {
+export const InterApplicationBus = {
     publish,
     send,
     subscribe,

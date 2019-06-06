@@ -1,7 +1,7 @@
 
 import ofEvents from '../of_events';
 import { Identity, Listener } from '../../shapes';
-import * as ProcessTracker from '../process_tracker.js';
+import ProcessTracker from '../process_tracker.js';
 import route from '../../common/route';
 
 const authenticatedConnections: ExternalApplicationOptions[] = [];
