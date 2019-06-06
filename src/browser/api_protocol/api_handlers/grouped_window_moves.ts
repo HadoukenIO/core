@@ -32,11 +32,13 @@ const hijackThese: { [key: string]: (payload: any) => ChangeType } = {
 interface ChangeType extends Partial<RectangleBase> {
     change: 'delta' | 'absolute';
 }
-function makeGetChangeType(from: string[], to: (keyof ChangeType)[], change: 'delta' | 'absolute') {
+function makeGetChangeType(from: string[], to: (keyof Omit<ChangeType, 'change'>)[], change: 'delta' | 'absolute') {
     return (payload: any): ChangeType => from.reduce((accum: ChangeType, key, i) => {
-        accum[to[i]] = payload[key];
+        const value: number = payload[key];
+        const translatedKey = to[i];
+        accum[translatedKey] = value;
         return accum;
-    }, { change });
+    }, <any>{ change });
 }
 export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
     const specMap: ActionSpecMap = {};
