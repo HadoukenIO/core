@@ -67,7 +67,7 @@ export const applicationApiMap = {
 };
 
 export const init = function() {
-    apiProtocolBase.registerActionMap(module.exports.applicationApiMap, 'Application');
+    apiProtocolBase.registerActionMap(applicationApiMap, 'Application');
 };
 
 function destroyApplication(identity, message, ack, nack) {
