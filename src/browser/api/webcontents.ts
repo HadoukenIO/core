@@ -64,14 +64,21 @@ export function stopNavigation(webContents: Electron.WebContents) {
 function createNavigationEndPromise(webContents: Electron.WebContents): Promise<void> {
     return new Promise((resolve, reject) => {
         const chromeErrCodesLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
-        const didFail = (event: Electron.Event, errCode: number) => {
-            // tslint:disable-next-line: no-use-before-declare
+        const removeEventListeners = () => {
+            // tslint:disable: no-use-before-declare
             webContents.removeListener('did-finish-load', didSucceed);
+            webContents.removeListener('did-fail-load', didFail);
+            // tslint:enable: no-use-before-declare
+
+        };
+
+        const didFail = (event: Electron.Event, errCode: number) => {
+            removeEventListeners();
             const error = new Error(`error #${errCode}. See ${chromeErrCodesLink} for details`);
             reject(error);
         };
         const didSucceed = () => {
-            webContents.removeListener('did-fail-load', didFail);
+            removeEventListeners();
             resolve();
         };
         webContents.once('did-fail-load', didFail);
