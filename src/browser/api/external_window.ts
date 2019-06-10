@@ -622,7 +622,7 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
   winEventHooks.removeAllListeners();
   winEventHooksEmitters.delete(key);
 
-  injectionBus.removeAllListeners();
+  injectionBus.cleanup();
   injectionBuses.delete(key);
 
   windowGroupUnSubscription();

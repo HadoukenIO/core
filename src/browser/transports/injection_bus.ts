@@ -60,6 +60,7 @@ interface PendingRequest {
 
 export default class NativeWindowInjectionBus extends EventEmitter {
   private _connected: boolean; // Indicates whether the core is connected to the message window
+  private _heartbeatInterval: NodeJS.Timeout;
   private _listenerAck: (message: MessageBase) => void; // Listener called for ack/nack
   private _listenerBroadcastMsg: (message: MessageBase) => void; // Listener called for broadcast messages
   private _listenerHeartbeat: (message: MessageBase) => void; // Hearbeat listener
@@ -108,6 +109,12 @@ export default class NativeWindowInjectionBus extends EventEmitter {
     this.subscribe();
   }
 
+  // Perform cleanup logic
+  public cleanup() {
+    clearInterval(this._heartbeatInterval);
+    this.removeAllListeners();
+  }
+
   // Setup heartbeat
   private setupHeartbeat() {
     this._connected = false;
@@ -128,7 +135,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
     };
 
     // Ping message window every second and update current connection status
-    setInterval(() => {
+    this._heartbeatInterval = setInterval(() => {
       this.send({
         action: 'status/ping/request',
         payload: {}
