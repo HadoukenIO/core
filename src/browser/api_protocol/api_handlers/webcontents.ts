@@ -67,7 +67,8 @@ function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker,
 
     WebContents.navigateBack(browserWin.webContents);
     // we ack synchronously instead of waiting for a response of the window to maintain api consistency.
-    // to be replaced with the then-catch below.    ack(successAck);
+    // to be replaced with the then-catch below.
+    ack(successAck);
         // .then(() => ack(successAck))
         // .catch(nack);
 }
@@ -79,7 +80,8 @@ function navigateWindowForward(identity: Identity, message: APIMessage, ack: Ack
 
     WebContents.navigateForward(browserWin.webContents);
     // we ack synchronously instead of waiting for a response of the window to maintain api consistency.
-    // to be replaced with the then-catch below.    ack(successAck);
+    // to be replaced with the then-catch below.
+    ack(successAck);
         // .then(() => ack(successAck))
         // .catch(nack);
 }
