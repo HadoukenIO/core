@@ -53,18 +53,22 @@ function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nac
     const windowIdentity = getTargetWindowIdentity(payload);
     const browserWin = getElectronBrowserWindow(windowIdentity);
 
-    WebContents.navigate(browserWin.webContents, url)
-        .then(() => ack(successAck))
-        .catch(nack);
+    WebContents.navigate(browserWin.webContents, url);
+    // we ack synchronously instead of waiting for a response of the window to maintain api consistency. to be replaced with the then-catch below.
+    ack(successAck);
+        // .then(() => ack(successAck))
+        // .catch(nack);
 }
 function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const browserWin = getElectronBrowserWindow(windowIdentity);
 
-    WebContents.navigateBack(browserWin.webContents)
-        .then(() => ack(successAck))
-        .catch(nack);
+    WebContents.navigateBack(browserWin.webContents);
+    // we ack synchronously instead of waiting for a response of the window to maintain api consistency. to be replaced with the then-catch below.
+    ack(successAck);
+        // .then(() => ack(successAck))
+        // .catch(nack);
 }
 
 function navigateWindowForward(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
@@ -72,9 +76,11 @@ function navigateWindowForward(identity: Identity, message: APIMessage, ack: Ack
     const windowIdentity = getTargetWindowIdentity(payload);
     const browserWin = getElectronBrowserWindow(windowIdentity);
 
-    WebContents.navigateForward(browserWin.webContents)
-        .then(() => ack(successAck))
-        .catch(nack);
+    WebContents.navigateForward(browserWin.webContents);
+    // we ack synchronously instead of waiting for a response of the window to maintain api consistency. to be replaced with the then-catch below.
+    ack(successAck);
+        // .then(() => ack(successAck))
+        // .catch(nack);
 }
 
 function stopWindowNavigation(identity: Identity, message: APIMessage, ack: Acker): void {
