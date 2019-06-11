@@ -16,7 +16,7 @@ limitations under the License.
 
 import { basename } from 'path';
 import { BrowserWindow as OFBrowserWindow } from '../shapes';
-import { BrowserWindow, Rectangle, screen } from 'electron';
+import { BrowserWindow, Rectangle, screen, NativeWindowInfo } from 'electron';
 import * as Shapes from '../shapes';
 
 /*
@@ -76,7 +76,7 @@ function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEG
 /*
   Extends raw native window info.
 */
-export function extendNativeWindowInfo(rawNativeWindowInfo: Shapes.RawNativeWindowInfo): Shapes.NativeWindowInfo {
+export function extendNativeWindowInfo(rawNativeWindowInfo: NativeWindowInfo): Shapes.NativeWindowInfo {
   let name = capitalize(basename(rawNativeWindowInfo.process.imageName, '.exe'));
 
   if (name === 'ApplicationFrameHost') {

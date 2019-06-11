@@ -1,4 +1,4 @@
-import { app as electronApp, ExternalWindow, WinEventHookEmitter } from 'electron';
+import { app as electronApp, ExternalWindow, WinEventHookEmitter, NativeWindowInfo } from 'electron';
 import { Bounds } from '../../../js-adapter/src/shapes';
 import { EventEmitter } from 'events';
 import { extendNativeWindowInfo } from '../utils';
@@ -306,7 +306,7 @@ function subToGlobalWinEventHooks(): void {
   const listener = (
     parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
     sender: EventEmitter,
-    rawNativeWindowInfo: Shapes.RawNativeWindowInfo,
+    rawNativeWindowInfo: NativeWindowInfo,
     timestamp: number
   ): void => {
     const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
@@ -356,7 +356,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   const listener = (
     parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
     sender: EventEmitter,
-    rawNativeWindowInfo: Shapes.RawNativeWindowInfo,
+    rawNativeWindowInfo: NativeWindowInfo,
     timestamp: number
   ): void => {
     const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
@@ -533,7 +533,8 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
   });
 
   injectionBus.on('WM_EXITSIZEMOVE', (data: any) => {
-    const { changeType, deferred, userMovement, height, left, top, width } = parseEvent(data);
+    const { changeType, deferred, userMovement } = parseEvent(data);
+    const { height, left, top, width } = getExternalWindowBounds(externalWindow);
     const routeName = route.externalWindow(OF_EVENT_FROM_WINDOWS_MESSAGE.WM_EXITSIZEMOVE, uuid, name);
     if (!userMovement) {
       ofEvents.emit(routeName);
