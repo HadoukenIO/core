@@ -285,12 +285,13 @@ function emitBoundsChangedEvent(identity: Identity, previousNativeWindowInfo: Sh
   Subsribes to global win32 events
 */
 function subToGlobalWinEventHooks(): void {
-  if (winEventHooksEmitters.has('*')) {
+  if (winEventHooksEmitters.has('*') || winEventHooksEmitters.has('**')) {
     // Already subscribed to global hooks
     return;
   }
 
-  const winEventHooks = new WinEventHookEmitter();
+  const globalWinEventHooks = new WinEventHookEmitter();
+  const globalAllWindowsEventHooks = new WinEventHookEmitter({ skipOwnWindows: false });
   const listener = (
     parser: (nativeWindowInfo: Shapes.NativeWindowInfoLite) => void,
     sender: EventEmitter,
@@ -306,27 +307,56 @@ function subToGlobalWinEventHooks(): void {
     }
   };
 
-  winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  globalWinEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const routeName = route.system('external-window-closed');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooks.on('EVENT_OBJECT_CREATE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  globalWinEventHooks.on('EVENT_OBJECT_CREATE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const routeName = route.system('external-window-created');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooks.on('EVENT_OBJECT_HIDE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  globalWinEventHooks.on('EVENT_OBJECT_HIDE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const routeName = route.system('external-window-hidden');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooks.on('EVENT_OBJECT_SHOW', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  globalWinEventHooks.on('EVENT_OBJECT_SHOW', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const routeName = route.system('external-window-shown');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooksEmitters.set('*', winEventHooks);
+  const hookupBlurEventSubscription = () => {
+    const allNativeWindows = electronApp.getAllNativeWindowInfo(false);
+    let previousFocusedNativeWindow = allNativeWindows.find((e: NativeWindowInfo) => e.focused);
+
+    if (previousFocusedNativeWindow) {
+      previousFocusedNativeWindow = extendNativeWindowInfo(previousFocusedNativeWindow);
+    } else {
+      previousFocusedNativeWindow = { uuid: '' };
+    }
+
+    globalAllWindowsEventHooks.on('EVENT_OBJECT_FOCUS', (sender, rawNativeWindowInfo) => {
+      const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
+      const previousIdentity = { uuid: previousFocusedNativeWindow.uuid };
+      const previousFocusedRegisteredNativeWindow = findExternalWindow(previousIdentity);
+
+      if (
+        previousFocusedRegisteredNativeWindow &&
+        previousFocusedRegisteredNativeWindow.uuid !== nativeWindowInfo.uuid
+      ) {
+        previousFocusedRegisteredNativeWindow.emit('blurred');
+      }
+
+      previousFocusedNativeWindow = nativeWindowInfo;
+    });
+  };
+
+  hookupBlurEventSubscription();
+
+  winEventHooksEmitters.set('*', globalWinEventHooks);
+  winEventHooksEmitters.set('**', globalAllWindowsEventHooks);
 }
 
 /*
@@ -532,10 +562,6 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
         changeType, deferred, height, left, top, width
       });
     }
-  });
-
-  injectionBus.on('WM_KILLFOCUS', () => {
-    externalWindow.emit('blurred');
   });
 }
 
