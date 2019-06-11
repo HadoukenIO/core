@@ -203,7 +203,9 @@ export const init = function() {
         externalConnection = ExternalApplication.getExternalConnectionById(id);
         if (externalConnection) {
             ExternalApplication.removeExternalConnection(externalConnection);
-            releaseUuid(externalConnection.uuid);
+            if (!externalConnection.runtimeClient) {
+                releaseUuid(externalConnection.uuid);
+            }
             ofEvents.emit(route('externalconn', 'closed'), externalConnection);
         }
 
