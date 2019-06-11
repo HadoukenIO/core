@@ -410,7 +410,7 @@ export function addApp(id: number, uuid: string): Shapes.App[] {
         id: id,
         isRunning: false,
         uuid,
-
+        views: [],
         // hide-splashscreen is sent to RVM on 1st window show &
         // immediately on subsequent app launches if already sent once
         sentHideSplashScreen: false
@@ -761,7 +761,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             const { uuid, name } = openfinWindow;
             let browserWindow: Shapes.BrowserWindow;
             browserWindow = openfinWindow.browserWindow;
-
+            const webContents = browserWindow.webContents;
             if (!openfinWindow.mainFrameRoutingId) {
                 // save bit time here by not calling webContents.mainFrameRoutingId every time
                 // mainFrameRoutingId is wrong during setWindowObj
@@ -776,7 +776,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             if (name === frame) {
                 return {
                     name,
-                    browserWindow,
+                    webContents,
                     frameRoutingId: openfinWindow.mainFrameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -785,7 +785,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 const {name, frameRoutingId} = openfinWindow.frames.get(frame);
                 return {
                     name,
-                    browserWindow,
+                    webContents,
                     frameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -793,6 +793,17 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             }
         } else {
             writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
+        }
+    } for (const view of app.views) {
+        if (frame === view.name) {
+            return {
+                name: frame,
+                webContents: view.view.webContents,
+                frameRoutingId: view.view.webContents.mainFrameRoutingId,
+                mainFrameRoutingId: view.view.webContents.mainFrameRoutingId,
+                frameName: frame,
+                type: 'view'
+            };
         }
     }
 }
@@ -809,7 +820,13 @@ export interface OfView extends Identity {
 }
 export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
     const {uuid, name} = opts;
-    views.push({ frames: new Map(), uuid, _options: {uuid, name}, name, view});
+    const ofView = { frames: new Map(), uuid, _options: opts, name, view };
+    views.push(ofView);
+    const app = appByUuid(uuid);
+    if (app) {
+        app.views.push(ofView);
+    }
+    return ofView;
 }
 export function getBrowserViewByIdentity({uuid, name}: Identity) {
    return views.find(v => v.uuid === uuid && v.name === name);

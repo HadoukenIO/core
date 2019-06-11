@@ -4,6 +4,7 @@ import { BrowserWindow as BrowserWindowElectron } from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
 import { AnchorType } from '../js-adapter/src/shapes';
 import { WritableOptions } from 'stream';
+import { OfView } from './browser/core_state';
 
 export interface Identity {
     uuid: string;
@@ -81,6 +82,7 @@ export interface App {
     parentUuid?: string;
     sentHideSplashScreen: boolean;
     uuid: string;
+    views: OfView[];
 }
 
 export interface Window {
