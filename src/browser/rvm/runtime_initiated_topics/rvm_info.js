@@ -145,4 +145,4 @@ let RvmInfoFetcher = function() {
     };
 };
 
-module.exports = new RvmInfoFetcher();
+export default new RvmInfoFetcher();

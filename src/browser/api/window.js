@@ -17,7 +17,7 @@ const crypto = require('crypto');
 import * as Rx from 'rxjs';
 
 // local modules
-let animations = require('../animations.js');
+import animations from '../animations';
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 let convertOptions = require('../convert_options.js');
@@ -52,7 +52,7 @@ import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-let Window = {}; // jshint ignore:line
+export const Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
@@ -2402,5 +2402,3 @@ function boundsVisible(bounds, monitorInfo) {
     }
     return visible;
 }
-
-module.exports.Window = Window;

@@ -10,7 +10,7 @@ declare namespace Electron {
         generateGUID(): string;
         getCommandLineArguments(): string;
         getCommandLineArgv(): string[];
-        getNativeWindowInfoForNativeId(nativeId: string): import('./shapes').RawNativeWindowInfo;
+        getNativeWindowInfoForNativeId(nativeId: string): NativeWindowInfo;
         getPath(str: string): string;
         getProcessIdForNativeId(nativeId: string): number;
         getTickCount(): number;
@@ -162,7 +162,4 @@ declare namespace Electron {
         const releaseLock: (key: string) => number;
     }
 
-    export class WinEventHookEmitter extends EventEmitter {
-        constructor(opts?: { pid?: number });
-    }
 }

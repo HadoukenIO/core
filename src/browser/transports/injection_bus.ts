@@ -1,6 +1,7 @@
 import { adjustCoordsScaling } from '../../common/main';
 import { app as electronApp } from 'electron';
 import { EventEmitter } from 'events';
+import { getMeshUuid } from '../connection_manager';
 import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 import { writeToLog } from '../log';
 import WMCopyData from './wm_copydata';
@@ -58,6 +59,7 @@ interface PendingRequest {
 }
 
 export default class NativeWindowInjectionBus extends EventEmitter {
+  private _meshUuid: string; // ID of core instance
   private _messageListener: (sender: number, rawMessage: string) => void;
   private _nativeId: string; // HWND of the external window
   private _pendingRequests: Map<string, PendingRequest>;
@@ -68,6 +70,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
     super();
 
     const { nativeId, pid } = params;
+    this._meshUuid = getMeshUuid();
     this._nativeId = nativeId;
     this._pendingRequests = new Map();
     this._pid = pid;
@@ -135,7 +138,7 @@ export default class NativeWindowInjectionBus extends EventEmitter {
           action,
           messageId,
           payload,
-          senderId: '0x0000',
+          senderId: this._meshUuid,
           sequence: 0,
           time: 0
         },

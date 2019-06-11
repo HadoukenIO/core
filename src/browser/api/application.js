@@ -45,7 +45,7 @@ let runtimeIsClosing = false;
 let hasPlugins = false;
 let rvmBus;
 let MonitorInfo;
-var Application = {};
+export const Application = {};
 let fetchingIcon = {};
 let registeredUsersByApp = {};
 
@@ -75,7 +75,7 @@ electronApp.on('ready', function() {
     rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
     log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
 
-    MonitorInfo = require('../monitor_info.js');
+    MonitorInfo = require('../monitor_info.js').default;
 
     // listen to and broadcast 'broadcast' messages from RVM as an openfin app event
     rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'manifest-changed'), payload => {
@@ -1249,4 +1249,3 @@ function checkApplicationAvailability(uuid) {
         return null;
     }
 }
-module.exports.Application = Application;
