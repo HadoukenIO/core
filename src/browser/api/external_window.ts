@@ -1,7 +1,7 @@
 import { app as electronApp, ExternalWindow, WinEventHookEmitter, NativeWindowInfo } from 'electron';
 import { Bounds } from '../../../js-adapter/src/shapes';
 import { EventEmitter } from 'events';
-import { extendNativeWindowInfo } from '../utils';
+import { getNativeWindowInfo, getNativeWindowInfoLite } from '../utils';
 import { Identity } from '../../../js-adapter/src/identity';
 import { OF_EVENT_FROM_WINDOWS_MESSAGE } from '../../common/windows_messages';
 import * as NativeWindowModule from './native_window';
@@ -77,7 +77,7 @@ export function getExternalWindowGroup(identity: Identity): Shapes.GroupWindowId
 export function getExternalWindowInfo(identity: Identity): Shapes.NativeWindowInfo {
   const { uuid } = identity;
   const rawNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(uuid);
-  return extendNativeWindowInfo(rawNativeWindowInfo);
+  return getNativeWindowInfo(rawNativeWindowInfo);
 }
 
 export function getExternalWindowOptions(identity: Identity): any {
@@ -292,14 +292,14 @@ function subToGlobalWinEventHooks(): void {
 
   const winEventHooks = new WinEventHookEmitter();
   const listener = (
-    parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
+    parser: (nativeWindowInfo: Shapes.NativeWindowInfoLite) => void,
     sender: EventEmitter,
     rawNativeWindowInfo: NativeWindowInfo,
     timestamp: number
   ): void => {
-    const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
+    const nativeWindowInfo = getNativeWindowInfoLite(rawNativeWindowInfo);
     const ignoreVisibility = true;
-    const isValid = isValidExternalWindow(nativeWindowInfo, ignoreVisibility);
+    const isValid = isValidExternalWindow(rawNativeWindowInfo, ignoreVisibility);
 
     if (isValid) {
       parser(nativeWindowInfo);
@@ -339,7 +339,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   const winEventHooks = new WinEventHookEmitter({ pid });
   winEventHooksEmitters.set(key, winEventHooks);
 
-  let previousNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(nativeId);
+  let previousNativeWindowInfo: NativeWindowInfo | Shapes.NativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(nativeId);
 
   const listener = (
     parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
@@ -347,7 +347,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
     rawNativeWindowInfo: NativeWindowInfo,
     timestamp: number
   ): void => {
-    const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
+    const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
 
     // Since we are subscribing to a process, we are only interested in a
     // specific window.
@@ -542,7 +542,8 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
 /*
     Decides whether external window is valid (external window filtering)
 */
-export function isValidExternalWindow(nativeWindowInfo: Shapes.NativeWindowInfo, ignoreVisibility?: boolean) {
+export function isValidExternalWindow(rawNativeWindowInfo: NativeWindowInfo, ignoreVisibility?: boolean) {
+  const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
   const classNamesToIgnore = [
     // TODO: Edge, calculator, etc (looks like they are always
     // "opened" and "visible", but at least visiblity part is wrong)
