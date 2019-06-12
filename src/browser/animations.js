@@ -6,7 +6,7 @@
 
 let app = require('electron').app;
 let BrowserWindow = require('electron').BrowserWindow;
-let NativeTimer = require('electron').nativeTimer;
+let NativeTimer = require('electron').NativeTimer;
 let windowTransaction = require('electron').windowTransaction;
 
 import { clipBounds } from './utils';

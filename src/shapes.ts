@@ -1,6 +1,6 @@
 
 import { PortInfo } from './browser/port_discovery';
-import { BrowserWindow as BrowserWindowElectron } from 'electron';
+import { BrowserWindow as BrowserWindowElectron, NativeWindowInfo as NativeWindowInfoElectron } from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
 import { AnchorType } from '../js-adapter/src/shapes';
 
@@ -415,13 +415,6 @@ export interface ShowWindowAtOpts extends MoveWindowToOpts {
     force?: boolean;
 }
 
-export interface Bounds {
-    height: number;
-    width: number;
-    x: number;
-    y: number;
-}
-
 export interface CoordinatesXY {
     x: number;
     y: number;
@@ -451,21 +444,7 @@ export interface ExternalWindow extends BrowserWindowElectron {
     uuid: string;
 }
 
-export interface RawNativeWindowInfo {
-    alwaysOnTop: boolean;
-    bounds: Bounds;
-    className: string;
-    dpi: number;
-    focused: boolean;
-    id: string;
-    maximized: boolean;
-    minimized: boolean;
-    process: ProcessInfo;
-    title: string;
-    visible: boolean;
-}
-
-export interface NativeWindowInfo extends RawNativeWindowInfo {
+export interface NativeWindowInfo extends NativeWindowInfoElectron {
     name: string;
     uuid: string;
 }
