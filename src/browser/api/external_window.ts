@@ -214,12 +214,11 @@ export function findExternalWindow(identity: Identity): Shapes.ExternalWindow | 
 }
 
 /*
-  Checks whether an an hwnd is a valid target for wrapping
+  Checks whether an hwnd is a valid target for wrapping
 */
 function doesExternalWindowExist(uuid: string): boolean {
-  const skipOpenFinWindows = false;
-  const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOpenFinWindows);
-  return !!allNativeWindows.find(win => win.id === uuid);
+  const allNativeWindows = electronApp.getAllNativeWindowInfo(true);
+  return !!allNativeWindows.find(win => getNativeWindowInfoLite(win).uuid === uuid);
 }
 
 /*
