@@ -1,7 +1,7 @@
 import { app as electronApp, ExternalWindow, WinEventHookEmitter, NativeWindowInfo } from 'electron';
 import { Bounds } from '../../../js-adapter/src/shapes';
 import { EventEmitter } from 'events';
-import { extendNativeWindowInfo } from '../utils';
+import { getNativeWindowInfo, getNativeWindowInfoLite } from '../utils';
 import { Identity } from '../../../js-adapter/src/identity';
 import { OF_EVENT_FROM_WINDOWS_MESSAGE } from '../../common/windows_messages';
 import * as NativeWindowModule from './native_window';
@@ -77,7 +77,7 @@ export function getExternalWindowGroup(identity: Identity): Shapes.GroupWindowId
 export function getExternalWindowInfo(identity: Identity): Shapes.NativeWindowInfo {
   const { uuid } = identity;
   const rawNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(uuid);
-  return extendNativeWindowInfo(rawNativeWindowInfo);
+  return getNativeWindowInfo(rawNativeWindowInfo);
 }
 
 export function getExternalWindowOptions(identity: Identity): any {
@@ -297,48 +297,78 @@ function emitBoundsChangedEvent(identity: Identity, previousNativeWindowInfo: Sh
   Subsribes to global win32 events
 */
 function subToGlobalWinEventHooks(): void {
-  if (winEventHooksEmitters.has('*')) {
+  if (winEventHooksEmitters.has('*') || winEventHooksEmitters.has('**')) {
     // Already subscribed to global hooks
     return;
   }
 
-  const winEventHooks = new WinEventHookEmitter();
+  const globalWinEventHooks = new WinEventHookEmitter();
+  const globalAllWindowsEventHooks = new WinEventHookEmitter({ skipOwnWindows: false });
   const listener = (
-    parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
+    parser: (nativeWindowInfo: Shapes.NativeWindowInfoLite) => void,
     sender: EventEmitter,
     rawNativeWindowInfo: NativeWindowInfo,
     timestamp: number
   ): void => {
-    const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
+    const nativeWindowInfo = getNativeWindowInfoLite(rawNativeWindowInfo);
     const ignoreVisibility = true;
-    const isValid = isValidExternalWindow(nativeWindowInfo, ignoreVisibility);
+    const isValid = isValidExternalWindow(rawNativeWindowInfo, ignoreVisibility);
 
     if (isValid) {
       parser(nativeWindowInfo);
     }
   };
 
-  winEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  globalWinEventHooks.on('EVENT_OBJECT_DESTROY', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const routeName = route.system('external-window-closed');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooks.on('EVENT_OBJECT_CREATE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  globalWinEventHooks.on('EVENT_OBJECT_CREATE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const routeName = route.system('external-window-created');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooks.on('EVENT_OBJECT_HIDE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  globalWinEventHooks.on('EVENT_OBJECT_HIDE', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const routeName = route.system('external-window-hidden');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooks.on('EVENT_OBJECT_SHOW', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
+  globalWinEventHooks.on('EVENT_OBJECT_SHOW', listener.bind(null, (nativeWindowInfo: Shapes.NativeWindowInfo) => {
     const routeName = route.system('external-window-shown');
     ofEvents.emit(routeName, nativeWindowInfo);
   }));
 
-  winEventHooksEmitters.set('*', winEventHooks);
+  const hookupBlurEventSubscription = () => {
+    const allNativeWindows = electronApp.getAllNativeWindowInfo(false);
+    let previousFocusedNativeWindow = allNativeWindows.find((e: NativeWindowInfo) => e.focused);
+
+    if (previousFocusedNativeWindow) {
+      previousFocusedNativeWindow = getNativeWindowInfo(previousFocusedNativeWindow);
+    } else {
+      previousFocusedNativeWindow = { uuid: '' };
+    }
+
+    globalAllWindowsEventHooks.on('EVENT_OBJECT_FOCUS', (sender, rawNativeWindowInfo) => {
+      const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
+      const previousIdentity = { uuid: previousFocusedNativeWindow.uuid };
+      const previousFocusedRegisteredNativeWindow = findExternalWindow(previousIdentity);
+
+      if (
+        previousFocusedRegisteredNativeWindow &&
+        previousFocusedRegisteredNativeWindow.uuid !== nativeWindowInfo.uuid
+      ) {
+        previousFocusedRegisteredNativeWindow.emit('blurred');
+      }
+
+      previousFocusedNativeWindow = nativeWindowInfo;
+    });
+  };
+
+  hookupBlurEventSubscription();
+
+  winEventHooksEmitters.set('*', globalWinEventHooks);
+  winEventHooksEmitters.set('**', globalAllWindowsEventHooks);
 }
 
 /*
@@ -351,7 +381,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
   const winEventHooks = new WinEventHookEmitter({ pid });
   winEventHooksEmitters.set(key, winEventHooks);
 
-  let previousNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(nativeId);
+  let previousNativeWindowInfo: NativeWindowInfo | Shapes.NativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(nativeId);
 
   const listener = (
     parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
@@ -359,7 +389,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
     rawNativeWindowInfo: NativeWindowInfo,
     timestamp: number
   ): void => {
-    const nativeWindowInfo = extendNativeWindowInfo(rawNativeWindowInfo);
+    const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
 
     // Since we are subscribing to a process, we are only interested in a
     // specific window.
@@ -545,16 +575,13 @@ async function subscribeToInjectionEvents(externalWindow: Shapes.ExternalWindow)
       });
     }
   });
-
-  injectionBus.on('WM_KILLFOCUS', () => {
-    externalWindow.emit('blurred');
-  });
 }
 
 /*
     Decides whether external window is valid (external window filtering)
 */
-export function isValidExternalWindow(nativeWindowInfo: Shapes.NativeWindowInfo, ignoreVisibility?: boolean) {
+export function isValidExternalWindow(rawNativeWindowInfo: NativeWindowInfo, ignoreVisibility?: boolean) {
+  const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
   const classNamesToIgnore = [
     // TODO: Edge, calculator, etc (looks like they are always
     // "opened" and "visible", but at least visiblity part is wrong)
