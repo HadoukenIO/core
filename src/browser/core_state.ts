@@ -775,6 +775,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 return {
                     name,
                     browserWindow,
+                    webContents: browserWindow.webContents,
                     frameRoutingId: openfinWindow.mainFrameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -784,6 +785,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 return {
                     name,
                     browserWindow,
+                    webContents: browserWindow.webContents,
                     frameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name

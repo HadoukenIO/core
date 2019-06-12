@@ -42,7 +42,7 @@ export abstract class ApiTransportBase<T> {
 
     public abstract onClientDisconnect(cb: Function): void;
 
-    protected abstract onMessage(id: number, data: any, ackDelegate: any): void;
+    protected abstract onMessage(id: any, data: any, ackDelegate: any): void;
 
     protected abstract ackDecorator(id: number, messageId: number, originalPayload: any, configuration: MessageConfiguration): AckFunc;
 
