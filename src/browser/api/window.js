@@ -1829,16 +1829,15 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     function handleSaveStateAlwaysResolve() {
         return new Promise((resolve, reject) => {
             if (browserWindow._options.saveWindowState) {
-                browserWindow.webContents.getZoomLevel(zoomLevel => {
-                    const cachedBounds = _boundsChangedHandler.getCachedBounds();
-                    saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
-                        if (err) {
-                            log.writeToLog('info', err);
-                        }
-                        // These were causing an exception on close if the window was reloaded
-                        _boundsChangedHandler.teardown();
-                        resolve();
-                    });
+                const zoomLevel = browserWindow.webContents.getZoomLevel();
+                const cachedBounds = _boundsChangedHandler.getCachedBounds();
+                saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
+                    if (err) {
+                        log.writeToLog('info', err);
+                    }
+                    // These were causing an exception on close if the window was reloaded
+                    _boundsChangedHandler.teardown();
+                    resolve();
                 });
             } else {
                 _boundsChangedHandler.teardown();
