@@ -18,11 +18,11 @@ declare namespace Electron {
     BrowserView: typeof BrowserView;
     BrowserWindowProxy: typeof BrowserWindowProxy;
     BrowserWindow: typeof BrowserWindow;
-    ClientRequest: typeof ClientRequest;
     ChromeIpcClient: typeof ChromeIpcClient;
+    ClientRequest: typeof ClientRequest;
     clipboard: Clipboard;
-    contentTracing: ContentTracing;
     CommandLine: typeof CommandLine;
+    contentTracing: ContentTracing;
     Cookies: typeof Cookies;
     crashReporter: CrashReporter;
     Debugger: typeof Debugger;
@@ -5010,12 +5010,16 @@ For example:
     // Docs: http://electronjs.org/docs\api\message-window
 
     /**
-     * Emitted when the window receives a WM_COPYDATA message
+     * Emitted when the window receives a WM_COPYDATA message.
      */
-    on(event: 'data', listener: Function): this;
-    once(event: 'data', listener: Function): this;
-    addListener(event: 'data', listener: Function): this;
-    removeListener(event: 'data', listener: Function): this;
+    on(event: 'data', listener: (event: Event,
+                                 data: DataData) => void): this;
+    once(event: 'data', listener: (event: Event,
+                                 data: DataData) => void): this;
+    addListener(event: 'data', listener: (event: Event,
+                                 data: DataData) => void): this;
+    removeListener(event: 'data', listener: (event: Event,
+                                 data: DataData) => void): this;
     /**
      * MessageWindow
      */
@@ -5230,9 +5234,9 @@ Please note that this property only has an effect on macOS.
      */
     constructor(callback: () => void, delay: number);
     /**
-     * Returns true if the timer is running; false otherwise.
+     * true if the timer is running, false otherwise.
      */
-    isRunning(): void;
+    isRunning(): boolean;
     /**
      * Restarts the timer.
      */
@@ -11026,6 +11030,17 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * The title of the url at `text`.
      */
     bookmark?: string;
+  }
+
+  interface DataData {
+    /**
+     * window id of the window that sent the WM_COPYDATA message.
+     */
+    sender: number;
+    /**
+     * Message that was sent.
+     */
+    message: string;
   }
 
   interface DeferredSetWindowPosBounds {
