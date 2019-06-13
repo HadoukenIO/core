@@ -3,8 +3,7 @@
  *
  *  Functions that support the window animations
  */
-import { app, BrowserWindow, nativeTimer as NativeTimer, windowTransaction, screen } from 'electron';
-
+import { app, BrowserWindow, NativeTimer, windowTransaction, screen } from 'electron';
 
 import { clipBounds } from './utils';
 import { handleMove } from './deferred';

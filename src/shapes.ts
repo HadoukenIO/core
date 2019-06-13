@@ -415,13 +415,6 @@ export interface ShowWindowAtOpts extends MoveWindowToOpts {
     force?: boolean;
 }
 
-export interface Bounds {
-    height: number;
-    width: number;
-    x: number;
-    y: number;
-}
-
 export interface CoordinatesXY {
     x: number;
     y: number;
