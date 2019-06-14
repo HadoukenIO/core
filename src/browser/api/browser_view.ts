@@ -4,6 +4,8 @@ import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView }
 import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
 import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
+import of_events from '../of_events';
+import route from '../../common/route';
 
 
 // import { BrowserWindow, BrowserView, app } from 'electron';
@@ -45,25 +47,32 @@ export async function create(options: BrowserViewOpts) {
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
     } if (options.target) {
-        attach(ofView, options.target);
+        await attach(ofView, options.target);
     } if (options.bounds) {
         setBounds(ofView, options.bounds);
     }
 }
 
 export async function attach(ofView: OfView, toIdentity: Identity) {
-   const {view} = ofView;
-   if (view) {
-       const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
-       let bWin;
-       if (!ofWin) {
-           const proxyWin = await getRuntimeProxyWindow(toIdentity);
-           bWin = proxyWin.window.browserWindow;
-       } else {
-           bWin = ofWin.browserWindow;
-       }
-       bWin.setBrowserView(view);
-   }
+    const {view} = ofView;
+    if (view) {
+        const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
+        let bWin;
+        if (!ofWin) {
+            throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`)
+        } else {
+            bWin = ofWin.browserWindow;
+            if (ofWin.view) {
+                ofWin.view.view.destroy();
+            } 
+        }
+        ofWin.view = ofView;
+        bWin.setBrowserView(view);
+        of_events.once(route.window('closed', toIdentity.uuid, toIdentity.name), () => {
+            view.destroy();
+            ofWin.view = undefined;
+        })
+    }
 }
 
 export async function setAutoResize(ofView: OfView, autoResize: AutoResizeOptions) {

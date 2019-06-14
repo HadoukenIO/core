@@ -117,6 +117,7 @@ export interface OpenFinWindow extends InjectableContext {
     preloadScripts: PreloadScriptState[];
     mainFrameRoutingId: number;
     isProxy?: boolean;
+    view?: OfView;
 }
 
 export interface BrowserWindow extends BrowserWindowElectron {
