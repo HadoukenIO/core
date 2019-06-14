@@ -14,11 +14,9 @@ const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUr
                                             // did not return permissions
 const CONFIG_URL_WILDCARD = 'default';  // can set as default for all applications.  Checked ONLY IF permissions
                                   // for a particular URL is not defined
-const ENABLE_DESKTOP_OWNER_SETTINGS: string = 'enable-desktop-owner-settings'; // RVM adds this to runtime->arguments
-                                                        // if settings are detected in Registry
 const DESKTOP_OWNER_SETTINGS_TIMEOUT: string = 'desktop-owner-settings-timeout'; // timeout for requesting from RVM in ms
 let desktopOwnerSettingsTimeout: number = 2000;  // in ms
-let desktopOwnerSettingEnabled: boolean = false;
+let applicationSettingsEnabled: boolean = false;  // true, if applicationxxSettings is defined in desktop owner settings
 
 type ApiPolicy = {
     // for backwards compatible, policyName can be a single config URL
@@ -182,7 +180,7 @@ function authorizeActionFromPolicy(windowOpts: any, action: string, payload: any
 
     const apiPath: ApiPath = getApiPath(action);
     return new Promise((resolve, reject) => {
-        if (desktopOwnerSettingEnabled === true) {
+        if (applicationSettingsEnabled === true) {
             const configUrl = coreState.getConfigUrlByUuid(uuid);
             const defaultPermission: boolean = getApiDefaultPermission(action);
             if (configUrl) {
@@ -217,7 +215,7 @@ function authorizeActionFromPolicy(windowOpts: any, action: string, payload: any
                 resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
             }
         } else {
-            writeToLog(1, `authorizeActionFromPolicy desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled} ${logSuffix}`, true);
+            writeToLog(1, `authorizeActionFromPolicy applicationSettingsEnabled ${applicationSettingsEnabled} ${logSuffix}`, true);
             resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
         }
     });
@@ -311,6 +309,10 @@ function registerDelegate(apiPath: ApiPath, delegate: ApiPolicyDelegate) {
     delegateMap.set(apiPath, delegate);
 }
 
+// Example response from RVM
+// { "broadcast": false, "messageId": "735267b6-0a12-4524-bf12-00ea556d74aa", "payload":
+// { "action": "get-desktop-owner-settings", "applicationSettingsExists": false,
+//  "desktopOwnerFileExists": true, "payload": { }, "success": true }, "topic": "application" }
 function retrieveAPIPolicyContent(): Promise<any> {
     writeToLog(1, 'retrieveAPIPolicyContent', true);
     return new Promise((resolve, reject) => {
@@ -324,8 +326,14 @@ function retrieveAPIPolicyContent(): Promise<any> {
         rvmBus.publish(msg, (rvmResponse: any) => {
             writeToLog('info', `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
             if (rvmResponse.payload && rvmResponse.payload.success === true &&
+                rvmResponse.payload.desktopOwnerFileExists === true &&
                 rvmResponse.payload.payload) {
-                resolve(rvmResponse.payload.payload);
+                  if (rvmResponse.payload.applicationSettingsExists === true) {
+                    resolve(rvmResponse.payload.payload);
+                  } else {
+                    writeToLog('info', 'requestAppPermissions applicationSettings not set in desktop-owner-settings');
+                    reject(rvmResponse);
+                  }
             } else {
                 writeToLog('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
                 reject(rvmResponse);  // false indicates request to RVM failed
@@ -336,9 +344,7 @@ function retrieveAPIPolicyContent(): Promise<any> {
 
 writeToLog('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
 getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
-desktopOwnerSettingEnabled = !!coreState.argo[ENABLE_DESKTOP_OWNER_SETTINGS];
-writeToLog(1, `desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`, true);
-if (desktopOwnerSettingEnabled === true && coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
+if (coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
     desktopOwnerSettingsTimeout = Number(coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]);
     writeToLog(1, `desktopOwnerSettingsTimeout ${desktopOwnerSettingsTimeout}`, true);
 }
@@ -349,21 +355,20 @@ for (const key of Object.keys(actionMap)) {
     }
 }
 
-if (desktopOwnerSettingEnabled === true) {
-    retrieveAPIPolicyContent().then((content: ApiPolicy) => {
-        apiPolicies = content;
-        if (apiPolicies && Object.keys(apiPolicies).length > 0) {
-            if (!apiPolicies.hasOwnProperty(CONFIG_URL_WILDCARD)) {
-                apiPolicies[CONFIG_URL_WILDCARD] = { permissions: {} };
-                writeToLog(1, `requestAppPermissions ${CONFIG_URL_WILDCARD}`, true);
-                writeToLog('info', 'default policy missing, setting to {} ');
-            }
+retrieveAPIPolicyContent().then((content: ApiPolicy) => {
+    apiPolicies = content;
+    if (apiPolicies) {
+        applicationSettingsEnabled = true;
+        if (!apiPolicies.hasOwnProperty(CONFIG_URL_WILDCARD)) {
+            apiPolicies[CONFIG_URL_WILDCARD] = { permissions: {} };
+            writeToLog('info', 'default policy missing, setting to {} ');
         }
-
-    }).catch(e => {
-        writeToLog(1, `Error retrieveAPIPolicies ${e}`, true);
-    });
-}
+    } else {
+        writeToLog(1, 'API policy not defined in desktopOwnerSettings', true);
+    }
+}).catch(e => {
+    writeToLog(1, `Error retrieveAPIPolicies ${JSON.stringify(e)}`, true);
+});
 
 export {apiPolicyPreProcessor};
 
