@@ -330,6 +330,13 @@ function retrieveAPIPolicyContent(): Promise<any> {
                 rvmResponse.payload.payload) {
                   if (rvmResponse.payload.applicationSettingsExists === true) {
                     resolve(rvmResponse.payload.payload);
+                  } else if (rvmResponse.payload.applicationSettingsExists === false) {
+                    writeToLog('info', 'requestAppPermissions applicationSettings not set in desktop-owner-settings');
+                    reject(rvmResponse);
+                  } else if (Object.keys(rvmResponse.payload.payload).length > 0) {
+                    // older versions of RVM do not set applicationSettingsExists
+                    // accept only if it is not empty
+                    resolve(rvmResponse.payload.payload);
                   } else {
                     writeToLog('info', 'requestAppPermissions applicationSettings not set in desktop-owner-settings');
                     reject(rvmResponse);
