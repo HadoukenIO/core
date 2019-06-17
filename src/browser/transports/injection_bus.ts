@@ -105,8 +105,6 @@ export default class NativeWindowInjectionBus extends EventEmitter {
     };
 
     copyDataTransport.on('message', this._messageListener);
-
-    this.subscribe();
   }
 
   // Perform cleanup logic
