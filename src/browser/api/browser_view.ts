@@ -53,6 +53,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         const listener = () => {
             view.destroy();
             ofWin.view = undefined;
+            windowCloseListenerMap.delete(ofWin);
         };
         of_events.once(route.window('closed', toIdentity.uuid, toIdentity.name), listener);
         windowCloseListenerMap.set(ofWin, listener);
