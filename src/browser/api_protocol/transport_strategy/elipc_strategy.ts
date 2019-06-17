@@ -115,7 +115,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         const { webContents, frameRoutingId, mainFrameRoutingId, _options} = routingInfo;
         if (frameRoutingId === mainFrameRoutingId) {
             // this is the main window frame
-            if (_options.api.iframe.enableDeprecatedSharedName) {
+            if (!_options.api.iframe.enableDeprecatedSharedName) {
                 webContents.sendToFrame(frameRoutingId, channels.CORE_MESSAGE, payload);
             } else {
                 webContents.send(channels.CORE_MESSAGE, payload);
