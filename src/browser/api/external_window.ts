@@ -214,6 +214,14 @@ export function findExternalWindow(identity: Identity): Shapes.ExternalWindow | 
 }
 
 /*
+  Checks whether an hwnd is a valid target for wrapping
+*/
+function doesExternalWindowExist(uuid: string): boolean {
+  const allNativeWindows = electronApp.getAllNativeWindowInfo(true);
+  return !!allNativeWindows.find(win => getNativeWindowInfoLite(win).uuid === uuid);
+}
+
+/*
   Returns a registered native window or creates a new one if not found.
 */
 export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
@@ -221,6 +229,9 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
   let externalWindow = externalWindows.get(uuid);
 
   if (!externalWindow) {
+    if (!doesExternalWindowExist(uuid)) {
+      throw new Error(`Attempted to wrap a non-existent external window using uuid: ${uuid}`);
+    }
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: uuid }));
 
     applyWindowGroupingStub(externalWindow);
