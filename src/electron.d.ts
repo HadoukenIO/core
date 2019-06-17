@@ -1,4 +1,4 @@
-// Type definitions for Electron 7.0.0-nightly.20190601
+// Type definitions for Electron 7.0.0-nightly.20190609
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -941,7 +941,6 @@ This method can only be called before app is ready.
      */
     getGPUInfo(infoType: string): Promise<Electron.GPUInfoReturnValue>;
     getGpuName(): string;
-    getHostToken(): string;
     /**
      * This call will return the same value on subsequent calls on the same
      * machine(host). The values will be different on different machines, and should be
@@ -1096,10 +1095,7 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
      */
     importCertificate(options: ImportCertificateOptions, callback: (result: number) => void): void;
     /**
-     * * `type` String - Uniquely identifies the activity. Maps to
-     * `NSUserActivity.activityType`.
-
-Invalidates the current Handoff user activity.
+     * Invalidates the current Handoff user activity.
      */
     invalidateCurrentActivity(): void;
     invokeNamedCallback(key: string, ...args: any[]): any;
@@ -1266,6 +1262,10 @@ The result message.
      * starts:
      */
     requestSingleInstanceLock(): boolean;
+    /**
+     * Marks the current Handoff user activity as inactive without invalidating it.
+     */
+    resignCurrentActivity(): void;
     /**
      * Set the about panel options. This will override the values defined in the app's
      * `.plist` file on MacOS. See the Apple docs for more details. On Linux, values
@@ -2339,6 +2339,8 @@ On Windows and Linux always returns `true`.
      * Whether the window can be manually closed by user.
      * 
 On Linux always returns `true`.
+
+**Deprecated**
      */
     isClosable(): boolean;
     /**
@@ -2360,6 +2362,8 @@ On Linux always returns `true`.
     /**
      * Whether the maximize/zoom window button toggles fullscreen mode or maximizes the
      * window.
+
+**Deprecated**
      */
     isFullScreenable(): boolean;
     /**
@@ -2370,6 +2374,8 @@ On Linux always returns `true`.
      * Whether the window can be manually maximized by user.
      * 
 On Linux always returns `true`.
+
+**Deprecated**
      */
     isMaximizable(): boolean;
     /**
@@ -2378,6 +2384,8 @@ On Linux always returns `true`.
     isMaximized(): boolean;
     /**
      * Whether menu bar automatically hides itself.
+
+**Deprecated**
      */
     isMenuBarAutoHide(): boolean;
     /**
@@ -2388,6 +2396,8 @@ On Linux always returns `true`.
      * Whether the window can be manually minimized by user
      * 
 On Linux always returns `true`.
+
+**Deprecated**
      */
     isMinimizable(): boolean;
     /**
@@ -2400,8 +2410,10 @@ On Linux always returns `true`.
     isModal(): boolean;
     /**
      * Whether the window can be moved by user.
-
+     * 
 On Linux always returns `true`.
+
+**Deprecated**
      */
     isMovable(): boolean;
     /**
@@ -2411,6 +2423,8 @@ On Linux always returns `true`.
     isNormal(): boolean;
     /**
      * Whether the window can be manually resized by user.
+
+**Deprecated**
      */
     isResizable(): boolean;
     /**
@@ -2557,7 +2571,7 @@ On Linux always returns `true`.
      * Calling this function with a value of `0` will remove any previously set aspect
      * ratios.
      */
-    setAspectRatio(aspectRatio: number, extraSize: Size): void;
+    setAspectRatio(aspectRatio: number, extraSize?: Size): void;
     /**
      * Controls whether to hide cursor when typing.
      */
@@ -2568,6 +2582,8 @@ On Linux always returns `true`.
      *
      * If the menu bar is already visible, calling `setAutoHideMenuBar(true)` won't
      * hide it immediately.
+
+**Deprecated**
      */
     setAutoHideMenuBar(hide: boolean): void;
     /**
@@ -2582,6 +2598,8 @@ On Linux always returns `true`.
     setBrowserView(browserView: BrowserView): void;
     /**
      * Sets whether the window can be manually closed by user. On Linux does nothing.
+     * 
+**Deprecated**
      */
     setClosable(closable: boolean): void;
     /**
@@ -2620,6 +2638,8 @@ On Linux always returns `true`.
     /**
      * Sets whether the maximize/zoom window button toggles fullscreen mode or
      * maximizes the window.
+
+**Deprecated**
      */
     setFullScreenable(fullscreenable: boolean): void;
     /**
@@ -2644,6 +2664,8 @@ On Linux always returns `true`.
     /**
      * Sets whether the window can be manually maximized by user. On Linux does
      * nothing.
+
+**Deprecated**
      */
     setMaximizable(maximizable: boolean): void;
     /**
@@ -2662,6 +2684,8 @@ On Linux always returns `true`.
     /**
      * Sets whether the window can be manually minimized by user. On Linux does
      * nothing.
+
+**Deprecated**
      */
     setMinimizable(minimizable: boolean): void;
     /**
@@ -2670,6 +2694,8 @@ On Linux always returns `true`.
     setMinimumSize(width: number, height: number): void;
     /**
      * Sets whether the window can be moved by user. On Linux does nothing.
+     * 
+**Deprecated**
      */
     setMovable(movable: boolean): void;
     /**
@@ -2716,6 +2742,8 @@ On Linux always returns `true`.
     setRepresentedFilename(filename: string): void;
     /**
      * Sets whether the window can be manually resized by user.
+
+**Deprecated**
      */
     setResizable(resizable: boolean): void;
     /**
@@ -3952,17 +3980,6 @@ Send given command to the debugging target.
      */
     showSaveDialog(options: SaveDialogOptions): Promise<Electron.SaveDialogReturnValue>;
     /**
-     * the path of the file chosen by the user; if the dialog is cancelled it returns
-     * `undefined`.
-     *
-     * The `browserWindow` argument allows the dialog to attach itself to a parent
-     * window, making it modal.
-     *
-     * The `filters` specifies an array of file types that can be displayed, see
-     * `dialog.showOpenDialog` for an example.
-     */
-    showSaveDialog(options: SaveDialogOptions): (string) | (undefined);
-    /**
      * Resolve with an object containing the following:
      *
      * * `canceled` Boolean - whether or not the dialog was canceled.
@@ -3992,7 +4009,18 @@ Send given command to the debugging target.
      * The `filters` specifies an array of file types that can be displayed, see
      * `dialog.showOpenDialog` for an example.
      */
-    showSaveDialog(browserWindow: BrowserWindow, options: SaveDialogOptions): (string) | (undefined);
+    showSaveDialogSync(options: SaveDialogSyncOptions): (string) | (undefined);
+    /**
+     * the path of the file chosen by the user; if the dialog is cancelled it returns
+     * `undefined`.
+     *
+     * The `browserWindow` argument allows the dialog to attach itself to a parent
+     * window, making it modal.
+     *
+     * The `filters` specifies an array of file types that can be displayed, see
+     * `dialog.showOpenDialog` for an example.
+     */
+    showSaveDialogSync(browserWindow: BrowserWindow, options: SaveDialogSyncOptions): (string) | (undefined);
   }
 
   interface Display {
@@ -4648,7 +4676,7 @@ Retrieves the product descriptions.
     /**
      * Removes listeners of the specified `channel`.
      */
-    removeAllListeners(channel: string): this;
+    removeAllListeners(channel?: string): this;
     /**
      * Removes any handler for `channel`, if present.
      */
@@ -5138,7 +5166,7 @@ For example:
      * 
 where `SYSTEM_IMAGE_NAME` should be replaced with any value from this list.
      */
-    static createFromNamedImage(imageName: string, hslShift: number[]): NativeImage;
+    static createFromNamedImage(imageName: string, hslShift?: number[]): NativeImage;
     /**
      * Creates a new `NativeImage` instance from a file located at `path`. This method
      * returns an empty image if the `path` does not exist, cannot be read, or is not a
@@ -5419,7 +5447,7 @@ Starts recording network events to `path`.
     /**
      * Notification
      */
-    constructor(options: NotificationConstructorOptions);
+    constructor(options?: NotificationConstructorOptions);
     /**
      * Whether or not desktop notifications are supported on the current system
      */
@@ -6834,17 +6862,17 @@ Returns an object with system animation settings.
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
      */
-    postLocalNotification(event: string, userInfo: any): void;
+    postLocalNotification(event: string, userInfo: Record<string, any>): void;
     /**
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
      */
-    postNotification(event: string, userInfo: any, deliverImmediately?: boolean): void;
+    postNotification(event: string, userInfo: Record<string, any>, deliverImmediately?: boolean): void;
     /**
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
      */
-    postWorkspaceNotification(event: string, userInfo: any): void;
+    postWorkspaceNotification(event: string, userInfo: Record<string, any>): void;
     /**
      * resolves if the user has successfully authenticated with Touch ID.
      *
@@ -6892,8 +6920,41 @@ Some popular `key` and `type`s are:
      * Same as `subscribeNotification`, but uses `NSNotificationCenter` for local
      * defaults. This is necessary for events such as
      * `NSUserDefaultsDidChangeNotification`.
+
+**Deprecated**
      */
-    subscribeLocalNotification(event: string, callback: (event: string, userInfo: any) => void): number;
+    subscribeLocalNotification(event: string, callback: (event: string, userInfo: Record<string, any>) => void): number;
+    /**
+     * Resolves with an object containing the following items:
+     *
+     * * `id` Number - The ID of this subscription
+     * * `event` String
+     * * `userInfo` Record<string, any>
+     *
+     * Same as `subscribeNotification`, but uses `NSNotificationCenter` for local
+     * defaults. This is necessary for events such as
+     * `NSUserDefaultsDidChangeNotification`.
+     */
+    subscribeLocalNotification(event: string): Promise<Electron.SubscribeLocalNotificationReturnValue>;
+    /**
+     * Resolves with an object containing the following items:
+     *
+     * * `id` Number - The ID of this subscription, which can be used to unsubscribe
+     * the `event`.
+     * * `event` String
+     * * `userInfo` Record<string, any>
+     *
+     * Subscribes to native notifications of macOS.
+     *
+     * Under the hood this API subscribes to `NSDistributedNotificationCenter`, example
+     * values of `event` are:
+     *
+     * * `AppleInterfaceThemeChangedNotification`
+     * * `AppleAquaColorVariantChanged`
+     * * `AppleColorPreferencesChangedNotification`
+     * * `AppleShowScrollBarsSettingChanged`
+     */
+    subscribeNotification(event: string): Promise<Electron.SubscribeNotificationReturnValue>;
     /**
      * The ID of this subscription
      *
@@ -6912,14 +6973,30 @@ Some popular `key` and `type`s are:
      * * `AppleAquaColorVariantChanged`
      * * `AppleColorPreferencesChangedNotification`
      * * `AppleShowScrollBarsSettingChanged`
+
+**Deprecated**
      */
-    subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): number;
+    subscribeNotification(event: string, callback: (event: string, userInfo: Record<string, any>) => void): number;
     /**
      * Same as `subscribeNotification`, but uses
      * `NSWorkspace.sharedWorkspace.notificationCenter`. This is necessary for events
      * such as `NSWorkspaceDidActivateApplicationNotification`.
+
+**Deprecated**
      */
-    subscribeWorkspaceNotification(event: string, callback: (event: string, userInfo: any) => void): void;
+    subscribeWorkspaceNotification(event: string, callback: (event: string, userInfo: Record<string, any>) => void): void;
+    /**
+     * Resolves with an object containing the following items:
+     *
+     * * `id` Number - The ID of this subscription
+     * * `event` String
+     * * `userInfo` Record<string, any>
+     *
+     * Same as `subscribeNotification`, but uses
+     * `NSWorkspace.sharedWorkspace.notificationCenter`. This is necessary for events
+     * such as `NSWorkspaceDidActivateApplicationNotification`.
+     */
+    subscribeWorkspaceNotification(event: string): Promise<Electron.SubscribeWorkspaceNotificationReturnValue>;
     /**
      * Same as `unsubscribeNotification`, but removes the subscriber from
      * `NSNotificationCenter`.
@@ -7964,9 +8041,8 @@ The usage is the same with the `certificate-error` event of `app`.
                                                     */
                                                    color: (string) | (null)) => void): this;
     /**
-     * This event is like `did-finish-load` but emitted when the load failed or was
-     * cancelled, e.g. `window.stop()` is invoked. The full list of error codes and
-     * their meaning is available here.
+     * This event is like `did-finish-load` but emitted when the load failed. The full
+     * list of error codes and their meaning is available here.
      */
     on(event: 'did-fail-load', listener: (event: Event,
                                           errorCode: number,
@@ -7996,6 +8072,38 @@ The usage is the same with the `certificate-error` event of `app`.
                                           isMainFrame: boolean,
                                           frameProcessId: number,
                                           frameRoutingId: number) => void): this;
+    /**
+     * This event is like `did-fail-load` but emitted when the load was cancelled (e.g.
+     * `window.stop()` was invoked).
+     */
+    on(event: 'did-fail-provisional-load', listener: (event: Event,
+                                                      errorCode: number,
+                                                      errorDescription: string,
+                                                      validatedURL: string,
+                                                      isMainFrame: boolean,
+                                                      frameProcessId: number,
+                                                      frameRoutingId: number) => void): this;
+    once(event: 'did-fail-provisional-load', listener: (event: Event,
+                                                      errorCode: number,
+                                                      errorDescription: string,
+                                                      validatedURL: string,
+                                                      isMainFrame: boolean,
+                                                      frameProcessId: number,
+                                                      frameRoutingId: number) => void): this;
+    addListener(event: 'did-fail-provisional-load', listener: (event: Event,
+                                                      errorCode: number,
+                                                      errorDescription: string,
+                                                      validatedURL: string,
+                                                      isMainFrame: boolean,
+                                                      frameProcessId: number,
+                                                      frameRoutingId: number) => void): this;
+    removeListener(event: 'did-fail-provisional-load', listener: (event: Event,
+                                                      errorCode: number,
+                                                      errorDescription: string,
+                                                      validatedURL: string,
+                                                      isMainFrame: boolean,
+                                                      frameProcessId: number,
+                                                      frameRoutingId: number) => void): this;
     /**
      * Emitted when the navigation is done, i.e. the spinner of the tab has stopped
      * spinning, and the `onload` event was dispatched.
@@ -8625,70 +8733,70 @@ The usage is the same with the `login` event of `app`.
      * `event.preventDefault()` will prevent the module from being returned. Custom
      * value can be returned by setting `event.returnValue`.
      */
-    on(event: 'remote-get-builtin', listener: (event: Event,
+    on(event: 'remote-get-builtin', listener: (event: IpcMainEvent,
                                                moduleName: string) => void): this;
-    once(event: 'remote-get-builtin', listener: (event: Event,
+    once(event: 'remote-get-builtin', listener: (event: IpcMainEvent,
                                                moduleName: string) => void): this;
-    addListener(event: 'remote-get-builtin', listener: (event: Event,
+    addListener(event: 'remote-get-builtin', listener: (event: IpcMainEvent,
                                                moduleName: string) => void): this;
-    removeListener(event: 'remote-get-builtin', listener: (event: Event,
+    removeListener(event: 'remote-get-builtin', listener: (event: IpcMainEvent,
                                                moduleName: string) => void): this;
     /**
      * Emitted when `remote.getCurrentWebContents()` is called in the renderer process.
      * Calling `event.preventDefault()` will prevent the object from being returned.
      * Custom value can be returned by setting `event.returnValue`.
      */
-    on(event: 'remote-get-current-web-contents', listener: (event: Event) => void): this;
-    once(event: 'remote-get-current-web-contents', listener: (event: Event) => void): this;
-    addListener(event: 'remote-get-current-web-contents', listener: (event: Event) => void): this;
-    removeListener(event: 'remote-get-current-web-contents', listener: (event: Event) => void): this;
+    on(event: 'remote-get-current-web-contents', listener: (event: IpcMainEvent) => void): this;
+    once(event: 'remote-get-current-web-contents', listener: (event: IpcMainEvent) => void): this;
+    addListener(event: 'remote-get-current-web-contents', listener: (event: IpcMainEvent) => void): this;
+    removeListener(event: 'remote-get-current-web-contents', listener: (event: IpcMainEvent) => void): this;
     /**
      * Emitted when `remote.getCurrentWindow()` is called in the renderer process.
      * Calling `event.preventDefault()` will prevent the object from being returned.
      * Custom value can be returned by setting `event.returnValue`.
      */
-    on(event: 'remote-get-current-window', listener: (event: Event) => void): this;
-    once(event: 'remote-get-current-window', listener: (event: Event) => void): this;
-    addListener(event: 'remote-get-current-window', listener: (event: Event) => void): this;
-    removeListener(event: 'remote-get-current-window', listener: (event: Event) => void): this;
+    on(event: 'remote-get-current-window', listener: (event: IpcMainEvent) => void): this;
+    once(event: 'remote-get-current-window', listener: (event: IpcMainEvent) => void): this;
+    addListener(event: 'remote-get-current-window', listener: (event: IpcMainEvent) => void): this;
+    removeListener(event: 'remote-get-current-window', listener: (event: IpcMainEvent) => void): this;
     /**
      * Emitted when `remote.getGlobal()` is called in the renderer process. Calling
      * `event.preventDefault()` will prevent the global from being returned. Custom
      * value can be returned by setting `event.returnValue`.
      */
-    on(event: 'remote-get-global', listener: (event: Event,
+    on(event: 'remote-get-global', listener: (event: IpcMainEvent,
                                               globalName: string) => void): this;
-    once(event: 'remote-get-global', listener: (event: Event,
+    once(event: 'remote-get-global', listener: (event: IpcMainEvent,
                                               globalName: string) => void): this;
-    addListener(event: 'remote-get-global', listener: (event: Event,
+    addListener(event: 'remote-get-global', listener: (event: IpcMainEvent,
                                               globalName: string) => void): this;
-    removeListener(event: 'remote-get-global', listener: (event: Event,
+    removeListener(event: 'remote-get-global', listener: (event: IpcMainEvent,
                                               globalName: string) => void): this;
     /**
      * Emitted when `<webview>.getWebContents()` is called in the renderer process.
      * Calling `event.preventDefault()` will prevent the object from being returned.
      * Custom value can be returned by setting `event.returnValue`.
      */
-    on(event: 'remote-get-guest-web-contents', listener: (event: Event,
+    on(event: 'remote-get-guest-web-contents', listener: (event: IpcMainEvent,
                                                           guestWebContents: WebContents) => void): this;
-    once(event: 'remote-get-guest-web-contents', listener: (event: Event,
+    once(event: 'remote-get-guest-web-contents', listener: (event: IpcMainEvent,
                                                           guestWebContents: WebContents) => void): this;
-    addListener(event: 'remote-get-guest-web-contents', listener: (event: Event,
+    addListener(event: 'remote-get-guest-web-contents', listener: (event: IpcMainEvent,
                                                           guestWebContents: WebContents) => void): this;
-    removeListener(event: 'remote-get-guest-web-contents', listener: (event: Event,
+    removeListener(event: 'remote-get-guest-web-contents', listener: (event: IpcMainEvent,
                                                           guestWebContents: WebContents) => void): this;
     /**
      * Emitted when `remote.require()` is called in the renderer process. Calling
      * `event.preventDefault()` will prevent the module from being returned. Custom
      * value can be returned by setting `event.returnValue`.
      */
-    on(event: 'remote-require', listener: (event: Event,
+    on(event: 'remote-require', listener: (event: IpcMainEvent,
                                            moduleName: string) => void): this;
-    once(event: 'remote-require', listener: (event: Event,
+    once(event: 'remote-require', listener: (event: IpcMainEvent,
                                            moduleName: string) => void): this;
-    addListener(event: 'remote-require', listener: (event: Event,
+    addListener(event: 'remote-require', listener: (event: IpcMainEvent,
                                            moduleName: string) => void): this;
-    removeListener(event: 'remote-require', listener: (event: Event,
+    removeListener(event: 'remote-require', listener: (event: IpcMainEvent,
                                            moduleName: string) => void): this;
     /**
      * Emitted when the unresponsive web page becomes responsive again.
@@ -10799,7 +10907,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * When provided, request will be made with these headers.
      */
-    requestHeaders?: RequestHeaders;
+    requestHeaders?: Record<string, string>;
   }
 
   interface CertificateTrustDialogOptions {
@@ -11803,7 +11911,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     resourceType: string;
     referrer: string;
     timestamp: number;
-    requestHeaders: RequestHeaders;
+    requestHeaders: Record<string, string>;
   }
 
   interface OnCompletedFilter {
@@ -11913,7 +12021,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     resourceType: string;
     referrer: string;
     timestamp: number;
-    requestHeaders: RequestHeaders;
+    requestHeaders: Record<string, string>;
   }
 
   interface OpenDevToolsOptions {
@@ -12369,6 +12477,38 @@ See webContents.sendInputEvent for detailed description of `event` object.
     bookmark?: string;
   }
 
+  interface SaveDialogSyncOptions {
+    title?: string;
+    /**
+     * Absolute directory path, absolute file path, or file name to use by default.
+     */
+    defaultPath?: string;
+    /**
+     * Custom label for the confirmation button, when left empty the default label will
+     * be used.
+     */
+    buttonLabel?: string;
+    filters?: FileFilter[];
+    /**
+     * Message to display above text fields.
+     */
+    message?: string;
+    /**
+     * Custom label for the text displayed in front of the filename text field.
+     */
+    nameFieldLabel?: string;
+    /**
+     * Show the tags input box, defaults to `true`.
+     */
+    showsTagField?: boolean;
+    /**
+     * Create a security scoped bookmark when packaged for the Mac App Store. If this
+     * option is enabled and the file doesn't already exist a blank file will be
+     * created at the chosen path.
+     */
+    securityScopedBookmarks?: boolean;
+  }
+
   interface Settings {
     /**
      * `true` to open the app at login, `false` to remove the app as a login item.
@@ -12422,6 +12562,27 @@ See webContents.sendInputEvent for detailed description of `event` object.
   interface StartOFCrashReporter {
     isRunning: boolean;
     diagnosticMode: boolean;
+  }
+
+  interface SubscribeLocalNotificationReturnValue {
+    /**
+     * The ID of this subscription
+     */
+    id: number;
+    event: string;
+    userInfo: Record<string, any>;
+  }
+
+  interface SubscribeNotificationReturnValue {
+  }
+
+  interface SubscribeWorkspaceNotificationReturnValue {
+    /**
+     * The ID of this subscription
+     */
+    id: number;
+    event: string;
+    userInfo: Record<string, any>;
   }
 
   interface SystemMemoryInfo {
@@ -12706,6 +12867,10 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * to receive events from all processes on the current desktop. Defaults to `0`.
      */
     pid?: number;
+    /**
+     * Excludes windows owned by the current runtime process. Defaults to true.
+     */
+    skipOwnWindows?: boolean;
   }
 
   interface EditFlags {
@@ -12798,9 +12963,6 @@ See webContents.sendInputEvent for detailed description of `event` object.
   }
 
   interface Query {
-  }
-
-  interface RequestHeaders {
   }
 
   interface ResizeRegion {
