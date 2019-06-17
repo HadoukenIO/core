@@ -7,7 +7,7 @@ declare var require: any;
 
 import * as coreState from '../../core_state';
 import {ipc, channels} from '../../transports/electron_ipc';
-import { getWebContentsInitialOptionSet } from '../../core_state';
+import { getWebContentsInitialOptionSet, RoutingInfo } from '../../core_state';
 import { WebContents } from 'electron';
 const system = require('../../api/system').System;
 
@@ -111,12 +111,11 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
     // Dispatch a message
     private innerSend(payload: string,
-                      frameRoutingId: number,
-                      mainFrameRoutingId: number,
-                      webContents: WebContents): void {
+                      routingInfo: RoutingInfo): void {
+        const { webContents, frameRoutingId, mainFrameRoutingId, _options} = routingInfo;
         if (frameRoutingId === mainFrameRoutingId) {
             // this is the main window frame
-            if (coreState.argo.framestrategy === 'frames') {
+            if (_options.api.iframe.enableDeprecatedSharedName) {
                 webContents.sendToFrame(frameRoutingId, channels.CORE_MESSAGE, payload);
             } else {
                 webContents.send(channels.CORE_MESSAGE, payload);
@@ -146,7 +145,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         if (!this.canTrySend(routingInfo)) {
             system.debugLog(1, `uuid:${uuid} name:${name} frameRoutingId:${frameRoutingId} not reachable, payload:${payload}`);
         } else {
-            this.innerSend(payload, frameRoutingId, mainFrameRoutingId, webContents);
+            this.innerSend(payload, routingInfo);
         }
     }
 
