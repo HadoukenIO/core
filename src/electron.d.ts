@@ -806,7 +806,7 @@ declare namespace Electron {
      * Returns NativeWindowInfo[] - An Array of NativeWindowInfo objects for all
      * top-level windows of the current user's desktop.
      */
-    getAllNativeWindowInfo(skipOwnWindows: boolean): void;
+    getAllNativeWindowInfo(skipOwnWindows: boolean): any[];
     getAppMetrics(): ProcessMetric[];
     getAppPath(): string;
     getBadgeCount(): number;
@@ -3842,7 +3842,7 @@ declare namespace Electron {
     /**
      * The window's bounds.
      */
-    Bounds: Rectangle;
+    bounds: Rectangle;
     /**
      * The className of the window.
      */
