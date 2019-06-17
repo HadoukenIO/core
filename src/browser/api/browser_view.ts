@@ -8,28 +8,8 @@ import of_events from '../of_events';
 import route from '../../common/route';
 
 
-// import { BrowserWindow, BrowserView, app } from 'electron';
-// import { OpenFinWindow } from '../../shapes';
-// const convertToElectron = require('../convert_options').convertToElectron;
-// import * as coreState from '../core_state';
+const windowCloseListenerMap = new WeakMap();
 
-
-// export function addBrowserViewToWindow(options: any, win: BrowserWindow) {
-//     const view = new BrowserView(convertToElectron({}, false));
-//     const ofWin = coreState.getWinObjById(win.id);
-//     if (!ofWin) {
-//         return;
-//     }
-//     const name = app.generateGUID();
-//     const uuid = ofWin.uuid;
-//     ofWin.views.set(name, { info: { name, uuid, parent: { uuid, name: ofWin.name }, entityType: 'view' }, view });
-//     //@ts-ignore
-//     view.webContents.registerIframe = win.webContents.registerIframe.bind(view.webContents);
-//     view.webContents.loadURL(options.url);
-//     view.setBounds(options.bounds);
-//     view.setAutoResize(Object.assign({ width: true, height: true }, options.autoResize));
-//     win.setBrowserView(view);
-// }
 export interface BrowserViewOpts extends BrowserViewCreationOptions {
     uuid: string;
 }
@@ -59,19 +39,23 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
         let bWin;
         if (!ofWin) {
-            throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`)
+            throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
         } else {
             bWin = ofWin.browserWindow;
             if (ofWin.view) {
                 ofWin.view.view.destroy();
-            } 
+                const oldListener = windowCloseListenerMap.get(ofWin);
+                of_events.removeListener(route.window('closed', toIdentity.uuid, toIdentity.name), oldListener);
+            }
         }
         ofWin.view = ofView;
         bWin.setBrowserView(view);
-        of_events.once(route.window('closed', toIdentity.uuid, toIdentity.name), () => {
+        const listener = () => {
             view.destroy();
             ofWin.view = undefined;
-        })
+        };
+        of_events.once(route.window('closed', toIdentity.uuid, toIdentity.name), listener);
+        windowCloseListenerMap.set(ofWin, listener);
     }
 }
 
