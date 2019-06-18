@@ -108,7 +108,6 @@ export interface WebOptions {
 }
 export interface OpenFinWindow extends InjectableContext {
     isIframe?: boolean;
-    parentFrameId?: number;
     _options: WindowOptions;
     _window: BrowserWindow;
     app_uuid: string;
