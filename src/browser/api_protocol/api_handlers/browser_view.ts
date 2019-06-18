@@ -28,10 +28,17 @@ function setBounds (identity: Identity, message: APIMessage, ack: AckFunc) {
     const view = getBrowserViewByIdentity({uuid, name});
     browser_view.setBounds(view, bounds);
 }
+async function getInfo(identity: Identity, message: APIMessage, ack: AckFunc) {
+    const { payload } = message;
+    const { uuid, name } = payload;
+    const view = getBrowserViewByIdentity({ uuid, name });
+    return browser_view.getInfo(view);
+}
 export const browserViewActionMap: ActionSpecMap = {
     'create-browser-view': create,
     'attach-browser-view': attach,
-    'set-browser-view-bounds': setBounds
+    'set-browser-view-bounds': setBounds,
+    'get-browser-view-info': getInfo
 };
 
 export function init() {

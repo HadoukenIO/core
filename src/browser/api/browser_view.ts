@@ -1,9 +1,10 @@
-import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions } from 'electron';
+import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions, webContents } from 'electron';
 import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
 import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView } from '../core_state';
 import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
 import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
+import {getInfo as getWebContentsInfo} from './webcontents';
 import of_events from '../of_events';
 import route from '../../common/route';
 
@@ -68,4 +69,8 @@ export async function setAutoResize(ofView: OfView, autoResize: AutoResizeOption
 export async function setBounds(ofView: OfView, bounds: Rectangle) {
     const {view} = ofView;
     view.setBounds(bounds);
+}
+
+export function getInfo (ofView: OfView) {
+    return getWebContentsInfo(ofView.view.webContents);
 }
