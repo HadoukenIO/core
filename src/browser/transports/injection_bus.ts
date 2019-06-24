@@ -122,11 +122,13 @@ export default class NativeWindowInjectionBus extends EventEmitter {
       const { sequence } = message;
 
       if (this._previousDllSequence + 1 !== sequence) {
-        // At least one message has been missed
-        const msg = `[NWI] Missed message(s) from ${this._senderId}: `
-          + `previous sequence ${this._previousDllSequence}, `
-          + `current sequence: ${sequence}`;
-        writeToLog('info', msg);
+        // If message sequence is out-of-sync, this indicates that the message
+        // window started a new session and all subscriptions are gone, thus,
+        // needing to re-subscribe to events
+        const message = '[NWI] message sequence is out-of-sync with'
+          + ` ${this._senderId}. Re-subscribing to events...`;
+        writeToLog('info', message);
+        this.subscribe();
       }
 
       this._previousDllSequence = sequence;
