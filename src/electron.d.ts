@@ -1,4 +1,4 @@
-// Type definitions for Electron 6.0.0-beta.5
+// Type definitions for Electron 6.0.0-beta.8
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -1183,6 +1183,17 @@ declare namespace Electron {
      * default.
      */
     accessibilitySupportEnabled?: boolean;
+    /**
+     * A Boolean which when true disables the overrides that Electron has in place to
+     * ensure renderer processes are restarted on every navigation.  The current
+     * default value for this property is false. The intention is for these overrides
+     * to become disabled by default and then at some point in the future this property
+     * will be removed.  This property impacts which native modules you can use in the
+     * renderer process.  For more information on the direction Electron is going with
+     * renderer process restarts and usage of native modules in the renderer process
+     * please check out this Tracking Issue.
+     */
+    allowRendererProcessReuse?: boolean;
     /**
      * A Menu property that return Menu if one has been set and null otherwise. Users
      * can pass a Menu to set this property.
@@ -2990,8 +3001,8 @@ declare namespace Electron {
     /**
      * Set an extra parameter to be sent with the crash report. The values specified
      * here will be sent in addition to any values set via the extra option when start
-     * was called. This API is only available on macOS, if you need to add/update extra
-     * parameters on Linux and Windows after your first call to start you can call
+     * was called. This API is only available on macOS and windows, if you need to
+     * add/update extra parameters on Linux after your first call to start you can call
      * start again with the updated extra options.
      */
     addExtraParameter(key: string, value: string): void;
@@ -3038,16 +3049,13 @@ declare namespace Electron {
      * this out by calling process.crash() to crash the child process. Note: If you
      * need send additional/updated extra parameters after your first call start you
      * can call addExtraParameter on macOS or call start again with the new/updated
-     * extra parameters on Linux and Windows. Note: To collect crash reports from child
-     * process in Windows, you need to add this extra code as well. This will start the
-     * process that will monitor and send the crash reports. Replace submitURL,
-     * productName and crashesDirectory with appropriate values. Note: On macOS,
-     * Electron uses a new crashpad client for crash collection and reporting. If you
-     * want to enable crash reporting, initializing crashpad from the main process
-     * using crashReporter.start is required regardless of which process you want to
-     * collect crashes from. Once initialized this way, the crashpad handler collects
-     * crashes from all processes. You still have to call crashReporter.start from the
-     * renderer or child process, otherwise crashes from them will get reported without
+     * extra parameters on Linux and Windows. Note: On macOS and windows, Electron uses
+     * a new crashpad client for crash collection and reporting. If you want to enable
+     * crash reporting, initializing crashpad from the main process using
+     * crashReporter.start is required regardless of which process you want to collect
+     * crashes from. Once initialized this way, the crashpad handler collects crashes
+     * from all processes. You still have to call crashReporter.start from the renderer
+     * or child process, otherwise crashes from them will get reported without
      * companyName, productName or any of the extra information.
      */
     start(options: CrashReporterStartOptions): void;
@@ -3340,12 +3348,6 @@ declare namespace Electron {
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
-     * be displayed, see dialog.showOpenDialog for an example.
-     */
-    showSaveDialog(options: SaveDialogOptions): (string) | (undefined);
-    /**
-     * The browserWindow argument allows the dialog to attach itself to a parent
-     * window, making it modal. The filters specifies an array of file types that can
      * be displayed, see dialog.showOpenDialog for an example. Note: On macOS, using
      * the asynchronous version is recommended to avoid issues when expanding and
      * collapsing the dialog.
@@ -3356,7 +3358,13 @@ declare namespace Electron {
      * window, making it modal. The filters specifies an array of file types that can
      * be displayed, see dialog.showOpenDialog for an example.
      */
-    showSaveDialog(browserWindow: BrowserWindow, options: SaveDialogOptions): (string) | (undefined);
+    showSaveDialogSync(options: SaveDialogSyncOptions): (string) | (undefined);
+    /**
+     * The browserWindow argument allows the dialog to attach itself to a parent
+     * window, making it modal. The filters specifies an array of file types that can
+     * be displayed, see dialog.showOpenDialog for an example.
+     */
+    showSaveDialogSync(browserWindow: BrowserWindow, options: SaveDialogSyncOptions): (string) | (undefined);
   }
 
   interface Display {
@@ -4105,10 +4113,20 @@ declare namespace Electron {
     // Docs: http://electronjs.org/docs/api/menu-item
 
     constructor(options: MenuItemConstructorOptions);
+    accelerator: string;
     checked: boolean;
     click: Function;
+    commandId: number;
     enabled: boolean;
+    icon: NativeImage;
+    id: string;
     label: string;
+    menu: Menu;
+    registerAccelerator: boolean;
+    role: string;
+    sublabel: string;
+    submenu: Menu;
+    type: string;
     visible: boolean;
   }
 
@@ -4608,14 +4626,15 @@ declare namespace Electron {
      */
     contentVersion: string;
     /**
-     * A Boolean value that indicates whether the App Store has downloadable content
-     * for this product.
-     */
-    downloadable: boolean;
-    /**
      * The locale formatted price of the product.
      */
     formattedPrice: string;
+    /**
+     * A Boolean value that indicates whether the App Store has downloadable content
+     * for this product. true if at least one file has been associated with the
+     * product.
+     */
+    isDownloadable: boolean;
     /**
      * A description of the product.
      */
@@ -13543,6 +13562,37 @@ declare namespace Electron {
     bookmark?: string;
   }
 
+  interface SaveDialogSyncOptions {
+    title?: string;
+    /**
+     * Absolute directory path, absolute file path, or file name to use by default.
+     */
+    defaultPath?: string;
+    /**
+     * Custom label for the confirmation button, when left empty the default label will
+     * be used.
+     */
+    buttonLabel?: string;
+    filters?: FileFilter[];
+    /**
+     * Message to display above text fields.
+     */
+    message?: string;
+    /**
+     * Custom label for the text displayed in front of the filename text field.
+     */
+    nameFieldLabel?: string;
+    /**
+     * Show the tags input box, defaults to true.
+     */
+    showsTagField?: boolean;
+    /**
+     * Create a when packaged for the Mac App Store. If this option is enabled and the
+     * file doesn't already exist a blank file will be created at the chosen path.
+     */
+    securityScopedBookmarks?: boolean;
+  }
+
   interface Settings {
     /**
      * true to open the app at login, false to remove the app as a login item. Defaults
@@ -13896,6 +13946,10 @@ declare namespace Electron {
      * to receive events from all processes on the current desktop. Defaults to 0.
      */
     pid?: number;
+    /**
+     * Excludes windows owned by the current runtime process. Defaults to true.
+     */
+    skipOwnWindows?: boolean;
   }
 
   interface EditFlags {
