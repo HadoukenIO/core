@@ -29,18 +29,12 @@ export function navigate (webContents: Electron.WebContents, url: string) {
 }
 
 export async function navigateBack (webContents: Electron.WebContents) {
-    if (!webContents.canGoBack()) {
-        throw new Error('Cannot navigate back');
-    }
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goBack();
     return navigationEnd;
 }
 
 export async function navigateForward (webContents: Electron.WebContents) {
-    if (!webContents.canGoForward()) {
-        throw new Error('Cannot navigate forward');
-    }
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goForward();
     return navigationEnd;
