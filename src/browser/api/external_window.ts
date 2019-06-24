@@ -230,7 +230,7 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
 
   if (!externalWindow) {
     if (!doesExternalWindowExist(uuid)) {
-      throw new Error(`Attempted to wrap a non-existent external window using uuid: ${uuid}`);
+      throw new Error(`Attempted to interact with a nonexistent external window using uuid: ${uuid}`);
     }
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: uuid }));
 
