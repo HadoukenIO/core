@@ -14418,5 +14418,8 @@ declare namespace NodeJS {
   interface ProcessVersions {
     electron: string;
     chrome: string;
+    combinedId: string;
+    mainFrameRoutingId: number;
+    cachePath: string;
   }
 }
