@@ -164,6 +164,7 @@ export interface WindowOptions extends WebOptions {
     };
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
+    api?: any;
     applicationIcon?: string;
     appLogFlushInterval?: number;
     aspectRatio?: number;

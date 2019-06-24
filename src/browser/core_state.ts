@@ -10,7 +10,7 @@
 * */
 
 import * as minimist from 'minimist';
-import { app, webContents, session, Session, WebContents, BrowserView } from 'electron';
+import { app, Session, WebContents, BrowserWindow, BrowserView } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
@@ -748,8 +748,16 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
         }
     }
 }
-
-export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
+export interface RoutingInfo {
+    name: string;
+    browserWindow?: BrowserWindow;
+    webContents: WebContents;
+    frameRoutingId: number;
+    mainFrameRoutingId: number;
+    frameName: string;
+    _options: Shapes.WindowOptions;
+}
+export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingInfo {
     const app = appByUuid(uuid);
 
     if (!app) {
@@ -761,7 +769,6 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             const { uuid, name } = openfinWindow;
             let browserWindow: Shapes.BrowserWindow;
             browserWindow = openfinWindow.browserWindow;
-            const webContents = browserWindow.webContents;
             if (!openfinWindow.mainFrameRoutingId) {
                 // save bit time here by not calling webContents.mainFrameRoutingId every time
                 // mainFrameRoutingId is wrong during setWindowObj
@@ -776,7 +783,9 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
             if (name === frame) {
                 return {
                     name,
-                    webContents,
+                    browserWindow,
+                    _options: openfinWindow._options,
+                    webContents: browserWindow.webContents,
                     frameRoutingId: openfinWindow.mainFrameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -785,7 +794,9 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 const {name, frameRoutingId} = openfinWindow.frames.get(frame);
                 return {
                     name,
-                    webContents,
+                    browserWindow,
+                    _options: openfinWindow._options,
+                    webContents: browserWindow.webContents,
                     frameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -802,7 +813,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 frameRoutingId: view.view.webContents.mainFrameRoutingId,
                 mainFrameRoutingId: view.view.webContents.mainFrameRoutingId,
                 frameName: frame,
-                type: 'view'
+                _options: view._options
             };
         }
     }
