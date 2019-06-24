@@ -8,7 +8,6 @@ declare var require: any;
 import * as coreState from '../../core_state';
 import {ipc, channels} from '../../transports/electron_ipc';
 import { getWebContentsInitialOptionSet, RoutingInfo } from '../../core_state';
-import { WebContents } from 'electron';
 const system = require('../../api/system').System;
 
 class RendererBatchConfiguration {
@@ -64,7 +63,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         super(actionMap, requestHandler);
 
         this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
-            const { identity, data, ack, nack, e, strategyName } = mp;
+            const { identity, data, ack, nack, strategyName } = mp;
 
             if (strategyName !== this.constructor.name) {
                 next();
@@ -139,7 +138,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             return;
         }
 
-        const { webContents, mainFrameRoutingId, frameRoutingId } = routingInfo;
+        const { frameRoutingId } = routingInfo;
         const payload = JSON.stringify(payloadObj);
 
         if (!this.canTrySend(routingInfo)) {
