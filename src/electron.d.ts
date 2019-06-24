@@ -839,18 +839,18 @@ declare namespace Electron {
      * Linux and macOS, icons depend on the application associated with file mime type.
      * Deprecated Soon
      */
-    getFileIcon(path: string, callback: (error: Error, icon: NativeImage) => void): void;
-    /**
-     * Fetches a path's associated icon. On Windows, there are 2 kinds of icons: On
-     * Linux and macOS, icons depend on the application associated with file mime type.
-     * Deprecated Soon
-     */
     getFileIcon(path: string, options: FileIconOptions, callback: (error: Error, icon: NativeImage) => void): void;
     /**
      * Fetches a path's associated icon. On Windows, there a 2 kinds of icons: On Linux
      * and macOS, icons depend on the application associated with file mime type.
      */
     getFileIcon(path: string, options?: FileIconOptions): Promise<Electron.NativeImage>;
+    /**
+     * Fetches a path's associated icon. On Windows, there are 2 kinds of icons: On
+     * Linux and macOS, icons depend on the application associated with file mime type.
+     * Deprecated Soon
+     */
+    getFileIcon(path: string, callback: (error: Error, icon: NativeImage) => void): void;
     getFileSignature(fileName: string): FileSignature;
     getFocusedNativeId(): string;
     getGPUFeatureStatus(): GPUFeatureStatus;
@@ -1823,7 +1823,7 @@ declare namespace Electron {
      * data of the snapshot. Omitting rect will capture the whole visible page.
      * Deprecated Soon
      */
-    capturePage(callback: (image: NativeImage) => void): void;
+    capturePage(rect: Rectangle, callback: (image: NativeImage) => void): void;
     /**
      * Captures a snapshot of the page within rect. Omitting rect will capture the
      * whole visible page.
@@ -1835,7 +1835,7 @@ declare namespace Electron {
      * data of the snapshot. Omitting rect will capture the whole visible page.
      * Deprecated Soon
      */
-    capturePage(rect: Rectangle, callback: (image: NativeImage) => void): void;
+    capturePage(callback: (image: NativeImage) => void): void;
     /**
      * Moves window to the center of the screen.
      */
@@ -1902,11 +1902,11 @@ declare namespace Electron {
      * Rectangle.
      */
     getNormalBounds(): Rectangle;
+    getOpacity(): number;
     /**
      * Return the current opacity as a double between 0.0 and 1.0
      */
     getOpacity(): void;
-    getOpacity(): number;
     getParentWindow(): BrowserWindow;
     getPosition(): number[];
     getRepresentedFilename(): string;
@@ -2199,11 +2199,11 @@ declare namespace Electron {
      */
     setMovable(movable: boolean): void;
     /**
-     * Set the transparency of the window. 0 is transparent. 1 is opaque. 0.5 is half.
+     * Sets the opacity of the window. On Linux does nothing.
      */
     setOpacity(opacity: number): void;
     /**
-     * Sets the opacity of the window. On Linux does nothing.
+     * Set the transparency of the window. 0 is transparent. 1 is opaque. 0.5 is half.
      */
     setOpacity(opacity: number): void;
     /**
@@ -3225,7 +3225,7 @@ declare namespace Electron {
      * to the parent window, making it modal. On Windows the options are more limited,
      * due to the Win32 APIs used:
      */
-    showCertificateTrustDialog(options: CertificateTrustDialogOptions): Promise<void>;
+    showCertificateTrustDialog(browserWindow: BrowserWindow, options: CertificateTrustDialogOptions): Promise<void>;
     /**
      * On macOS, this displays a modal dialog that shows a message and certificate
      * information, and gives the user the option of trusting/importing the
@@ -3239,17 +3239,17 @@ declare namespace Electron {
      * information, and gives the user the option of trusting/importing the
      * certificate. If you provide a browserWindow argument the dialog will be attached
      * to the parent window, making it modal. On Windows the options are more limited,
-     * due to the Win32 APIs used:
+     * due to the Win32 APIs used: Deprecated Soon
      */
-    showCertificateTrustDialog(browserWindow: BrowserWindow, options: CertificateTrustDialogOptions): Promise<void>;
+    showCertificateTrustDialog(browserWindow: BrowserWindow, options: CertificateTrustDialogOptions, callback: Function): void;
     /**
      * On macOS, this displays a modal dialog that shows a message and certificate
      * information, and gives the user the option of trusting/importing the
      * certificate. If you provide a browserWindow argument the dialog will be attached
      * to the parent window, making it modal. On Windows the options are more limited,
-     * due to the Win32 APIs used: Deprecated Soon
+     * due to the Win32 APIs used:
      */
-    showCertificateTrustDialog(browserWindow: BrowserWindow, options: CertificateTrustDialogOptions, callback: Function): void;
+    showCertificateTrustDialog(options: CertificateTrustDialogOptions): Promise<void>;
     /**
      * Displays a modal dialog that shows an error message. This API can be called
      * safely before the ready event the app module emits, it is usually used to report
@@ -3332,17 +3332,9 @@ declare namespace Electron {
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
-     * be displayed, see dialog.showOpenDialog for an example. Note: On macOS, using
-     * the asynchronous version is recommended to avoid issues when expanding and
-     * collapsing the dialog.
-     */
-    showSaveDialog(options: SaveDialogOptions): Promise<Electron.SaveDialogReturnValue>;
-    /**
-     * The browserWindow argument allows the dialog to attach itself to a parent
-     * window, making it modal. The filters specifies an array of file types that can
      * be displayed, see dialog.showOpenDialog for an example.
      */
-    showSaveDialog(options: SaveDialogOptions): (string) | (undefined);
+    showSaveDialog(browserWindow: BrowserWindow, options: SaveDialogOptions): (string) | (undefined);
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
@@ -3356,7 +3348,15 @@ declare namespace Electron {
      * window, making it modal. The filters specifies an array of file types that can
      * be displayed, see dialog.showOpenDialog for an example.
      */
-    showSaveDialog(browserWindow: BrowserWindow, options: SaveDialogOptions): (string) | (undefined);
+    showSaveDialog(options: SaveDialogOptions): (string) | (undefined);
+    /**
+     * The browserWindow argument allows the dialog to attach itself to a parent
+     * window, making it modal. The filters specifies an array of file types that can
+     * be displayed, see dialog.showOpenDialog for an example. Note: On macOS, using
+     * the asynchronous version is recommended to avoid issues when expanding and
+     * collapsing the dialog.
+     */
+    showSaveDialog(options: SaveDialogOptions): Promise<Electron.SaveDialogReturnValue>;
   }
 
   interface Display {
@@ -5067,26 +5067,26 @@ declare namespace Electron {
     clearAuthCache(options: (RemovePassword) | (RemoveClientCertificate)): Promise<void>;
     clearAuthCache(): Promise<void>;
     /**
+     * Clears the session’s HTTP cache. Deprecated Soon
+     */
+    clearCache(callback: (error: number) => void): void;
+    /**
      * Clears the session’s HTTP cache.
      */
     clearCache(): Promise<void>;
     /**
-     * Clears the session’s HTTP cache. Deprecated Soon
+     * Clears the host resolver cache. Deprecated Soon
      */
-    clearCache(callback: (error: number) => void): void;
+    clearHostResolverCache(callback?: Function): void;
     /**
      * Clears the host resolver cache.
      */
     clearHostResolverCache(): Promise<void>;
     /**
-     * Clears the host resolver cache. Deprecated Soon
-     */
-    clearHostResolverCache(callback?: Function): void;
-    clearStorageData(options?: ClearStorageDataOptions): Promise<void>;
-    /**
      * Clears the storage data for the current session. Deprecated Soon
      */
     clearStorageData(options?: ClearStorageDataOptions, callback?: Function): void;
+    clearStorageData(options?: ClearStorageDataOptions): Promise<void>;
     /**
      * Allows resuming cancelled or interrupted downloads from previous Session. The
      * API will generate a DownloadItem that can be accessed with the will-download
@@ -5108,28 +5108,28 @@ declare namespace Electron {
      * Writes any unwritten DOMStorage data to disk.
      */
     flushStorageData(): void;
-    getBlobData(identifier: string): Promise<Buffer>;
     /**
      * Deprecated Soon
      */
     getBlobData(identifier: string, callback: (result: Buffer) => void): void;
-    getCacheSize(): Promise<number>;
+    getBlobData(identifier: string): Promise<Buffer>;
     /**
      * Callback is invoked with the session's current cache size. Deprecated Soon
      */
     getCacheSize(callback: (size: number, error: number) => void): void;
+    getCacheSize(): Promise<number>;
     getPreloads(): string[];
     /**
      * Returns the system's proxy configuration.
      */
     getProxySettings(): ProxySettings;
     getUserAgent(): string;
-    resolveProxy(url: string): Promise<string>;
     /**
      * Resolves the proxy information for url. The callback will be called with
      * callback(proxy) when the request is performed. Deprecated Soon
      */
     resolveProxy(url: string, callback: (proxy: string) => void): void;
+    resolveProxy(url: string): Promise<string>;
     /**
      * Sets the certificate verify proc for session, the proc will be called with
      * proc(request, callback) whenever a server certificate verification is requested.
@@ -5165,16 +5165,16 @@ declare namespace Electron {
      * Sets the proxy settings. When pacScript and proxyRules are provided together,
      * the proxyRules option is ignored and pacScript configuration is applied. The
      * proxyRules has to follow the rules below: For example: The proxyBypassRules is a
-     * comma separated list of rules described below:
+     * comma separated list of rules described below: Deprecated Soon
      */
-    setProxy(config: Config): Promise<void>;
+    setProxy(config: Config, callback: Function): void;
     /**
      * Sets the proxy settings. When pacScript and proxyRules are provided together,
      * the proxyRules option is ignored and pacScript configuration is applied. The
      * proxyRules has to follow the rules below: For example: The proxyBypassRules is a
-     * comma separated list of rules described below: Deprecated Soon
+     * comma separated list of rules described below:
      */
-    setProxy(config: Config, callback: Function): void;
+    setProxy(config: Config): Promise<void>;
     /**
      * Overrides the userAgent and acceptLanguages for this session. The
      * acceptLanguages must a comma separated ordered list of language codes, for
@@ -7370,7 +7370,7 @@ declare namespace Electron {
      * part of the page was repainted. If onlyDirty is set to true, image will only
      * contain the repainted area. onlyDirty defaults to false.
      */
-    beginFrameSubscription(callback: (image: NativeImage, dirtyRect: Rectangle) => void): void;
+    beginFrameSubscription(onlyDirty: boolean, callback: (image: NativeImage, dirtyRect: Rectangle) => void): void;
     /**
      * Begin subscribing for presentation events and captured frames, the callback will
      * be called with callback(image, dirtyRect) when there is a presentation event.
@@ -7379,17 +7379,10 @@ declare namespace Electron {
      * part of the page was repainted. If onlyDirty is set to true, image will only
      * contain the repainted area. onlyDirty defaults to false.
      */
-    beginFrameSubscription(onlyDirty: boolean, callback: (image: NativeImage, dirtyRect: Rectangle) => void): void;
+    beginFrameSubscription(callback: (image: NativeImage, dirtyRect: Rectangle) => void): void;
     canGoBack(): boolean;
     canGoForward(): boolean;
     canGoToOffset(offset: number): boolean;
-    /**
-     * Captures a snapshot of the page within rect. Upon completion callback will be
-     * called with callback(image). The image is an instance of NativeImage that stores
-     * data of the snapshot. Omitting rect will capture the whole visible page.
-     * Deprecated Soon
-     */
-    capturePage(callback: (image: NativeImage) => void): void;
     /**
      * Captures a snapshot of the page within rect. Upon completion callback will be
      * called with callback(image). The image is an instance of NativeImage that stores
@@ -7402,6 +7395,13 @@ declare namespace Electron {
      * whole visible page.
      */
     capturePage(rect?: Rectangle): Promise<Electron.NativeImage>;
+    /**
+     * Captures a snapshot of the page within rect. Upon completion callback will be
+     * called with callback(image). The image is an instance of NativeImage that stores
+     * data of the snapshot. Omitting rect will capture the whole visible page.
+     * Deprecated Soon
+     */
+    capturePage(callback: (image: NativeImage) => void): void;
     /**
      * Clears the navigation history.
      */
@@ -7446,15 +7446,15 @@ declare namespace Electron {
     /**
      * Evaluates code in page. In the browser window some HTML APIs like
      * requestFullScreen can only be invoked by a gesture from the user. Setting
-     * userGesture to true will remove this limitation.
-     */
-    executeJavaScript(code: string, userGesture?: boolean): Promise<any>;
-    /**
-     * Evaluates code in page. In the browser window some HTML APIs like
-     * requestFullScreen can only be invoked by a gesture from the user. Setting
      * userGesture to true will remove this limitation. Deprecated Soon
      */
     executeJavaScript(code: string, userGesture?: boolean, callback?: (result: any) => void): Promise<any>;
+    /**
+     * Evaluates code in page. In the browser window some HTML APIs like
+     * requestFullScreen can only be invoked by a gesture from the user. Setting
+     * userGesture to true will remove this limitation.
+     */
+    executeJavaScript(code: string, userGesture?: boolean): Promise<any>;
     /**
      * Starts a request to find all matches for the text in the web page. The result of
      * the request can be obtained by subscribing to found-in-page event.
@@ -7764,15 +7764,15 @@ declare namespace Electron {
     /**
      * Evaluates code in page. In the browser window some HTML APIs like
      * requestFullScreen can only be invoked by a gesture from the user. Setting
-     * userGesture to true will remove this limitation.
-     */
-    executeJavaScript(code: string, userGesture?: boolean): Promise<any>;
-    /**
-     * Evaluates code in page. In the browser window some HTML APIs like
-     * requestFullScreen can only be invoked by a gesture from the user. Setting
      * userGesture to true will remove this limitation. Deprecated Soon
      */
     executeJavaScript(code: string, userGesture?: boolean, callback?: (result: any) => void): Promise<any>;
+    /**
+     * Evaluates code in page. In the browser window some HTML APIs like
+     * requestFullScreen can only be invoked by a gesture from the user. Setting
+     * userGesture to true will remove this limitation.
+     */
+    executeJavaScript(code: string, userGesture?: boolean): Promise<any>;
     /**
      * Works like executeJavaScript but evaluates scripts in an isolated context.
      * Deprecated Soon
@@ -7887,24 +7887,24 @@ declare namespace Electron {
      * The listener will be called with listener(details) when a server initiated
      * redirect is about to occur.
      */
-    onBeforeRedirect(listener: ((details: OnBeforeRedirectDetails) => void) | (null)): void;
+    onBeforeRedirect(filter: OnBeforeRedirectFilter, listener: ((details: OnBeforeRedirectDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when a server initiated
      * redirect is about to occur.
      */
-    onBeforeRedirect(filter: OnBeforeRedirectFilter, listener: ((details: OnBeforeRedirectDetails) => void) | (null)): void;
-    /**
-     * The listener will be called with listener(details, callback) when a request is
-     * about to occur. The uploadData is an array of UploadData objects. The callback
-     * has to be called with an response object.
-     */
-    onBeforeRequest(listener: ((details: OnBeforeRequestDetails, callback: (response: Response) => void) => void) | (null)): void;
+    onBeforeRedirect(listener: ((details: OnBeforeRedirectDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) when a request is
      * about to occur. The uploadData is an array of UploadData objects. The callback
      * has to be called with an response object.
      */
     onBeforeRequest(filter: OnBeforeRequestFilter, listener: ((details: OnBeforeRequestDetails, callback: (response: Response) => void) => void) | (null)): void;
+    /**
+     * The listener will be called with listener(details, callback) when a request is
+     * about to occur. The uploadData is an array of UploadData objects. The callback
+     * has to be called with an response object.
+     */
+    onBeforeRequest(listener: ((details: OnBeforeRequestDetails, callback: (response: Response) => void) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) before sending an
      * HTTP request, once the request headers are available. This may occur after a TCP
@@ -7930,11 +7930,11 @@ declare namespace Electron {
     /**
      * The listener will be called with listener(details) when an error occurs.
      */
-    onErrorOccurred(listener: ((details: OnErrorOccurredDetails) => void) | (null)): void;
+    onErrorOccurred(filter: OnErrorOccurredFilter, listener: ((details: OnErrorOccurredDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when an error occurs.
      */
-    onErrorOccurred(filter: OnErrorOccurredFilter, listener: ((details: OnErrorOccurredDetails) => void) | (null)): void;
+    onErrorOccurred(listener: ((details: OnErrorOccurredDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) when HTTP response
      * headers of a request have been received. The callback has to be called with an
@@ -7952,13 +7952,13 @@ declare namespace Electron {
      * response body is received. For HTTP requests, this means that the status line
      * and response headers are available.
      */
-    onResponseStarted(listener: ((details: OnResponseStartedDetails) => void) | (null)): void;
+    onResponseStarted(filter: OnResponseStartedFilter, listener: ((details: OnResponseStartedDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when first byte of the
      * response body is received. For HTTP requests, this means that the status line
      * and response headers are available.
      */
-    onResponseStarted(filter: OnResponseStartedFilter, listener: ((details: OnResponseStartedDetails) => void) | (null)): void;
+    onResponseStarted(listener: ((details: OnResponseStartedDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) just before a request is
      * going to be sent to the server, modifications of previous onBeforeSendHeaders
@@ -8178,19 +8178,19 @@ declare namespace Electron {
      * data of the snapshot. Omitting rect will capture the whole visible page.
      * Deprecated Soon
      */
-    capturePage(callback: (image: NativeImage) => void): void;
-    /**
-     * Captures a snapshot of the page within rect. Upon completion callback will be
-     * called with callback(image). The image is an instance of NativeImage that stores
-     * data of the snapshot. Omitting rect will capture the whole visible page.
-     * Deprecated Soon
-     */
     capturePage(rect: Rectangle, callback: (image: NativeImage) => void): void;
     /**
      * Captures a snapshot of the page within rect. Omitting rect will capture the
      * whole visible page.
      */
     capturePage(rect?: Rectangle): Promise<Electron.NativeImage>;
+    /**
+     * Captures a snapshot of the page within rect. Upon completion callback will be
+     * called with callback(image). The image is an instance of NativeImage that stores
+     * data of the snapshot. Omitting rect will capture the whole visible page.
+     * Deprecated Soon
+     */
+    capturePage(callback: (image: NativeImage) => void): void;
     /**
      * Clears the navigation history.
      */
@@ -13896,6 +13896,10 @@ declare namespace Electron {
      * to receive events from all processes on the current desktop. Defaults to 0.
      */
     pid?: number;
+    /**
+     * Excludes windows owned by the current runtime process. Defaults to true.
+     */
+    skipOwnWindows?: boolean;
   }
 
   interface EditFlags {
@@ -14414,8 +14418,5 @@ declare namespace NodeJS {
   interface ProcessVersions {
     electron: string;
     chrome: string;
-    combinedId: string;
-    mainFrameRoutingId: number;
-    cachePath: string;
   }
 }
