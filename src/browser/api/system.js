@@ -28,7 +28,7 @@ import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
-import { extendNativeWindowInfo } from '../utils';
+import { getNativeWindowInfoLite } from '../utils';
 import { isValidExternalWindow } from './external_window';
 
 const defaultProc = {
@@ -706,8 +706,8 @@ export const System = {
         const externalWindows = [];
 
         allNativeWindows.forEach(e => {
-            const externalWindow = extendNativeWindowInfo(e);
-            const isValid = isValidExternalWindow(externalWindow);
+            const externalWindow = getNativeWindowInfoLite(e);
+            const isValid = isValidExternalWindow(e);
 
             if (isValid) {
                 externalWindows.push(externalWindow);

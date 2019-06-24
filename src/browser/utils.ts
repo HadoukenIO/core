@@ -74,9 +74,9 @@ function clamp(num: number, min: number = 0, max: number = Number.MAX_SAFE_INTEG
 }
 
 /*
-  Extends raw native window info.
+  Returns lite version of external window info object
 */
-export function extendNativeWindowInfo(rawNativeWindowInfo: NativeWindowInfo): Shapes.NativeWindowInfo {
+export function getNativeWindowInfoLite(rawNativeWindowInfo: NativeWindowInfo): Shapes.NativeWindowInfoLite {
   let name = capitalize(basename(rawNativeWindowInfo.process.imageName, '.exe'));
 
   if (name === 'ApplicationFrameHost') {
@@ -84,10 +84,34 @@ export function extendNativeWindowInfo(rawNativeWindowInfo: NativeWindowInfo): S
   }
 
   return {
-    ...rawNativeWindowInfo,
     name,
-    uuid: rawNativeWindowInfo.id
+    process: {
+      injected: rawNativeWindowInfo.process.injected,
+      pid: rawNativeWindowInfo.process.pid
+    },
+    title: rawNativeWindowInfo.title,
+    uuid: rawNativeWindowInfo.id,
+    visible: rawNativeWindowInfo.visible
   };
+}
+
+/*
+  Returns full version of external window info object
+*/
+export function getNativeWindowInfo(rawNativeWindowInfo: NativeWindowInfo): Shapes.NativeWindowInfo {
+  const liteInfoObject = getNativeWindowInfoLite(rawNativeWindowInfo);
+  const fullInfoObject = <Shapes.NativeWindowInfo>liteInfoObject;
+
+  fullInfoObject.alwaysOnTop = rawNativeWindowInfo.alwaysOnTop;
+  fullInfoObject.bounds = rawNativeWindowInfo.bounds;
+  fullInfoObject.className = rawNativeWindowInfo.className;
+  fullInfoObject.dpi = rawNativeWindowInfo.dpi;
+  fullInfoObject.dpiAwareness = rawNativeWindowInfo.dpiAwareness;
+  fullInfoObject.focused = rawNativeWindowInfo.focused;
+  fullInfoObject.maximized = rawNativeWindowInfo.maximized;
+  fullInfoObject.minimized = rawNativeWindowInfo.minimized;
+
+  return fullInfoObject;
 }
 
 /*
