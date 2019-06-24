@@ -305,7 +305,7 @@ function subToGlobalWinEventHooks(): void {
   const globalAllWindowsEventHooks = new WinEventHookEmitter({ skipOwnWindows: false });
   const listener = (
     parser: (nativeWindowInfo: Shapes.NativeWindowInfoLite) => void,
-    sender: EventEmitter,
+    sender: Event,
     rawNativeWindowInfo: NativeWindowInfo,
     timestamp: number
   ): void => {
@@ -340,7 +340,7 @@ function subToGlobalWinEventHooks(): void {
 
   const hookupBlurEventSubscription = () => {
     const allNativeWindows = electronApp.getAllNativeWindowInfo(false);
-    let previousFocusedNativeWindow = allNativeWindows.find((e: NativeWindowInfo) => e.focused);
+    let previousFocusedNativeWindow: any = allNativeWindows.find((e: NativeWindowInfo) => e.focused);
 
     if (previousFocusedNativeWindow) {
       previousFocusedNativeWindow = getNativeWindowInfo(previousFocusedNativeWindow);
@@ -348,7 +348,7 @@ function subToGlobalWinEventHooks(): void {
       previousFocusedNativeWindow = { uuid: '' };
     }
 
-    globalAllWindowsEventHooks.on('EVENT_OBJECT_FOCUS', (sender, rawNativeWindowInfo) => {
+    globalAllWindowsEventHooks.on('EVENT_OBJECT_FOCUS', (sender: Event, rawNativeWindowInfo: NativeWindowInfo) => {
       const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
       const previousIdentity = { uuid: previousFocusedNativeWindow.uuid };
       const previousFocusedRegisteredNativeWindow = findExternalWindow(previousIdentity);
@@ -384,7 +384,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
 
   const listener = (
     parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
-    sender: EventEmitter,
+    sender: Event,
     rawNativeWindowInfo: NativeWindowInfo,
     timestamp: number
   ): void => {
