@@ -13938,6 +13938,11 @@ declare namespace Electron {
      * flags.
      */
     flags: number;
+    /**
+     * Whether to convert the bounds (w/h/x/y) from DIP to screen values. true by
+     * default.
+     */
+    scale?: boolean;
   }
 
   interface WinEventHookEmitterConstructorOptions {
