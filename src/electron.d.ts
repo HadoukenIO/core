@@ -8543,7 +8543,7 @@ declare namespace Electron {
      * required noSize - w,h not required noZorder - hwndafter not required noActivate
      * - don't activate window show - show the window hide - hide the window
      */
-    setWindowPos(hwnd: number, options: WindowPosOptions): void;
+    setWindowPos(hwnd: number, options: WindowPosOptions, scale: boolean): void;
   }
 
   class WinEventHookEmitter extends EventEmitter {
