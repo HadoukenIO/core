@@ -238,7 +238,7 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
     const nativeWinObj = findExsistentNativeWindow(uuid);
 
     if (!nativeWinObj) {
-      throw new Error(`Attempted to wrap a non-existent external window using uuid: ${uuid}`);
+      throw new Error(`Attempted to interact with a nonexistent external window using uuid: ${uuid}`);
     }
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: nativeWinObj.uuid }));
 
