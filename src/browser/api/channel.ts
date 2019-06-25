@@ -138,8 +138,8 @@ export module Channel {
         const connectingWindow = getExternalOrOfWindowIdentity(identity);
         const providerIdentity = Channel.getChannelByChannelName(channelName);
 
-        if (connectingWindow.isExternal && payload.customExternalWindowName) {
-            identity.name = payload.customExternalWindowName;
+        if (connectingWindow && connectingWindow.isExternal && payload.externalNameAlias) {
+            identity.name = payload.externalNameAlias;
         }
 
         if (providerIdentity) {
@@ -192,7 +192,8 @@ export module Channel {
                 providerIdentity,
                 action: channelAction,
                 senderIdentity: identity,
-                payload: {intendedTargetIdentity, ...messagePayload}
+                payload: messagePayload,
+                intendedTargetIdentity
             }
         });
     }
