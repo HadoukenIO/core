@@ -89,6 +89,13 @@ export class WindowGroups extends EventEmitter {
         sourceWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
         targetWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
 
+        // Identify if either the target or the source belong to a different runtime:
+        let runtimeProxyWindow;
+        if (!targetWindow) {
+            runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
+            targetWindow = <OpenFinWindow>runtimeProxyWindow.window;
+        }
+
         // Check if missing source and target windows are external windows
         if (!sourceWindow) {
             sourceWindow = <ExternalWindow>getExternalWindow(source);
@@ -97,15 +104,9 @@ export class WindowGroups extends EventEmitter {
             targetWindow = <ExternalWindow>getExternalWindow(target);
         }
 
-        let runtimeProxyWindow;
         const sourceGroupUuid = sourceWindow.groupUuid;
-
-        //identify if either the target or the source belong to a different runtime:
-        if (!targetWindow) {
-            runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
-            targetWindow = <OpenFinWindow>runtimeProxyWindow.window;
-        }
         let targetGroupUuid = targetWindow.groupUuid;
+
         // cannot join a group with yourself
         if (sourceWindow.uuid === targetWindow.uuid && sourceWindow.name === targetWindow.name) {
             return;
@@ -182,6 +183,13 @@ export class WindowGroups extends EventEmitter {
         sourceWindow = <OpenFinWindow>coreState.getWindowByUuidName(source.uuid, source.name);
         targetWindow = <OpenFinWindow>coreState.getWindowByUuidName(target.uuid, target.name);
 
+        // Identify if either the target or the source belong to a different runtime:
+        let runtimeProxyWindow;
+        if (!targetWindow) {
+            runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
+            targetWindow = runtimeProxyWindow.window;
+        }
+
         // Check if missing source and target windows are external windows
         if (!sourceWindow) {
             sourceWindow = <ExternalWindow>getExternalWindow(source);
@@ -190,14 +198,7 @@ export class WindowGroups extends EventEmitter {
             targetWindow = <ExternalWindow>getExternalWindow(target);
         }
 
-        let runtimeProxyWindow;
         let sourceGroupUuid = sourceWindow.groupUuid;
-
-        //identify if either the target or the source belong to a different runtime:
-        if (!targetWindow) {
-            runtimeProxyWindow = await windowGroupsProxy.getRuntimeProxyWindow(target);
-            targetWindow = runtimeProxyWindow.window;
-        }
         let targetGroupUuid = targetWindow.groupUuid;
 
         // cannot merge a group with yourself
