@@ -1,6 +1,6 @@
 import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions, webContents } from 'electron';
 import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
-import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView } from '../core_state';
+import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView } from '../core_state';
 import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
 import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
@@ -44,7 +44,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         } else {
             bWin = ofWin.browserWindow;
             if (ofWin.view) {
-                ofWin.view.view.destroy();
+                destroy(ofWin.view);
                 const oldListener = windowCloseListenerMap.get(ofWin);
                 of_events.removeListener(route.window('closed', toIdentity.uuid, toIdentity.name), oldListener);
             }
@@ -52,7 +52,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         ofWin.view = ofView;
         bWin.setBrowserView(view);
         const listener = () => {
-            view.destroy();
+            destroy(ofView);
             ofWin.view = undefined;
             windowCloseListenerMap.delete(ofWin);
         };
@@ -60,7 +60,10 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         windowCloseListenerMap.set(ofWin, listener);
     }
 }
-
+function destroy (ofView: OfView) {
+   removeBrowserView(ofView);
+   ofView.view.destroy();
+}
 export async function setAutoResize(ofView: OfView, autoResize: AutoResizeOptions) {
     const { view } = ofView;
     view.setAutoResize(autoResize);

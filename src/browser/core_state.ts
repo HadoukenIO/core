@@ -822,7 +822,7 @@ function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
     return win && win.openfinWindow;
 }
-const views: OfView[] = [];
+let views: OfView[] = [];
 export interface OfView extends Identity {
     name: string;
     view: BrowserView;
@@ -838,6 +838,13 @@ export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
         app.views.push(ofView);
     }
     return ofView;
+}
+export function removeBrowserView (view: OfView) {
+    const app = appByUuid(view.uuid);
+    if (app) {
+        app.views = app.views.filter(v => v.name !== view.name);
+    }
+    views = views.filter(v => v.uuid !== view.uuid && v.name !== view.name);
 }
 export function getBrowserViewByIdentity({uuid, name}: Identity) {
    return views.find(v => v.uuid === uuid && v.name === name);
