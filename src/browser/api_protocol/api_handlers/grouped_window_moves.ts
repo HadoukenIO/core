@@ -5,7 +5,7 @@ import { getTargetWindowIdentity } from './api_protocol_base';
 import { RectangleBase } from '../../rectangle';
 import { APIMessage, GroupWindow } from '../../../shapes';
 import { AckFunc, AckPayload, NackFunc } from '../transport_strategy/ack';
-import { findExternalWindow } from '../../api/external_window';
+import { getRegisteredExternalWindow } from '../../api/external_window';
 
 const unsupported = (payload: any) => {
     throw new Error('This action is not supported while grouped');
@@ -52,7 +52,7 @@ export function hijackMovesForGroupedWindows(actions: ActionSpecMap) {
 
                     // Check if the missing window is an external window
                     if (!window) {
-                        window = findExternalWindow({ uuid });
+                        window = getRegisteredExternalWindow({ uuid });
                     }
 
                     const options = payload.options || { moveIndependently: false };
