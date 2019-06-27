@@ -608,13 +608,11 @@ function propMoveThroughGraph (
         const e = (<number [][]>edges).filter(([uu]): boolean => uu === refVertex);
 
         e.forEach(([u, v]) => {
-            if (!visited.includes(v)) {
-                if (distances.get(v) === Infinity) {
-                    distances.set(v, distances.get(u) + 1);
-                    
-                    propMoveThroughGraph(rects, v, rects[refVertex], movedRef, visited);
-                    visited.push(v);
-                }
+            if (distances.get(v) === Infinity && !visited.includes(v)) {
+                distances.set(v, distances.get(u) + 1);
+                
+                propMoveThroughGraph(rects, v, rects[refVertex], movedRef, visited);
+                visited.push(v);
             }
         });
         rects[refVertex] = movedRef;
