@@ -588,7 +588,7 @@ function propMoveThroughGraph (
     const distances = new Map();
     let movedRef = rects[refVertex];
 
-    if (movedRef.hasIdenticalBounds( cachedBounds)) {
+    if (movedRef.hasIdenticalBounds(cachedBounds)) {
         // This is the leader, move it to the proposed bounds
         movedRef = Rectangle.CREATE_FROM_BOUNDS(proposedBounds);
     } else {
