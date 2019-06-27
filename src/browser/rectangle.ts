@@ -7,8 +7,6 @@ type SharedBounds = {
     left: SideName;
 };
 type SharedBound = Array<SideName>;
-type BoundIdentifier = [Rectangle, SideName];
-type RectangleBaseKeys = 'x' | 'y' | 'width' | 'height';
 export type SharedBoundsList = Array<SharedBound>;
 type Graph = [number[], number[][]];
 export interface Opts {
@@ -53,17 +51,6 @@ export class Rectangle {
         return new Rectangle(x, y, width, height, new RectOptionsOpts(options));
     }
     public static BOUND_SHARE_THRESHOLD = 5;
-
-    private static readonly EDGE_CROSSINGS: SideName[][] = [
-        ['top', 'top'],
-        ['top', 'bottom'],
-        ['bottom', 'top'],
-        ['bottom', 'bottom'],
-        ['right', 'left'],
-        ['right', 'right'],
-        ['left', 'left'],
-        ['left', 'right']
-    ];
 
     public x: number;
     public y: number;
@@ -355,12 +342,14 @@ export class Rectangle {
         return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts);
     }
 
-    public move = (cachedBounds: RectangleBase, currentBounds: RectangleBase): Rectangle => {
+    public propogateMoveToThisRect = (leaderStartBounds: RectangleBase, proposedLeaderMove: RectangleBase): Rectangle => {
         
-        const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(cachedBounds));
-        const currLeader = Rectangle.CREATE_FROM_BOUNDS(currentBounds);
-        const delta = Rectangle.CREATE_FROM_BOUNDS(cachedBounds).delta(currLeader);
+        const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(leaderStartBounds));
+        const currLeader = Rectangle.CREATE_FROM_BOUNDS(proposedLeaderMove);
+        // This is the delta of the leader, which may or may not be `this` rect
+        const delta = Rectangle.CREATE_FROM_BOUNDS(leaderStartBounds).delta(currLeader);
         let rect: Rectangle = this;
+        // Check if any sides of this rect would be moved by the leader move represented by delta
         for (const [thisRectSharedSide, otherRectSharedSide] of sharedBoundsList) {
             if (rect.edgeMoved([thisRectSharedSide, otherRectSharedSide], delta)) {
                 rect = rect.alignSide(thisRectSharedSide, currLeader, otherRectSharedSide);
@@ -600,9 +589,11 @@ function propMoveThroughGraph (
     let movedRef = rects[refVertex];
 
     if (movedRef.hasIdenticalBounds( cachedBounds)) {
+        // This is the leader, move it to the proposed bounds
         movedRef = Rectangle.CREATE_FROM_BOUNDS(proposedBounds);
     } else {
-        movedRef = movedRef.move(cachedBounds, proposedBounds);
+        // This rect is not the leader, see if it needs to be move and if so, move it
+        movedRef = movedRef.propogateMoveToThisRect(cachedBounds, proposedBounds);
     }
 
     for (let v in vertices) {
@@ -612,16 +603,13 @@ function propMoveThroughGraph (
     distances.set(refVertex, 0);
     visited.push(refVertex);
 
-    const toVisit = [refVertex];
-
-    while (toVisit.length) {
-        const u = toVisit.shift();
-        const e = (<number [][]>edges).filter(([uu]): boolean => uu === u);
+    // If this rect has been moved, need to propagate the move to any touching edges
+    if(!rects[refVertex].hasIdenticalBounds(movedRef)) {
+        const e = (<number [][]>edges).filter(([uu]): boolean => uu === refVertex);
 
         e.forEach(([u, v]) => {
             if (!visited.includes(v)) {
                 if (distances.get(v) === Infinity) {
-                    toVisit.push(v);
                     distances.set(v, distances.get(u) + 1);
                     
                     propMoveThroughGraph(rects, v, rects[refVertex], movedRef, visited);
@@ -629,9 +617,8 @@ function propMoveThroughGraph (
                 }
             }
         });
+        rects[refVertex] = movedRef;
     }
-
-    rects[refVertex] = movedRef;
     return rects;
 }
 

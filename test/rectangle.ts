@@ -142,62 +142,62 @@ describe('Rectangle', () => {
 
     it('should not move if no shared edges', () => {
         const rect = new Rectangle(0, 0, 100, 100);
-        const move = rect.move({x: 200, y: 0, width: 100, height: 100}, {x: 300, y: 0, width: 100, height: 100});
+        const move = rect.propogateMoveToThisRect({x: 200, y: 0, width: 100, height: 100}, {x: 300, y: 0, width: 100, height: 100});
         assert.deepStrictEqual(move.bounds, {x: 0, y: 0, width: 100, height: 100});
     });
 
     it('should not move if the resizing edge is not a shared one, (leader right, leader grows not shared)', () => {
         const rect = new Rectangle(0, 0, 100, 100);
-        const move = rect.move({x: 100, y: 0, width: 100, height: 100}, {x: 100, y: 0, width: 110, height: 100});
+        const move = rect.propogateMoveToThisRect({x: 100, y: 0, width: 100, height: 100}, {x: 100, y: 0, width: 110, height: 100});
         assert.deepStrictEqual(move.bounds, {x: 0, y: 0, width: 100, height: 100});
     });
 
 
     it('should move with just the leader window move (leader top, leader grows)', () => {
         const rect = new Rectangle(100, 100, 100, 100);
-        const move = rect.move({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 110});
+        const move = rect.propogateMoveToThisRect({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 110});
         assert.deepStrictEqual(move.bounds, {x: 100, y: 110, width: 100, height: 90});
     });
 
     it('should move with just the leader window move (leader top, leader shrinks)', () => {
         const rect = new Rectangle(100, 100, 100, 100);
-        const move = rect.move({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 90});
+        const move = rect.propogateMoveToThisRect({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 100, height: 90});
         assert.deepStrictEqual(move.bounds, {x: 100, y: 90, width: 100, height: 110});
     });
 
     it('should move with just the leader window move (leader bottom, leader grows)', () => {
         const rect = new Rectangle(100, 100, 100, 100);
-        const move = rect.move({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 190, width: 100, height: 110});
+        const move = rect.propogateMoveToThisRect({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 190, width: 100, height: 110});
         assert.deepStrictEqual(move.bounds, {x: 100, y: 100, width: 100, height: 90});
     });
 
     it('should move with just the leader window move (leader bottom, leader shrinks)', () => {
         const rect = new Rectangle(100, 100, 100, 100);
-        const move = rect.move({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 210, width: 100, height: 90});
+        const move = rect.propogateMoveToThisRect({x: 0, y: 200, width: 100, height: 100}, {x: 0, y: 210, width: 100, height: 90});
         assert.deepStrictEqual(move.bounds, {x: 100, y: 100, width: 100, height: 110});
     });
 
     it('should move with just the leader window move (leader left, leader grows)', () => {
         const rect = new Rectangle(100, 0, 100, 100);
-        const move = rect.move({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 110, height: 100});
+        const move = rect.propogateMoveToThisRect({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 110, height: 100});
         assert.deepStrictEqual(move.bounds, {x: 110, y: 0, width: 90, height: 100});
     });
 
     it('should move with just the leader window move (leader left, leader shrinks)', () => {
         const rect = new Rectangle(100, 0, 100, 100);
-        const move = rect.move({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 90, height: 100});
+        const move = rect.propogateMoveToThisRect({x: 0, y: 0, width: 100, height: 100}, {x: 0, y: 0, width: 90, height: 100});
         assert.deepStrictEqual(move.bounds, {x: 90, y: 0, width: 110, height: 100});
     });
 
     it('should move with just the leader window move (leader right, leader grows)', () => {
         const rect = new Rectangle(0, 0, 100, 100);
-        const move = rect.move({x: 100, y: 0, width: 100, height: 100}, {x: 90, y: 0, width: 110, height: 100});
+        const move = rect.propogateMoveToThisRect({x: 100, y: 0, width: 100, height: 100}, {x: 90, y: 0, width: 110, height: 100});
         assert.deepStrictEqual(move.bounds, {x: 0, y: 0, width: 90, height: 100});
     });
 
     it('should move with just the leader window move (leader right, leader shrinks)', () => {
         const rect = new Rectangle(0, 0, 100, 100);
-        const move = rect.move({x: 100, y: 0, width: 100, height: 100}, {x: 110, y: 0, width: 90, height: 100});
+        const move = rect.propogateMoveToThisRect({x: 100, y: 0, width: 100, height: 100}, {x: 110, y: 0, width: 90, height: 100});
         assert.deepStrictEqual(move.bounds, {x: 0, y: 0, width: 110, height: 100});
     });
 
@@ -266,14 +266,14 @@ describe('Rectangle', () => {
         const rect1From = Rectangle.CREATE_FROM_BOUNDS({ 'x': 5104, 'y': -560, 'width': 340, 'height': 349 });
         const rect1To = Rectangle.CREATE_FROM_BOUNDS({'x': 5104, 'y': -908, 'width': 306, 'height': 697});
         const rect = Rectangle.CREATE_FROM_BOUNDS({ 'x': 5104, 'y': -686, 'width': 340, 'height': 126 });
-        const result = rect.move(rect1From, rect1To);
+        const result = rect.propogateMoveToThisRect(rect1From, rect1To);
         assert(result.height === 38);
     });
     it('doesnt move to negative height2', () => {
         const rect1From = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': -100, 'width': 100, 'height': 100 });
         const rect1To = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': -200, 'width': 100, 'height': 200 });
         const rect = Rectangle.CREATE_FROM_BOUNDS({ 'x': 0, 'y': -150, 'width': 100, 'height': 50 });
-        const result = rect.move(rect1From, rect1To);
+        const result = rect.propogateMoveToThisRect(rect1From, rect1To);
         assert(result.height === 38);
     });
     it('should recognize if another window shares the same bounds', () => {
@@ -400,6 +400,27 @@ describe('Rectangle', () => {
         const delta = startRect.delta(endRect);
 
         const propagatedMoves = Rectangle.PROPAGATE_MOVE(0, startRect, delta, rectsInit);
+        assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
+    });
+
+    it('should propagate a move through the window graph correctly when there are 3 windows and 2 have the same bounds', () => {
+        const startRect = Rectangle.CREATE_FROM_BOUNDS({x: 0, y: 100, width: 100, height: 100});
+        const endRect = Rectangle.CREATE_FROM_BOUNDS({x: 0, y: 100, width: 100, height: 101});
+        const rectsInit = [
+            Rectangle.CREATE_FROM_BOUNDS({x: 0, y: 0, width: 100, height: 100}),
+            Rectangle.CREATE_FROM_BOUNDS({x: 0, y: 100, width: 100, height: 100}),
+            startRect
+        ];
+
+        const rectsFinal = [
+            Rectangle.CREATE_FROM_BOUNDS({x: 0, y: 0, width: 100, height: 100}),
+            Rectangle.CREATE_FROM_BOUNDS({x: 0, y: 100, width: 100, height: 101}),
+            endRect
+        ];
+
+        const delta = startRect.delta(endRect);
+
+        const propagatedMoves = Rectangle.PROPAGATE_MOVE(2, startRect, delta, rectsInit);
         assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
     });
 });
