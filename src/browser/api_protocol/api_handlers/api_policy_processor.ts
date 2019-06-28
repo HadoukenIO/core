@@ -16,12 +16,12 @@ const CONFIG_URL_WILDCARD = 'default';  // can set as default for all applicatio
                                   // for a particular URL is not defined
 const DESKTOP_OWNER_SETTINGS_TIMEOUT: string = 'desktop-owner-settings-timeout'; // timeout for requesting from RVM in ms
 let desktopOwnerSettingsTimeout: number = 2000;  // in ms
-let applicationSettingsEnabled: boolean = false;  // true, if applicationxxSettings is defined in desktop owner settings
+let applicationSettingsEnabled: boolean = false;  // true, if applicationSettings is defined in desktop owner settings
 
 type ApiPolicy = {
     // for backwards compatible, policyName can be a single config URL
     [policyName: string]: {
-        urls?: [string];  // support wildcard patterns. If missing, policyName should a single URL (no wildcard)
+        urls?: [string];  // support wildcard patterns. If missing, policyName should be a single URL (no wildcard)
         permissions: any;
     }
 };
