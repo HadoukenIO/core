@@ -10,10 +10,10 @@ const successAck = {
     success: true
 };
 
-function create (identity: Identity, message: APIMessage, ack: AckFunc) {
+async function create (identity: Identity, message: APIMessage, ack: AckFunc) {
     const { payload } = message;
-    browser_view.create(payload);
-    ack(successAck);
+    await browser_view.create(payload);
+    return successAck;
 }
 async function attach (identity: Identity, message: APIMessage, ack: AckFunc) {
     const { payload } = message;
