@@ -805,15 +805,15 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
         } else {
             writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
-    } for (const view of app.views) {
-        if (frame === view.name) {
+    } for (const ofView of app.views) {
+        if (frame === ofView.name) {
             return {
                 name: frame,
-                webContents: view.view.webContents,
-                frameRoutingId: view.view.webContents.mainFrameRoutingId,
-                mainFrameRoutingId: view.view.webContents.mainFrameRoutingId,
+                webContents: ofView.view.webContents,
+                frameRoutingId: ofView.view.webContents.mainFrameRoutingId,
+                mainFrameRoutingId: ofView.view.webContents.mainFrameRoutingId,
                 frameName: frame,
-                _options: view._options
+                _options: ofView._options
             };
         }
     }
