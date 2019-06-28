@@ -206,9 +206,9 @@ function getKey(externalWindow: Shapes.ExternalWindow): string {
 }
 
 /*
-  Finds and returns registerd external window
+  Returns registerd external window
 */
-export function findExternalWindow(identity: Identity): Shapes.ExternalWindow | undefined {
+export function getRegisteredExternalWindow(identity: Identity): Shapes.ExternalWindow | undefined {
   const { uuid } = identity;
   return externalWindows.get(uuid);
 }
