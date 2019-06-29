@@ -14,20 +14,22 @@ const crypto = require('crypto');
 const _ = require('underscore');
 
 // local modules
-const convertOptions = require('../convert_options.js');
-const coreState = require('../core_state.js');
+import convertOptions from '../convert_options.js';
+import * as coreState from '../core_state.js';
 import { ExternalApplication } from './external_application';
-const log = require('../log.js');
+import * as log from '../log';
 import ofEvents from '../of_events';
-const ProcessTracker = require('../process_tracker.js');
-const socketServer = require('../transports/socket_server').server;
-const portDiscovery = require('../port_discovery').portDiscovery;
+import ProcessTracker from '../process_tracker.js';
+import socketServer from '../transports/socket_server';
+import { portDiscovery } from '../port_discovery';
 
 import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
+import { getNativeWindowInfoLite } from '../utils';
+import { isValidExternalWindow } from './external_window';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -67,7 +69,7 @@ let Session;
 let rvmBus;
 let defaultSession;
 electronApp.on('ready', function() {
-    MonitorInfo = require('../monitor_info.js');
+    MonitorInfo = require('../monitor_info.js').default;
     Session = require('../session').default;
     rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
 
@@ -104,7 +106,7 @@ eventPropagationMap.forEach((systemEvent, eventString) => {
     });
 });
 
-exports.System = {
+export const System = {
     addEventListener: function(type, listener) {
         ofEvents.on(route.system(type), listener);
 
@@ -281,6 +283,10 @@ exports.System = {
         const { uuid, name } = coreState.getWinObjById(id) || {};
         return uuid ? { uuid, name } : null;
     },
+    getFocusedExternalWindow: function() {
+        let { uuid } = electronBrowserWindow.getFocusedWindow() || {};
+        return uuid ? { uuid } : null;
+    },
     getHostSpecs: function() {
         let state = new idleState();
         const theme = (process.platform === 'win32') ? { aeroGlassEnabled: electronApp.isAeroGlassEnabled() } : {};
@@ -444,7 +450,9 @@ exports.System = {
         const manifestUrl = coreState.getConfigUrlByUuid(identity.uuid);
         const architecture = process.arch;
         const cachePath = electronApp.getPath('userData');
-        return { manifestUrl, port, securityRealm, version, architecture, cachePath };
+        const args = Object.assign({}, coreState.argo);
+        args._ = undefined;
+        return { manifestUrl, port, securityRealm, version, architecture, cachePath, args };
     },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
@@ -452,8 +460,27 @@ exports.System = {
 
         // TODO: Move this require to the top of file during future 'dependency injection refactor'
         // Must require here otherwise runtime error Cannot create browser window before app is ready
-        let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js');
+        let RvmInfoFetcher = require('../rvm/runtime_initiated_topics/rvm_info.js').default;
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
+    },
+    getServiceConfiguration: function() {
+        const rvmMessage = {
+            topic: 'application',
+            action: 'get-service-settings',
+            sourceUrl: 'https://openfin.co'
+        };
+
+        return new Promise((resolve) => {
+            rvmBus.publish(rvmMessage, response => {
+                if (!response || !response.payload) {
+                    resolve(new Error('Bad Response from RVM'));
+                } else if (response.payload.success === false) {
+                    resolve(new Error(response.payload.error || 'get-service-settings failed'));
+                } else {
+                    resolve(response.payload.settings);
+                }
+            });
+        });
     },
     launchExternalProcess: function(identity, options, errDataCallback) { // Node-style callback used here
         options.srcUrl = coreState.getConfigUrlByUuid(identity.uuid);
@@ -672,6 +699,22 @@ exports.System = {
                 uuid: eApp.uuid
             };
         });
+    },
+    getAllExternalWindows: function() {
+        const skipOpenFinWindows = true;
+        const allNativeWindows = electronApp.getAllNativeWindowInfo(skipOpenFinWindows);
+        const externalWindows = [];
+
+        allNativeWindows.forEach(e => {
+            const externalWindow = getNativeWindowInfoLite(e);
+            const isValid = isValidExternalWindow(e);
+
+            if (isValid) {
+                externalWindows.push(externalWindow);
+            }
+        });
+
+        return externalWindows;
     },
     resolveUuid: function(identity, uuid, cb) {
         const externalConn = ExternalApplication.getAllExternalConnctions().find(c => c.uuid === uuid);

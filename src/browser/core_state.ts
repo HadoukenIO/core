@@ -10,7 +10,7 @@
 * */
 
 import * as minimist from 'minimist';
-import { app, webContents, session } from 'electron';
+import { app, webContents, session, Session, WebContents, BrowserWindow } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
@@ -493,7 +493,9 @@ export function getWindowByUuidName(uuid: string, name: string): Shapes.OpenFinW
     const win = getOfWindowByUuidName(uuid, name);
     return win && win.openfinWindow;
 }
-
+export function appInCoreState(uuid: string): boolean {
+    return !!appByUuid(uuid);
+}
 export function getBrowserWindow(identity: Shapes.Identity): Shapes.BrowserWindow|undefined {
     const { uuid, name } = identity;
     const wnd: Shapes.Window = getOfWindowByUuidName(uuid, name);
@@ -508,7 +510,7 @@ export function getBrowserWindow(identity: Shapes.Identity): Shapes.BrowserWindo
     }
 }
 
-export function getWebContents(identity: Shapes.Identity): webContents|undefined {
+export function getWebContents(identity: Shapes.Identity): WebContents|undefined {
     const browserWindow = getBrowserWindow(identity);
 
     if (browserWindow) {
@@ -516,7 +518,7 @@ export function getWebContents(identity: Shapes.Identity): webContents|undefined
     }
 }
 
-export function getSession(identity: Shapes.Identity): session|undefined {
+export function getSession(identity: Shapes.Identity): Session|undefined {
     const webContents = getWebContents(identity);
 
     if (webContents) {
@@ -744,8 +746,16 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
         }
     }
 }
-
-export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
+export interface RoutingInfo {
+    name: string;
+    browserWindow?: BrowserWindow;
+    webContents: WebContents;
+    frameRoutingId: number;
+    mainFrameRoutingId: number;
+    frameName: string;
+    _options: Shapes.WindowOptions;
+}
+export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingInfo {
     const app = appByUuid(uuid);
 
     if (!app) {
@@ -773,6 +783,8 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 return {
                     name,
                     browserWindow,
+                    _options: openfinWindow._options,
+                    webContents: browserWindow.webContents,
                     frameRoutingId: openfinWindow.mainFrameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -782,6 +794,8 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 return {
                     name,
                     browserWindow,
+                    _options: openfinWindow._options,
+                    webContents: browserWindow.webContents,
                     frameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -792,9 +806,21 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
         }
     }
 }
+function getWinObjByWebcontentsId(webContentsId: number) {
+    const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
+    return win.openfinWindow;
+}
 
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
     const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
+    return getOptionsFromOpenFinWindow(ofWin);
+}
+export function getWebContentsInitialOptionSet(webContentsId: number) {
+    const ofWin = getWinObjByWebcontentsId(webContentsId);
+    return getOptionsFromOpenFinWindow(ofWin);
+}
+
+function getOptionsFromOpenFinWindow(ofWin: Shapes.OpenFinWindow) {
     const options = ofWin._options;
     const { uuid, name } = options;
     const entityInfo = getEntityInfo({ uuid, name });
@@ -803,7 +829,6 @@ export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitia
     };
     const socketServerState = <PortInfo>getSocketServerState();
     const enableChromiumBuild = isEnableChromiumBuild();
-
     return {
         options,
         entityInfo,

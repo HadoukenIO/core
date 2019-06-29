@@ -1,27 +1,30 @@
-
 /**
  * All declared modules in this file don't correctly represent all of
  * their functionality, rather things are constantly added here while
  * transitioning the code base to TypeScript to quickly make the editor "happy"
  */
+/// <reference path="electron.d.ts"/>
 
-declare module 'electron' {
-    namespace app {
-        export function generateGUID(): string;
-        export function getCommandLineArguments(): string;
-        export function getCommandLineArgv(): string[];
-        export function getPath(str: string): string;
-        export function getTickCount(): number;
-        export function isAeroGlassEnabled(): boolean;
-        export function log(level: string, message: any): any;
-        export function matchesURL(url: string, patterns: [string]): boolean;
-        export function now(): number;
-        export function nowFromSystemTime(): number;
-        export function on(event: string, callback: () => void): void;
-        export function readRegistryValue(root: string, key: string, value: string): any;
-        export function setMinLogLevel(level: number): void;
-        export function vlog(level: number, message: any): any;
+declare namespace Electron {
+    class App {
+        generateGUID(): string;
+        getCommandLineArguments(): string;
+        getCommandLineArgv(): string[];
+        getNativeWindowInfoForNativeId(nativeId: string): NativeWindowInfo;
+        getPath(str: string): string;
+        getProcessIdForNativeId(nativeId: string): number;
+        getTickCount(): number;
+        isAeroGlassEnabled(): boolean;
+        log(level: string, message: any): any;
+        matchesURL(url: string, patterns: [string]): boolean;
+        now(): number;
+        nowFromSystemTime(): number;
+        on(event: string, callback: () => void): void;
+        readRegistryValue(root: string, key: string, value: string): any;
+        setMinLogLevel(level: number): void;
+        vlog(level: number, message: any, thirdArg?: any): any;
     }
+
     namespace windowTransaction {
         export class Transaction {
             on(arg0: string, arg1: (event: any, payload: any) => void): any;
@@ -30,19 +33,19 @@ declare module 'electron' {
             constructor(count: number);
             commit(): any;
         }
-        export interface flag {
-            noMove: 2;
-            noSize: 1;
-            noZorder: 4;
-            noActivate: 16;
-            show: 64;
-            hide: 128;
+        export namespace flag {
+            export const noMove: 2;
+            export const noSize: 1;
+            export const noZorder: 4;
+            export const noActivate: 16;
+            export const show: 64;
+            export const hide: 128;
         }
-        export interface zOrder {
-            hwndBottom: 1;
-            hwndTop: 0;
-            hwndTopMost: -1;
-            hwndNoTopMost: -2;
+        export namespace zOrder {
+            const hwndBottom: 1;
+            const hwndTop: 0;
+            const hwndTopMost: -1;
+            const hwndNoTopMost: -2;
         }
     }
 
@@ -51,12 +54,10 @@ declare module 'electron' {
         isDestroyed(): boolean;
         on(event: string, callback: (...args: any[]) => any): void;
         sendbyname(classname: string, windowname: string, message: string, maskPayload?: boolean): boolean;
+        sendbyid(id: number, message: string, maskPayload?: boolean): boolean;
         setmessagetimeout(timeout: number): void;
     }
 
-    export namespace net {
-        export function request(url: string | Object): any;
-    }
     export namespace socketNet {
         export function socketRequest(url: string): any;
     }
@@ -72,7 +73,6 @@ declare module 'electron' {
         id: number;
         rotation: number;
         scaleFactor: number;
-        touchSupport: string;
         bounds: Rectangle;
         size: Size;
         workArea: Rectangle;
@@ -84,36 +84,34 @@ declare module 'electron' {
         height: number;
     }
 
-    export class BrowserWindow {
-        constructor(props: any);
-        public id: number;
-        public nativeId: string;
-        static fromId(id: number): BrowserWindow;
-        static getAllWindows(): BrowserWindow[];
-        static fromWebContents(wc: webContents): BrowserWindow;
+    interface WebContents {
+        fromProcessAndFrameIds: (processId: number, frameId: number) => WebContents;
+        getOwnerBrowserWindow: () => BrowserWindow | void;
+        mainFrameRoutingId: number;
+        session: Session;
+        //DELETE IN v13
+        sendToFrame(frameId: number, channel: string, ...args: any[]): void;
+    }
 
-        close(): void;
+    export interface BrowserWindowConstructorOptions {
+        hwnd?: string;
+    }
+
+    export interface BrowserWindow {
+        id: number;
+        nativeId: string;
+
+        activate(): void;
+        bringToFront(): any;
+        forceExternalWindowClose(): void;
+        isUserMovementEnabled(): boolean;
         on(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
         once(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
+        removeAllListeners(eventName?: string): any;
         removeListener(eventName: string, listener: (a: any, wnd: any, msg: any) => any): any;
-        getWindowsByClassName(className: string): any;
-        sendMessageToWindowByHwnd(hWnd: string, timeout: number, data: string): any;
-        hookWindowMessage(n: number, listener: (message: any) => void): void;
-        subscribeSessionNotifications(b: boolean): void;
-        bringToFront(): any;
-        isDestroyed(): boolean;
-        isMaximized(): boolean;
-        isFullScreen(): boolean;
-        isMinimized(): boolean;
-        unmaximize(): any;
-        setFullScreen(fullscreen: boolean): void;
-        emit(routeString: string, ...args: any[]): void;
-        getBounds(): Rectangle;
-        setBounds(bounds: Rectangle): void;
-        setWindowPlacement(bounds: Rectangle): void;
-        devToolsWebContents: null;
-        webContents: webContents;
         setUserMovementEnabled(enabled: boolean): void;
+        setWindowPlacement(bounds: Rectangle): void;
+        subscribeSessionNotifications(b: boolean): void;
 
         _eventsCount: number;
         _events: {
@@ -129,30 +127,18 @@ declare module 'electron' {
         };
     }
 
-    export class webContents {
-        hasFrame: (frameName: string) => boolean;
-        mainFrameRoutingId: number;
-        session: session;
+    export class ExternalWindow extends BrowserWindow { }
+
+    export interface screen {
+        getDisplayMatching(rect: Rectangle): Display;
     }
 
-    export namespace screen {
-        export function getDisplayMatching(rect: Rectangle): Display;
+    export interface cookies {
+        get: (filter: object, callback: (error: Error, cookies: any[]) => any) => void;
     }
 
-    export class session {
-        cookies: cookies;
-    }
-
-    export class cookies {
-        get: (filter: Object, callback: (error: Error, cookies: any[]) => any) => void;
-    }
-
-    export class ipcMain {
-
-    }
-
-    namespace systemPreferences {
-        export function subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): void;
+    export interface systemPreferences {
+        subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): void;
     }
 
     export class chromeIpcClient {
@@ -161,7 +147,6 @@ declare module 'electron' {
         send(data: any): void;
         close(): void;
     }
-
     export class idleState {
         public isIdle(): boolean;
         public elapsedTime(): number;
@@ -174,22 +159,9 @@ declare module 'electron' {
         public reset(): void;
         public isRunning(): boolean;
     }
-
-    namespace clipboard {
-        export function write(data: { text?: string; html?: string; rtf?: string; }, type?: string): void;
-        export function writeRTF(data: string, type?: string): void;
-        export function writeHTML(data: string, type?: string): void;
-        export function writeText(data: string, type?: string): void;
-        export function availableFormats(type?: string): string[];
-        export function clear(type?: string): void;
-        export function readRTF(type?: string): string;
-        export function readHTML(type?: string): string;
-        export function readText(type?: string): string;
+    export namespace fileLock {
+        const tryLock: (key: string) => number;
+        const releaseLock: (key: string) => number;
     }
-}
 
-declare namespace Rx {
-    interface IScheduler {
-        scheduleFuture<TState>(state: TState, dueTime: number | Date, action: (scheduler: IScheduler, state: TState) => IDisposable): IDisposable;
-    }
 }

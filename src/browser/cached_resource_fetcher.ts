@@ -8,7 +8,7 @@ import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
 import { addPendingAuthRequests, createAuthUI } from './authentication_delegate';
 import { AuthCallback, Identity } from '../shapes';
 import { getSession } from './core_state';
-
+const path = require('path');
 let appQuiting: boolean = false;
 let cacheCleared: boolean = false;
 
@@ -235,14 +235,14 @@ async function download(identity: Identity, url: string, saveToPath: string, app
         });
 
         if (session) {
-            session.cookies.get({}, (error, cookies) => {
+            session.cookies.get({}, (error: any, cookies: any) => {
                 if (error) {
                     log.writeToLog(1, 'Error getting session cookies for identity '
                         + `${identity.uuid}-${identity.name} while trying to fetch a `
                         + `resource from URL ${url}. Will attempt to fetch the resource `
                         + `without cookies. Error received: ${error}`, true);
                 } else {
-                    const cookiesNameValue = cookies.map((e) => `${e.name}=${e.value}`);
+                    const cookiesNameValue = cookies.map((e: any) => `${e.name}=${e.value}`);
                     request.setHeader('cookie', cookiesNameValue);
                 }
                 request.end();
@@ -325,10 +325,15 @@ export function fetchReadFile(url: string, isJSON: boolean): Promise<string|obje
  */
 export function readFile(pathToFile: string, isJSON: boolean): Promise<string|object> {
     return new Promise((resolve, reject) => {
-        fsReadFile(pathToFile, 'utf-8', (error, data) => {
+        log.writeToLog(1, `Requested contents from ${pathToFile}`, true);
+        const normalizedPath = path.resolve(pathToFile);
+        log.writeToLog(1, `Normalized path as ${normalizedPath}`, true);
+        fsReadFile(normalizedPath, 'utf-8', (error, data) => {
             if (error) {
                 reject(error);
             } else {
+                log.writeToLog(1, `Contents from ${normalizedPath}`, true);
+                log.writeToLog(1, data, true);
                 isJSON ? resolve(JSON.parse(data)) : resolve(data);
             }
         });

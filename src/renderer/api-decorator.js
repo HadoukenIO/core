@@ -11,12 +11,13 @@
     const isMainFrame = glbl.isMainFrame;
     let renderFrameId = glbl.routingId;
     let customData = glbl.getFrameData(renderFrameId);
+    let webWindowMap = new Map();
 
     const electron = require('electron');
 
     // Mock webFrame if unavailable
     const webFrame = (electron.webFrame ?
-        electron.webFrame.createForRenderFrame(renderFrameId) : {
+        electron.webFrame.findFrameByRoutingId(renderFrameId) : {
             getZoomLevel: () => { return 1.0; },
             setZoomLevel: () => {}
         });
@@ -33,7 +34,8 @@
         options: { api: { iframe: { enableDeprecatedSharedName } } },
         socketServerState,
         runtimeArguments,
-        frames
+        frames,
+        licenseKey
     } = glbl.__startOptions;
 
     //Check if we need to use the process.eval in a nodeless environment.
@@ -131,6 +133,13 @@
         return elIPCConfig;
     }
 
+    function isLicenseKeyValid() {
+        if (licenseKey && licenseKey.length === 36) {
+            return true;
+        }
+        return false;
+    }
+
     function raiseEventSync(eventName, eventArgs) {
         return syncApiCall('raise-event', {
             eventName,
@@ -196,17 +205,21 @@
             e.preventDefault();
         });
         global.addEventListener('click', e => {
-            const tag = e.target.tagName;
             const modifiedClick = e.shiftKey || e.metaKey || e.ctrlKey || e.altKey;
-            const mightOpenNewWindow = tag === 'A' || tag === 'IMG';
-            if (mightOpenNewWindow && modifiedClick) {
-                e.preventDefault();
-            } else if (modifiedClick && (tag === 'BUTTON' || tag === 'INPUT')) {
-                if (e.target.type === 'submit') {
+            e.path.some(target => {
+                const tag = target.tagName;
+                const mightOpenNewWindow = tag === 'A' || tag === 'IMG';
+                if (mightOpenNewWindow && modifiedClick) {
                     e.preventDefault();
-                }
+                    return true;
+                } else if (modifiedClick && (tag === 'BUTTON' || tag === 'INPUT')) {
+                    if (target.type === 'submit') {
+                        e.preventDefault();
+                        return true;
+                    }
 
-            }
+                }
+            });
         });
     }
 
@@ -245,8 +258,10 @@
     var pendingMainCallbacks = [];
     var currPageHasLoaded = false;
 
+    global.addEventListener('DOMContentLoaded', function() {
+        disableModifiedClicks(glbl);
+    });
     global.addEventListener('load', function() {
-
         //---------------------------------------------------------------
         // TODO: extract this, used to be bound to ready
         //---------------------------------------------------------------
@@ -256,7 +271,6 @@
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
         wireUpMenu(glbl);
-        disableModifiedClicks(glbl);
         wireUpMouseWheelZoomEvents();
         raiseReadyEvents(entityInfo);
 
@@ -289,8 +303,7 @@
 
 
         currPageHasLoaded = true;
-
-        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen) {
+        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen || isCrossOrigin()) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
                     const userAppConfigArgs = initialOptions.userAppConfigArgs;
@@ -304,16 +317,38 @@
         }
     });
 
+    // check if a license key is valid or not
+    if (!isLicenseKeyValid()) {
+        // log invalid license key info in debug.log
+        asyncApiCall('write-to-log', {
+            level: 'info',
+            message: `[licenseKey] [${initialOptions.uuid} - ${initialOptions.name}]: invalid OpenFin license key`
+        });
+        console.warn('WARNING : Application does not have a valid OpenFin license key implemented in application manifest. ' +
+            'To obtain a valid license key or to begin your 30 days of free support, please contact support@openfin.co.');
+    }
 
     function onContentReady(bindObject, callback) {
-
-        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.rawWindowOpen)) {
+        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen || isCrossOrigin())) {
             deferByTick(() => {
                 callback();
             });
         } else {
             pendingMainCallbacks.push(callback);
         }
+    }
+
+    // When creating an openfin child window with cross domain url, we need to check this condition since openerSuccessDBCalled is NOT called.
+    function isCrossOrigin() {
+        let isCORS = false;
+        try {
+            if (window.opener && window.opener.name) {
+                isCORS = false;
+            }
+        } catch (e) {
+            isCORS = true;
+        }
+        return isCORS;
     }
 
     //extend open
@@ -323,14 +358,16 @@
         const [url, requestedName, features = ''] = args; // jshint ignore:line
         const requestId = ++childWindowRequestId;
         const webContentsId = getWebContentsId();
-        const name = !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
+        const name = requestedName && !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
         const responseChannel = `${name}-created`;
 
         const options = Object.assign(featuresToOptionsObj(features), {
             url,
             uuid: initialOptions.uuid,
             name: name,
-            autoShow: true
+            autoShow: true,
+            waitForPageLoad: false,
+            isRawWindowOpen: true
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
@@ -375,7 +412,7 @@
                         try {
                             let returnMeta = JSON.parse(meta);
                             cb({
-                                nativeWindow: nativeWindow,
+                                nativeWindow,
                                 id: returnMeta.windowId
                             });
                         } catch (e) {}
@@ -483,6 +520,47 @@
         return featuresObj;
     }
 
+    ///WEB Window Functionality
+
+    function mergeWebWindowMap(map) {
+        webWindowMap = new Map([...webWindowMap, ...map]);
+    }
+
+    function registerWebWindow(name, win) {
+        webWindowMap.set(name, win);
+        try {
+            window.opener.fin.__internal_.registerWebWindow(name, win);
+        } catch (err) {
+            //common for main windows, we do not want to expose this error. here just to have a debug target.
+            //console.error(err);
+        }
+    }
+
+    function deregisterWebWindow(name) {
+        webWindowMap.delete(name);
+        try {
+            window.opener.fin.__internal_.deregisterWebWindow(name);
+        } catch (err) {
+            //common for main windows, we do not want to expose this error. here just to have a debug target.
+            //console.error(err);
+        }
+    }
+
+    function getWebWindow(name) {
+        let webWindow = webWindowMap.get(name);
+        if (webWindow) {
+            return webWindow;
+        } else {
+            try {
+                return window.opener.fin.__internal_.getWebWindow(name);
+            } catch (err) {
+                //common for main windows, we do not want to expose this error. here just to have a debug target.
+                //console.error(err);
+            }
+        }
+    }
+    //End WEB Window Functionality
+
     ///external API Decorator:
     global.fin = {
         desktop: {
@@ -510,7 +588,11 @@
             emitNoteProxyReady: emitNoteProxyReady,
             initialOptions,
             entityInfo,
-            isMainFrame
+            isMainFrame,
+            registerWebWindow,
+            getWebWindow,
+            deregisterWebWindow,
+            mergeWebWindowMap
         }
     };
 
@@ -593,5 +675,44 @@
 
         asyncApiCall(action, { allDone: true });
     }
+
+    //Web window setup and cleanup
+    window.addEventListener('beforeunload', () => {
+        try {
+            deregisterWebWindow(initialOptions.name);
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+
+    //wire up cleanup and re-hidration
+    window.addEventListener('load', () => {
+
+        //if window content is cross domain, beforeunload might not catch this
+        const app = fin.Application.getCurrentSync();
+        app.on('window-closed', ({ name }) => {
+            deregisterWebWindow(name);
+        });
+
+        //on parent reload we want to re-hidrate
+        try {
+            const parentIdentity = window.opener.fin.wire.me;
+            const win = fin.Window.wrapSync(parentIdentity);
+            win.on('initialized', () => {
+                try {
+                    window.opener.fin.__internal_.mergeWebWindowMap(webWindowMap);
+                } catch (err) {
+                    console.error(err);
+                }
+            });
+        } catch (err) {
+            //common for main windows, we do not want to expose this error. here just to have a debug target.
+            //console.error(err);
+        }
+    });
+
+    deferByTick(() => registerWebWindow(getWindowIdentitySync().name, window));
+    //End Web window setup and cleanup
 
 }());

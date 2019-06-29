@@ -2,11 +2,12 @@ import { AckMessage, AckFunc, AckPayload, NackPayload } from './ack';
 import { ApiTransportBase, MessagePackage, MessageConfiguration } from './api_transport_base';
 import { default as RequestHandler } from './base_handler';
 import { Endpoint, ActionMap } from '../shapes';
-import { Identity } from '../../../shapes';
+import { Identity, AppObj } from '../../../shapes';
 declare var require: any;
 
-const coreState = require('../../core_state');
-const electronIpc = require('../../transports/electron_ipc');
+import * as coreState from '../../core_state';
+import {ipc, channels} from '../../transports/electron_ipc';
+import { getWebContentsInitialOptionSet, RoutingInfo } from '../../core_state';
 const system = require('../../api/system').System;
 
 class RendererBatchConfiguration {
@@ -62,23 +63,34 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
         super(actionMap, requestHandler);
 
         this.requestHandler.addHandler((mp: MessagePackage, next: () => void) => {
-            const { identity, data, ack, nack, e, strategyName } = mp;
+            const { identity, data, ack, nack, strategyName } = mp;
 
             if (strategyName !== this.constructor.name) {
                 next();
             } else {
                 const endpoint: Endpoint = this.actionMap[data.action];
                 if (endpoint) {
-                    Promise.resolve()
-                        .then(() => endpoint.apiFunc(identity, data, ack, nack))
-                        .then(result => {
-                            // older action calls will invoke ack internally, newer ones will return a value
-                            if (result !== undefined) {
-                                ack(new AckPayload(result));
-                            }
+                    let endpointReturnValue: any;
+
+                    try {
+                        endpointReturnValue = endpoint.apiFunc(identity, data, ack, nack);
+                    } catch (error) {
+                        return nack(error);
+                    }
+
+                    if (endpointReturnValue instanceof Promise) {
+                        // Promise-based endpoint
+                        endpointReturnValue.then(result => {
+                            ack(new AckPayload(result));
                         }).catch(err => {
                             nack(err);
                         });
+                    } else if (endpointReturnValue !== undefined) {
+                        // Synchronous endpoint with returned data
+                        ack(new AckPayload(endpointReturnValue));
+                    } else {
+                        // Callback-based endpoint (takes care of calling ack/nack by itself)
+                    }
                 } else {
                     const runtimeVersion = system.getVersion();
                     const message = `API call ${data.action} not implemented in runtime version: ${runtimeVersion}.`;
@@ -89,33 +101,32 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     }
 
     private canTrySend(routingInfo: any): boolean {
-        const { browserWindow, frameRoutingId } = routingInfo;
-        const browserWindowLocated = browserWindow;
-        const browserWindowExists = !browserWindow.isDestroyed();
+        const { webContents, frameRoutingId } = routingInfo;
+        const webContentsLocated = webContents;
+        const webContentsExists = !webContents.isDestroyed();
         const validRoutingId = typeof frameRoutingId === 'number';
-        return browserWindowLocated && browserWindowExists && validRoutingId;
+        return webContentsLocated && webContentsExists && validRoutingId;
     }
 
     // Dispatch a message
     private innerSend(payload: string,
-                      frameRoutingId: number,
-                      mainFrameRoutingId: number,
-                      browserWindow: any): void {
+                      routingInfo: RoutingInfo): void {
+        const { webContents, frameRoutingId, mainFrameRoutingId, _options} = routingInfo;
         if (frameRoutingId === mainFrameRoutingId) {
             // this is the main window frame
-            if (coreState.argo.framestrategy === 'frames') {
-                browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
+            if (!_options.api.iframe.enableDeprecatedSharedName) {
+                webContents.sendToFrame(frameRoutingId, channels.CORE_MESSAGE, payload);
             } else {
-                browserWindow.send(electronIpc.channels.CORE_MESSAGE, payload);
+                webContents.send(channels.CORE_MESSAGE, payload);
             }
         } else {
-            // frameRoutingId != browserWindow.webContents.mainFrameRoutingId implies a frame
-            browserWindow.webContents.sendToFrame(frameRoutingId, electronIpc.channels.CORE_MESSAGE, payload);
+            // frameRoutingId != webContents.mainFrameRoutingId implies a frame
+            webContents.sendToFrame(frameRoutingId, channels.CORE_MESSAGE, payload);
         }
     }
 
     public registerMessageHandlers(): void {
-        electronIpc.ipc.on(electronIpc.channels.WINDOW_MESSAGE, this.onMessage.bind(this));
+        ipc.on(channels.WINDOW_MESSAGE, this.onMessage.bind(this));
     }
 
     public send(identity: Identity, payloadObj: any): void {
@@ -127,13 +138,13 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             return;
         }
 
-        const { browserWindow, mainFrameRoutingId, frameRoutingId } = routingInfo;
+        const { frameRoutingId } = routingInfo;
         const payload = JSON.stringify(payloadObj);
 
         if (!this.canTrySend(routingInfo)) {
             system.debugLog(1, `uuid:${uuid} name:${name} frameRoutingId:${frameRoutingId} not reachable, payload:${payload}`);
         } else {
-            this.innerSend(payload, frameRoutingId, mainFrameRoutingId, browserWindow);
+            this.innerSend(payload, routingInfo);
         }
     }
 
@@ -150,13 +161,12 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
     protected onMessage(e: any, rawData: any, ackFactoryDelegate: any): void {
 
         try {
-            const browserWindow = e.sender.getOwnerBrowserWindow();
-            const currWindow = browserWindow ? coreState.getWinById(browserWindow.id) : null;
-            const openfinWindow = currWindow && currWindow.openfinWindow;
-            const opts = openfinWindow && openfinWindow._options;
+            const webContentsId = e.sender.id;
+
+            const opts: any = getWebContentsInitialOptionSet(webContentsId).options;
 
             if (!opts) {
-                throw new Error(`Unable to locate window information for endpoint with window id ${browserWindow.id}`);
+                throw new Error(`Unable to locate window information for endpoint with window id ${webContentsId}`);
             }
 
             const data = JSON.parse(JSON.stringify(rawData));
@@ -173,11 +183,11 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             const nack = this.nackDecorator(ack);
 
             const entityType = e.sender.getEntityType(e.frameRoutingId);
-            const isWindow  = ! e.sender.isIframe(e.frameRoutingId);
+            const isIframe  = e.sender.isIframe(e.frameRoutingId);
             const { api: { iframe: { enableDeprecatedSharedName } } } = opts;
             let subFrameName;
 
-            if (isWindow || enableDeprecatedSharedName) {
+            if (!isIframe || enableDeprecatedSharedName) {
                 subFrameName = opts.name;
             } else {
                 subFrameName = e.sender.getFrameName(e.frameRoutingId);
@@ -193,7 +203,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
 
             /* tslint:disable: max-line-length */
             //message payload might contain sensitive data, mask it.
-            const disableIabSecureLogging = coreState.getAppObjByUuid(opts.uuid)._options.disableIabSecureLogging;
+            const disableIabSecureLogging = (<AppObj>coreState.getAppObjByUuid(opts.uuid))._options.disableIabSecureLogging;
             let replacer = (!disableIabSecureLogging && (data.action === 'publish-message' || data.action === 'send-message')) ? this.payloadReplacer : null;
             if (data.action === 'window-authenticate') { // not log password
                 replacer = this.passwordReplacer;
@@ -276,7 +286,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                     ackObj.addBreadcrumb('core/ACK');
                 }
 
-                e.sender.sendToFrame(e.frameRoutingId, electronIpc.channels.CORE_MESSAGE, JSON.stringify(ackObj));
+                e.sender.sendToFrame(e.frameRoutingId, channels.CORE_MESSAGE, JSON.stringify(ackObj));
             }
         };
 

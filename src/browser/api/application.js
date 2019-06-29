@@ -3,6 +3,7 @@
  */
 
 // built-in modules
+let os = require('os');
 let path = require('path');
 let electron = require('electron');
 let queryString = require('querystring');
@@ -34,6 +35,9 @@ import route from '../../common/route';
 import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
+import { releaseUuid } from '../uuid_availability';
+import { launch } from '../../../js-adapter/src/main';
+import { externalWindows } from './external_window';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -41,7 +45,7 @@ let runtimeIsClosing = false;
 let hasPlugins = false;
 let rvmBus;
 let MonitorInfo;
-var Application = {};
+export const Application = {};
 let fetchingIcon = {};
 let registeredUsersByApp = {};
 
@@ -71,7 +75,7 @@ electronApp.on('ready', function() {
     rvmBus = require('../rvm/rvm_message_bus').rvmMessageBus;
     log.writeToLog(1, 'RVM MESSAGE BUS READY', true);
 
-    MonitorInfo = require('../monitor_info.js');
+    MonitorInfo = require('../monitor_info.js').default;
 
     // listen to and broadcast 'broadcast' messages from RVM as an openfin app event
     rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'manifest-changed'), payload => {
@@ -278,7 +282,14 @@ Application.close = function(identity, force, callback) {
         Window.close(mainWindowIdentity, force, callback);
     }
 };
-
+Application.destroy = function(identity, ack, nack) {
+    if (coreState.getAppRunningState(identity.uuid)) {
+        nack('Cannot destroy a running application');
+    } else {
+        coreState.deleteApp(identity.uuid);
+        ack();
+    }
+};
 Application.getChildWindows = function(identity /*, callback, errorCallback*/ ) {
     const uuid = identity.uuid;
     const appError = checkApplicationAvailability(uuid);
@@ -303,9 +314,14 @@ Application.getManifest = function(identity, manifestUrl, callback, errCallback)
     }
 
     if (manifestUrl) {
-        fetchReadFile(manifestUrl, true)
-            .then(callback)
-            .catch(errCallback);
+        const configObj = coreState.getManifestByUrl(manifestUrl);
+        if (configObj) {
+            callback(configObj);
+        } else {
+            fetchReadFile(manifestUrl, true)
+                .then(callback)
+                .catch(errCallback);
+        }
     } else {
         errCallback(new Error('App not started from manifest'));
     }
@@ -660,7 +676,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     ofEvents.once(route.window('closed', uuid, uuid), () => {
         delete fetchingIcon[uuid];
         removeTrayIcon(app);
-
+        releaseUuid(uuid);
         if (uuid in registeredUsersByApp) {
             delete registeredUsersByApp[uuid];
         }
@@ -705,6 +721,12 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
                 //deregister all proxy windows
                 deregisterAllRuntimeProxyWindows();
 
+                // Release all external windows to prevent bringing them
+                // down when the runtime closes.
+                externalWindows.forEach((nativeWindow) => {
+                    nativeWindow.setExternalWindowNativeId('');
+                });
+
                 // Force close any windows that have slipped past core-state
                 BrowserWindow.getAllWindows().forEach(function(window) {
                     window.close();
@@ -747,17 +769,23 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 }
 
 /**
- * Run an application via RVM
+ * Run an application via RVM Call
  */
-Application.runWithRVM = function(identity, manifestUrl) {
-    return sendToRVM({
-        topic: 'application',
-        action: 'launch-app',
-        sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
-        data: {
-            configUrl: manifestUrl
-        }
-    });
+Application.runWithRVM = function(manifestUrl, appIdentity) {
+    const { uuid } = appIdentity;
+    // on mac/linux, launch the app, else hand off to RVM
+    if (os.platform() !== 'win32') {
+        return launch({ manifestUrl: manifestUrl });
+    } else {
+        return sendToRVM({
+            topic: 'application',
+            action: 'launch-app',
+            sourceUrl: coreState.getConfigUrlByUuid(uuid),
+            data: {
+                configUrl: manifestUrl
+            }
+        });
+    }
 };
 
 Application.send = function() {
@@ -1221,4 +1249,3 @@ function checkApplicationAvailability(uuid) {
         return null;
     }
 }
-module.exports.Application = Application;

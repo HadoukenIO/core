@@ -3,7 +3,6 @@
  */
 
 // built-in modules
-let fs = require('fs');
 let path = require('path');
 let queryString = require('querystring');
 
@@ -13,8 +12,7 @@ let _ = require('underscore');
 // local modules
 let coreState = require('./core_state.js');
 let log = require('./log');
-import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
-import { fetchReadFile } from './cached_resource_fetcher';
+import { fetchReadFile, readFile } from './cached_resource_fetcher';
 
 // constants
 import {
@@ -98,6 +96,7 @@ function five0BaseOptions() {
         'hideOnClose': false,
         'hideWhileChildrenVisible': false,
         'icon': '',
+        'isRawWindowOpen': false,
         'launchExternal': '',
         'loadErrorMessage': '',
         'maxHeight': -1,
@@ -137,30 +136,6 @@ function isInContainer(type) {
     return process && process.versions && process.versions[type];
 }
 
-function readFile(filePath, done, onError) {
-    log.writeToLog(1, `Requested contents from ${filePath}`, true);
-    let normalizedPath = path.resolve(filePath);
-    log.writeToLog(1, `Normalized path as ${normalizedPath}`, true);
-    fs.readFile(normalizedPath, 'utf8', (err, data) => {
-        if (err) {
-            onError(err);
-            return;
-        }
-
-        log.writeToLog(1, `Contents from ${normalizedPath}`, true);
-        log.writeToLog(1, data, true);
-
-        let config;
-        try {
-            config = JSON.parse(data);
-        } catch (e) {
-            onError(e);
-            return;
-        }
-        done(config);
-    });
-}
-
 function validateOptions(options) {
     var baseOptions = five0BaseOptions();
 
@@ -192,205 +167,197 @@ function validate(base, user) {
 
 function fetchLocalConfig(configUrl, successCallback, errorCallback) {
     log.writeToLog(1, `Falling back on local-startup-url path: ${configUrl}`, true);
-    readFile(configUrl, configObject => {
-        successCallback({
-            configObject,
-            configUrl
-        });
-    }, errorCallback);
+    readFile(configUrl, true)
+        .then((configObject) => successCallback({ configObject, configUrl }))
+        .catch(errorCallback);
 }
+export const getStartupAppOptions = function(appJson) {
+    return appJson['startup_app'];
+};
+export const convertToElectron = function(options, returnAsString) {
 
-module.exports = {
+    const usingIframe = !!(options.api && options.api.iframe);
 
-    getStartupAppOptions: function(appJson) {
-        return appJson['startup_app'];
-    },
+    // build on top of the 5.0 base
+    let newOptions = validateOptions(options);
 
-    convertToElectron: function(options, returnAsString) {
+    if (isInContainer('openfin')) {
+        newOptions.resizable = newOptions.resize && newOptions.resizable;
+        //always rely on the core to show the window.
+        newOptions.show = false;
+        newOptions.skipTaskbar = !newOptions.showTaskbarIcon;
+        newOptions.title = newOptions.name;
 
-        const usingIframe = !!(options.api && options.api.iframe);
-
-        // build on top of the 5.0 base
-        let newOptions = validateOptions(options);
-
-        if (isInContainer('openfin')) {
-            newOptions.resizable = newOptions.resize && newOptions.resizable;
-            newOptions.show = newOptions.autoShow && !newOptions.waitForPageLoad;
-            newOptions.skipTaskbar = !newOptions.showTaskbarIcon;
-            newOptions.title = newOptions.name;
-
-            let minHeight = newOptions.minHeight;
-            let maxHeight = newOptions.maxHeight;
-            let defaultHeight = newOptions.defaultHeight;
-            if (defaultHeight < minHeight) {
-                newOptions.height = minHeight;
-            } else if (maxHeight !== -1 && defaultHeight > maxHeight) {
-                newOptions.height = maxHeight;
-            } else {
-                newOptions.height = defaultHeight;
-            }
-
-            let defaultWidth = newOptions.defaultWidth;
-            let minWidth = newOptions.minWidth;
-            let maxWidth = newOptions.maxWidth;
-            if (defaultWidth < minWidth) {
-                newOptions.width = minWidth;
-            } else if (maxWidth !== -1 && defaultWidth > maxWidth) {
-                newOptions.width = maxWidth;
-            } else {
-                newOptions.width = defaultWidth;
-            }
-
-            newOptions.center = newOptions.defaultCentered;
-            if (!newOptions.center) {
-                newOptions.x = newOptions.defaultLeft;
-                newOptions.y = newOptions.defaultTop;
-            }
-        }
-
-        const useNodeInRenderer = newOptions.experimental.node;
-        const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
-
-        // Because we have communicated the experimental option, this allows us to
-        // respect that if its set but defaults to the proper passed in `iframe` key
-        if (usingIframe) {
-            Object.assign(newOptions.experimental.api.iframe, newOptions.api.iframe);
+        let minHeight = newOptions.minHeight;
+        let maxHeight = newOptions.maxHeight;
+        let defaultHeight = newOptions.defaultHeight;
+        if (defaultHeight < minHeight) {
+            newOptions.height = minHeight;
+        } else if (maxHeight !== -1 && defaultHeight > maxHeight) {
+            newOptions.height = maxHeight;
         } else {
-            newOptions.api.iframe = newOptions.experimental.api.iframe;
+            newOptions.height = defaultHeight;
         }
 
-        if (_.has(options, 'contextMenu')) { // backwards compatible
-            newOptions.contextMenuSettings.enable = options.contextMenu;
-        }
-
-        // Electron BrowserWindow options
-        newOptions.enableLargerThanScreen = true;
-        newOptions['enable-plugins'] = true;
-        newOptions.webPreferences = {
-            api: newOptions.experimental.api,
-            contextMenuSettings: newOptions.contextMenuSettings,
-            disableInitialReload: newOptions.experimental.disableInitialReload,
-            nodeIntegration: false,
-            plugins: newOptions.plugins,
-            preload: (!useNodeInRenderer ? noNodePreload : ''),
-            sandbox: !useNodeInRenderer,
-            spellCheck: newOptions.spellCheck,
-            backgroundThrottling: newOptions.backgroundThrottling
-        };
-
-        if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
-            newOptions.webPreferences.webSecurity = false;
-        }
-
-        if (coreState.argo['user-app-config-args']) {
-            newOptions.userAppConfigArgs = queryString.parse(coreState.argo['user-app-config-args']);
-        }
-
-        if (options.message !== undefined) {
-            newOptions.message = options.message;
-        }
-
-        if (options.customData !== undefined) {
-            newOptions.customData = options.customData;
-        }
-
-        if (options.permissions !== undefined) { // API policy
-            newOptions.permissions = options.permissions;
-        }
-
-        if ('preloadScripts' in options || 'preload' in options) {
-            newOptions.preloadScripts = this.normalizePreloadScripts(options);
-        }
-
-        if (options.customRequestHeaders !== undefined) {
-            newOptions.customRequestHeaders = options.customRequestHeaders;
-        }
-
-        // implicitly set the backgroundColor if the window is transparent
-        if (newOptions.transparent) {
-            newOptions.backgroundColor = TRANSPARENT_WHITE;
-        }
-
-        if (returnAsString) {
-            return JSON.stringify(newOptions);
+        let defaultWidth = newOptions.defaultWidth;
+        let minWidth = newOptions.minWidth;
+        let maxWidth = newOptions.maxWidth;
+        if (defaultWidth < minWidth) {
+            newOptions.width = minWidth;
+        } else if (maxWidth !== -1 && defaultWidth > maxWidth) {
+            newOptions.width = maxWidth;
         } else {
-            return JSON.parse(JSON.stringify(newOptions));
-        }
-    },
-
-    fetchOptions: function(argo, onComplete, onError) {
-        // ensure removal of eclosing double-quotes when absolute path.
-        let configUrl = (argo['startup-url'] || argo['config']);
-        let localConfigPath = argo['local-startup-url'];
-        let offlineAccess = false;
-        let errorCallback = err => {
-            if (offlineAccess) {
-                fetchLocalConfig(localConfigPath, onComplete, onError);
-            } else {
-                onError(err);
-            }
-        };
-
-        // if local-startup-url is defined and its config specifies offline mode, then
-        // allow fetching from the local-startup-url config
-        if (localConfigPath) {
-            try {
-                let localConfig = JSON.parse(fs.readFileSync(localConfigPath));
-
-                if (localConfig['offlineAccess']) {
-                    offlineAccess = true;
-                }
-            } catch (err) {
-                log.writeToLog(1, err, true);
-            }
+            newOptions.width = defaultWidth;
         }
 
-        if (typeof configUrl !== 'string') {
-            configUrl = '';
+        newOptions.center = newOptions.defaultCentered;
+        if (!newOptions.center) {
+            newOptions.x = newOptions.defaultLeft;
+            newOptions.y = newOptions.defaultTop;
         }
-
-        configUrl = configUrl.replace(/"/g, '');
-
-        if (!configUrl) {
-            if (typeof onError === 'function') {
-                onError(new Error('missing runtime argument --startup-url'));
-            }
-            return;
-        }
-
-        if (isHttpUrl(configUrl)) {
-            fetchReadFile(configUrl, true)
-                .then((configObject) => onComplete({ configObject, configUrl }))
-                .catch(errorCallback);
-            return;
-        }
-
-        let filepath = isFileUrl(configUrl) ? uriToPath(configUrl) : configUrl;
-
-        return readFile(filepath, configObject => {
-            onComplete({
-                configObject,
-                configUrl
-            });
-        }, errorCallback);
-    },
-
-    normalizePreloadScripts(options) {
-        let preloadScripts = [];
-
-        if ('preload' in options) {
-            if (typeof options.preload === 'string') {
-                preloadScripts = [{ url: options.preload }];
-            } else if (Array.isArray(options.preload)) {
-                preloadScripts = options.preload;
-            }
-        }
-
-        if ('preloadScripts' in options && Array.isArray(options.preloadScripts)) {
-            preloadScripts = options.preloadScripts;
-        }
-
-        return preloadScripts;
     }
 
+    const useNodeInRenderer = newOptions.experimental.node;
+    const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
+
+    // Because we have communicated the experimental option, this allows us to
+    // respect that if its set but defaults to the proper passed in `iframe` key
+    if (usingIframe) {
+        Object.assign(newOptions.experimental.api.iframe, newOptions.api.iframe);
+    } else {
+        newOptions.api.iframe = newOptions.experimental.api.iframe;
+    }
+
+    if (_.has(options, 'contextMenu')) { // backwards compatible
+        newOptions.contextMenuSettings.enable = options.contextMenu;
+    }
+
+    // Electron BrowserWindow options
+    newOptions.enableLargerThanScreen = true;
+    newOptions['enable-plugins'] = true;
+    newOptions.webPreferences = {
+        api: newOptions.experimental.api,
+        contextMenuSettings: newOptions.contextMenuSettings,
+        disableInitialReload: newOptions.experimental.disableInitialReload,
+        nodeIntegration: false,
+        plugins: newOptions.plugins,
+        preload: (!useNodeInRenderer ? noNodePreload : ''),
+        sandbox: !useNodeInRenderer,
+        spellCheck: newOptions.spellCheck,
+        backgroundThrottling: newOptions.backgroundThrottling
+    };
+
+    if (coreState.argo['disable-web-security'] || newOptions.webSecurity === false) {
+        newOptions.webPreferences.webSecurity = false;
+    }
+
+    if (coreState.argo['user-app-config-args']) {
+        newOptions.userAppConfigArgs = queryString.parse(coreState.argo['user-app-config-args']);
+    }
+
+    if (options.message !== undefined) {
+        newOptions.message = options.message;
+    }
+
+    if (options.customData !== undefined) {
+        newOptions.customData = options.customData;
+    }
+
+    if (options.permissions !== undefined) { // API policy
+        newOptions.permissions = options.permissions;
+    }
+
+    if ('preloadScripts' in options || 'preload' in options) {
+        newOptions.preloadScripts = this.normalizePreloadScripts(options);
+    }
+
+    if (options.customRequestHeaders !== undefined) {
+        newOptions.customRequestHeaders = options.customRequestHeaders;
+    }
+
+    // implicitly set the backgroundColor if the window is transparent
+    if (newOptions.transparent) {
+        newOptions.backgroundColor = TRANSPARENT_WHITE;
+    }
+
+    if (returnAsString) {
+        return JSON.stringify(newOptions);
+    } else {
+        return JSON.parse(JSON.stringify(newOptions));
+    }
+};
+
+export const fetchOptions = function(argo, onComplete, onError) {
+    // ensure removal of eclosing double-quotes when absolute path.
+    let configUrl = (argo['startup-url'] || argo['config']);
+    let localConfigPath = argo['local-startup-url'];
+    let offlineAccess = false;
+    let errorCallback = err => {
+        if (offlineAccess) {
+            fetchLocalConfig(localConfigPath, onComplete, onError);
+        } else {
+            onError(err);
+        }
+    };
+
+    // if local-startup-url is defined and its config specifies offline mode, then
+    // allow fetching from the local-startup-url config
+    if (localConfigPath) {
+        try {
+            // Use this version of the fs module because the decorated version checks if the file
+            // has a matching signature file
+            const originalFs = require('original-fs');
+            let localConfig = JSON.parse(originalFs.readFileSync(localConfigPath));
+
+            if (localConfig['offlineAccess']) {
+                offlineAccess = true;
+            }
+        } catch (err) {
+            log.writeToLog(1, err, true);
+        }
+    }
+
+    if (typeof configUrl !== 'string') {
+        configUrl = '';
+    }
+
+    configUrl = configUrl.replace(/"/g, '');
+
+    if (!configUrl) {
+        if (typeof onError === 'function') {
+            onError(new Error('missing runtime argument --startup-url'));
+        }
+        return;
+    }
+
+    // read config file from RVM local app folder if it exists
+    const actualConfigUrl = localConfigPath ? localConfigPath : configUrl;
+
+    // Note: actualConfigUrl is only used for getting config object, but configUrl is still needed in callback function. otherwise RVM sent error message.
+    fetchReadFile(actualConfigUrl, true)
+        .then((configObject) => onComplete({ configObject, configUrl }))
+        .catch(errorCallback);
+};
+export function normalizePreloadScripts(options) {
+    let preloadScripts = [];
+
+    if ('preload' in options) {
+        if (typeof options.preload === 'string') {
+            preloadScripts = [{ url: options.preload }];
+        } else if (Array.isArray(options.preload)) {
+            preloadScripts = options.preload;
+        }
+    }
+
+    if ('preloadScripts' in options && Array.isArray(options.preloadScripts)) {
+        preloadScripts = options.preloadScripts;
+    }
+
+    return preloadScripts;
+}
+export default {
+    getStartupAppOptions,
+    convertToElectron,
+    fetchOptions,
+    normalizePreloadScripts
 };

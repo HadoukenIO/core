@@ -1,7 +1,12 @@
 
 import { PortInfo } from './browser/port_discovery';
-import { BrowserWindow as BrowserWindowElectron } from 'electron';
+import {
+    BrowserWindow as BrowserWindowElectron,
+    NativeWindowInfo as NativeWindowInfoElectron,
+    Process as ProcessElectron
+} from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
+import { AnchorType } from '../js-adapter/src/shapes';
 
 export interface Identity {
     uuid: string;
@@ -110,7 +115,7 @@ export interface OpenFinWindow {
 
 export interface BrowserWindow extends BrowserWindowElectron {
     _options: WindowOptions;
-    setExternalWindowNativeId?: Function;
+    setExternalWindowNativeId(hwnd: string): void;
 }
 
 export interface AppObj {
@@ -130,7 +135,7 @@ export interface AppObj {
 export type WebRequestHeader = {[key: string]: string};
 
 export type WebRequestHeaderConfig = {
-    urlPatterns: string[],
+    urlPatterns: [string],
     headers: WebRequestHeader[]  // key=value is added to headers
 };
 
@@ -148,6 +153,7 @@ export interface WindowOptions {
     };
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
+    api?: any;
     applicationIcon?: string;
     appLogFlushInterval?: number;
     aspectRatio?: number;
@@ -192,6 +198,7 @@ export interface WindowOptions {
     hideOnClose?: boolean;
     hideWhileChildrenVisible?: boolean;
     icon?: string;
+    isRawWindowOpen?: boolean;
     launchExternal?: string;
     loadErrorMessage?: string;
     maxHeight?: number;
@@ -232,7 +239,7 @@ export interface WindowOptions {
     toShowOnRun?: boolean;
     transparent?: boolean;
     _type?: ERROR_BOX_TYPES;
-    url: string;
+    url?: string;
     uuid: string;
     waitForPageLoad?: boolean;
     webPreferences?: {
@@ -386,3 +393,80 @@ export interface Subscriber {
 }
 
 export type Func = () => void;
+
+export interface MoveWindowByOpts {
+    deltaLeft: number;
+    deltaTop: number;
+}
+
+export interface MoveWindowToOpts {
+    left: number;
+    top: number;
+}
+
+export interface ResizeWindowByOpts {
+    anchor: AnchorType;
+    deltaHeight: number;
+    deltaWidth: number;
+}
+
+export interface ResizeWindowToOpts {
+    anchor: AnchorType;
+    height: number;
+    width: number;
+}
+
+export interface ShowWindowAtOpts extends MoveWindowToOpts {
+    force?: boolean;
+}
+
+export interface Bounds {
+    height: number;
+    width: number;
+    x: number;
+    y: number;
+}
+
+export interface CoordinatesXY {
+    x: number;
+    y: number;
+}
+
+// This mock is for window grouping accepting external windows
+interface BrowserWindowMock extends BrowserWindowElectron {
+    _options: WindowOptions;
+}
+
+export interface ExternalWindow extends BrowserWindowElectron {
+    _options: WindowOptions;
+    _userMovement?: boolean;
+    _window?: {};
+    app_uuid?: string;
+    browserWindow: BrowserWindowMock;
+    groupUuid?: string;
+    isExternalWindow: boolean;
+    isProxy?: boolean;
+    name: string;
+    uuid: string;
+}
+
+export interface Process extends Omit<ProcessElectron, 'imageName'> {
+    injected: boolean;
+    pid: number;
+}
+
+export interface NativeWindowInfo extends Omit<NativeWindowInfoElectron, 'process'> {
+    process: Process;
+    name: string;
+    uuid: string;
+}
+
+export type NativeWindowInfoLite = Pick<NativeWindowInfo, 'name'|'process'|'title'|'uuid'|'visible'>;
+
+export type GroupWindow = (ExternalWindow | OpenFinWindow) & {
+    isExternalWindow?: boolean;
+};
+
+export interface GroupWindowIdentity extends Identity {
+    isExternalWindow?: boolean;
+}

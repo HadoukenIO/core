@@ -31,8 +31,8 @@ class UnixDomainSocket extends BaseTransport {
         const version: string = coreState.argo['version-keyword'];
         const securityRealm: string = coreState.argo['security-realm'] || '';
         this.filenamePrefix = filenamePrefix;
-        // e.g. /some/prefix/string.<version>.<optional security realm>.<unix timestamp>
-        this.serverName = `${filenamePrefix}.${version}.${securityRealm ? securityRealm + '.' : ''}${Date.now()}`;
+        // e.g. /some/prefix/string.<version>.<optional security realm>.<unix timestamp>.<pid>
+        this.serverName = `${filenamePrefix}.${version}.${securityRealm ? securityRealm + '.' : ''}.${Date.now()}.${process.pid}`;
         this.server = unixDgram.createSocket('unix_dgram', (buffer: Buffer) => {
             this.eventEmitter.emit('message', null, buffer);
         });

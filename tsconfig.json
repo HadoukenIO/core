@@ -5,12 +5,14 @@
         "noImplicitAny": true,
         "removeComments": true,
         "preserveConstEnums": true,
-        "sourceMap": false,
+        "sourceMap": true,
         "outDir": "./staging/core/",
         "moduleResolution": "node",
         "allowJs": true
     },
     "exclude": [
-        "node_modules", "staging", "js-adapter"
+        "node_modules",
+        "staging",
+        "js-adapter"
     ]
 }

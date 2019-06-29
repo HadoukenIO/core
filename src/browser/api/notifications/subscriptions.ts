@@ -1,4 +1,4 @@
-import * as Rx from 'rx';
+import * as Rx from 'rxjs';
 import * as seqs from './observable_sequences';
 import NoteAction from './note_action';
 import {
@@ -71,7 +71,7 @@ ofEvents.on(route.window('closed', '*'), (e: any) => {
             const {uuid, name} = e.data[0];
 
             if (Window.isNotification(name)) {
-                seqs.removes.onNext({uuid, name});
+                seqs.removes.next({uuid, name});
             }
         } catch (e) {
             writeToLog('info', e);
@@ -171,7 +171,7 @@ seqs.position
 
 seqs.noteStack
     .subscribe(liveNotes => {
-        seqs.position.onNext(liveNotes);
+        seqs.position.next(liveNotes);
     });
 
 seqs.isAnimating
@@ -185,7 +185,7 @@ seqs.isAnimating
         ofEvents.emit(route('notifications', 'listener/'), payload); // legacy trailing slash; do not remove!
     });
 
-seqs.removes.subscribe((removedOpts: Object) => {
+seqs.removes.subscribe((removedOpts: object) => {
     cleanPendingNotes ();
 
     try {
@@ -348,7 +348,7 @@ function createQCounterNumPendingMessage() {
     };
 }
 
-function positionWindowsImmediate(liveNotes: Object[]) {
+function positionWindowsImmediate(liveNotes: object[]) {
     try {
         const {bottom} = getPrimaryMonitorAvailableRect();
         const defaultTop = bottom - 100;
@@ -497,7 +497,7 @@ function handleNoteCreated(msg: NotificationMessage): void {
     if (idx !== -1) {
         notesToBeCreated.splice(idx, 1);
     }
-    seqs.createdNotes.onNext({ identity, options });
+    seqs.createdNotes.next({ identity, options });
 }
 
 export function routeRequest(id: any, msg: NotificationMessage, ack: any) {
@@ -548,7 +548,7 @@ export function routeRequest(id: any, msg: NotificationMessage, ack: any) {
             break;
 
         case NoteAction.animating:
-            seqs.isAnimating.onNext(data);
+            seqs.isAnimating.next(data);
             break;
 
         case NoteAction.qQuery:
@@ -572,7 +572,7 @@ function requestNoteClose(msg: NotificationMessage): void {
         msg.id.uuid = NOTE_APP_UUID;
     }
 
-    seqs.requestNoteClose.onNext(msg);
+    seqs.requestNoteClose.next(msg);
 }
 
 function dispatchMessageToNote (msg: NotificationMessage): void {
@@ -682,7 +682,7 @@ function closeNotification(req: NotificationMessage): void {
 }
 
 function updateAnimationState(animationState: boolean): void {
-    seqs.isAnimating.onNext(<any> {
+    seqs.isAnimating.next(<any> {
         animating: animationState,
         from: {}
     });
@@ -701,13 +701,9 @@ function getPrimaryMonitorRect(): AvailableRect {
 }
 
 function scheduleNoteClose(req: NotificationMessage, timeout: number): void {
-    Rx.Scheduler.default.scheduleFuture(req,
-        timeout,
-        (scheduler: any, request: any) => {
-            seqs.requestNoteClose.onNext(request);
-
-            return scheduler;
-        });
+    Rx.Scheduler.asap.schedule((request: any) => {
+            seqs.requestNoteClose.next(request);
+        }, timeout);
 }
 
 function shouldCreatePendingNote(): boolean {
