@@ -351,7 +351,7 @@ function subToGlobalWinEventHooks(): void {
     globalAllWindowsEventHooks.on('EVENT_OBJECT_FOCUS', (sender, rawNativeWindowInfo) => {
       const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
       const previousIdentity = { uuid: previousFocusedNativeWindow.uuid };
-      const previousFocusedRegisteredNativeWindow = findExternalWindow(previousIdentity);
+      const previousFocusedRegisteredNativeWindow = getRegisteredExternalWindow(previousIdentity);
 
       if (
         previousFocusedRegisteredNativeWindow &&
