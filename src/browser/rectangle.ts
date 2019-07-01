@@ -588,7 +588,7 @@ function propMoveThroughGraph (
     const distances = new Map();
     let movedRef = rects[refVertex];
 
-    if (movedRef.hasIdenticalBounds( cachedBounds)) {
+    if (movedRef.hasIdenticalBounds(cachedBounds)) {
         // This is the leader, move it to the proposed bounds
         movedRef = Rectangle.CREATE_FROM_BOUNDS(proposedBounds);
     } else {
@@ -615,7 +615,7 @@ function propMoveThroughGraph (
                     toVisit.push(v);
                     distances.set(v, distances.get(u) + 1);
                     
-                    const visitedClone = JSON.parse(JSON.stringify(visited));
+                    const visitedClone = [...visited];
                     propMoveThroughGraph(rects, v, rects[refVertex], movedRef, visitedClone);
                     visited.push(v);
                 }
