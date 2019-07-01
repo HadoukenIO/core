@@ -868,20 +868,22 @@ export function getWebContentsInitialOptionSet(webContentsId: number) {
 }
 
 function getOptionsFromOpenFinWindow(ofWin: Shapes.InjectableContext) {
-    const options = ofWin._options;
-    const { uuid, name } = ofWin;
-    const entityInfo = getEntityInfo({ uuid, name });
-    const elIPCConfig = {
-        channels: electronIPC.channels
-    };
-    const socketServerState = <PortInfo>getSocketServerState();
-    const enableChromiumBuild = isEnableChromiumBuild();
-    return {
-        options,
-        entityInfo,
-        elIPCConfig,
-        enableChromiumBuild,
-        socketServerState,
-        frames: Array.from(ofWin.frames.values())
-    };
+    if (ofWin) {
+        const options = ofWin._options;
+        const { uuid, name } = options;
+        const entityInfo = getEntityInfo({ uuid, name });
+        const elIPCConfig = {
+            channels: electronIPC.channels
+        };
+        const socketServerState = <PortInfo>getSocketServerState();
+        const enableChromiumBuild = isEnableChromiumBuild();
+        return {
+            options,
+            entityInfo,
+            elIPCConfig,
+            enableChromiumBuild,
+            socketServerState,
+            frames: Array.from(ofWin.frames.values())
+        };
+    }
 }
