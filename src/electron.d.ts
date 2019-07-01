@@ -47,8 +47,8 @@ declare namespace Electron {
     netLog: NetLog;
     net: Net;
     Notification: typeof Notification;
-    powerMonitor: PowerMonitor;
     powerSaveBlocker: PowerSaveBlocker;
+    powerMonitor: PowerMonitor;
     ProcessInfo: typeof ProcessInfo;
     ProcessMonitor: typeof ProcessMonitor;
     protocol: Protocol;
@@ -56,24 +56,24 @@ declare namespace Electron {
     screen: Screen;
     session: typeof Session;
     shell: Shell;
-    systemPreferences: SystemPreferences;
     TouchBarButton: typeof TouchBarButton;
+    systemPreferences: SystemPreferences;
     TouchBarColorPicker: typeof TouchBarColorPicker;
     TouchBarGroup: typeof TouchBarGroup;
     TouchBarLabel: typeof TouchBarLabel;
     TouchBarPopover: typeof TouchBarPopover;
     TouchBarScrubber: typeof TouchBarScrubber;
     TouchBarSegmentedControl: typeof TouchBarSegmentedControl;
-    TouchBarSlider: typeof TouchBarSlider;
     TouchBarSpacer: typeof TouchBarSpacer;
+    TouchBarSlider: typeof TouchBarSlider;
     TouchBar: typeof TouchBar;
-    Tray: typeof Tray;
     webContents: typeof WebContents;
+    Tray: typeof Tray;
     webFrame: WebFrame;
-    WebRequest: typeof WebRequest;
     webviewTag: WebviewTag;
-    WinEventHookEmitter: typeof WinEventHookEmitter;
+    WebRequest: typeof WebRequest;
     WindowTransaction: typeof WindowTransaction;
+    WinEventHookEmitter: typeof WinEventHookEmitter;
   }
 
   interface MainInterface extends CommonInterface {
@@ -101,8 +101,8 @@ declare namespace Electron {
   const nativeImage: typeof NativeImage;
   const netLog: NetLog;
   const net: Net;
-  const powerMonitor: PowerMonitor;
   const powerSaveBlocker: PowerSaveBlocker;
+  const powerMonitor: PowerMonitor;
   const protocol: Protocol;
   const remote: Remote;
   const screen: Screen;
@@ -4314,10 +4314,6 @@ If the size is unknown, it returns 0.
     // Docs: http://electronjs.org/docs\api\external-process
 
     /**
-     * ExternalProcess
-     */
-    constructor();
-    /**
      * attaches to the application specified by <pid>. <pid> is the process id of a
      * running process.
 
@@ -4338,6 +4334,10 @@ Returns the process id and handle in an object.
 Terminates the process.
      */
     static terminate(): void;
+    /**
+     * ExternalProcess
+     */
+    constructor();
   }
 
   interface FileFilter {
@@ -12859,6 +12859,11 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * flags.
      */
     flags: number;
+    /**
+     * Whether to convert the bounds (w/h/x/y) from DIP to screen values. `true` by
+     * default.
+     */
+    scale?: boolean;
   }
 
   interface WinEventHookEmitterConstructorOptions {
