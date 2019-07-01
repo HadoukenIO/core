@@ -43,6 +43,8 @@ const rendererBatchingBaseSettings = {
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
+    const enableNode = process.argv.indexOf('--enable-electron-apis') !== -1 &&
+        process.buildFlags.enableElectronAPIs;
     return {
         'accelerator': {
             'devtools': false,
@@ -87,7 +89,7 @@ function five0BaseOptions() {
                 'iframe': iframeBaseSettings
             },
             'disableInitialReload': false,
-            'node': false,
+            'node': enableNode,
             'v2Api': true
         },
         'frame': true,
