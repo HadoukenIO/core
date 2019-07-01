@@ -34,7 +34,7 @@ let me = fs.readFileSync(path.join(__dirname, 'api-decorator.js'), 'utf8');
 me = me.slice(13);
 
 const api = (webContentsId, initialOptions) => {
-    const windowOptionSet = initialOptions || coreState.getWebContentsInitialOptionSet(webContentsId);
+    const windowOptionSet = initialOptions || coreState.getWebContentsInitialOptionSet(webContentsId) || {};
     const mainWindowOptions = windowOptionSet.options || {};
     const enableV2Api = (mainWindowOptions.experimental || {}).v2Api;
     const v2AdapterShim = (!enableV2Api ? '' : jsAdapterV2);
