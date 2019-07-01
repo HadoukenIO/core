@@ -588,7 +588,7 @@ function propMoveThroughGraph (
     const distances = new Map();
     let movedRef = rects[refVertex];
 
-    if (movedRef.hasIdenticalBounds(cachedBounds)) {
+    if (movedRef.hasIdenticalBounds( cachedBounds)) {
         // This is the leader, move it to the proposed bounds
         movedRef = Rectangle.CREATE_FROM_BOUNDS(proposedBounds);
     } else {
@@ -603,20 +603,26 @@ function propMoveThroughGraph (
     distances.set(refVertex, 0);
     visited.push(refVertex);
 
+    const toVisit = [refVertex];
     // If this rect has been moved, need to propagate the move to any touching edges
     if(!rects[refVertex].hasIdenticalBounds(movedRef)) {
-        const e = (<number [][]>edges).filter(([uu]): boolean => uu === refVertex);
+        while (toVisit.length) {
+            const u = toVisit.shift();
+            const e = (<number [][]>edges).filter(([uu]): boolean => uu === u);
 
-        e.forEach(([u, v]) => {
-            if (distances.get(v) === Infinity && !visited.includes(v)) {
-                distances.set(v, distances.get(u) + 1);
-                
-                propMoveThroughGraph(rects, v, rects[refVertex], movedRef, visited);
-                visited.push(v);
-            }
-        });
-        rects[refVertex] = movedRef;
+            e.forEach(([u, v]) => {
+                if (!visited.includes(v) && distances.get(v) === Infinity) {
+                    toVisit.push(v);
+                    distances.set(v, distances.get(u) + 1);
+                    
+                    const visitedClone = JSON.parse(JSON.stringify(visited));
+                    propMoveThroughGraph(rects, v, rects[refVertex], movedRef, visitedClone);
+                    visited.push(v);
+                }
+            });
+        }
     }
+    rects[refVertex] = movedRef;
     return rects;
 }
 
