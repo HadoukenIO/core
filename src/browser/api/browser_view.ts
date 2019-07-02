@@ -16,6 +16,9 @@ export interface BrowserViewOpts extends BrowserViewCreationOptions {
 }
 
 export async function create(options: BrowserViewOpts) {
+    if (!options.target) {
+        throw new Error('Must supply target identity');
+    }
     const targetWin = getWindowByUuidName(options.target.uuid, options.target.name);
     if (!targetWin) {
         throw new Error('Target Window could not be found');
