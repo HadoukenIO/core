@@ -317,14 +317,16 @@
         }
 
         // Collect performance data and send it as an event
-        let payload = {
-            name: initialOptions.name,
-            uuid: initialOptions.uuid
-        };
-        raiseEventSync(`window/performance-report/${initialOptions.uuid}-${initialOptions.name}`, Object.assign(payload, performance.toJSON()));
-        asyncApiCall('write-to-log', {
-            level: 'info',
-            message: `[Performance] [${initialOptions.uuid} - ${initialOptions.name}]: ${JSON.stringify(performance)}`
+        deferByTick(() => {
+            let payload = {
+                name: initialOptions.name,
+                uuid: initialOptions.uuid
+            };
+            raiseEventSync(`window/performance-report/${initialOptions.uuid}-${initialOptions.name}`, Object.assign(payload, performance.toJSON()));
+            asyncApiCall('write-to-log', {
+                level: 'info',
+                message: `[Performance] [${initialOptions.uuid} - ${initialOptions.name}]: ${JSON.stringify(performance)}`
+            });
         });
     });
 
