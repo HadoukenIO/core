@@ -50,7 +50,7 @@ export const SystemApiMap: APIHandlerMap = {
     'authenticate-proxy-socket': authenticateProxySocket,
     'convert-options': convertOptions,
     'delete-cache-request': { apiFunc: deleteCacheRequest, apiPath: '.deleteCacheOnExit' },
-    'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset' },
+    'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset', defaultPermission: false },
     'download-preload-scripts': { apiFunc: downloadPreloadScripts, apiPath: '.downloadPreloadScripts'},
     'download-runtime': { apiFunc: downloadRuntime, apiPath: '.downloadRuntime' },
     'exit-desktop': { apiFunc: exitDesktop, apiPath: '.exit' },
@@ -83,7 +83,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-service-configuration': getServiceConfiguration,
     'get-preload-scripts': getPreloadScripts,
     'get-version': getVersion,
-    'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess' },
+    'launch-external-process': { apiFunc: launchExternalProcess, apiPath: '.launchExternalProcess', defaultPermission: false },
     'list-logs': { apiFunc: listLogs, apiPath: '.getLogList' },
     'monitor-external-process': { apiFunc: monitorExternalProcess, apiPath: '.monitorExternalProcess' },
     'open-url-with-browser': openUrlWithBrowser,
@@ -93,7 +93,8 @@ export const SystemApiMap: APIHandlerMap = {
     'read-registry-value': {
         apiFunc: readRegistryValue,
         apiPath: '.readRegistryValue',
-        apiPolicyDelegate: ReadRegistryValuePolicyDelegate
+        apiPolicyDelegate: ReadRegistryValuePolicyDelegate,
+        defaultPermission: false
     },
     'release-external-process': { apiFunc: releaseExternalProcess, apiPath: '.releaseExternalProcess' },
     'resolve-uuid': resolveUuid,
@@ -104,7 +105,7 @@ export const SystemApiMap: APIHandlerMap = {
     'set-min-log-level': setMinLogLevel,
     'show-developer-tools': showDeveloperTools,
     'start-crash-reporter': startCrashReporter,
-    'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess' },
+    'terminate-external-process': { apiFunc: terminateExternalProcess, apiPath: '.terminateExternalProcess', defaultPermission: false },
     'update-proxy': updateProxy,
     'view-log': { apiFunc: viewLog, apiPath: '.getLog' },
     'write-to-log': writeToLog

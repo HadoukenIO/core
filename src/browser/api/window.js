@@ -486,6 +486,9 @@ Window.create = function(id, opts) {
         // be made to be the parent's options if that makes more sense...
         baseOpts = coreState.getMainWindowOptions(id) || {};
         _options = convertOptions.convertToElectron(Object.assign({}, baseOpts, opts));
+        if (!_.has(opts, 'permissions')) {
+            delete _options.permissions;
+        }
 
         // (taskbar) a child window should be grouped in with the application
         // if a taskbarIconGroup isn't specified
