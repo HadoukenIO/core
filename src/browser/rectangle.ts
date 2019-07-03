@@ -342,7 +342,7 @@ export class Rectangle {
         return new Rectangle(this.x + delta.x, this.y + delta.y, this.width + delta.width, this.height + delta.height, this.opts);
     }
 
-    public propogateMoveToThisRect = (leaderStartBounds: RectangleBase, proposedLeaderMove: RectangleBase): Rectangle => {
+    public propagateMoveToThisRect = (leaderStartBounds: RectangleBase, proposedLeaderMove: RectangleBase): Rectangle => {
         
         const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(leaderStartBounds));
         const currLeader = Rectangle.CREATE_FROM_BOUNDS(proposedLeaderMove);
@@ -593,7 +593,7 @@ function propMoveThroughGraph (
         movedRef = Rectangle.CREATE_FROM_BOUNDS(proposedBounds);
     } else {
         // This rect is not the leader, see if it needs to be move and if so, move it
-        movedRef = movedRef.propogateMoveToThisRect(cachedBounds, proposedBounds);
+        movedRef = movedRef.propagateMoveToThisRect(cachedBounds, proposedBounds);
     }
 
     for (let v in vertices) {
