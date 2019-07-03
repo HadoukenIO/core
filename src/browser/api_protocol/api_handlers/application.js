@@ -32,7 +32,7 @@ let successAck = {
     success: true
 };
 
-module.exports.applicationApiMap = {
+export const applicationApiMap = {
     'close-application': closeApplication,
     'create-application': createApplication,
     'create-child-window': createChildWindow,
@@ -66,8 +66,8 @@ module.exports.applicationApiMap = {
     'wait-for-hung-application': waitForHungApplication
 };
 
-module.exports.init = function() {
-    apiProtocolBase.registerActionMap(module.exports.applicationApiMap, 'Application');
+export const init = function() {
+    apiProtocolBase.registerActionMap(applicationApiMap, 'Application');
 };
 
 function destroyApplication(identity, message, ack, nack) {

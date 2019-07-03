@@ -1,11 +1,10 @@
-/*
+/**
     src/browser/api/window.js
- */
+ **/
 
 // build-in modules
 let fs = require('fs');
 let path = require('path');
-let url = require('url');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
@@ -18,7 +17,7 @@ const crypto = require('crypto');
 import * as Rx from 'rxjs';
 
 // local modules
-let animations = require('../animations.js');
+import animations from '../animations';
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 let convertOptions = require('../convert_options.js');
@@ -35,6 +34,7 @@ import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
 import { FrameInfo } from './frame';
 import { System } from './system';
+import * as WebContents from './webcontents';
 import { isFileUrl, isHttpUrl, getIdentityFromObject, isObject, mergeDeep } from '../../common/main';
 import {
     DEFAULT_RESIZE_REGION_SIZE,
@@ -52,7 +52,7 @@ import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
 const windowPosCacheFolder = 'winposCache';
-let Window = {}; // jshint ignore:line
+export const Window = {}; // jshint ignore:line
 const disabledFrameRef = new Map();
 
 let browserWindowEventMap = {
@@ -486,6 +486,9 @@ Window.create = function(id, opts) {
         // be made to be the parent's options if that makes more sense...
         baseOpts = coreState.getMainWindowOptions(id) || {};
         _options = convertOptions.convertToElectron(Object.assign({}, baseOpts, opts));
+        if (!_.has(opts, 'permissions')) {
+            delete _options.permissions;
+        }
 
         // (taskbar) a child window should be grouped in with the application
         // if a taskbarIconGroup isn't specified
@@ -1074,7 +1077,35 @@ Window.animate = function(identity, transitions, options = {}, callback = () => 
         animationMeta.interrupt = true;
     }
 
-    animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
+    const { size } = transitions;
+
+    if (!size) {
+        animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
+        return;
+    }
+
+    if (!('_options' in browserWindow)) {
+        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
+        return;
+    }
+
+    let finalWidth = browserWindow._options.width;
+    if (size.width) {
+        finalWidth = size.relative ? finalWidth + size.width : size.width;
+    }
+
+    let finalHeight = browserWindow._options.height;
+    if (size.height) {
+        finalHeight = size.relative ? finalHeight + size.height : size.height;
+    }
+
+    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, finalWidth, finalHeight);
+
+    if (newBoundsWithinConstraints) {
+        animations.getAnimationHandler().add(browserWindow, animationMeta, animationTween, callback, errorCallback);
+    } else {
+        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
+    }
 };
 
 Window.blur = function(identity) {
@@ -1193,9 +1224,7 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
         return;
     }
 
-    browserWindow.webContents.executeJavaScript(code, true).then(result => {
-        callback(undefined, result);
-    });
+    WebContents.executeJavascript(browserWindow.webContents, code, callback);
 };
 
 Window.flash = function(identity) {
@@ -1272,23 +1301,16 @@ Window.getGroup = function(identity) {
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
     const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
-    const webContents = browserWindow.webContents;
-    const windowInfo = {
-        canNavigateBack: webContents.canGoBack(),
-        canNavigateForward: webContents.canGoForward(),
+    const windowInfo = Object.assign({
         preloadScripts,
-        title: webContents.getTitle(),
-        url: webContents.getURL()
-    };
+    }, WebContents.getInfo(browserWindow.webContents));
     return windowInfo;
 };
 
 
 Window.getAbsolutePath = function(identity, path) {
     let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
-    let windowURL = browserWindow.webContents.getURL();
-
-    return (path || path === 0) ? url.resolve(windowURL, path) : '';
+    return (path || path === 0) ? WebContents.getAbsolutePath(browserWindow.webContents, path) : '';
 };
 
 
@@ -1494,33 +1516,28 @@ Window.moveTo = function(identity, left, top) {
 };
 
 Window.navigate = function(identity, url) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate');
-    browserWindow.webContents.loadURL(url);
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate');
+    return WebContents.navigate(browserWindow.webContents, url);
 };
 
 Window.navigateBack = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate back');
-    browserWindow.webContents.goBack();
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate back');
+    return WebContents.navigateBack(browserWindow.webContents);
 };
 
 Window.navigateForward = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
-    browserWindow.webContents.goForward();
+    const browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
+    return WebContents.navigateForward(browserWindow.webContents);
 };
 
 Window.reload = function(identity, ignoreCache = false) {
-    let browserWindow = getElectronBrowserWindow(identity, 'reload');
-
-    if (!ignoreCache) {
-        browserWindow.webContents.reload();
-    } else {
-        browserWindow.webContents.reloadIgnoringCache();
-    }
+    const browserWindow = getElectronBrowserWindow(identity, 'reload');
+    WebContents.reload(browserWindow.webContents, ignoreCache);
 };
 
 Window.stopNavigation = function(identity) {
-    let browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
-    browserWindow.webContents.stop();
+    const browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
+    WebContents.stopNavigation(browserWindow.webContents);
 };
 
 Window.removeEventListener = function(identity, type, listener) {
@@ -1528,24 +1545,83 @@ Window.removeEventListener = function(identity, type, listener) {
     ofEvents.removeListener(route.window(type, browserWindow.id), listener);
 };
 
+function areNewBoundsWithinConstraints(options, width, height) {
+    const {
+        minWidth,
+        minHeight,
+        maxWidth,
+        maxHeight,
+        aspectRatio
+    } = options;
 
-Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor) {
+    if (typeof width !== 'number' && typeof height !== 'number') {
+        return true;
+    }
+
+    if (typeof height !== 'number') {
+        return (width >= minWidth) && (maxWidth === -1 || width <= maxWidth);
+    }
+
+    if (typeof width !== 'number') {
+        return (height >= minHeight) && (maxHeight === -1 || height <= maxHeight);
+    }
+
+    const acceptableWidth = (width >= minWidth) && (maxWidth === -1 || width <= maxWidth);
+    const acceptableHeight = (height >= minHeight) && (maxHeight === -1 || height <= maxHeight);
+
+    // Check what the new aspect ratio would be at the proposed width/height. Precise to two decimal places.
+    const roundedProposedRatio = Math.round(100 * (width / height)) / 100;
+    const roundedAspectRatio = Math.round(100 * aspectRatio) / 100;
+
+    return acceptableWidth && acceptableHeight && (aspectRatio <= 0 || roundedProposedRatio === roundedAspectRatio);
+}
+
+Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor, callback, errorCallback) {
     const browserWindow = getElectronBrowserWindow(identity);
     const opts = { anchor, deltaHeight, deltaWidth };
     if (!browserWindow) {
         return;
     }
-    NativeWindow.resizeBy(browserWindow, opts);
+
+    if (!('_options' in browserWindow)) {
+        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
+        return;
+    }
+
+    const newWidth = browserWindow._options.width + deltaWidth;
+    const newHeight = browserWindow._options.height + deltaHeight;
+
+    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, newWidth, newHeight);
+
+    if (newBoundsWithinConstraints) {
+        NativeWindow.resizeBy(browserWindow, opts);
+        callback();
+    } else {
+        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
+    }
 };
 
 
-Window.resizeTo = function(identity, width, height, anchor) {
+Window.resizeTo = function(identity, width, height, anchor, callback, errorCallback) {
     const browserWindow = getElectronBrowserWindow(identity);
     const opts = { anchor, height, width };
     if (!browserWindow) {
         return;
     }
-    NativeWindow.resizeTo(browserWindow, opts);
+
+    if (!('_options' in browserWindow)) {
+        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
+        return;
+    }
+
+    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, width, height);
+
+    if (newBoundsWithinConstraints) {
+        NativeWindow.resizeTo(browserWindow, opts);
+        callback();
+    } else {
+        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
+    }
 };
 
 
@@ -1564,10 +1640,26 @@ Window.setAsForeground = function(identity) {
 };
 
 
-Window.setBounds = function(identity, left, top, width, height) {
+Window.setBounds = function(identity, left, top, width, height, callback, errorCallback) {
     const browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
     const opts = { height, left, top, width };
-    NativeWindow.setBounds(browserWindow, opts);
+    if (!browserWindow) {
+        return;
+    }
+
+    if (!('_options' in browserWindow)) {
+        errorCallback(new Error(`No window options present for uuid: ${identity.uuid} name: ${identity.name}`));
+        return;
+    }
+
+    const newBoundsWithinConstraints = areNewBoundsWithinConstraints(browserWindow._options, width, height);
+
+    if (newBoundsWithinConstraints) {
+        NativeWindow.setBounds(browserWindow, opts);
+        callback();
+    } else {
+        errorCallback(new Error(`Proposed window bounds violate size constraints for uuid: ${identity.uuid} name: ${identity.name}`));
+    }
 };
 
 
@@ -1760,15 +1852,12 @@ Window.authenticate = function(identity, username, password, callback) {
 
 Window.getZoomLevel = function(identity, callback) {
     let browserWindow = getElectronBrowserWindow(identity, 'get zoom level for');
-
-    callback(browserWindow.webContents.getZoomLevel());
+    WebContents.getZoomLevel(browserWindow.webContents, callback);
 };
 
 Window.setZoomLevel = function(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
-
-    // browserWindow.webContents.setZoomLevel(level); // zooms all windows loaded from same domain
-    browserWindow.webContents.send('zoom', { level }); // zoom just this window
+    WebContents.setZoomLevel(browserWindow.webContents, level);
 };
 
 Window.onUnload = (identity) => {
@@ -2418,5 +2507,3 @@ function boundsVisible(bounds, monitorInfo) {
     }
     return visible;
 }
-
-module.exports.Window = Window;

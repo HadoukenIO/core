@@ -1,7 +1,7 @@
 import { ExternalApplication } from '../../api/external_application';
 import SubscriptionManager from '../../subscription_manager';
 const WebSocketStrategy = require('../transport_strategy/ws_strategy').WebSocketStrategy;
-const ElipcStrategy = require('../transport_strategy/elipc_strategy').ElipcStrategy;
+import { ElipcStrategy } from '../transport_strategy/elipc_strategy';
 
 import { default as RequestHandler } from '../transport_strategy/base_handler';
 import { MessagePackage } from '../transport_strategy/api_transport_base';

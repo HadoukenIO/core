@@ -82,7 +82,13 @@
             singleFrameOnly: singleFrameOnly
         };
 
-        let responsePayload = JSON.parse(ipc.sendSync(renderFrameId, channel, apiPackage)).payload;
+        const syncResult = ipc.sendSync(renderFrameId, channel, apiPackage);
+        let responsePayload;
+        if (syncResult) {
+            responsePayload = JSON.parse(syncResult).payload;
+        } else {
+            responsePayload = { error: new Error(`Undefined result for ${channel}`) };
+        }
 
         if (responsePayload.success) {
             return responsePayload.data;
@@ -319,6 +325,11 @@
 
     // check if a license key is valid or not
     if (!isLicenseKeyValid()) {
+        // log invalid license key info in debug.log
+        asyncApiCall('write-to-log', {
+            level: 'info',
+            message: `[licenseKey] [${initialOptions.uuid} - ${initialOptions.name}]: invalid OpenFin license key`
+        });
         console.warn('WARNING : Application does not have a valid OpenFin license key implemented in application manifest. ' +
             'To obtain a valid license key or to begin your 30 days of free support, please contact support@openfin.co.');
     }
