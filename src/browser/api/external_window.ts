@@ -206,9 +206,9 @@ function getKey(externalWindow: Shapes.ExternalWindow): string {
 }
 
 /*
-  Finds and returns registerd external window
+  Returns registerd external window
 */
-export function findExternalWindow(identity: Identity): Shapes.ExternalWindow | undefined {
+export function getRegisteredExternalWindow(identity: Identity): Shapes.ExternalWindow | undefined {
   const { uuid } = identity;
   return externalWindows.get(uuid);
 }
@@ -230,7 +230,7 @@ export function getExternalWindow(identity: Identity): Shapes.ExternalWindow {
 
   if (!externalWindow) {
     if (!doesExternalWindowExist(uuid)) {
-      throw new Error(`Attempted to wrap a non-existent external window using uuid: ${uuid}`);
+      throw new Error(`Attempted to interact with a nonexistent external window using uuid: ${uuid}`);
     }
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: uuid }));
 
@@ -351,7 +351,7 @@ function subToGlobalWinEventHooks(): void {
     globalAllWindowsEventHooks.on('EVENT_OBJECT_FOCUS', (sender: Event, rawNativeWindowInfo: NativeWindowInfo) => {
       const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
       const previousIdentity = { uuid: previousFocusedNativeWindow.uuid };
-      const previousFocusedRegisteredNativeWindow = findExternalWindow(previousIdentity);
+      const previousFocusedRegisteredNativeWindow = getRegisteredExternalWindow(previousIdentity);
 
       if (
         previousFocusedRegisteredNativeWindow &&

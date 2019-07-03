@@ -82,7 +82,13 @@
             singleFrameOnly: singleFrameOnly
         };
 
-        let responsePayload = JSON.parse(ipc.sendSync(renderFrameId, channel, apiPackage)).payload;
+        const syncResult = ipc.sendSync(renderFrameId, channel, apiPackage);
+        let responsePayload;
+        if (syncResult) {
+            responsePayload = JSON.parse(syncResult).payload;
+        } else {
+            responsePayload = { error: new Error(`Undefined result for ${channel}`) };
+        }
 
         if (responsePayload.success) {
             return responsePayload.data;

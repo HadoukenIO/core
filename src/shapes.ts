@@ -12,6 +12,7 @@ export interface Identity {
     uuid: string;
     name?: string;
     runtimeUuid?: string;
+    entityType?: EntityType;
 }
 
 export interface ProviderIdentity extends Identity {
@@ -153,6 +154,7 @@ export interface WindowOptions {
     };
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
+    api?: any;
     applicationIcon?: string;
     appLogFlushInterval?: number;
     aspectRatio?: number;
@@ -378,7 +380,8 @@ export interface APIHandlerMap {
         apiPath?: string;
         apiPolicyDelegate?: {
             checkPermissions: (args: any) => boolean;
-        }
+        },
+        defaultPermission?: boolean
     };
 }
 

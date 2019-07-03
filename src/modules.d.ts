@@ -33,6 +33,8 @@ declare namespace Electron {
         getOwnerBrowserWindow: () => BrowserWindow | void;
         mainFrameRoutingId: number;
         session: Session;
+        //DELETE IN v13
+        sendToFrame(frameId: number, channel: string, ...args: any[]): void;
     }
 
     export interface BrowserWindow {
