@@ -20,7 +20,7 @@ export const webContentsApiMap = {
 export function init () {
     registerActionMap(webContentsApiMap, 'Window');
 }
-function executeJavascript(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
+async function executeJavascript(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void) {
     const { payload } = message;
     const { code } = payload;
     const dataAck = Object.assign({}, successAck);
@@ -31,14 +31,8 @@ function executeJavascript(identity: Identity, message: APIMessage, ack: Acker, 
 
     while (pUuid) {
         if (pUuid === identity.uuid) {
-            return WebContents.executeJavascript(browserWin.webContents, code, (err: Error, result: any) => {
-                if (err) {
-                    nack(err); // TODO: this nack doesn't follow the protocol
-                } else {
-                    dataAck.data = result;
-                    ack(dataAck);
-                }
-            });
+            dataAck.data = WebContents.executeJavascript(browserWin.webContents, code);
+            return dataAck;
         }
         pUuid = Application.getParentApplication({
             uuid: pUuid

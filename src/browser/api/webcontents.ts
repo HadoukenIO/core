@@ -1,9 +1,7 @@
 import * as url from 'url';
 
-export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {
-    webContents.executeJavaScript(code, true, (result) => {
-        callback(undefined, result);
-    });
+export function executeJavascript(webContents: Electron.WebContents, code: string): Promise<any> {
+    return webContents.executeJavaScript(code, true);
 }
 
 export function getInfo(webContents: Electron.WebContents) {
