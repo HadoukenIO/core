@@ -12,6 +12,7 @@ export interface Identity {
     uuid: string;
     name?: string;
     runtimeUuid?: string;
+    entityType?: EntityType;
 }
 
 export interface ProviderIdentity extends Identity {
@@ -379,7 +380,8 @@ export interface APIHandlerMap {
         apiPath?: string;
         apiPolicyDelegate?: {
             checkPermissions: (args: any) => boolean;
-        }
+        },
+        defaultPermission?: boolean
     };
 }
 
