@@ -1,4 +1,4 @@
-// Type definitions for Electron 7.0.0-nightly.20190609
+// Type definitions for Electron 7.0.0-nightly.20190701
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -396,7 +396,7 @@ declare namespace Electron {
     addListener(event: 'gpu-info-update', listener: Function): this;
     removeListener(event: 'gpu-info-update', listener: Function): this;
     /**
-     * Emitted when the gpu process crashes or is killed.
+     * Emitted when the GPU process crashes or is killed.
      */
     on(event: 'gpu-process-crashed', listener: (event: Event,
                                                 killed: boolean) => void): this;
@@ -464,7 +464,7 @@ declare namespace Electron {
                                       path: string) => void): this;
     /**
      * Emitted when the user wants to open a URL with the application. Your
-     * application's `Info.plist` file must define the url scheme within the
+     * application's `Info.plist` file must define the URL scheme within the
      * `CFBundleURLTypes` key, and set `NSPrincipalClass` to `AtomApplication`.
      * 
 You should call `event.preventDefault()` if you want to handle this event.
@@ -871,7 +871,7 @@ This method can only be called before app is ready.
      */
     getAllNativeWindowInfo(skipOwnWindows: boolean): NativeWindowInfo[];
     /**
-     * Array of `ProcessMetric` objects that correspond to memory and cpu usage
+     * Array of `ProcessMetric` objects that correspond to memory and CPU usage
      * statistics of all the processes associated with the app.
      */
     getAppMetrics(): ProcessMetric[];
@@ -1015,7 +1015,7 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
      * The current application's name, which is the name in the application's
      * `package.json` file.
      *
-     * Usually the `name` field of `package.json` is a short lowercased name, according
+     * Usually the `name` field of `package.json` is a short lowercase name, according
      * to the npm modules spec. You should usually also specify a `productName` field,
      * which is your application's full capitalized name, and which will be preferred
      * over `name` by Electron.
@@ -1289,7 +1289,7 @@ The result message.
      * Sets or creates a directory your app's logs which can then be manipulated with
      * `app.getPath()` or `app.setPath(pathName, newPath)`.
      *
-     * On _macOS_, this directory will be set by deafault to
+     * On _macOS_, this directory will be set by default to
      * `/Library/Logs/YourAppName`, and on _Linux_ and _Windows_ it will be placed
      * inside your `userData` directory.
      */
@@ -1406,7 +1406,7 @@ Here's a very simple example of creating a custom Jump List:
      */
     setUserActivity(type: string, userInfo: any, webpageURL?: string): void;
     /**
-     * Adds `tasks` to the Tasks category of the JumpList on Windows.
+     * Adds `tasks` to the Tasks category of the Jump List on Windows.
      *
      * `tasks` is an array of `Task` objects.
      *
@@ -1518,7 +1518,7 @@ Here's a very simple example of creating a custom Jump List:
      * A `String` property that indicates the current application's name, which is the
      * name in the application's `package.json` file.
      *
-     * Usually the `name` field of `package.json` is a short lowercased name, according
+     * Usually the `name` field of `package.json` is a short lowercase name, according
      * to the npm modules spec. You should usually also specify a `productName` field,
      * which is your application's full capitalized name, and which will be preferred
      * over `name` by Electron.
@@ -1871,7 +1871,7 @@ __Note__: On macOS this event is an alias of `moved`.
     /**
      * Emitted when the document changed its title, calling `event.preventDefault()`
      * will prevent the native window's title from changing. `explicitSet` is false
-     * when title is synthesized from file url.
+     * when title is synthesized from file URL.
      */
     on(event: 'page-title-updated', listener: (event: Event,
                                                title: string,
@@ -3070,7 +3070,7 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
     /**
      * Attempts to connect to a listener with the given channel name.
      */
-    connect(channel_name: string): void;
+    connect(channel: string): void;
     /**
      * Sends the data 'msg' over the connected channel.
      */
@@ -3234,7 +3234,7 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
      */
     removeHeader(name: string): void;
     /**
-     * Adds an extra HTTP header. The header name will issued as it is without
+     * Adds an extra HTTP header. The header name will be issued as-is without
      * lowercasing. It can be called only before first write. Calling this method after
      * the first write will throw an error. If the passed value is not a `String`, its
      * `toString()` method will be called to obtain the final value.
@@ -3526,7 +3526,7 @@ Sets a cookie with `details`.
     // Docs: http://electronjs.org/docs\api\structures\cpu-usage
 
     /**
-     * The number of average idle cpu wakeups per second since the last call to
+     * The number of average idle CPU wakeups per second since the last call to
      * getCPUUsage. First call returns 0. Will always return 0 on Windows.
      */
     idleWakeupsPerSecond: number;
@@ -3551,9 +3551,9 @@ Sets a cookie with `details`.
     /**
      * Set an extra parameter to be sent with the crash report. The values specified
      * here will be sent in addition to any values set via the `extra` option when
-     * `start` was called. This API is only available on macOS, if you need to
-     * add/update extra parameters on Linux and Windows after your first call to
-     * `start` you can call `start` again with the updated `extra` options.
+     * `start` was called. This API is only available on macOS and windows, if you need
+     * to add/update extra parameters on Linux after your first call to `start` you can
+     * call `start` again with the updated `extra` options.
      */
     addExtraParameter(key: string, value: string): void;
     /**
@@ -3608,19 +3608,14 @@ Sets a cookie with `details`.
      * first call `start` you can call `addExtraParameter` on macOS or call `start`
      * again with the new/updated `extra` parameters on Linux and Windows.
      *
-     * **Note:** To collect crash reports from child process in Windows, you need to
-     * add this extra code as well. This will start the process that will monitor and
-     * send the crash reports. Replace `submitURL`, `productName` and
-     * `crashesDirectory` with appropriate values.
-     *
-     * **Note:** On macOS, Electron uses a new `crashpad` client for crash collection
-     * and reporting. If you want to enable crash reporting, initializing `crashpad`
-     * from the main process using `crashReporter.start` is required regardless of
-     * which process you want to collect crashes from. Once initialized this way, the
-     * crashpad handler collects crashes from all processes. You still have to call
-     * `crashReporter.start` from the renderer or child process, otherwise crashes from
-     * them will get reported without `companyName`, `productName` or any of the
-     * `extra` information.
+     * **Note:** On macOS and windows, Electron uses a new `crashpad` client for crash
+     * collection and reporting. If you want to enable crash reporting, initializing
+     * `crashpad` from the main process using `crashReporter.start` is required
+     * regardless of which process you want to collect crashes from. Once initialized
+     * this way, the crashpad handler collects crashes from all processes. You still
+     * have to call `crashReporter.start` from the renderer or child process, otherwise
+     * crashes from them will get reported without `companyName`, `productName` or any
+     * of the `extra` information.
      */
     start(options: CrashReporterStartOptions): void;
     /**
@@ -4239,6 +4234,8 @@ an ID representing the request.
      * The save path of the download item. This will be either the path set via
      * `downloadItem.setSavePath(path)` or the path selected from the shown save
      * dialog.
+
+**Deprecated: use the `savePath` property instead.**
      */
     getSavePath(): string;
     /**
@@ -4260,11 +4257,11 @@ If the size is unknown, it returns 0.
      */
     getTotalBytes(): number;
     /**
-     * The origin url where the item is downloaded from.
+     * The origin URL where the item is downloaded from.
      */
     getURL(): string;
     /**
-     * The complete url chain of the item including any redirects.
+     * The complete URL chain of the item including any redirects.
      */
     getURLChain(): string[];
     /**
@@ -4297,9 +4294,12 @@ If the size is unknown, it returns 0.
     /**
      * The API is only available in session's `will-download` callback function. If
      * user doesn't set the save path via the API, Electron will use the original
-     * routine to determine the save path(Usually prompts a save dialog).
+     * routine to determine the save path; this usually prompts a save dialog.
+     * 
+**Deprecated: use the `savePath` property instead.**
      */
     setSavePath(path: string): void;
+    savePath: string;
   }
 
   interface Event extends GlobalEvent {
@@ -4366,6 +4366,20 @@ Terminates the process.
      * the file lock so other processes can lock it.
      */
     tryLock(name: string): number;
+  }
+
+  interface FilePathWithHeaders {
+
+    // Docs: http://electronjs.org/docs\api\structures\file-path-with-headers
+
+    /**
+     * Additional headers to be sent.
+     */
+    headers?: Record<string, string>;
+    /**
+     * The path to the file to send.
+     */
+    path: string;
   }
 
   interface GlobalShortcut extends NodeJS.EventEmitter {
@@ -4699,12 +4713,12 @@ Retrieves the product descriptions.
     /**
      * A function that will send an IPC message to the renderer frame that sent the
      * original message that you are currently handling.  You should use this method to
-     * "reply" to the sent message in order to guaruntee the reply will go to the
+     * "reply" to the sent message in order to guarantee the reply will go to the
      * correct process and frame.
      */
     reply: Function;
     /**
-     * Set this to the value to be returned in a syncronous message
+     * Set this to the value to be returned in a synchronous message
      */
     returnValue: any;
     /**
@@ -5026,7 +5040,7 @@ For example:
     label: string;
     menu: Menu;
     registerAccelerator: boolean;
-    role?: string;
+    role?: ('undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'pasteandmatchstyle' | 'delete' | 'selectall' | 'reload' | 'forcereload' | 'toggledevtools' | 'resetzoom' | 'zoomin' | 'zoomout' | 'togglefullscreen' | 'window' | 'minimize' | 'close' | 'help' | 'about' | 'services' | 'hide' | 'hideothers' | 'unhide' | 'quit' | 'startspeaking' | 'stopspeaking' | 'close' | 'minimize' | 'zoom' | 'front' | 'appMenu' | 'fileMenu' | 'editMenu' | 'viewMenu' | 'windowMenu');
     sublabel: string;
     submenu?: Menu;
     type: ('normal' | 'separator' | 'submenu' | 'checkbox' | 'radio');
@@ -5696,8 +5710,7 @@ Calculate system idle time in seconds.
      */
     private: number;
     /**
-     * _Linux_ and _Windows_ - The amount of memory currently pinned to actual physical
-     * RAM in Kilobytes.
+     * The amount of memory currently pinned to actual physical RAM in Kilobytes.
      */
     residentSet: number;
     /**
@@ -5716,9 +5729,24 @@ Calculate system idle time in seconds.
      */
     cpu: CPUUsage;
     /**
+     * Creation time for this process. The time is represented as number of
+     * milliseconds since epoch. Since the `pid` can be reused after a process dies, it
+     * is useful to use both the `pid` and the `creationTime` to uniquely identify a
+     * process.
+     */
+    creationTime: number;
+    /**
+     * One of the following values:
+     */
+    integrityLevel?: ('untrusted' | 'low' | 'medium' | 'high' | 'unknown');
+    /**
      * Process id of the process.
      */
     pid: number;
+    /**
+     * Whether the process is sandboxed on OS level.
+     */
+    sandboxed?: boolean;
     /**
      * Process type (Browser or Tab or GPU etc).
      */
@@ -5818,14 +5846,15 @@ Calculate system idle time in seconds.
      */
     contentVersion: string;
     /**
-     * A Boolean value that indicates whether the App Store has downloadable content
-     * for this product.
-     */
-    downloadable: boolean;
-    /**
      * The locale formatted price of the product.
      */
     formattedPrice: string;
+    /**
+     * A Boolean value that indicates whether the App Store has downloadable content
+     * for this product. `true` if at least one file has been associated with the
+     * product.
+     */
+    isDownloadable: boolean;
     /**
      * A description of the product.
      */
@@ -5872,7 +5901,7 @@ Calculate system idle time in seconds.
      * Intercepts `scheme` protocol and uses `handler` as the protocol's new handler
      * which sends a `String` as a response.
      */
-    interceptStringProtocol(scheme: string, handler: (request: HandlerRequest, callback: (data?: string) => void) => void, completion?: (error: Error) => void): void;
+    interceptStringProtocol(scheme: string, handler: (request: HandlerRequest, callback: (data?: (string) | (StringProtocolResponse)) => void) => void, completion?: (error: Error) => void): void;
     /**
      * fulfilled with a boolean that indicates whether there is already a handler for
      * `scheme`.
@@ -5909,7 +5938,7 @@ Example:
      * By default the `scheme` is treated like `http:`, which is parsed differently
      * than protocols that follow the "generic URI syntax" like `file:`.
      */
-    registerFileProtocol(scheme: string, handler: (request: HandlerRequest, callback: (filePath?: string) => void) => void, completion?: (error: Error) => void): void;
+    registerFileProtocol(scheme: string, handler: (request: HandlerRequest, callback: (filePath?: (string) | (FilePathWithHeaders)) => void) => void, completion?: (error: Error) => void): void;
     /**
      * Registers a protocol of `scheme` that will send an HTTP request as a response.
      *
@@ -5922,7 +5951,7 @@ Example:
      * 
 For POST requests the `uploadData` object must be provided.
      */
-    registerHttpProtocol(scheme: string, handler: (request: HandlerRequest, callback: (redirectRequest: RedirectRequest) => void) => void, completion?: (error: Error) => void): void;
+    registerHttpProtocol(scheme: string, handler: (request: HandlerRequest, callback: (redirectRequest: CallbackRedirectRequest) => void) => void, completion?: (error: Error) => void): void;
     /**
      * **Note:** This method can only be used before the `ready` event of the `app`
      * module gets emitted and can be called only once.
@@ -5984,7 +6013,7 @@ For POST requests the `uploadData` object must be provided.
      * should be called with either a `String` or an object that has the `data`,
      * `mimeType`, and `charset` properties.
      */
-    registerStringProtocol(scheme: string, handler: (request: HandlerRequest, callback: (data?: string) => void) => void, completion?: (error: Error) => void): void;
+    registerStringProtocol(scheme: string, handler: (request: HandlerRequest, callback: (data?: (string) | (StringProtocolResponse)) => void) => void, completion?: (error: Error) => void): void;
     /**
      * Remove the interceptor installed for `scheme` and restore its original handler.
      */
@@ -5993,6 +6022,96 @@ For POST requests the `uploadData` object must be provided.
      * Unregisters the custom protocol of `scheme`.
      */
     unregisterProtocol(scheme: string, completion?: (error: Error) => void): void;
+  }
+
+  interface ProtocolRequest {
+
+    // Docs: http://electronjs.org/docs\api\structures\protocol-request
+
+    method: string;
+    referrer: string;
+    uploadData?: UploadData[];
+    url: string;
+  }
+
+  interface ProtocolResponse {
+
+    // Docs: http://electronjs.org/docs\api\structures\protocol-response
+
+    /**
+     * The charset of response body, default is `"utf-8"`.
+     */
+    charset?: string;
+    /**
+     * The response body. When returning stream as response, this is a Node.js readable
+     * stream representing the response body. When returning `Buffer` as response, this
+     * is a `Buffer`. When returning `String` as response, this is a `String`. This is
+     * ignored for other types of responses.
+     */
+    data?: (Buffer) | (string) | (NodeJS.ReadableStream);
+    /**
+     * When assigned, the `request` will fail with the `error` number . For the
+     * available error numbers you can use, please see the net error list.
+     */
+    error?: number;
+    /**
+     * An object containing the response headers. The keys must be String, and values
+     * must be either String or Array of String.
+     */
+    headers?: Record<string, (string) | (string[])>;
+    /**
+     * The HTTP `method`. This is only used for file and URL responses.
+     */
+    method?: string;
+    /**
+     * The MIME type of response body, default is `"text/html"`. Setting `mimeType`
+     * would implicitly set the `content-type` header in response, but if
+     * `content-type` is already set in `headers`, the `mimeType` would be ignored.
+     */
+    mimeType?: string;
+    /**
+     * Path to the file which would be sent as response body. This is only used for
+     * file responses.
+     */
+    path?: string;
+    /**
+     * The `referrer` URL. This is only used for file and URL responses.
+     */
+    referrer?: string;
+    /**
+     * The session used for requesting URL, by default the HTTP request will reuse the
+     * current session. Setting `session` to `null` would use a random independent
+     * session. This is only used for URL responses.
+     */
+    session?: Session;
+    /**
+     * The HTTP response code, default is 200.
+     */
+    statusCode?: number;
+    /**
+     * The data used as upload data. This is only used for URL responses when `method`
+     * is `"POST"`.
+     */
+    uploadData?: ProtocolResponseUploadData;
+    /**
+     * Download the `url` and pipe the result as response body. This is only used for
+     * URL responses.
+     */
+    url?: string;
+  }
+
+  interface ProtocolResponseUploadData {
+
+    // Docs: http://electronjs.org/docs\api\structures\protocol-response-upload-data
+
+    /**
+     * MIME type of the content.
+     */
+    contentType: string;
+    /**
+     * Content to be sent.
+     */
+    data: string;
   }
 
   interface Rectangle {
@@ -6444,9 +6563,6 @@ Returns the system's proxy configuration.
     /**
      * Adds scripts that will be executed on ALL web contents that are associated with
      * this session just before normal `preload` scripts run.
-     *
-     * **Note:** For security reasons, preload scripts can only be loaded from a
-     * subpath of the app path.
      */
     setPreloads(preloads: string[]): void;
     /**
@@ -6620,15 +6736,33 @@ Creates or updates a shortcut link at `shortcutPath`.
     /**
      * A Node.js readable stream representing the response body.
      */
-    data: NodeJS.ReadableStream;
+    data: (NodeJS.ReadableStream) | (null);
     /**
      * An object containing the response headers.
      */
-    headers: Headers;
+    headers?: Record<string, (string) | (string[])>;
     /**
      * The HTTP response code.
      */
-    statusCode: number;
+    statusCode?: number;
+  }
+
+  interface StringProtocolResponse {
+
+    // Docs: http://electronjs.org/docs\api\structures\string-protocol-response
+
+    /**
+     * Charset of the response.
+     */
+    charset?: string;
+    /**
+     * A string representing the response body.
+     */
+    data: (string) | (null);
+    /**
+     * MIME type of the response.
+     */
+    mimeType?: string;
   }
 
   interface SystemPreferences extends NodeJS.EventEmitter {
@@ -6862,17 +6996,17 @@ Returns an object with system animation settings.
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
      */
-    postLocalNotification(event: string, userInfo: Record<string, any>): void;
+    postLocalNotification(event: string, userInfo: any): void;
     /**
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
      */
-    postNotification(event: string, userInfo: Record<string, any>, deliverImmediately?: boolean): void;
+    postNotification(event: string, userInfo: any, deliverImmediately?: boolean): void;
     /**
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
      */
-    postWorkspaceNotification(event: string, userInfo: Record<string, any>): void;
+    postWorkspaceNotification(event: string, userInfo: any): void;
     /**
      * resolves if the user has successfully authenticated with Touch ID.
      *
@@ -6920,41 +7054,8 @@ Some popular `key` and `type`s are:
      * Same as `subscribeNotification`, but uses `NSNotificationCenter` for local
      * defaults. This is necessary for events such as
      * `NSUserDefaultsDidChangeNotification`.
-
-**Deprecated**
      */
-    subscribeLocalNotification(event: string, callback: (event: string, userInfo: Record<string, any>) => void): number;
-    /**
-     * Resolves with an object containing the following items:
-     *
-     * * `id` Number - The ID of this subscription
-     * * `event` String
-     * * `userInfo` Record<string, any>
-     *
-     * Same as `subscribeNotification`, but uses `NSNotificationCenter` for local
-     * defaults. This is necessary for events such as
-     * `NSUserDefaultsDidChangeNotification`.
-     */
-    subscribeLocalNotification(event: string): Promise<Electron.SubscribeLocalNotificationReturnValue>;
-    /**
-     * Resolves with an object containing the following items:
-     *
-     * * `id` Number - The ID of this subscription, which can be used to unsubscribe
-     * the `event`.
-     * * `event` String
-     * * `userInfo` Record<string, any>
-     *
-     * Subscribes to native notifications of macOS.
-     *
-     * Under the hood this API subscribes to `NSDistributedNotificationCenter`, example
-     * values of `event` are:
-     *
-     * * `AppleInterfaceThemeChangedNotification`
-     * * `AppleAquaColorVariantChanged`
-     * * `AppleColorPreferencesChangedNotification`
-     * * `AppleShowScrollBarsSettingChanged`
-     */
-    subscribeNotification(event: string): Promise<Electron.SubscribeNotificationReturnValue>;
+    subscribeLocalNotification(event: string, callback: (event: string, userInfo: any) => void): number;
     /**
      * The ID of this subscription
      *
@@ -6973,30 +7074,14 @@ Some popular `key` and `type`s are:
      * * `AppleAquaColorVariantChanged`
      * * `AppleColorPreferencesChangedNotification`
      * * `AppleShowScrollBarsSettingChanged`
-
-**Deprecated**
      */
-    subscribeNotification(event: string, callback: (event: string, userInfo: Record<string, any>) => void): number;
+    subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): number;
     /**
      * Same as `subscribeNotification`, but uses
      * `NSWorkspace.sharedWorkspace.notificationCenter`. This is necessary for events
      * such as `NSWorkspaceDidActivateApplicationNotification`.
-
-**Deprecated**
      */
-    subscribeWorkspaceNotification(event: string, callback: (event: string, userInfo: Record<string, any>) => void): void;
-    /**
-     * Resolves with an object containing the following items:
-     *
-     * * `id` Number - The ID of this subscription
-     * * `event` String
-     * * `userInfo` Record<string, any>
-     *
-     * Same as `subscribeNotification`, but uses
-     * `NSWorkspace.sharedWorkspace.notificationCenter`. This is necessary for events
-     * such as `NSWorkspaceDidActivateApplicationNotification`.
-     */
-    subscribeWorkspaceNotification(event: string): Promise<Electron.SubscribeWorkspaceNotificationReturnValue>;
+    subscribeWorkspaceNotification(event: string, callback: (event: string, userInfo: any) => void): void;
     /**
      * Same as `unsubscribeNotification`, but removes the subscriber from
      * `NSNotificationCenter`.
@@ -7273,7 +7358,7 @@ Some popular `key` and `type`s are:
     included_process_ids?: number[];
     /**
      * if the `disabled-by-default-memory-infra` category is enabled, this contains
-     * optional additional configuration for data callection. See the Chromium
+     * optional additional configuration for data collection. See the Chromium
      * memory-infra docs for more information.
      */
     memory_dump_config?: MemoryDumpConfig;
@@ -7687,10 +7772,9 @@ This value is set to false by default.
     // Docs: http://electronjs.org/docs\api\structures\upload-data
 
     /**
-     * UUID of blob data. Use [ses.getBlobData](../session.md#sesgetblobdataidentifier
-     * method to retrieve the data.
+     * UUID of blob data. Use ses.getBlobData method to retrieve the data.
      */
-    blobUUID: string;
+    blobUUID?: string;
     /**
      * Content being sent.
      */
@@ -7698,7 +7782,7 @@ This value is set to false by default.
     /**
      * Path of file being uploaded.
      */
-    file: string;
+    file?: string;
   }
 
   interface UploadFile {
@@ -9196,13 +9280,17 @@ Returns `PrinterInfo[]`.
      */
     hasFrame(frameName: string): HasFrame;
     /**
-     * Injects CSS into the current web page.
+     * A promise that resolves with a key for the inserted CSS that can later be used
+     * to remove the CSS via `contents.removeInsertedCSS(key)`.
+     *
+     * Injects CSS into the current web page and returns a unique key for the inserted
+     * stylesheet.
      */
-    insertCSS(css: string): void;
+    insertCSS(css: string): Promise<string>;
     /**
      * Inserts `text` to the focused element.
      */
-    insertText(text: string): void;
+    insertText(text: string): Promise<void>;
     /**
      * Starts inspecting element at position (`x`, `y`).
      */
@@ -9353,6 +9441,13 @@ An example of `webContents.printToPDF`:
      */
     reloadIgnoringCache(): void;
     /**
+     * Resolves if the removal was successful.
+     *
+     * Removes the inserted CSS from the current web page. The stylesheet is identified
+     * by its key, which is returned from `contents.insertCSS(css)`.
+     */
+    removeInsertedCSS(key: string): Promise<void>;
+    /**
      * Removes the specified path from DevTools workspace.
      */
     removeWorkSpace(path: string): void;
@@ -9475,7 +9570,7 @@ An example of showing devtools in a `BrowserWindow`:
     /**
      * Sets the maximum and minimum layout-based (i.e. non-visual) zoom level.
      */
-    setLayoutZoomLevelLimits(minimumLevel: number, maximumLevel: number): void;
+    setLayoutZoomLevelLimits(minimumLevel: number, maximumLevel: number): Promise<void>;
     /**
      * Overrides the user agent for this web page.
      */
@@ -9486,7 +9581,7 @@ An example of showing devtools in a `BrowserWindow`:
      * > **NOTE**: Visual zoom is disabled by default in Electron. To re-enable it,
      * call:
      */
-    setVisualZoomLevelLimits(minimumLevel: number, maximumLevel: number): void;
+    setVisualZoomLevelLimits(minimumLevel: number, maximumLevel: number): Promise<void>;
     /**
      * Setting the WebRTC IP handling policy allows you to control which IPs are
      * exposed via WebRTC. See BrowserLeaks for more details.
@@ -9626,13 +9721,22 @@ This will generate:
      */
     getZoomLevel(): number;
     /**
-     * Inserts `css` as a style sheet in the document.
+     * A key for the inserted CSS that can later be used to remove the CSS via
+     * `webFrame.removeInsertedCSS(key)`.
+     *
+     * Injects CSS into the current web page and returns a unique key for the inserted
+     * stylesheet.
      */
-    insertCSS(css: string): void;
+    insertCSS(css: string): string;
     /**
      * Inserts `text` to the focused element.
      */
     insertText(text: string): void;
+    /**
+     * Removes the inserted CSS from the current web page. The stylesheet is identified
+     * by its key, which is returned from `webFrame.insertCSS(css)`.
+     */
+    removeInsertedCSS(key: string): void;
     /**
      * Set the security origin, content security policy and name of the isolated world.
      * Note: If the `csp` is specified, then the `securityOrigin` also has to be
@@ -10130,13 +10234,17 @@ Calling `event.preventDefault()` does __NOT__ have any effect.
      */
     goToOffset(offset: number): void;
     /**
-     * Injects CSS into the guest page.
+     * A promise that resolves with a key for the inserted CSS that can later be used
+     * to remove the CSS via `<webview>.removeInsertedCSS(key)`.
+     *
+     * Injects CSS into the current web page and returns a unique key for the inserted
+     * stylesheet.
      */
-    insertCSS(css: string): void;
+    insertCSS(css: string): Promise<string>;
     /**
      * Inserts `text` to the focused element.
      */
-    insertText(text: string): void;
+    insertText(text: string): Promise<void>;
     /**
      * Starts inspecting element at position (`x`, `y`) of guest page.
      */
@@ -10203,7 +10311,7 @@ Calling `event.preventDefault()` does __NOT__ have any effect.
     /**
      * Prints `webview`'s web page. Same as `webContents.print([options])`.
      */
-    print(options?: PrintOptions): void;
+    print(options?: PrintOptions): Promise<void>;
     /**
      * Resolves with the generated PDF data.
      * 
@@ -10223,6 +10331,13 @@ Prints `webview`'s web page as PDF, Same as `webContents.printToPDF(options)`.
      */
     reloadIgnoringCache(): void;
     /**
+     * Resolves if the removal was successful.
+     *
+     * Removes the inserted CSS from the current web page. The stylesheet is identified
+     * by its key, which is returned from `<webview>.insertCSS(css)`.
+     */
+    removeInsertedCSS(key: string): Promise<void>;
+    /**
      * Executes editing command `replace` in page.
      */
     replace(text: string): void;
@@ -10241,13 +10356,13 @@ Prints `webview`'s web page as PDF, Same as `webContents.printToPDF(options)`.
      * 
 See webContents.send for examples.
      */
-    send(channel: string, ...args: any[]): void;
+    send(channel: string, ...args: any[]): Promise<void>;
     /**
      * Sends an input `event` to the page.
      * 
 See webContents.sendInputEvent for detailed description of `event` object.
      */
-    sendInputEvent(event: any): void;
+    sendInputEvent(event: any): Promise<void>;
     /**
      * Set guest page muted.
      */
@@ -10255,7 +10370,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Sets the maximum and minimum layout-based (i.e. non-visual) zoom level.
      */
-    setLayoutZoomLevelLimits(minimumLevel: number, maximumLevel: number): void;
+    setLayoutZoomLevelLimits(minimumLevel: number, maximumLevel: number): Promise<void>;
     /**
      * Overrides the user agent for the guest page.
      */
@@ -10263,7 +10378,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Sets the maximum and minimum pinch-to-zoom level.
      */
-    setVisualZoomLevelLimits(minimumLevel: number, maximumLevel: number): void;
+    setVisualZoomLevelLimits(minimumLevel: number, maximumLevel: number): Promise<void>;
     /**
      * Changes the zoom factor to the specified factor. Zoom factor is zoom percent
      * divided by 100, so 300% = 3.0.
@@ -10367,9 +10482,6 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * When the guest page doesn't have node integration this script will still have
      * access to all Node APIs, but global objects injected by Node will be deleted
      * after this script has finished executing.
-     *
-     * **Note:** For security reasons, preload scripts can only be loaded from a
-     * subpath of the app path.
      *
      * **Note:** This option will be appear as `preloadURL` (not `preload`) in the
      * `webPreferences` specified to the `will-attach-webview` event.
@@ -10520,19 +10632,24 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     copyright?: string;
     /**
-     * The app's build version number. _macOS_
+     * The app's build version number.
      */
     version?: string;
     /**
-     * Credit information. _macOS_
+     * Credit information.
      */
     credits?: string;
     /**
-     * The app's website. _Linux_
+     * List of app authors.
+     */
+    authors?: string[];
+    /**
+     * The app's website.
      */
     website?: string;
     /**
-     * Path to the app's icon. _Linux_
+     * Path to the app's icon. Will be shown as 64x64 pixels while retaining aspect
+     * ratio.
      */
     iconPath?: string;
   }
@@ -10623,12 +10740,12 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     height: boolean;
     /**
-     * If `true`, the view's x position and width will grow and shrink proportionly
+     * If `true`, the view's x position and width will grow and shrink proportionally
      * with the window. `false` by default.
      */
     horizontal: boolean;
     /**
-     * If `true`, the view's y position and height will grow and shrink proportinaly
+     * If `true`, the view's y position and height will grow and shrink proportionally
      * with the window. `false` by default.
      */
     vertical: boolean;
@@ -10902,6 +11019,13 @@ See webContents.sendInputEvent for detailed description of `event` object.
     hwnd?: string;
   }
 
+  interface CallbackRedirectRequest {
+    url: string;
+    method?: string;
+    session?: Session;
+    uploadData?: ProtocolResponseUploadData;
+  }
+
   interface CallbackResponse {
     cancel?: boolean;
     /**
@@ -11067,7 +11191,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     extra?: Extra;
     /**
-     * Directory to store the crashreports temporarily (only used when the crash
+     * Directory to store the crash reports temporarily (only used when the crash
      * reporter is started via `process.crashReporter.start`).
      */
     crashesDirectory?: string;
@@ -11135,7 +11259,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     image?: NativeImage;
     rtf?: string;
     /**
-     * The title of the url at `text`.
+     * The title of the URL at `text`.
      */
     bookmark?: string;
   }
@@ -11161,7 +11285,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
 
   interface Details {
     /**
-     * The url to associate the cookie with.
+     * The URL to associate the cookie with. The promise will be rejected if the URL is
+     * invalid.
      */
     url: string;
     /**
@@ -11285,7 +11410,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
   interface Filter {
     /**
      * Retrieves cookies which are associated with `url`. Empty implies retrieving
-     * cookies of all urls.
+     * cookies of all URLs.
      */
     url?: string;
     /**
@@ -11351,6 +11476,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
 
   interface HandlerRequest {
     url: string;
+    headers: Record<string, string>;
     referrer: string;
     method: string;
     uploadData: UploadData[];
@@ -11360,9 +11486,6 @@ See webContents.sendInputEvent for detailed description of `event` object.
   }
 
   interface Header {
-  }
-
-  interface Headers {
   }
 
   interface HeapStatistics {
@@ -11501,7 +11624,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
 
   interface LoadURLOptions {
     /**
-     * An HTTP Referrer url.
+     * An HTTP Referrer URL.
      */
     httpReferrer?: (string) | (Referrer);
     /**
@@ -11514,8 +11637,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     extraHeaders?: string;
     postData?: (UploadRawData[]) | (UploadFile[]) | (UploadBlob[]);
     /**
-     * Base url (with trailing path separator) for files to be loaded by the data url.
-     * This is needed only if the specified `url` is a data url and needs to load other
+     * Base URL (with trailing path separator) for files to be loaded by the data URL.
+     * This is needed only if the specified `url` is a data URL and needs to load other
      * files.
      */
     baseURLForDataURL?: string;
@@ -11595,7 +11718,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     enabled?: boolean;
     /**
      * default is `true`, and when `false` will prevent the accelerator from triggering
-     * the item if the item is not visible`. _macOS_
+     * the item if the item is not visible`.
      */
     acceleratorWorksWhenHidden?: boolean;
     /**
@@ -12107,11 +12230,10 @@ See webContents.sendInputEvent for detailed description of `event` object.
   interface OpenExternalOptions {
     /**
      * `true` to bring the opened application to the foreground. The default is `true`.
-     * _macOS_
      */
     activate?: boolean;
     /**
-     * The working directory. _Windows_
+     * The working directory.
      */
     workingDirectory?: string;
   }
@@ -12178,17 +12300,33 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * The type of media access being requested, can be `video`, `audio` or `unknown`
      */
     mediaType: ('video' | 'audio' | 'unknown');
+    /**
+     * The last URL the requesting frame loaded
+     */
+    requestingUrl: string;
+    /**
+     * Whether the frame making the request is the main frame
+     */
+    isMainFrame: boolean;
   }
 
   interface PermissionRequestHandlerHandlerDetails {
     /**
      * The url of the `openExternal` request.
      */
-    externalURL: string;
+    externalURL?: string;
     /**
      * The types of media access being requested, elements can be `video` or `audio`
      */
-    mediaTypes: Array<'video' | 'audio'>;
+    mediaTypes?: Array<'video' | 'audio'>;
+    /**
+     * The last URL the requesting frame loaded
+     */
+    requestingUrl: string;
+    /**
+     * Whether the frame making the request is the main frame
+     */
+    isMainFrame: boolean;
   }
 
   interface PluginCrashedEvent extends Event {
@@ -12233,13 +12371,49 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     silent?: boolean;
     /**
-     * Also prints the background color and image of the web page. Default is `false`.
+     * Prints the background color and image of the web page. Default is `false`.
      */
     printBackground?: boolean;
     /**
      * Set the printer device name to use. Default is `''`.
      */
     deviceName?: string;
+    /**
+     * Set whether the printed web page will be in color or grayscale. Default is
+     * `true`.
+     */
+    color?: boolean;
+    margins?: Margins;
+    /**
+     * Whether the web page should be printed in landscape mode. Default is `false`.
+     */
+    landscape?: boolean;
+    /**
+     * The scale factor of the web page.
+     */
+    scaleFactor?: number;
+    /**
+     * The number of pages to print per page sheet.
+     */
+    pagesPerSheet?: number;
+    /**
+     * Whether the web page should be collated.
+     */
+    collate?: boolean;
+    /**
+     * The number of copies of the web page to print.
+     */
+    copies?: number;
+    /**
+     * The page range to print. Should have two keys: `from` and `to`.
+     */
+    pageRanges?: Record<string, number>;
+    /**
+     * Set the duplex mode of the printed web page. Can be `simplex`, `shortEdge`, or
+     * `longEdge`.
+     */
+    duplexMode?: ('simplex' | 'shortEdge');
+    dpi?: Dpi;
   }
 
   interface PrintToPDFOptions {
@@ -12359,8 +12533,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
 
   interface RedirectRequest {
     url: string;
-    method: string;
-    session?: Session;
+    method?: string;
+    session?: (any) | (null);
     uploadData?: UploadData;
   }
 
@@ -12562,27 +12736,6 @@ See webContents.sendInputEvent for detailed description of `event` object.
   interface StartOFCrashReporter {
     isRunning: boolean;
     diagnosticMode: boolean;
-  }
-
-  interface SubscribeLocalNotificationReturnValue {
-    /**
-     * The ID of this subscription
-     */
-    id: number;
-    event: string;
-    userInfo: Record<string, any>;
-  }
-
-  interface SubscribeNotificationReturnValue {
-  }
-
-  interface SubscribeWorkspaceNotificationReturnValue {
-    /**
-     * The ID of this subscription
-     */
-    id: number;
-    event: string;
-    userInfo: Record<string, any>;
   }
 
   interface SystemMemoryInfo {
@@ -12878,6 +13031,17 @@ See webContents.sendInputEvent for detailed description of `event` object.
     skipOwnWindows?: boolean;
   }
 
+  interface Dpi {
+    /**
+     * The horizontal dpi.
+     */
+    horizontal?: number;
+    /**
+     * The vertical dpi.
+     */
+    vertical?: number;
+  }
+
   interface EditFlags {
     /**
      * Whether the renderer believes it can undo.
@@ -12927,6 +13091,33 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     selectionArea: SelectionArea;
     finalUpdate: boolean;
+  }
+
+  interface Headers {
+  }
+
+  interface Margins {
+    /**
+     * Can be `default`, `none`, `printableArea`, or `custom`. If `custom` is chosen,
+     * you will also need to specify `top`, `bottom`, `left`, and `right`.
+     */
+    marginType?: ('default' | 'none' | 'printableArea');
+    /**
+     * The top margin of the printed web page, in pixels.
+     */
+    top?: number;
+    /**
+     * The bottom margin of the printed web page, in pixels.
+     */
+    bottom?: number;
+    /**
+     * The left margin of the printed web page, in pixels.
+     */
+    left?: number;
+    /**
+     * The right margin of the printed web page, in pixels.
+     */
+    right?: number;
   }
 
   interface MediaFlags {
@@ -13000,9 +13191,9 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     nodeIntegrationInWorker?: boolean;
     /**
-     * Experimental option for enabling NodeJS support in sub-frames such as iframes.
-     * All your preloads will load for every iframe, you can use `process.isMainFrame`
-     * to determine if you are in the main frame or not.
+     * Experimental option for enabling Node.js support in sub-frames such as iframes
+     * and child windows. All your preloads will load for every iframe, you can use
+     * `process.isMainFrame` to determine if you are in the main frame or not.
      */
     nodeIntegrationInSubFrames?: boolean;
     /**
@@ -13011,8 +13202,6 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * integration is turned on or off. The value should be the absolute file path to
      * the script. When node integration is turned off, the preload script can
      * reintroduce Node global symbols back to the global scope. See example here.
-     * **Note:** For security reasons, preload scripts can only be loaded from a
-     * subpath of the app path.
      */
     preload?: string;
     /**
@@ -13155,8 +13344,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     contextIsolation?: boolean;
     /**
      * Whether to use native `window.open()`. Defaults to `false`. Child windows will
-     * always have node integration disabled. **Note:** This option is currently
-     * experimental.
+     * always have node integration disabled unless `nodeIntegrationInSubFrames` is
+     * true. **Note:** This option is currently experimental.
      */
     nativeWindowOpen?: boolean;
     /**
