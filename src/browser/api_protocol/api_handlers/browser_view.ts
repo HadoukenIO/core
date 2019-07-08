@@ -10,25 +10,26 @@ const successAck = {
     success: true
 };
 
-async function create (identity: Identity, message: APIMessage, ack: AckFunc) {
+async function create (identity: Identity, message: APIMessage) {
     const { payload } = message;
     await browser_view.create(payload);
     return successAck;
 }
-async function attach (identity: Identity, message: APIMessage, ack: AckFunc) {
+async function attach (identity: Identity, message: APIMessage) {
     const { payload } = message;
     const { uuid, name, target } = payload;
     const view = getBrowserViewByIdentity({uuid, name});
     await browser_view.attach(view, target);
-    ack(successAck);
+    return successAck;
 }
-function setBounds (identity: Identity, message: APIMessage, ack: AckFunc) {
+async function setBounds (identity: Identity, message: APIMessage) {
     const { payload } = message;
     const { uuid, name, bounds } = payload;
     const view = getBrowserViewByIdentity({uuid, name});
     browser_view.setBounds(view, bounds);
+    return successAck;
 }
-async function getInfo(identity: Identity, message: APIMessage, ack: AckFunc) {
+async function getInfo(identity: Identity, message: APIMessage) {
     const { payload } = message;
     const { uuid, name } = payload;
     const view = getBrowserViewByIdentity({ uuid, name });
