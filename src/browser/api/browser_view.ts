@@ -28,7 +28,7 @@ export async function create(options: BrowserViewOpts) {
     const view = new BrowserView(convertOptions.convertToElectron(fullOptions, false));
     const ofView = addBrowserView(fullOptions, view);
     await attach(ofView, options.target);
-    view.webContents.loadURL(options.url);
+    view.webContents.loadURL(options.url || 'about:blank');
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
     } if (options.bounds) {
