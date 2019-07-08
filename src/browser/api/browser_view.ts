@@ -27,9 +27,6 @@ export async function create(options: BrowserViewOpts) {
     const fullOptions = Object.assign({}, targetOptions, options);
     const view = new BrowserView(convertOptions.convertToElectron(fullOptions, false));
     const ofView = addBrowserView(fullOptions, view);
-    if (!options.target) {
-        throw new Error('BrowserView must have a target');
-    }
     await attach(ofView, options.target);
     view.webContents.loadURL(options.url);
     if (options.autoResize) {
