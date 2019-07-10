@@ -220,4 +220,4 @@ function getVirtualScreenInfo(allMonitorsInfo) {
     };
 }
 
-module.exports = new MonitorInfo();
+export default new MonitorInfo();

@@ -1,4 +1,4 @@
-import { chromeIpcClient as ChromeIpcClient } from 'electron';
+import { ChromeIpcClient } from 'electron';
 import BaseTransport from './base';
 
 class ChromiumIPCTransport extends BaseTransport {

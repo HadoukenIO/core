@@ -267,7 +267,7 @@ app.on('ready', function() {
     rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
 
 
-    app.allowNTLMCredentialsForAllDomains(true);
+    electron.session.defaultSession.allowNTLMCredentialsForDomains('*');
 
     if (process.platform === 'win32') {
         let integrityLevel = app.getIntegrityLevel();
@@ -436,7 +436,7 @@ function includeFlashPlugin() {
         app.commandLine.appendSwitch('ppapi-flash-path', path.join(process.resourcesPath, 'plugins', 'flash', pluginName));
         // Currently for enable_chromium build the flash version need to be
         // specified. See RUN-4510 and RUN-4580.
-        app.commandLine.appendSwitch('ppapi-flash-version', '30.0.0.154');
+        app.commandLine.appendSwitch('ppapi-flash-version', '32.0.0.207');
     }
 }
 

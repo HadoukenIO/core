@@ -33,26 +33,19 @@ const { apiString, initialOptions } = JSON.parse(apiInfo);
 // let chromiumWindowAlertEnabled = electron.remote.app.getCommandLineArguments().includes('--enable-chromium-window-alert');
 
 const hookWebFrame = (webFrame, renderFrameId) => {
-    electron.ipcRendererInternal.on(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`, (event, method, args) => {
-        webFrame[method](...args);
-    });
-
-    electron.ipcRendererInternal.on(`ELECTRON_INTERNAL_RENDERER_ASYNC_WEB_FRAME_METHOD-${renderFrameId}`, (event, requestId, method, args) => {
-        new Promise(resolve => {
-            webFrame[method](...args, resolve);
-        }).then(result => {
+    electron.ipcRendererInternal.on(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`, (event, requestId, method, ...args) => {
+        new Promise(resolve => resolve(webFrame[method](...args))).then(result => {
             return [null, result];
         }, error => {
             return [error];
         }).then(responseArgs => {
-            event.sender.send(renderFrameId, `ELECTRON_INTERNAL_BROWSER_ASYNC_WEB_FRAME_RESPONSE_${requestId}`, ...responseArgs);
+            event.sender.send(renderFrameId, `ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD_RESPONSE_${requestId}`, ...responseArgs);
         });
     });
 
     // Teardown
     return () => {
         electron.ipcRendererInternal.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_WEB_FRAME_METHOD-${renderFrameId}`);
-        electron.ipcRendererInternal.removeAllListeners(`ELECTRON_INTERNAL_RENDERER_ASYNC_WEB_FRAME_METHOD-${renderFrameId}`);
     };
 };
 
@@ -65,6 +58,9 @@ const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOrigi
 
     try {
         if (window.location.protocol === 'chrome-devtools:') {
+            return;
+        }
+        if (!initialOptions) {
             return;
         }
 
