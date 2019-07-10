@@ -2,6 +2,7 @@ import * as url from 'url';
 import { app } from 'electron';
 import ofEvents from '../of_events';
 import route from '../../common/route';
+import { InjectableContext, EntityType } from '../../shapes';
 
 export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {
     webContents.executeJavaScript(code, true, (result) => {
@@ -83,7 +84,7 @@ function createNavigationEndPromise(webContents: Electron.WebContents): Promise<
 }
 
 
-export function setIframeHandlers (webContents: Electron.WebContents, contextObj: any, uuid: string, name: string) {
+export function setIframeHandlers (webContents: Electron.WebContents, contextObj: InjectableContext, uuid: string, name: string) {
     webContents.registerIframe = (frameName: string, frameRoutingId: number) => {
         // called for all iframes, but not for main frame of windows
         app.vlog(1, `registerIframe ${frameName} ${frameRoutingId}`);
@@ -92,7 +93,7 @@ export function setIframeHandlers (webContents: Electron.WebContents, contextObj
             uuid,
             parent: { uuid, name },
             frameRoutingId,
-            entityType: 'iframe'
+            entityType: EntityType.IFRAME
         };
 
         contextObj.frames.set(frameName, frameInfo);

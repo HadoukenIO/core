@@ -113,7 +113,7 @@ export function getEntityInfo(identity: Shapes.Identity) {
         const externalAppInfo = ExternalApplication.getInfo(identity);
         return new FrameInfo({
             uuid: identity.uuid,
-            entityType: 'external connection',
+            entityType: Shapes.EntityType.EXTERNAL,
             parent: externalAppInfo.parent
         });
     } else {
@@ -738,7 +738,7 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
                     name,
                     uuid,
                     parent,
-                    entityType: 'window'
+                    entityType: Shapes.EntityType.WINDOW
                 };
             } else if (openfinWindow.frames.get(frame)) {
                 return openfinWindow.frames.get(frame);
