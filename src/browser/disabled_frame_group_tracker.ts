@@ -133,7 +133,7 @@ function getInitialPositions(win: GroupWindow) {
 }
 function generateWindowMoves(win: GroupWindow, rawBounds: RectangleBase, changeType: ChangeType): Move[] {
     const initialPositions: Move[] = getInitialPositions(win);
-    let moves = initialPositions;
+    let moves: Move[];
     const delta = getLeaderDelta(win, rawBounds);
     switch (changeType) {
         case ChangeType.POSITION:
@@ -197,8 +197,6 @@ function handleMoveOnly(delta: RectangleBase, initialPositions: Move[]) {
 }
 
 export function addWindowToGroup(win: GroupWindow) {
-    const MonitorInfo = require('./monitor_info.js');
-    const scaleFactor = MonitorInfo.getInfo().deviceScaleFactor;
     let moved = new Set<GroupWindow>();
     let boundsChanging = false;
     let interval: any;
@@ -228,9 +226,6 @@ export function addWindowToGroup(win: GroupWindow) {
     const handleBoundsChanging = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
             e.preventDefault();
-            // Object.keys(rawPayloadBounds).map((key: keyof RectangleBase) => {
-            //     rawPayloadBounds[key] = rawPayloadBounds[key] / scaleFactor;
-            // });
 
             const rawpb: any = (<any>ExternalWindow).removeShadow(e.sender.nativeId, rawPayloadBounds);
             rawPayloadBounds = Rectangle.CREATE_FROM_BOUNDS(rawpb);
@@ -252,27 +247,38 @@ export function addWindowToGroup(win: GroupWindow) {
             writeToLog('error', error);
         }
     };
-    const moveListener = (e: any, bounds: RectangleBase) => handleBoundsChanging(e, bounds, 0);
-    const resizeListener = (e: any, bounds: RectangleBase) => handleBoundsChanging(e, bounds, 1);
+    const setupInterval = (changeType: ChangeType, raiseBeginEventBounds?: RectangleBase) => {
+        interval = setInterval(() => {
+            if (payloadCache.length) {
+                const bounds = payloadCache.pop();
+                // tslint:disable-next-line:no-empty - need to mock prevent default
+                handleBoundsChanging({preventDefault: () => {}}, bounds, changeType);
+                payloadCache = [];
+            }
+        }, 30);
+        if (raiseBeginEventBounds) {
+            raiseEvent(win, 'begin-user-bounds-changing', { ...raiseBeginEventBounds, windowState: 'normal' });
+        }
+    };
+    const moveListener = (e: any, rawBounds: RectangleBase) => handleBoundsChanging(e, rawBounds, ChangeType.POSITION);
+    const resizeListener = (e: any, rawBounds: RectangleBase) => {
+        e.preventDefault();
+        payloadCache.push(rawBounds);
+        // Setup an interval because resizing with a native window in the group is slow
+        if (!interval) {
+            setupInterval(ChangeType.SIZE);
+        }
+    };
     const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(w => restore(w.browserWindow));
-
     const disabledFrameListener = (e: any, rawBounds: RectangleBase, changeType: ChangeType) => {
         payloadCache.push(rawBounds);
-        // Setup an interval to get around aero-shake issues in native
+        // Setup an interval to get around aero-shake issues in native external windows
         if (!interval) {
-            interval = setInterval(() => {
-                if (payloadCache.length) {
-                    const bounds = payloadCache.pop();
-                    changeType = changeType !== 2 ? changeType : 1;
-                    // tslint:disable-next-line:no-empty - need to mock prevent default
-                    handleBoundsChanging({preventDefault: () => {}}, bounds, changeType);
-                    payloadCache = [];
-                }
-            }, 30);
+            changeType = changeType !== ChangeType.POSITION_AND_SIZE ? changeType : ChangeType.SIZE;
+            setupInterval(changeType, rawBounds);
             raiseEvent(win, 'begin-user-bounds-changing', { ...rawBounds, windowState: 'normal' });
         }
     };
-
     if (usesDisabledFrameEvents(win)) {
         win.browserWindow.on('disabled-frame-bounds-changing', disabledFrameListener);
         listenerCache.set(win.browserWindow.nativeId, [disabledFrameListener]);
