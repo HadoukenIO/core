@@ -1,4 +1,5 @@
 import { Rectangle, RectangleBase } from './rectangle';
+import { ExternalWindow } from 'electron';
 import { GroupWindow } from '../shapes';
 import { System } from './api/system';
 import { Move } from './disabled_frame_group_tracker';
@@ -22,8 +23,10 @@ const framedOffset: Readonly<RectangleBase> = {
 export const zeroDelta: Readonly<RectangleBase> = {x: 0, y: 0, height: 0, width: 0 };
 export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
     const win = ofWin.browserWindow;
-    const bounds = win.getBounds();
-    const delta = isWin10 && win._options.frame
+    // const bounds = win.getBounds();
+    // const delta = isWin10 && win._options.frame
+    const bounds = (<any>ExternalWindow).getBoundsWithoutShadow(win.nativeId); //  win.getBounds();
+    const delta = isWin10 && win._options.frame && false
         ? framedOffset
         : zeroDelta;
     const normalizedOptions = {...win._options};
@@ -47,7 +50,7 @@ export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
     if (normalizedOptions.minWidth) { normalizedOptions.minWidth += delta.width; }
     return {
         ofWin,
-        rect: Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), normalizedOptions).shift(delta),
+        rect: Rectangle.CREATE_FROM_BOUNDS(bounds, normalizedOptions).shift(delta),
         offset: negate(delta)
     };
 }

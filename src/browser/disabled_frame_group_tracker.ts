@@ -1,4 +1,5 @@
 import { GroupWindow } from '../shapes';
+import { ExternalWindow } from 'electron';
 import of_events from './of_events';
 import route from '../common/route';
 import WindowGroups from './window_groups';
@@ -104,7 +105,8 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
 }
 
 function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFront: boolean = false) {
-    if (isWin32) {
+    // if (isWin32) {
+    if (isWin32 && false) {
         const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
         let flags = noZorder + noActivate;
         flags = changeType === 0 ? flags + noSize : flags;
@@ -117,7 +119,8 @@ function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFro
         wt.commit();
     } else {
         moves.forEach(({ ofWin, rect, offset }) => {
-            ofWin.browserWindow.setBounds(applyOffset(rect, offset));
+            // ofWin.browserWindow.setBounds(applyOffset(rect, offset));
+            (<any>ExternalWindow).setBoundsWithoutShadow(ofWin.browserWindow.nativeId, rect);
             if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
     }
@@ -225,9 +228,13 @@ export function addWindowToGroup(win: GroupWindow) {
     const handleBoundsChanging = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
             e.preventDefault();
-            Object.keys(rawPayloadBounds).map((key: keyof RectangleBase) => {
-                rawPayloadBounds[key] = rawPayloadBounds[key] / scaleFactor;
-            });
+            // Object.keys(rawPayloadBounds).map((key: keyof RectangleBase) => {
+            //     rawPayloadBounds[key] = rawPayloadBounds[key] / scaleFactor;
+            // });
+
+            const rawpb: any = (<any>ExternalWindow).removeShadow(e.sender.nativeId, rawPayloadBounds);
+            rawPayloadBounds = Rectangle.CREATE_FROM_BOUNDS(rawpb);
+
             const moves = generateWindowMoves(win, rawPayloadBounds, changeType);
             handleBatchedMove(moves, changeType, true);
             // Keep track of which windows have moved in order to emit events

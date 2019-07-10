@@ -476,10 +476,14 @@ export class Rectangle {
         }, 1);
         const iterator = Math.ceil(maxDelta / Rectangle.BOUND_SHARE_THRESHOLD);
         const iterDelta: RectangleBase = {
-            x: Math.round(delta.x / iterator),
-            y: Math.round(delta.y / iterator),
-            width: Math.round(delta.width / iterator),
-            height: Math.round(delta.height / iterator)
+            // x: Math.round(delta.x / iterator),
+            // y: Math.round(delta.y / iterator),
+            // width: Math.round(delta.width / iterator),
+            // height: Math.round(delta.height / iterator)
+            x: delta.x / iterator,
+            y: delta.y / iterator,
+            width: delta.width / iterator,
+            height: delta.height / iterator
         };
         let iterStart = start;
         let iterEnd = iterStart.shift(iterDelta);
@@ -502,7 +506,14 @@ export class Rectangle {
             }
         }
 
-        return rects;
+        // return rects;
+        return rects.map(r => {
+            r.x = Math.round(r.x);
+            r.y = Math.round(r.y);
+            r.width = Math.round(r.width);
+            r.height = Math.round(r.height);
+            return r;
+        });
     }
     
     public static GRAPH(rects: Rectangle[], validator = Rectangle.sharedBoundValidator): Graph  {
