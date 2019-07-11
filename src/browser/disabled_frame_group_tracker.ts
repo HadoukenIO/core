@@ -226,8 +226,7 @@ export function addWindowToGroup(win: GroupWindow) {
     const handleBoundsChanging = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
             e.preventDefault();
-
-            const rawpb: any = (<any>ExternalWindow).removeShadow(e.sender.nativeId, rawPayloadBounds);
+            const rawpb: any = (<any>ExternalWindow).removeShadow(win.browserWindow.nativeId, rawPayloadBounds);
             rawPayloadBounds = Rectangle.CREATE_FROM_BOUNDS(rawpb);
 
             const moves = generateWindowMoves(win, rawPayloadBounds, changeType);
@@ -276,7 +275,6 @@ export function addWindowToGroup(win: GroupWindow) {
         if (!interval) {
             changeType = changeType !== ChangeType.POSITION_AND_SIZE ? changeType : ChangeType.SIZE;
             setupInterval(changeType, rawBounds);
-            raiseEvent(win, 'begin-user-bounds-changing', { ...rawBounds, windowState: 'normal' });
         }
     };
     if (usesDisabledFrameEvents(win)) {
