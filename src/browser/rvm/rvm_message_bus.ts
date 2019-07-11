@@ -95,6 +95,11 @@ export interface AppCloseRequestedOptions {
     sourceUrl: string;
 }
 
+export interface GetInstalledRuntimesOptions {
+    uuid: string;
+    sourceUrl: string;
+}
+
 // topic: application (used only by the utils module)
 type getShortcutStateAction = 'get-shortcut-state';
 type setShortcutStateAction = 'set-shortcut-state';
@@ -174,6 +179,7 @@ export interface System extends RvmMsgBase {
     action: getRvmInfoAction;
     sourceUrl: string;
 }
+
 
 // topic: application-events -----
 type EventType = 'started'| 'closed' | 'ready' | 'run-requested' | 'crashed' | 'error' | 'not-responding';
@@ -398,7 +404,16 @@ export class RVMMessageBus extends EventEmitter  {
             }
         });
     }
-}
 
+    public getInstalledRuntimes(opts: GetInstalledRuntimesOptions, callback: (x: any) => any = () => undefined) {
+        const rvmPayload = {
+            topic: 'system',
+            action: 'get-installed-runtimes',
+            sourceUrl: opts.sourceUrl,
+            timeToLive: 5
+        };
+        this.publish(rvmPayload, callback);
+    }
+}
 const rvmMessageBus = new RVMMessageBus();
 export {rvmMessageBus};
