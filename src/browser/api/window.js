@@ -1211,8 +1211,12 @@ Window.enableUserMovement = function(identity) {
     if (!browserWindow) {
         return;
     }
-    let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
-    disabledFrameRef.set(windowKey, --dframeRefCount);
+
+    if (disabledFrameRef.has(windowKey)) {
+        let dframeRefCount = disabledFrameRef.get(windowKey) || 0;
+        disabledFrameRef.set(windowKey, --dframeRefCount);
+    }
+
     browserWindow.setUserMovementEnabled(true);
 };
 
