@@ -1407,14 +1407,11 @@ Window.getSnapshot = (opts) => {
             return reject(error);
         }
 
-        const callback = (img) => {
-            const imageBase64 = img.toPNG().toString('base64');
-            resolve(imageBase64);
-        };
+        const callback = (img) => resolve(img.toPNG().toString('base64'));
 
         if (typeof area === 'undefined') {
             // Snapshot of a full window
-            return browserWindow.capturePage(callback);
+            return browserWindow.capturePage().then(callback);
         }
 
         if (!area ||
@@ -1429,7 +1426,7 @@ Window.getSnapshot = (opts) => {
         }
 
         // Snapshot of a specified area of the window
-        browserWindow.capturePage(area, callback);
+        return browserWindow.capturePage(area).then(callback);
     });
 };
 
@@ -1942,16 +1939,15 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     function handleSaveStateAlwaysResolve() {
         return new Promise((resolve, reject) => {
             if (browserWindow._options.saveWindowState) {
-                browserWindow.webContents.getZoomLevel(zoomLevel => {
-                    const cachedBounds = _boundsChangedHandler.getCachedBounds();
-                    saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
-                        if (err) {
-                            log.writeToLog('info', err);
-                        }
-                        // These were causing an exception on close if the window was reloaded
-                        _boundsChangedHandler.teardown();
-                        resolve();
-                    });
+                const zoomLevel = browserWindow.webContents.getZoomLevel();
+                const cachedBounds = _boundsChangedHandler.getCachedBounds();
+                saveBoundsToDisk(identity, cachedBounds, zoomLevel, err => {
+                    if (err) {
+                        log.writeToLog('info', err);
+                    }
+                    // These were causing an exception on close if the window was reloaded
+                    _boundsChangedHandler.teardown();
+                    resolve();
                 });
             } else {
                 _boundsChangedHandler.teardown();
