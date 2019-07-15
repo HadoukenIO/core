@@ -241,10 +241,10 @@ export class Rectangle {
 
     public delta = (rect: RectangleBase): RectangleBase => {
         return {
-            x: rect.x - this.x >= 0 ? Math.ceil(rect.x - this.x) : Math.floor(rect.x - this.x),
-            y: rect.y - this.y >= 0 ? Math.ceil(rect.y - this.y) : Math.floor(rect.y - this.y),
-            width: rect.width - this.width >= 0 ? Math.ceil(rect.width - this.width) : Math.floor(rect.width - this.width),
-            height: rect.height - this.height >= 0 ? Math.ceil(rect.height - this.height) : Math.floor(rect.height - this.height)
+            x: Math.round(rect.x - this.x),
+            y: Math.round(rect.y - this.y),
+            width: Math.round(rect.width - this.width),
+            height: Math.round(rect.height - this.height)
         };
     }
 
@@ -476,10 +476,6 @@ export class Rectangle {
         }, 1);
         const iterator = Math.ceil(maxDelta / Rectangle.BOUND_SHARE_THRESHOLD);
         const iterDelta: RectangleBase = {
-            // x: Math.round(delta.x / iterator),
-            // y: Math.round(delta.y / iterator),
-            // width: Math.round(delta.width / iterator),
-            // height: Math.round(delta.height / iterator)
             x: delta.x / iterator,
             y: delta.y / iterator,
             width: delta.width / iterator,

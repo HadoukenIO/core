@@ -14,31 +14,22 @@ export function negate(delta: RectangleBase) {
         width: -delta.width
     };
 }
-const framedOffset: Readonly<RectangleBase> = {
-    x: 7,
-    y: 0,
-    height: -7,
-    width: -14
-};
 export const zeroDelta: Readonly<RectangleBase> = {x: 0, y: 0, height: 0, width: 0 };
 export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
-    const win = ofWin.browserWindow;
-    // const bounds = win.getBounds();
-    // const delta = isWin10 && win._options.frame
-    const bounds = (<any>ExternalWindow).getBoundsWithoutShadow(win.nativeId); //  win.getBounds();
-    const delta = isWin10 && win._options.frame && false
-        ? framedOffset
-        : zeroDelta;
-    const normalizedOptions = {...win._options};
+    const { browserWindow } = ofWin;
+    const bounds = (<any>ExternalWindow).getBoundsWithoutShadow(browserWindow.nativeId);
+    // Fix this, no longer necessary
+    const delta = zeroDelta;
+    const normalizedOptions = {...browserWindow._options};
     if (normalizedOptions.maxHeight === -1) {
         normalizedOptions.maxHeight = Number.MAX_SAFE_INTEGER;
     }
     if (normalizedOptions.maxWidth === -1) {
         normalizedOptions.maxWidth = Number.MAX_SAFE_INTEGER;
     }
-    if (win._options.frame) {
-        normalizedOptions.minWidth = Math.max(win._options.minWidth, 150);
-    } if (win._options.resizable === false) {
+    if (browserWindow._options.frame) {
+        normalizedOptions.minWidth = Math.max(browserWindow._options.minWidth, 150);
+    } if (browserWindow._options.resizable === false) {
         normalizedOptions.maxHeight = bounds.height;
         normalizedOptions.minHeight = bounds.height;
         normalizedOptions.maxWidth = bounds.width;

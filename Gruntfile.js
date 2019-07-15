@@ -197,8 +197,10 @@ module.exports = (grunt) => {
         'sign-adapter'
     ]);
 
-    grunt.registerTask('quick-dev', [
-        'typescript',
+    grunt.registerTask('build-quick', [
+        'clean',
+        'babel',
+        'ts',
         'js-adapter',
         'copy',
         'clean-up-dependencies',
