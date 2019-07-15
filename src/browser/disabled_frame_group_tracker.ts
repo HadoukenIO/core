@@ -208,7 +208,7 @@ export function addWindowToGroup(win: GroupWindow) {
             if (!isLeader || win.isExternalWindow) {
                 // bounds-changed is emitted for the leader, but not other windows
                 const endPosition = moveFromOpenFinWindow(movedWin);
-                emitChange('bounds-changed2', endPosition, changeType, 'group');
+                emitChange('bounds-changed', endPosition, changeType, 'group');
             }
         });
         // Reset map of moved windows and flags for native windows and mac OS
