@@ -11,12 +11,17 @@ import InjectionBus from '../transports/injection_bus';
 import ofEvents from '../of_events';
 import route from '../../common/route';
 import WindowGroups, { GroupChangedEvent, GroupEvent } from '../window_groups';
+import SubscriptionManager from '../subscription_manager';
 
 electronApp.on('ready', () => {
   subToGlobalWinEventHooks();
 });
 
+const subscriptionManager = new SubscriptionManager();
+
+// Maps
 export const externalWindows = new Map<string, Shapes.ExternalWindow>();
+const disabledUserMovementRequestorCount = new Map<string, number>();
 const externalWindowEventAdapters = new Map<string, ExternalWindowEventAdapter>();
 const injectionBuses = new Map<string, InjectionBus>();
 const windowGroupUnSubscriptions = new Map<string, () => void>();
@@ -39,11 +44,29 @@ export function closeExternalWindow(identity: Identity): void {
   externalWindow.forceExternalWindowClose();
 }
 
-export async function disableExternalWindowUserMovement(identity: Identity): Promise<void> {
-  const externalWindow = getExternalWindow(identity);
+export async function disableExternalWindowUserMovement(target: Identity, requestor?: Identity): Promise<void> {
+  const externalWindow = getExternalWindow(target);
   const injectionBus = getInjectionBus(externalWindow);
   await injectionBus.set({ userMovement: false });
   externalWindow.emit('user-movement-disabled');
+
+  // Register a subscription that will fire every time requesting identity closes
+  // and if all requestors for disabling frame are gone - enable the frame.
+  if (requestor) {
+    const key = getKey(externalWindow);
+    const subscriptionKey = `disable-external-window-user-movement-${key}`;
+    const onRequestorClose = async () => {
+      let requestorCount = disabledUserMovementRequestorCount.get(key) || 0;
+      if (requestorCount > 1) {
+        disabledUserMovementRequestorCount.set(key, --requestorCount);
+      } else {
+        await enableExternaWindowUserMovement(target);
+      }
+    };
+    let requestorCount = disabledUserMovementRequestorCount.get(key) || 0;
+    disabledUserMovementRequestorCount.set(key, ++requestorCount);
+    subscriptionManager.registerSubscription(onRequestorClose, requestor, subscriptionKey);
+  }
 }
 
 export async function enableExternaWindowUserMovement(identity: Identity): Promise<void> {
@@ -51,6 +74,14 @@ export async function enableExternaWindowUserMovement(identity: Identity): Promi
   const injectionBus = getInjectionBus(externalWindow);
   await injectionBus.set({ userMovement: true });
   externalWindow.emit('user-movement-enabled');
+
+  // Decrement count of the requesting identities that previously disabled
+  // frame of an external window.
+  const key = getKey(externalWindow);
+  if (disabledUserMovementRequestorCount.has(key)) {
+    let requestorCount = disabledUserMovementRequestorCount.get(key);
+    disabledUserMovementRequestorCount.set(key, --requestorCount);
+  }
 }
 
 export function flashExternalWindow(identity: Identity): void {
@@ -200,9 +231,8 @@ export function updateExternalWindowOptions(identity: Identity, options: object)
   Returns a key for maps
 */
 function getKey(externalWindow: Shapes.ExternalWindow): string {
-  const { nativeId } = externalWindow;
-  const pid = electronApp.getProcessIdForNativeId(nativeId);
-  return `${pid}-${nativeId}`;
+  const { uuid } = externalWindow;
+  return uuid;
 }
 
 /*
@@ -618,6 +648,7 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
   const windowGroupUnSubscription = windowGroupUnSubscriptions.get(key);
 
   externalWindow.emit('closing');
+  disabledUserMovementRequestorCount.delete(key);
 
   winEventHooks.removeAllListeners();
   winEventHooksEmitters.delete(key);
