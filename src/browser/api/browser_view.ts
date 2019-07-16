@@ -1,12 +1,14 @@
-import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions, webContents } from 'electron';
+import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions, webContents, BrowserWindow } from 'electron';
 import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
-import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView } from '../core_state';
+import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView, updateViewTarget } from '../core_state';
 import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
 import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
 import {getInfo as getWebContentsInfo} from './webcontents';
 import of_events from '../of_events';
 import route from '../../common/route';
+import { browserViewActionMap } from '../api_protocol/api_handlers/browser_view';
+import { getElectronBrowserWindow } from '../api_protocol/api_handlers/webcontents';
 
 
 const windowCloseListenerMap = new WeakMap();
@@ -35,24 +37,24 @@ export async function create(options: BrowserViewOpts) {
         setBounds(ofView, options.bounds);
     }
 }
-
+export function hide(ofView: OfView) {
+    const win = getElectronBrowserWindow(ofView.target);
+    win.removeBrowserView(ofView.view);
+}
+export function show(ofView: OfView) {
+    const win = getElectronBrowserWindow(ofView.target);
+    win.addBrowserView(ofView.view);
+}
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view} = ofView;
     if (view) {
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
-        let bWin;
         if (!ofWin) {
             throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
-        } else {
-            bWin = ofWin.browserWindow;
-            if (ofWin.view) {
-                destroy(ofWin.view);
-                const oldListener = windowCloseListenerMap.get(ofWin);
-                of_events.removeListener(route.window('closed', toIdentity.uuid, toIdentity.name), oldListener);
-            }
         }
+        const bWin = ofWin.browserWindow;
         ofWin.view = ofView;
-        bWin.setBrowserView(view);
+        bWin.addBrowserView(view);
         const listener = () => {
             destroy(ofView);
             ofWin.view = undefined;
@@ -60,6 +62,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         };
         of_events.once(route.window('closed', toIdentity.uuid, toIdentity.name), listener);
         windowCloseListenerMap.set(ofWin, listener);
+        updateViewTarget(ofView, toIdentity);
     }
 }
 function destroy (ofView: OfView) {

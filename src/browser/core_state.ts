@@ -827,17 +827,24 @@ export interface OfView extends Identity {
     name: string;
     view: BrowserView;
     frames: Map<string, Shapes.ChildFrameInfo>;
+    target: Identity;
     _options: Shapes.WebOptions;
 }
 export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
-    const {uuid, name} = opts;
-    const ofView = { frames: new Map(), uuid, _options: opts, name, view };
+    const {uuid, name, target} = opts;
+    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target };
     views.push(ofView);
     const app = appByUuid(uuid);
     if (app) {
         app.views.push(ofView);
     }
     return ofView;
+}
+export function updateViewTarget(id: Identity, newTarget: Identity) {
+    const view = getBrowserViewByIdentity(id);
+    if (view) {
+        view.target = newTarget;
+    }
 }
 export function removeBrowserView (view: OfView) {
     const app = appByUuid(view.uuid);
