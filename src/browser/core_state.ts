@@ -10,7 +10,7 @@
 * */
 
 import * as minimist from 'minimist';
-import { app, webContents, session, Session, WebContents } from 'electron';
+import { app, webContents, session, Session, WebContents, BrowserWindow } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
@@ -746,8 +746,16 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
         }
     }
 }
-
-export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
+export interface RoutingInfo {
+    name: string;
+    browserWindow?: BrowserWindow;
+    webContents: WebContents;
+    frameRoutingId: number;
+    mainFrameRoutingId: number;
+    frameName: string;
+    _options: Shapes.WindowOptions;
+}
+export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingInfo {
     const app = appByUuid(uuid);
 
     if (!app) {
@@ -775,6 +783,8 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 return {
                     name,
                     browserWindow,
+                    _options: openfinWindow._options,
+                    webContents: browserWindow.webContents,
                     frameRoutingId: openfinWindow.mainFrameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -784,6 +794,8 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string) {
                 return {
                     name,
                     browserWindow,
+                    _options: openfinWindow._options,
+                    webContents: browserWindow.webContents,
                     frameRoutingId,
                     mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
                     frameName: name
@@ -809,20 +821,22 @@ export function getWebContentsInitialOptionSet(webContentsId: number) {
 }
 
 function getOptionsFromOpenFinWindow(ofWin: Shapes.OpenFinWindow) {
-    const options = ofWin._options;
-    const { uuid, name } = options;
-    const entityInfo = getEntityInfo({ uuid, name });
-    const elIPCConfig = {
-        channels: electronIPC.channels
-    };
-    const socketServerState = <PortInfo>getSocketServerState();
-    const enableChromiumBuild = isEnableChromiumBuild();
-    return {
-        options,
-        entityInfo,
-        elIPCConfig,
-        enableChromiumBuild,
-        socketServerState,
-        frames: Array.from(ofWin.frames.values())
-    };
+    if (ofWin) {
+        const options = ofWin._options;
+        const { uuid, name } = options;
+        const entityInfo = getEntityInfo({ uuid, name });
+        const elIPCConfig = {
+            channels: electronIPC.channels
+        };
+        const socketServerState = <PortInfo>getSocketServerState();
+        const enableChromiumBuild = isEnableChromiumBuild();
+        return {
+            options,
+            entityInfo,
+            elIPCConfig,
+            enableChromiumBuild,
+            socketServerState,
+            frames: Array.from(ofWin.frames.values())
+        };
+    }
 }

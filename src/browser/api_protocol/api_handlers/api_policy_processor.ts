@@ -3,6 +3,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 const coreState = require('../../core_state');
 import { getDefaultRequestHandler, actionMap } from './api_protocol_base';
 import {ApiPath, ApiPolicyDelegate, Endpoint} from '../shapes';
+import {OpenFinWindow} from '../../../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
 import { GetDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
 import { writeToLog } from '../../log';
@@ -13,16 +14,14 @@ const configUrlPermissionsMap : { [url: string]: any } = {};  // cached configUr
                                             // did not return permissions
 const CONFIG_URL_WILDCARD = 'default';  // can set as default for all applications.  Checked ONLY IF permissions
                                   // for a particular URL is not defined
-const ENABLE_DESKTOP_OWNER_SETTINGS: string = 'enable-desktop-owner-settings'; // RVM adds this to runtime->arguments
-                                                        // if settings are detected in Registry
 const DESKTOP_OWNER_SETTINGS_TIMEOUT: string = 'desktop-owner-settings-timeout'; // timeout for requesting from RVM in ms
 let desktopOwnerSettingsTimeout: number = 2000;  // in ms
-let desktopOwnerSettingEnabled: boolean = false;
+let applicationSettingsEnabled: boolean = false;  // true, if applicationSettings is defined in desktop owner settings
 
 type ApiPolicy = {
-    // for backwards compatible, policyName can be config URL
+    // for backwards compatible, policyName can be a single config URL
     [policyName: string]: {
-        urls?: [string];  // support wildcard patterns. If missing, policyName is URL (no wildcard)
+        urls?: [string];  // support wildcard patterns. If missing, policyName should be a single URL (no wildcard)
         permissions: any;
     }
 };
@@ -40,12 +39,22 @@ function getApiPath(action: string) : string {
     return actionMap[action] ? actionMap[action].apiPath : '';
 }
 
+function getApiDefaultPermission(action: string) : boolean {
+    if (actionMap[action]) {
+        return actionMap[action].defaultPermission === undefined || actionMap[action].defaultPermission;
+    } else {
+        return true;
+    }
+}
+
 function searchPolicyByConfigUrl(url: string): any {
     writeToLog(1, `searchPolicyByConfigUrl ${url}`, true);
     if (apiPolicies) {
         for (const policyName of Object.keys(apiPolicies)) {
             const policy = apiPolicies[policyName];
-            if (Array.isArray(policy.urls) &&
+            if (url === CONFIG_URL_WILDCARD && url === policyName) {
+                return policy;
+            } else if (Array.isArray(policy.urls) &&
                     electronApp.matchesURL(url, policy.urls)) {
                 writeToLog(1, `searchPolicyByConfigUrl matched by policy name ${policyName}`, true);
                 return policy;
@@ -60,9 +69,9 @@ function searchPolicyByConfigUrl(url: string): any {
 }
 
 /**
- * Checks if action needs to be listed in permissions option of the window
+ * Checks if action is allowed based on permission definitions
  *
- * Example of permissions
+ * Example of permission definitions
  *
  *  permissions": {
  *      "System": { "launchExternalProcess": true },
@@ -75,23 +84,20 @@ function searchPolicyByConfigUrl(url: string): any {
  *                 }
  *  }
  *
- * For an app, if an API is not listed in its 'permissions' section, reject.
- *
- * For a child window, if an API is not listed in its 'permissions' section, check parent app.
  *
  * @param apiPath array of strings such as  ['Window', 'getNativeId']
- * @param windowPermissions permissions options for the window or app
- * @param isChildWindow true if being called for a child window
+ * @param permissionDefinitions permissions options
  * @param payload API message payload
+ * @param defaultPermission default permission for the API
  * @returns {boolean} true means permitted
  */
-function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, isChildWindow: boolean, payload: any) : boolean {
-    let permitted: boolean = isChildWindow;  // defaults to true of child window
-    if (windowPermissions) {
+function checkPermissionDefinitions(apiPath: ApiPath, permissionDefinitions: any, payload: any, defaultPermission: boolean) : boolean {
+    let permitted: boolean = defaultPermission;
+    if (permissionDefinitions) {
         const parts: string[] = apiPath.split('.');
         const levels: number = parts.length;
         let level: number;
-        let lastValue: any = windowPermissions;
+        let lastValue: any = permissionDefinitions;
         for (level = 0; level < levels; level += 1) {
             const part: string = parts[level];
             if (lastValue.hasOwnProperty(part)) {
@@ -100,17 +106,17 @@ function checkWindowPermissions(apiPath: ApiPath, windowPermissions: any, isChil
                 break;
             }
         }
-        writeToLog(1, `checkWindowPermissions level ${level} ${apiPath}`, true);
+        writeToLog(1, `checkPermissionDefinitions level ${level} ${apiPath}`, true);
         if (level === levels) {
             if (typeof lastValue === 'boolean') {
                 // simple true or false
                 permitted = lastValue;
             } else if (delegateMap.has(apiPath)) {
-                writeToLog(1, `checkWindowPermissions calling delegate ${apiPath}`, true);
+                writeToLog(1, `checkPermissionDefinitions calling delegate ${apiPath}`, true);
                 permitted = delegateMap.get(apiPath).checkPermissions({apiPath,
                                                     permissionSettings: lastValue, payload});
             } else {
-                writeToLog(1, `checkWindowPermissions api path not defined ${apiPath}`, true);
+                writeToLog(1, `checkPermissionDefinitions api path not defined ${apiPath}`, true);
             }
         }
     }
@@ -133,24 +139,21 @@ function authorizeActionFromWindowOptions(windowOpts: any, parentUuid: string, a
     writeToLog(1, `authorizeAction ${logSuffix}`, true);
 
     const apiPath: ApiPath = getApiPath(action);
-    let allowed: boolean = true;
+    let allowed: boolean = getApiDefaultPermission(action);
 
     if (apiPath) {  // if listed in the map, has to be checked
-        const isChildWindow = uuid !== name;
-        allowed = isChildWindow;
         if (permissions) {
-            allowed = checkWindowPermissions(apiPath, permissions, isChildWindow, payload);
+            allowed = checkPermissionDefinitions(apiPath, permissions, payload, allowed);
         }
     }
 
     if (allowed && parentUuid) {  // check parent if there is one
-        const parentObject = coreState.getAppObjByUuid(parentUuid);
+        const parentObject = coreState.getAppByUuid(parentUuid);
         if (parentObject) {
             const parentOpts = parentObject._options;
             if (parentOpts) {
                 writeToLog(1, `authorizeAction checks parent ${parentUuid} ${logSuffix}`, true);
                 allowed = authorizeActionFromWindowOptions(parentOpts, parentObject.parentUuid, action, payload);
-                return;
             } else {
                 writeToLog(1, `authorizeAction missing parent options ${parentUuid} ${logSuffix}`, true);
             }
@@ -177,19 +180,20 @@ function authorizeActionFromPolicy(windowOpts: any, action: string, payload: any
 
     const apiPath: ApiPath = getApiPath(action);
     return new Promise((resolve, reject) => {
-        if (desktopOwnerSettingEnabled === true) {
+        if (applicationSettingsEnabled === true) {
             const configUrl = coreState.getConfigUrlByUuid(uuid);
+            const defaultPermission: boolean = getApiDefaultPermission(action);
             if (configUrl) {
                 writeToLog(1, `authorizeActionFromPolicy checking with config url ${configUrl} ${logSuffix}`, true);
                 requestAppPermissions(configUrl).then((resultByUrl: any) => {
                     if (resultByUrl.permissions) {
-                        resolve(checkWindowPermissions(apiPath, resultByUrl.permissions, false, payload) ?
+                        resolve(checkPermissionDefinitions(apiPath, resultByUrl.permissions, payload, defaultPermission) ?
                             POLICY_AUTH_RESULT.Allowed : POLICY_AUTH_RESULT.Denied);
                     } else {  // check default permissions defined with CONFIG_URL_WILDCARD
                         writeToLog(1, `authorizeActionFromPolicy checking with RVM ${CONFIG_URL_WILDCARD} ${logSuffix}`, true);
                         requestAppPermissions(CONFIG_URL_WILDCARD).then((resultByDefault: any) => {
                             if (resultByDefault.permissions) {
-                                resolve(checkWindowPermissions(apiPath, resultByDefault.permissions, false, payload) ?
+                                resolve(checkPermissionDefinitions(apiPath, resultByDefault.permissions, payload, defaultPermission) ?
                                     POLICY_AUTH_RESULT.Allowed :
                                     POLICY_AUTH_RESULT.Denied);
                             } else {
@@ -211,7 +215,7 @@ function authorizeActionFromPolicy(windowOpts: any, action: string, payload: any
                 resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
             }
         } else {
-            writeToLog(1, `authorizeActionFromPolicy desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled} ${logSuffix}`, true);
+            writeToLog(1, `authorizeActionFromPolicy applicationSettingsEnabled ${applicationSettingsEnabled} ${logSuffix}`, true);
             resolve(POLICY_AUTH_RESULT.NotDefined);  // config URL not defined in policy
         }
     });
@@ -234,23 +238,32 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
 
         writeToLog(1, `apiPolicyPreProcessor ${logSuffix}`, true);
 
-        const originWindow = coreState.getWindowByUuidName(uuid, name);
+        let originWindow : OpenFinWindow = coreState.getWindowByUuidName(uuid, name);
+        if (!originWindow && identity.entityType === 'iframe') {
+            const info = coreState.getInfoByUuidFrame(identity);
+            if (info && info.parent) {
+                originWindow = coreState.getWindowByUuidName(info.parent.uuid, info.parent.name);
+            }
+        }
         if (originWindow) {
-            const appObject = coreState.getAppObjByUuid(uuid);
+            const appObject = coreState.getAppByUuid(uuid);
             // parentUuid for child windows is uuid of the app
             const parentUuid = uuid === name ? appObject.parentUuid : uuid;
             authorizeActionFromPolicy(coreState.getWindowOptionsById(originWindow.id), action, payload).
               then((result: POLICY_AUTH_RESULT) => {
-                if (result === POLICY_AUTH_RESULT.Allowed) {
-                    next();
-                } else if (result === POLICY_AUTH_RESULT.Denied) {
+                if (result === POLICY_AUTH_RESULT.Denied) {
                     writeToLog(1, `apiPolicyPreProcessor rejecting from policy ${logSuffix}`, true);
                     nack('Rejected, action is not authorized');
-                } else if (authorizeActionFromWindowOptions(coreState.getWindowOptionsById(originWindow.id), parentUuid, action, payload)) {
-                    next();
                 } else {
-                    writeToLog(1, `apiPolicyPreProcessor rejecting from win opts ${logSuffix}`, true);
-                    nack('Rejected, action is not authorized');
+                    if (result === POLICY_AUTH_RESULT.Allowed) {
+                        writeToLog(1, `apiPolicyPreProcessor allowed from policy, still need to check window options ${logSuffix}`, true);
+                    }
+                    if (authorizeActionFromWindowOptions(coreState.getWindowOptionsById(originWindow.id), parentUuid, action, payload)) {
+                        next();
+                    } else {
+                        writeToLog(1, `apiPolicyPreProcessor rejecting from win opts ${logSuffix}`, true);
+                        nack('Rejected, action is not authorized');
+                    }
                 }
             }).catch(() => {
                 writeToLog(1, `apiPolicyPreProcessor rejecting from error ${logSuffix}`, true);
@@ -296,6 +309,10 @@ function registerDelegate(apiPath: ApiPath, delegate: ApiPolicyDelegate) {
     delegateMap.set(apiPath, delegate);
 }
 
+// Example response from RVM
+// { "broadcast": false, "messageId": "735267b6-0a12-4524-bf12-00ea556d74aa", "payload":
+// { "action": "get-desktop-owner-settings", "applicationSettingsExists": false,
+//  "desktopOwnerFileExists": true, "payload": { }, "success": true }, "topic": "application" }
 function retrieveAPIPolicyContent(): Promise<any> {
     writeToLog(1, 'retrieveAPIPolicyContent', true);
     return new Promise((resolve, reject) => {
@@ -303,45 +320,62 @@ function retrieveAPIPolicyContent(): Promise<any> {
             topic: 'application',
             action: 'get-desktop-owner-settings',
             sourceUrl: 'https://openfin.co', // ignored by RVM if isGlobal is true
-            isGlobal: true // get all polices
+            isGlobal: true, // get all polices
+            timeToLive: desktopOwnerSettingsTimeout / 1000
         };
         rvmBus.publish(msg, (rvmResponse: any) => {
             writeToLog('info', `requestAppPermissions from RVM ${JSON.stringify(rvmResponse)} `);
             if (rvmResponse.payload && rvmResponse.payload.success === true &&
+                rvmResponse.payload.desktopOwnerFileExists === true &&
                 rvmResponse.payload.payload) {
-                resolve(rvmResponse.payload.payload);
+                  if (rvmResponse.payload.applicationSettingsExists === true) {
+                    resolve(rvmResponse.payload.payload);
+                  } else if (rvmResponse.payload.applicationSettingsExists === false) {
+                    writeToLog('info', 'requestAppPermissions applicationSettings not set in desktop-owner-settings');
+                    reject(rvmResponse);
+                  } else if (Object.keys(rvmResponse.payload.payload).length > 0) {
+                    // older versions of RVM do not set applicationSettingsExists
+                    // accept only if it is not empty
+                    resolve(rvmResponse.payload.payload);
+                  } else {
+                    writeToLog('info', 'requestAppPermissions applicationSettings not set in desktop-owner-settings');
+                    reject(rvmResponse);
+                  }
             } else {
                 writeToLog('error', `requestAppPermissions from RVM failed ${JSON.stringify(rvmResponse)}`);
                 reject(rvmResponse);  // false indicates request to RVM failed
             }
-        }, desktopOwnerSettingsTimeout / 1000);
+        }, false);
     });
 }
 
-if (coreState.argo['enable-strict-api-permissions']) {
-    writeToLog('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
-    getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
-    desktopOwnerSettingEnabled = !!coreState.argo[ENABLE_DESKTOP_OWNER_SETTINGS];
-    writeToLog(1, `desktopOwnerSettingEnabled ${desktopOwnerSettingEnabled}`, true);
-    if (desktopOwnerSettingEnabled === true && coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
-        desktopOwnerSettingsTimeout = Number(coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]);
-        writeToLog(1, `desktopOwnerSettingsTimeout ${desktopOwnerSettingsTimeout}`, true);
-    }
-    for (const key of Object.keys(actionMap)) {
-        const endPoint: Endpoint = actionMap[key];
-        if (endPoint.apiPolicyDelegate) {
-            registerDelegate(endPoint.apiPath, endPoint.apiPolicyDelegate);
-        }
-    }
-
-    if (desktopOwnerSettingEnabled === true) {
-        retrieveAPIPolicyContent().then((content: ApiPolicy) => {
-            apiPolicies = content;
-        }).catch(e => {
-            writeToLog(1, `Error retrieveAPIPolicies ${e}`, true);
-        });
+writeToLog('info', `Installing API policy PreProcessor ${JSON.stringify(coreState.getStartManifest())}`);
+getDefaultRequestHandler().addPreProcessor(apiPolicyPreProcessor);
+if (coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]) {
+    desktopOwnerSettingsTimeout = Number(coreState.argo[DESKTOP_OWNER_SETTINGS_TIMEOUT]);
+    writeToLog(1, `desktopOwnerSettingsTimeout ${desktopOwnerSettingsTimeout}`, true);
+}
+for (const key of Object.keys(actionMap)) {
+    const endPoint: Endpoint = actionMap[key];
+    if (endPoint.apiPolicyDelegate) {
+        registerDelegate(endPoint.apiPath, endPoint.apiPolicyDelegate);
     }
 }
+
+retrieveAPIPolicyContent().then((content: ApiPolicy) => {
+    apiPolicies = content;
+    if (apiPolicies) {
+        applicationSettingsEnabled = true;
+        if (!apiPolicies.hasOwnProperty(CONFIG_URL_WILDCARD)) {
+            apiPolicies[CONFIG_URL_WILDCARD] = { permissions: {} };
+            writeToLog('info', 'default policy missing, setting to {} ');
+        }
+    } else {
+        writeToLog(1, 'API policy not defined in desktopOwnerSettings', true);
+    }
+}).catch(e => {
+    writeToLog(1, `Error retrieveAPIPolicies ${JSON.stringify(e)}`, true);
+});
 
 export {apiPolicyPreProcessor};
 

@@ -1,5 +1,4 @@
 
-const { Application } = require('../../api/application');
 const { Window } = require('../../api/window');
 import {
     getGroupingWindowIdentity,
@@ -30,7 +29,6 @@ export const windowApiMap = {
     'disable-window-frame': disableUserMovement,
     'dock-window': dockWindow,
     'enable-window-frame': enableUserMovement,
-    'execute-javascript-in-window': { apiFunc: executeJavascript, apiPath: '.executeJavaScript' },
     'flash-window': flashWindow,
     'focus-window': focusWindow,
     'get-current-window-options': getCurrentWindowOptions,
@@ -42,7 +40,6 @@ export const windowApiMap = {
     'get-window-options': getWindowOptions,
     'get-window-snapshot': { apiFunc: getWindowSnapshot, apiPath: '.getSnapshot' },
     'get-window-state': getWindowState,
-    'get-zoom-level': getZoomLevel,
     'hide-window': hideWindow,
     'is-window-showing': isWindowShowing,
     'join-window-group': joinWindowGroup,
@@ -52,12 +49,7 @@ export const windowApiMap = {
     'minimize-window': minimizeWindow,
     'move-window': moveWindow,
     'move-window-by': moveWindowBy,
-    'navigate-window': navigateWindow,
-    'navigate-window-back': navigateWindowBack,
-    'navigate-window-forward': navigateWindowForward,
-    'stop-window-navigation': stopWindowNavigation,
     'register-window-name': registerWindowName,
-    'reload-window': reloadWindow,
     'redirect-window-to-url': redirectWindowToUrl, // Deprecated
     'resize-window': resizeWindow,
     'resize-window-by': resizeWindowBy,
@@ -67,7 +59,6 @@ export const windowApiMap = {
     'set-foreground-window': setForegroundWindow,
     'set-window-bounds': setWindowBounds,
     'set-window-preload-state': setWindowPreloadState,
-    'set-zoom-level': setZoomLevel,
     'show-at-window': showAtWindow,
     'stop-flash-window': stopFlashWindow,
     'undock-window': undockWindow,
@@ -125,12 +116,11 @@ function stopFlashWindow(identity: Identity, message: APIMessage, ack: Acker): v
     ack(successAck);
 }
 
-function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker): void {
+function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { top, left, width, height } = payload;
     const {uuid, name} = getTargetWindowIdentity(payload);
-    Window.setBounds({uuid, name}, left, top, width, height);
-    ack(successAck);
+    Window.setBounds({ uuid, name }, left, top, width, height, () => ack(successAck), nack);
 }
 
 function setWindowPreloadState(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -184,22 +174,20 @@ function restoreWindow(identity: Identity, message: APIMessage, ack: Acker): voi
     ack(successAck);
 }
 
-function resizeWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+function resizeWindow(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { width, height, anchor } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.resizeTo(windowIdentity, width, height, anchor);
-    ack(successAck);
+    Window.resizeTo(windowIdentity, width, height, anchor, () => ack(successAck), nack);
 }
 
-function resizeWindowBy(identity: Identity, message: APIMessage, ack: Acker): void {
+function resizeWindowBy(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { deltaHeight, deltaWidth, anchor } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.resizeBy(windowIdentity, deltaWidth, deltaHeight, anchor);
-    ack(successAck);
+    Window.resizeBy(windowIdentity, deltaWidth, deltaHeight, anchor, () => ack(successAck), nack);
 }
 
 function undockWindow(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -222,48 +210,6 @@ function moveWindowBy(identity: Identity, message: APIMessage, ack: Acker): void
     const windowIdentity = getTargetWindowIdentity(payload);
 
     Window.moveBy(windowIdentity, deltaLeft, deltaTop);
-    ack(successAck);
-}
-
-function navigateWindow(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const { url } = payload;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.navigate(windowIdentity, url);
-    ack(successAck);
-}
-
-function navigateWindowBack(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.navigateBack(windowIdentity);
-    ack(successAck);
-}
-
-function navigateWindowForward(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.navigateForward(windowIdentity);
-    ack(successAck);
-}
-
-function stopWindowNavigation(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.stopNavigation(windowIdentity);
-    ack(successAck);
-}
-
-function reloadWindow(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const { ignoreCache } = payload;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.reload(windowIdentity, ignoreCache);
     ack(successAck);
 }
 
@@ -432,32 +378,6 @@ function enableUserMovement(identity: Identity, message: APIMessage, ack: Acker)
     ack(successAck);
 }
 
-function executeJavascript(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
-    const { payload } = message;
-    const { code } = payload;
-    const dataAck = Object.assign({}, successAck);
-    const windowIdentity = getTargetWindowIdentity(payload);
-    let { uuid: pUuid } = windowIdentity;
-
-    while (pUuid) {
-        if (pUuid === identity.uuid) {
-            return Window.executeJavascript(windowIdentity, code, (err: Error, result: any) => {
-                if (err) {
-                    nack(err); // TODO: this nack doesn't follow the protocol
-                } else {
-                    dataAck.data = result;
-                    ack(dataAck);
-                }
-            });
-        }
-        pUuid = Application.getParentApplication({
-            uuid: pUuid
-        });
-    }
-
-    return nack(new Error('Rejected, target window is not owned by requesting identity'));
-}
-
 function disableUserMovement(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
@@ -501,14 +421,12 @@ function blurWindow(identity: Identity, message: APIMessage, ack: Acker): void {
     ack(successAck);
 }
 
-function animateWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+function animateWindow(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { options, transitions } = payload;
     const windowIdentity = getTargetWindowIdentity(payload);
 
-    Window.animate(windowIdentity, transitions, options, () => {
-        ack(successAck);
-    });
+    Window.animate(windowIdentity, transitions, options, () => ack(successAck), nack);
 }
 
 function dockWindow(identity: Identity, message: APIMessage, ack: Acker): void {
@@ -534,26 +452,6 @@ function getCachedBounds(identity: Identity, message: APIMessage, ack: Acker, na
         dataAck.data = data;
         ack(dataAck);
     }, nack);
-}
-
-function getZoomLevel(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const dataAck = Object.assign({}, successAck);
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.getZoomLevel(windowIdentity, (result: number) => {
-        dataAck.data = result;
-        ack(dataAck);
-    });
-}
-
-function setZoomLevel(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const { level } = payload;
-    const windowIdentity = getTargetWindowIdentity(payload);
-
-    Window.setZoomLevel(windowIdentity, level);
-    ack(successAck);
 }
 
 function registerWindowName(identity: Identity, message: APIMessage, ack: Acker): void {

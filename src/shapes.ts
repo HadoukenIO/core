@@ -1,6 +1,10 @@
 
 import { PortInfo } from './browser/port_discovery';
-import { BrowserWindow as BrowserWindowElectron, NativeWindowInfo as NativeWindowInfoElectron } from 'electron';
+import {
+    BrowserWindow as BrowserWindowElectron,
+    NativeWindowInfo as NativeWindowInfoElectron,
+    Process as ProcessElectron
+} from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
 import { AnchorType } from '../js-adapter/src/shapes';
 
@@ -8,6 +12,7 @@ export interface Identity {
     uuid: string;
     name?: string;
     runtimeUuid?: string;
+    entityType?: EntityType;
 }
 
 export interface ProviderIdentity extends Identity {
@@ -149,6 +154,7 @@ export interface WindowOptions {
     };
     alwaysOnBottom?: boolean;
     alwaysOnTop?: boolean;
+    api?: any;
     applicationIcon?: string;
     appLogFlushInterval?: number;
     aspectRatio?: number;
@@ -374,7 +380,8 @@ export interface APIHandlerMap {
         apiPath?: string;
         apiPolicyDelegate?: {
             checkPermissions: (args: any) => boolean;
-        }
+        },
+        defaultPermission?: boolean
     };
 }
 
@@ -420,12 +427,6 @@ export interface CoordinatesXY {
     y: number;
 }
 
-export interface ProcessInfo {
-    imageName: string;
-    injected: boolean;
-    pid: number;
-}
-
 // This mock is for window grouping accepting external windows
 interface BrowserWindowMock extends BrowserWindowElectron {
     _options: WindowOptions;
@@ -444,10 +445,18 @@ export interface ExternalWindow extends BrowserWindowElectron {
     uuid: string;
 }
 
-export interface NativeWindowInfo extends NativeWindowInfoElectron {
+export interface Process extends Omit<ProcessElectron, 'imageName'> {
+    injected: boolean;
+    pid: number;
+}
+
+export interface NativeWindowInfo extends Omit<NativeWindowInfoElectron, 'process'> {
+    process: Process;
     name: string;
     uuid: string;
 }
+
+export type NativeWindowInfoLite = Pick<NativeWindowInfo, 'name'|'process'|'title'|'uuid'|'visible'>;
 
 export type GroupWindow = (ExternalWindow | OpenFinWindow) & {
     isExternalWindow?: boolean;
