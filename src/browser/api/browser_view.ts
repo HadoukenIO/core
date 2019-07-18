@@ -9,9 +9,10 @@ import of_events from '../of_events';
 import route from '../../common/route';
 import { browserViewActionMap } from '../api_protocol/api_handlers/browser_view';
 import { getElectronBrowserWindow } from '../api_protocol/api_handlers/webcontents';
+import { OpenFinWindow } from '../../shapes';
 
 
-const windowCloseListenerMap = new WeakMap();
+const windowCloseListenerMap: WeakMap<OpenFinWindow, WeakMap<OfView, () => void>> = new WeakMap();
 
 export interface BrowserViewOpts extends BrowserViewCreationOptions {
     uuid: string;
@@ -48,6 +49,17 @@ export function show(ofView: OfView) {
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view} = ofView;
     if (view) {
+        if (ofView.target.name !== toIdentity.name) {
+            const oldWin = getWindowByUuidName(ofView.target.uuid, ofView.target.name);
+            if (oldWin) {
+                const oldwinMap = windowCloseListenerMap.get(oldWin);
+                if (oldwinMap) {
+                    const listener = oldwinMap.get(ofView);
+                    of_events.removeListener(route.window('closed', ofView.target.uuid, ofView.target.name), listener);
+                    oldwinMap.delete(ofView);
+                }
+            }
+        }
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
         if (!ofWin) {
             throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
@@ -61,7 +73,10 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
             windowCloseListenerMap.delete(ofWin);
         };
         of_events.once(route.window('closed', toIdentity.uuid, toIdentity.name), listener);
-        windowCloseListenerMap.set(ofWin, listener);
+        if (!windowCloseListenerMap.has(ofWin)) {
+            windowCloseListenerMap.set(ofWin, new WeakMap());
+        }
+        windowCloseListenerMap.get(ofWin).set(ofView, listener);
         updateViewTarget(ofView, toIdentity);
     }
 }
