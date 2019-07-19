@@ -423,6 +423,40 @@ describe('Rectangle', () => {
         const propagatedMoves = Rectangle.PROPAGATE_MOVE(2, startRect, delta, rectsInit);
         assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
     });
+
+    it('should do THIS move correctly', () => {
+
+        const startRect = Rectangle.CREATE_FROM_BOUNDS({x: 908, y: 509, height: 222, width: 491});
+        const rectsInit = [
+            Rectangle.CREATE_FROM_BOUNDS({x: 908, y: 509, height: 222, width: 491}),
+            Rectangle.CREATE_FROM_BOUNDS({x: 906, y: 731, height: 223, width: 491})];
+
+        // numbers that fail here: 11, 14, 22, 26, 33, 52, 97
+        const chg = 26;
+        const delta = {x: 0, y: -chg, height: chg, width: 0};
+
+        const propagatedMoves = Rectangle.PROPAGATE_MOVE(0, startRect, delta, rectsInit);
+        assert.deepEqual(propagatedMoves[0].bounds.height, startRect.height + delta.height);
+    });
+
+    it('should do larger moves correctly', () => {
+        let heightChange = -50;
+        const startRect = Rectangle.CREATE_FROM_BOUNDS({x: 100, y: 100, width: 100, height: 100});
+
+        while (heightChange < 50) {
+            const endRect = Rectangle.CREATE_FROM_BOUNDS({x: 100, y: 100 - heightChange, width: 100, height: 100 + heightChange});
+            const rectsInit = [
+                startRect,
+                Rectangle.CREATE_FROM_BOUNDS({x: 100, y: 200, width: 100, height: 100})];
+            const rectsFinal = [
+                endRect,
+                Rectangle.CREATE_FROM_BOUNDS({x: 100, y: 200, width: 100, height: 100})];
+            const delta = startRect.delta(endRect);
+            const propagatedMoves = Rectangle.PROPAGATE_MOVE(0, startRect, delta, rectsInit);
+            assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
+            heightChange++;
+        }
+    });
 });
 
 function rectList (): Rectangle[] {
