@@ -113,6 +113,16 @@ function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFro
             (<any>ExternalWindow).setBoundsWithoutShadow(ofWin.browserWindow.nativeId, rect);
             if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
+        // const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
+        // const flags = noZorder + noActivate;
+        // const wt = new WindowTransaction.Transaction(0);
+        // moves.forEach(({ ofWin, rect, offset }) => {
+        //     const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
+        //     wt.setWindowPos(hwnd, { ...getTransactionBounds(rect, offset), flags });
+        //     // (<any>ExternalWindow).setBoundsWithoutShadow(ofWin.browserWindow.nativeId, rect);
+        //     if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
+        // });
+        // wt.commit();
     } else {
         moves.forEach(({ ofWin, rect, offset }) => {
             ofWin.browserWindow.setBounds(applyOffset(rect, offset));

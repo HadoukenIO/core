@@ -440,7 +440,7 @@ describe('Rectangle', () => {
     });
 
     it('should do larger moves correctly', () => {
-        let heightChange = -50;
+        let heightChange = 0;
         const startRect = Rectangle.CREATE_FROM_BOUNDS({x: 100, y: 100, width: 100, height: 100});
 
         while (heightChange < 50) {
