@@ -1,4 +1,4 @@
-// Type definitions for Electron 7.0.0-nightly.20190701
+// Type definitions for Electron 7.0.0-nightly.20190710
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -47,8 +47,8 @@ declare namespace Electron {
     netLog: NetLog;
     net: Net;
     Notification: typeof Notification;
-    powerSaveBlocker: PowerSaveBlocker;
     powerMonitor: PowerMonitor;
+    powerSaveBlocker: PowerSaveBlocker;
     ProcessInfo: typeof ProcessInfo;
     ProcessMonitor: typeof ProcessMonitor;
     protocol: Protocol;
@@ -56,24 +56,24 @@ declare namespace Electron {
     screen: Screen;
     session: typeof Session;
     shell: Shell;
-    TouchBarButton: typeof TouchBarButton;
     systemPreferences: SystemPreferences;
+    TouchBarButton: typeof TouchBarButton;
     TouchBarColorPicker: typeof TouchBarColorPicker;
     TouchBarGroup: typeof TouchBarGroup;
     TouchBarLabel: typeof TouchBarLabel;
     TouchBarPopover: typeof TouchBarPopover;
     TouchBarScrubber: typeof TouchBarScrubber;
     TouchBarSegmentedControl: typeof TouchBarSegmentedControl;
-    TouchBarSpacer: typeof TouchBarSpacer;
     TouchBarSlider: typeof TouchBarSlider;
+    TouchBarSpacer: typeof TouchBarSpacer;
     TouchBar: typeof TouchBar;
-    webContents: typeof WebContents;
     Tray: typeof Tray;
+    webContents: typeof WebContents;
     webFrame: WebFrame;
-    webviewTag: WebviewTag;
     WebRequest: typeof WebRequest;
-    WindowTransaction: typeof WindowTransaction;
+    webviewTag: WebviewTag;
     WinEventHookEmitter: typeof WinEventHookEmitter;
+    WindowTransaction: typeof WindowTransaction;
   }
 
   interface MainInterface extends CommonInterface {
@@ -101,8 +101,8 @@ declare namespace Electron {
   const nativeImage: typeof NativeImage;
   const netLog: NetLog;
   const net: Net;
-  const powerSaveBlocker: PowerSaveBlocker;
   const powerMonitor: PowerMonitor;
+  const powerSaveBlocker: PowerSaveBlocker;
   const protocol: Protocol;
   const remote: Remote;
   const screen: Screen;
@@ -939,7 +939,7 @@ This method can only be called before app is ready.
      * Using `basic` should be preferred if only basic information like `vendorId` or
      * `driverId` is needed.
      */
-    getGPUInfo(infoType: string): Promise<Electron.GPUInfoReturnValue>;
+    getGPUInfo(infoType: string): Promise<unknown>;
     getGpuName(): string;
     /**
      * This call will return the same value on subsequent calls on the same
@@ -2629,6 +2629,8 @@ On Linux always returns `true`.
     setEnabled(enable: boolean): void;
     /**
      * Changes whether the window can be focused.
+     * 
+On macOS it does not remove the focus from the window.
      */
     setFocusable(focusable: boolean): void;
     /**
@@ -2869,8 +2871,11 @@ On Linux always returns `true`.
     /**
      * Adds a vibrancy effect to the browser window. Passing `null` or an empty string
      * will remove the vibrancy effect on the window.
+     *
+     * Note that `appearance-based`, `light`, `dark`, `medium-light`, and `ultra-dark`
+     * have been deprecated and will be removed in an upcoming version of macOS.
      */
-    setVibrancy(type: 'appearance-based' | 'light' | 'dark' | 'titlebar' | 'selection' | 'menu' | 'popover' | 'sidebar' | 'medium-light' | 'ultra-dark'): void;
+    setVibrancy(type: (('appearance-based' | 'light' | 'dark' | 'titlebar' | 'selection' | 'menu' | 'popover' | 'sidebar' | 'medium-light' | 'ultra-dark')) | (null)): void;
     /**
      * Sets whether the window should be visible on all workspaces.
      * 
@@ -2953,7 +2958,7 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
      * In addition to these methods, the child window implements `window.opener` object
      * with no properties and a single method.
      */
-    postMessage(message: string, targetOrigin: string): void;
+    postMessage(message: any, targetOrigin: string): void;
     /**
      * Invokes the print dialog on the child window.
      */
@@ -4314,6 +4319,10 @@ If the size is unknown, it returns 0.
     // Docs: http://electronjs.org/docs\api\external-process
 
     /**
+     * ExternalProcess
+     */
+    constructor();
+    /**
      * attaches to the application specified by <pid>. <pid> is the process id of a
      * running process.
 
@@ -4334,10 +4343,6 @@ Returns the process id and handle in an object.
 Terminates the process.
      */
     static terminate(): void;
-    /**
-     * ExternalProcess
-     */
-    constructor();
   }
 
   interface FileFilter {
@@ -6789,30 +6794,6 @@ Creates or updates a shortcut link at `shortcutPath`.
                                                   * The new RGBA color the user assigned to be their system accent color.
                                                   */
                                                  newColor: string) => void): this;
-    /**
-     * **NOTE:** This event is only emitted after you have called
-     * `startAppLevelAppearanceTrackingOS`
-     */
-    on(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    once(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    addListener(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    removeListener(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
     on(event: 'color-changed', listener: (event: Event) => void): this;
     once(event: 'color-changed', listener: (event: Event) => void): this;
     addListener(event: 'color-changed', listener: (event: Event) => void): this;
@@ -9209,6 +9190,8 @@ Calling `event.preventDefault()` will prevent the navigation.
     getFrameName(frameRoutingId: number): string;
     /**
      * If *offscreen rendering* is enabled returns the current frame rate.
+     * 
+**Deprecated**
      */
     getFrameRate(): number;
     /**
@@ -9242,6 +9225,8 @@ Returns `PrinterInfo[]`.
     getURL(): string;
     /**
      * The user agent for this web page.
+
+**Deprecated**
      */
     getUserAgent(): string;
     /**
@@ -9250,10 +9235,14 @@ Returns `PrinterInfo[]`.
     getWebRTCIPHandlingPolicy(): string;
     /**
      * the current zoom factor.
+
+**Deprecated**
      */
     getZoomFactor(): number;
     /**
      * the current zoom level.
+
+**Deprecated**
      */
     getZoomLevel(): number;
     /**
@@ -9312,6 +9301,8 @@ Returns `PrinterInfo[]`.
     invalidate(): void;
     /**
      * Whether this page has been muted.
+
+**Deprecated**
      */
     isAudioMuted(): boolean;
     /**
@@ -9409,10 +9400,12 @@ Would require code like this
      *
      * Calling `window.print()` in web page is equivalent to calling
      * `webContents.print({ silent: false, printBackground: false, deviceName: '' })`.
+     *
+     * Use `page-break-before: always;` CSS style to force to print to a new page.
      * 
-Use `page-break-before: always;` CSS style to force to print to a new page.
+Example usage:
      */
-    print(options?: PrintOptions, callback?: (success: boolean) => void): void;
+    print(options?: PrintOptions, callback?: (success: boolean, failureReason: 'cancelled' | 'failed') => void): void;
     /**
      * Resolves with the generated PDF data.
      *
@@ -9526,6 +9519,8 @@ You can also read `frameId` from all incoming IPC messages in the main process.
     sendToFrame(frameId: number, channel: string, ...args: any[]): void;
     /**
      * Mute the audio on the current web page.
+
+**Deprecated**
      */
     setAudioMuted(muted: boolean): void;
     /**
@@ -9561,6 +9556,8 @@ An example of showing devtools in a `BrowserWindow`:
     /**
      * If *offscreen rendering* is enabled sets the frame rate to the specified number.
      * Only values between 1 and 60 are accepted.
+
+**Deprecated**
      */
     setFrameRate(fps: number): void;
     /**
@@ -9573,6 +9570,8 @@ An example of showing devtools in a `BrowserWindow`:
     setLayoutZoomLevelLimits(minimumLevel: number, maximumLevel: number): Promise<void>;
     /**
      * Overrides the user agent for this web page.
+
+**Deprecated**
      */
     setUserAgent(userAgent: string): void;
     /**
@@ -9590,6 +9589,8 @@ An example of showing devtools in a `BrowserWindow`:
     /**
      * Changes the zoom factor to the specified factor. Zoom factor is zoom percent
      * divided by 100, so 300% = 3.0.
+
+**Deprecated**
      */
     setZoomFactor(factor: number): void;
     /**
@@ -9597,6 +9598,8 @@ An example of showing devtools in a `BrowserWindow`:
      * increment above or below represents zooming 20% larger or smaller to default
      * limits of 300% and 50% of original size, respectively. The formula for this is
      * `scale := 1.2 ^ level`.
+
+**Deprecated**
      */
     setZoomLevel(level: number): void;
     /**
@@ -9643,11 +9646,16 @@ Takes a V8 heap snapshot and saves it to `filePath`.
      * Executes the editing command `unselect` in web page.
      */
     unselect(): void;
+    audioMuted: boolean;
     debugger: Debugger;
     devToolsWebContents: WebContents;
+    frameRate: number;
     hostWebContents: WebContents;
     id: number;
     session: Session;
+    userAgent: string;
+    zoomFactor: number;
+    zoomLevel: number;
   }
 
   interface WebFrame extends NodeJS.EventEmitter {
@@ -10292,10 +10300,13 @@ Calling `event.preventDefault()` does __NOT__ have any effect.
      */
     isWaitingForResponse(): boolean;
     /**
+     * The promise will resolve when the page has finished loading (see
+     * `did-finish-load`), and rejects if the page fails to load (see `did-fail-load`).
+     *
      * Loads the `url` in the webview, the `url` must contain the protocol prefix, e.g.
      * the `http://` or `file://`.
      */
-    loadURL(url: string, options?: LoadURLOptions): void;
+    loadURL(url: string, options?: LoadURLOptions): Promise<void>;
     /**
      * Opens a DevTools window for guest page.
      */
@@ -10483,7 +10494,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * access to all Node APIs, but global objects injected by Node will be deleted
      * after this script has finished executing.
      *
-     * **Note:** This option will be appear as `preloadURL` (not `preload`) in the
+     * **Note:** This option will appear as `preloadURL` (not `preload`) in the
      * `webPreferences` specified to the `will-attach-webview` event.
      */
     preload: string;
@@ -10931,7 +10942,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     autoHideMenuBar?: boolean;
     /**
-     * Enable the window to be resized larger than screen. Default is `false`.
+     * Enable the window to be resized larger than screen. Only relevant for macOS, as
+     * other OSes allow larger-than-screen windows by default. Default is `false`.
      */
     enableLargerThanScreen?: boolean;
     /**
@@ -10991,7 +11003,9 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * `appearance-based`, `light`, `dark`, `titlebar`, `selection`, `menu`, `popover`,
      * `sidebar`, `medium-light` or `ultra-dark`.  Please note that using `frame:
      * false` in combination with a vibrancy value requires that you use a non-default
-     * `titleBarStyle` as well.
+     * `titleBarStyle` as well. Also note that `appearance-based`, `light`, `dark`,
+     * `medium-light`, and `ultra-dark` have been deprecated and will be removed in an
+     * upcoming version of macOS.
      */
     vibrancy?: ('appearance-based' | 'light' | 'dark' | 'titlebar' | 'selection' | 'menu' | 'popover' | 'sidebar' | 'medium-light' | 'ultra-dark');
     /**
@@ -11469,9 +11483,6 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Whether to enable cache.
      */
     cache: boolean;
-  }
-
-  interface GPUInfoReturnValue {
   }
 
   interface HandlerRequest {
