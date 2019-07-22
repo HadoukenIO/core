@@ -65,7 +65,7 @@ export class Rectangle {
         this.opts = new RectOptionsOpts(opts);
     }
 
-        get right(): number {
+    get right(): number {
         return this.x + this.width;
     }
 
