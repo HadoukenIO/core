@@ -1,22 +1,10 @@
 import { Rectangle, RectangleBase } from './rectangle';
 import { ExternalWindow } from 'electron';
 import { GroupWindow } from '../shapes';
-import { System } from './api/system';
 import { Move } from './disabled_frame_group_tracker';
 
-const osName: string = System.getHostSpecs().name;
-const isWin10 = /Windows 10/.test(osName);
 const isWin32 = process.platform === 'win32';
 
-export function negate(delta: RectangleBase) {
-    return {
-        x: -delta.x,
-        y: -delta.y,
-        height: -delta.height,
-        width: -delta.width
-    };
-}
-export const zeroDelta: Readonly<RectangleBase> = {x: 0, y: 0, height: 0, width: 0 };
 export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
     const { browserWindow } = ofWin;
     let bounds;
@@ -26,7 +14,6 @@ export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
         bounds = browserWindow.getBounds();
     }
     // Fix this, no longer necessary
-    const delta = zeroDelta;
     const normalizedOptions = {...browserWindow._options};
     if (normalizedOptions.maxHeight === -1) {
         normalizedOptions.maxHeight = Number.MAX_SAFE_INTEGER;
@@ -42,42 +29,24 @@ export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
         normalizedOptions.maxWidth = bounds.width;
         normalizedOptions.minWidth = bounds.width;
     }
-    if (normalizedOptions.maxHeight) { normalizedOptions.maxHeight += delta.height; }
-    if (normalizedOptions.minHeight) { normalizedOptions.minHeight += delta.height; }
-    if (normalizedOptions.maxWidth) { normalizedOptions.maxWidth += delta.width; }
-    if (normalizedOptions.minWidth) { normalizedOptions.minWidth += delta.width; }
     return {
         ofWin,
-        rect: Rectangle.CREATE_FROM_BOUNDS(bounds, normalizedOptions).shift(delta),
-        offset: negate(delta)
+        rect: Rectangle.CREATE_FROM_BOUNDS(bounds, normalizedOptions)
     };
 }
-export function applyOffset(rect: RectangleBase, offset: RectangleBase = zeroDelta) {
+export function getEventBounds(rect: RectangleBase) {
     return {
-        x: rect.x + offset.x,
-        y: rect.y + offset.y,
-        width: rect.width + offset.width,
-        height: rect.height + offset.height
+        left: rect.x,
+        top: rect.y,
+        width: rect.width,
+        height: rect.height
     };
 }
-export function normalizeExternalBounds(rect: RectangleBase, offset: RectangleBase) {
-    return applyOffset(rect, negate(offset));
-}
-export function getEventBounds(rect: RectangleBase, offset?: RectangleBase) {
-    const normalizedBounds = applyOffset(rect, offset);
+export function getTransactionBounds(rect: RectangleBase) {
     return {
-        left: normalizedBounds.x,
-        top: normalizedBounds.y,
-        width: normalizedBounds.width,
-        height: normalizedBounds.height
-    };
-}
-export function getTransactionBounds(rect: RectangleBase, offset?: RectangleBase) {
-    const normalizedBounds = applyOffset(rect, offset);
-    return {
-        x: normalizedBounds.x,
-        y: normalizedBounds.y,
-        w: normalizedBounds.width,
-        h: normalizedBounds.height
+        x: rect.x,
+        y: rect.y,
+        w: rect.width,
+        h: rect.height
     };
 }
