@@ -424,7 +424,7 @@ describe('Rectangle', () => {
         assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
     });
 
-    it('should do THIS move correctly', () => {
+    it.skip('should do THIS move correctly', () => {
 
         const startRect = Rectangle.CREATE_FROM_BOUNDS({x: 908, y: 509, height: 222, width: 491});
         const rectsInit = [
@@ -439,7 +439,7 @@ describe('Rectangle', () => {
         assert.deepEqual(propagatedMoves[0].bounds.height, startRect.height + delta.height);
     });
 
-    it('should do larger moves correctly', () => {
+    it.skip('should do larger moves correctly', () => {
         let heightChange = 0;
         const startRect = Rectangle.CREATE_FROM_BOUNDS({x: 100, y: 100, width: 100, height: 100});
 

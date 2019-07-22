@@ -6,6 +6,8 @@ import { Move } from './disabled_frame_group_tracker';
 
 const osName: string = System.getHostSpecs().name;
 const isWin10 = /Windows 10/.test(osName);
+const isWin32 = process.platform === 'win32';
+
 export function negate(delta: RectangleBase) {
     return {
         x: -delta.x,
@@ -17,7 +19,12 @@ export function negate(delta: RectangleBase) {
 export const zeroDelta: Readonly<RectangleBase> = {x: 0, y: 0, height: 0, width: 0 };
 export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
     const { browserWindow } = ofWin;
-    const bounds = (<any>ExternalWindow).getBoundsWithoutShadow(browserWindow.nativeId);
+    let bounds;
+    if (isWin32) {
+        bounds = (<any>ExternalWindow).getBoundsWithoutShadow(browserWindow.nativeId);
+    } else {
+        bounds = browserWindow.getBounds();
+    }
     // Fix this, no longer necessary
     const delta = zeroDelta;
     const normalizedOptions = {...browserWindow._options};
