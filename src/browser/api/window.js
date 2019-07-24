@@ -10,6 +10,7 @@ let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let Menu = electron.Menu;
 let nativeImage = electron.nativeImage;
+let currentContextMenu = null;
 
 // npm modules
 let _ = require('underscore');
@@ -1770,9 +1771,13 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
         accelerator: 'CommandOrControl+Shift+I'
     });
 
-    const currentMenu = Menu.buildFromTemplate(menuTemplate);
-    currentMenu.popup(browserWindow, {
-        async: true
+    currentContextMenu = Menu.buildFromTemplate(menuTemplate);
+    currentContextMenu.popup({
+        window: browserWindow,
+        async: true,
+        callback: () => {
+            currentContextMenu = null;
+        }
     });
 };
 
