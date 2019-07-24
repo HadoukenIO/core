@@ -1,20 +1,20 @@
 import { EventEmitter } from 'events';
-import { BrowserWindow, app, idleState, nativeTimer, systemPreferences } from 'electron';
+import { BrowserWindow, app, IdleState, NativeTimer, systemPreferences } from 'electron';
 
 class Session extends EventEmitter {
-    private idleState: idleState;
-    private idleEventTimer: nativeTimer;
-    private checkIdleStateTimer: nativeTimer;
+    private idleState: IdleState;
+    private idleEventTimer: NativeTimer;
+    private checkIdleStateTimer: NativeTimer;
     private idleStartTime: number;
     private idleEndTime: number;
 
     constructor() {
         super();
 
-        this.idleState = new idleState();
+        this.idleState = new IdleState();
 
         // Idle event timer
-        this.idleEventTimer = new nativeTimer(() => {
+        this.idleEventTimer = new NativeTimer(() => {
             // NOTE: an idle event needs to be fired every minute while the machine is idle.
             // Manually setting the elapsed time here in the case where the screen is locked
             // and the mouse or keyboard is being used
@@ -25,7 +25,7 @@ class Session extends EventEmitter {
         this.idleEventTimer.stop();
 
         // This timer checks for the machine going into an idle state every second
-        this.checkIdleStateTimer = new nativeTimer(() => {
+        this.checkIdleStateTimer = new NativeTimer(() => {
             const isIdle = this.idleState.isIdle();
             const isTimerRunning = this.idleEventTimer.isRunning();
             const timeNow = app.getTickCount() - this.idleState.elapsedTime();
@@ -53,7 +53,7 @@ class Session extends EventEmitter {
             bw.hookWindowMessage(WM_WTSSESSION_CHANGE, (wParam: any) => {
                 let reason: string;
 
-                switch (wParam.readIntLE()) {
+                switch (wParam.readIntLE(0, 1)) {
                     case 3:
                         reason = 'remote-connect';
                         break;

@@ -45,7 +45,7 @@ export async function navigateForward (webContents: Electron.WebContents) {
 }
 
 export function getZoomLevel(webContents: Electron.WebContents, callback: (zoomLevel: number) => void) {
-    webContents.getZoomLevel(callback);
+    callback(webContents.getZoomLevel());
 }
 
 export function reload(webContents: Electron.WebContents, ignoreCache: boolean = false) {
