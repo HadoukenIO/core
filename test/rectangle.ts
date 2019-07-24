@@ -8,7 +8,7 @@ mockery.enable({
     warnOnReplace: false,
     warnOnUnregistered: false
 });
-import { Rectangle, SharedBoundsList, EdgeCrossings } from '../src/browser/rectangle';
+import { Rectangle, SharedBoundsList } from '../src/browser/rectangle';
 
 describe('Rectangle', () => {
     it('should provide the correct sizes', () => {
@@ -217,22 +217,22 @@ describe('Rectangle', () => {
         assert.deepStrictEqual(aligned.bounds, {x: 0, y: 100, width: 100, height: 110});
     });
 
-    it('should return an adjacency list, quickly :)', () => {
-        const NS_PER_SEC = 1e9;
-        const time = process.hrtime();
-        const adjList = Rectangle.ADJACENCY_LIST([
-            new Rectangle(0, 0, 100, 100),
-            new Rectangle(4, 4, 100, 100),
-            new Rectangle(8, 8, 100, 100),
-            new Rectangle(50, 0, 100, 100),
-            new Rectangle(400, 400, 100, 100),
-            new Rectangle(6, 6, 100, 100)
-        ]);
+    // it('should return an adjacency list, quickly :)', () => {
+    //     const NS_PER_SEC = 1e9;
+    //     const time = process.hrtime();
+    //     const adjList = Rectangle.ADJACENCY_LIST([
+    //         new Rectangle(0, 0, 100, 100),
+    //         new Rectangle(4, 4, 100, 100),
+    //         new Rectangle(8, 8, 100, 100),
+    //         new Rectangle(50, 0, 100, 100),
+    //         new Rectangle(400, 400, 100, 100),
+    //         new Rectangle(6, 6, 100, 100)
+    //     ]);
 
-        const diff = process.hrtime(time);
-        const diffInMilliSec = (diff[0] * NS_PER_SEC + diff[1]) / 1e6;
-        assert(diffInMilliSec < 5);
-    });
+    //     const diff = process.hrtime(time);
+    //     const diffInMilliSec = (diff[0] * NS_PER_SEC + diff[1]) / 1e6;
+    //     assert(diffInMilliSec < 5);
+    // });
 
     it ('should grow correctly on external monitors with negative y', () => {
         const rect = Rectangle.CREATE_FROM_BOUNDS({'x': 1206, 'y': -540, 'width': 491, 'height': 253});
@@ -424,7 +424,7 @@ describe('Rectangle', () => {
         assert.deepEqual(propagatedMoves.map(x => x.bounds), rectsFinal.map(x => x.bounds));
     });
 
-    it.skip('should do THIS move correctly', () => {
+    it('should do THIS move correctly', () => {
 
         const startRect = Rectangle.CREATE_FROM_BOUNDS({x: 908, y: 509, height: 222, width: 491});
         const rectsInit = [
@@ -439,7 +439,7 @@ describe('Rectangle', () => {
         assert.deepEqual(propagatedMoves[0].bounds.height, startRect.height + delta.height);
     });
 
-    it.skip('should do larger moves correctly', () => {
+    it('should do larger moves correctly', () => {
         let heightChange = 0;
         const startRect = Rectangle.CREATE_FROM_BOUNDS({x: 100, y: 100, width: 100, height: 100});
 

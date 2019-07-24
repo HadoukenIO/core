@@ -21,8 +21,6 @@ export interface RectangleBase {
     width: number;
     height: number;
 }
-type EdgeCrossing = { mine: SideName, other: SideName, distance: number };
-export type EdgeCrossings = EdgeCrossing[];
 
 class RectOptionsOpts {
     public minWidth?: number;
@@ -236,15 +234,6 @@ export class Rectangle {
         };
     }
 
-    public outerBounds = (rect: RectangleBase) => {
-        return {
-            x: Math.min(rect.x, this.x),
-            y: Math.min(rect.y, this.y),
-            width: Math.max(rect.width, this.width),
-            height: Math.max(rect.height, this.height)
-        };
-    }
-
     // this is only for resize, move would be different
     private edgeMoved = (pair: Array<SideName>, delta: RectangleBase): boolean => {
         const { x, y, width, height } = delta;
@@ -272,7 +261,6 @@ export class Rectangle {
 
         return movedSides.has(otherRectSharedSide);
     }
-
 
     public alignSide = (mySide: SideName, rect: Rectangle, sideToAlign: SideName) => {
         const changes = this.bounds;
@@ -344,7 +332,6 @@ export class Rectangle {
     }
 
     public propagateMoveToThisRect = (leaderStartBounds: RectangleBase, proposedLeaderMove: RectangleBase): Rectangle => {
-        
         const sharedBoundsList = this.sharedBoundsList(Rectangle.CREATE_FROM_BOUNDS(leaderStartBounds));
         const currLeader = Rectangle.CREATE_FROM_BOUNDS(proposedLeaderMove);
         // This is the delta of the leader, which may or may not be `this` rect
@@ -358,32 +345,6 @@ export class Rectangle {
         }
 
         return rect;
-    }
-
-    public adjacent = (rects: Rectangle[]) => {
-        return Array.from(Rectangle.ADJACENCY_LIST([...rects, this as Rectangle]).values()).find(list => list.includes(this));
-    }
-
-    public static ADJACENCY_LIST(rects: Rectangle[]): Map<number, Rectangle[]> {
-        const adjLists = new Map();
-        const rectLen = rects.length;
-
-        for (let i = 0; i < rectLen; i++) {
-            const adjacentRects = [];
-            const rect = rects[i];
-
-            for (let ii = 0; ii < rectLen; ii++) {
-                if (i !== ii) {
-                    if (rect.sharedBoundsOnIntersection(rects[ii]).hasSharedBounds) {
-                        adjacentRects.push(ii);
-                    }
-                }
-            }
-
-            adjLists.set(i, adjacentRects);
-        }
-
-        return adjLists;
     }
 
     public static GRAPH_WITH_SIDE_DISTANCES(rects: Rectangle[]) {
@@ -406,7 +367,12 @@ export class Rectangle {
                             const [mySide, otherSide] = sides;
                             const key = [i, ii, Side[mySide], Side[otherSide]].toString();
                             edges.add(key)
-                            edgeDistances.set(key, Math.abs(rect[mySide] - rects[ii][otherSide]));
+                            const edgeDistRaw = Math.abs(rect[mySide] - rects[ii][otherSide]);
+                            // because fractional distances dont make sense even when iterating over fractional
+                            // positions, if the distace is less than 1 we can just assume that its 0 and not 
+                            // some small decimal value
+                            const edgeDistCorrected = Math.round(edgeDistRaw);
+                            edgeDistances.set(key, edgeDistCorrected);
                         });
                     }
                 }
@@ -437,7 +403,6 @@ export class Rectangle {
 
         return true;
     }
-
 
     public static PROPAGATE_MOVE(leaderRectIndex: number,
         start: Rectangle,

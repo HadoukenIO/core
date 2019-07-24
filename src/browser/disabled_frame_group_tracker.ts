@@ -106,13 +106,15 @@ function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFro
             (<any>ExternalWindow).setBoundsWithoutShadow(ofWin.browserWindow.nativeId, rect);
             if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
+
+        // Leave window transaction Logic here for later use
+
         // const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
         // const flags = noZorder + noActivate;
         // const wt = new WindowTransaction.Transaction(0);
         // moves.forEach(({ ofWin, rect }) => {
         //     const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
         //     wt.setWindowPos(hwnd, { ...getTransactionBounds(rect), flags });
-        //     // (<any>ExternalWindow).setBoundsWithoutShadow(ofWin.browserWindow.nativeId, rect);
         //     if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         // });
         // wt.commit();
