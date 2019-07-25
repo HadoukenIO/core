@@ -15,6 +15,7 @@ export interface Identity {
     name?: string;
     runtimeUuid?: string;
     entityType?: EntityType;
+    parentFrame?: string;
 }
 
 export interface ProviderIdentity extends Identity {

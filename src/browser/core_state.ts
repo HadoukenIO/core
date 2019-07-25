@@ -124,8 +124,8 @@ export function getEntityInfo(identity: Shapes.Identity) {
     }
 }
 
-export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes.ProviderIdentity|undefined {
-    const { uuid, name } = identity;
+export function getEntityIdentity(identity: Shapes.Identity): Shapes.ProviderIdentity|undefined {
+    const { uuid, name, entityType, parentFrame } = identity;
     const externalConn = getExternalAppObjByUuid(uuid);
     if (externalConn) {
         return {...externalConn, isExternal: true };
@@ -135,6 +135,13 @@ export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes
     const browserWindow = ofWindow && ofWindow.browserWindow;
     if (browserWindow && !browserWindow.isDestroyed()) {
         return { uuid, name, isExternal: false };
+    }
+
+    if (entityType && entityType === 'iframe' && parentFrame) {
+        const hostWindow = getWindowByUuidName(uuid, parentFrame);
+        if (hostWindow && !hostWindow.browserWindow.isDestroyed() && hostWindow.frames.has(name)) {
+            return { uuid, name, isExternal: false };
+        }
     }
 }
 
@@ -847,7 +854,7 @@ export function removeBrowserView (view: OfView) {
     views = views.filter(v => v.uuid !== view.uuid && v.name !== view.name);
 }
 export function getBrowserViewByIdentity({uuid, name}: Identity) {
-   return views.find(v => v.uuid === uuid && v.name === name);
+    return views.find(v => v.uuid === uuid && v.name === name);
 }
 function getBrowserViewByWebContentsId(webContentsId: number) {
     return views.find(v => v.view.webContents.id === webContentsId);

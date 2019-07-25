@@ -4,7 +4,7 @@ import ofEvents from '../of_events';
 import route from '../../common/route';
 import { AckFunc, NackFunc, AckMessage, AckPayload, NackPayload } from '../api_protocol/transport_strategy/ack';
 import { sendToIdentity } from '../api_protocol/api_handlers/api_protocol_base';
-import { getExternalOrOfWindowIdentity } from '../core_state';
+import { getEntityIdentity } from '../core_state';
 import SubscriptionManager from '../subscription_manager';
 
 const subscriptionManager = new SubscriptionManager();
@@ -79,7 +79,7 @@ export module Channel {
             throw new Error(nackString);
         }
 
-        const providerApp = getExternalOrOfWindowIdentity(identity);
+        const providerApp = getEntityIdentity(identity);
         const channelId = getChannelId(identity, channelName);
         const providerIdentity = { ...providerApp, channelName, channelId };
         channelMap.set(channelId, providerIdentity);
@@ -135,7 +135,7 @@ export module Channel {
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { channelName, payload: connectionPayload } = payload;
 
-        const connectingWindow = getExternalOrOfWindowIdentity(identity);
+        const connectingWindow = getEntityIdentity(identity);
         const providerIdentity = Channel.getChannelByChannelName(channelName);
 
         if (connectingWindow && connectingWindow.isExternal && connectionPayload && connectionPayload.nameAlias) {
