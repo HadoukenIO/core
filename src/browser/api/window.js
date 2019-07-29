@@ -2475,7 +2475,10 @@ function restoreWindowPosition(identity, cb) {
             savedBounds.left = displayRoot.x;
         }
 
-        Window.setBounds(identity, savedBounds.left, savedBounds.top, savedBounds.width, savedBounds.height);
+        const browserWindow = getElectronBrowserWindow(identity);
+        const { left, right, width, height } = savedBounds;
+        NativeWindow.setBounds(browserWindow, { left, right, width, height });
+
         switch (savedBounds.windowState) {
             case 'maximized':
                 Window.maximize(identity);
