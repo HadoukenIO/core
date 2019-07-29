@@ -865,7 +865,8 @@ Window.create = function(id, opts) {
                 //if saveWindowState:false and autoShow:true and waitForPageLoad:false are present
                 //we show as soon as we restore the window position instead of waiting for the connected event
                 if (_options.autoShow && (!_options.waitForPageLoad)) {
-                    browserWindow.show();
+                    // Need to go through Window.show here so that the show-requested logic comes into play
+                    Window.show(identity);
                 }
             } else if (_options.waitForPageLoad) {
                 browserWindow.once('ready-to-show', () => {
@@ -876,7 +877,8 @@ Window.create = function(id, opts) {
                     //if autoShow:true and waitForPageLoad:false are present we show as soon as we restore the window position
                     //instead of waiting for the connected event
                     if (_options.autoShow) {
-                        browserWindow.show();
+                        // Need to go through Window.show here so that the show-requested logic comes into play
+                        Window.show(identity);
                     }
                     observer.next();
                 });
