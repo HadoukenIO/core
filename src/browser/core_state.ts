@@ -49,6 +49,7 @@ export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
 let apps: Shapes.App[] = [];
+let views: OfView[] = [];
 
 let startManifest = {};
 const manifests: Map <string, Shapes.Manifest> = new Map();
@@ -410,7 +411,9 @@ export function addApp(id: number, uuid: string): Shapes.App[] {
         id: id,
         isRunning: false,
         uuid,
-        views: [],
+        get views () {
+            return views.filter(v => v.uuid === uuid);
+        },
         // hide-splashscreen is sent to RVM on 1st window show &
         // immediately on subsequent app launches if already sent once
         sentHideSplashScreen: false
@@ -822,7 +825,6 @@ function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
     return win && win.openfinWindow;
 }
-let views: OfView[] = [];
 export interface OfView extends Identity {
     name: string;
     view: BrowserView;
@@ -834,10 +836,6 @@ export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
     const {uuid, name, target} = opts;
     const ofView = { frames: new Map(), uuid, _options: opts, name, view, target };
     views.push(ofView);
-    const app = appByUuid(uuid);
-    if (app) {
-        app.views.push(ofView);
-    }
     return ofView;
 }
 export function updateViewTarget(id: Identity, newTarget: Identity) {
@@ -848,9 +846,6 @@ export function updateViewTarget(id: Identity, newTarget: Identity) {
 }
 export function removeBrowserView (view: OfView) {
     const app = appByUuid(view.uuid);
-    if (app) {
-        app.views = app.views.filter(v => v.name !== view.name);
-    }
     views = views.filter(v => v.uuid !== view.uuid && v.name !== view.name);
 }
 export function getBrowserViewByIdentity({uuid, name}: Identity) {

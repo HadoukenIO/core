@@ -65,11 +65,9 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
             throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
         }
         const bWin = ofWin.browserWindow;
-        ofWin.view = ofView;
         bWin.addBrowserView(view);
         const listener = () => {
             destroy(ofView);
-            ofWin.view = undefined;
             windowCloseListenerMap.delete(ofWin);
         };
         of_events.once(route.window('closed', toIdentity.uuid, toIdentity.name), listener);
