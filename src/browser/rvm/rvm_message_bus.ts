@@ -409,6 +409,7 @@ export class RVMMessageBus extends EventEmitter  {
         const rvmPayload = {
             topic: 'system',
             action: 'get-installed-runtimes',
+            uuid: opts.uuid,
             sourceUrl: opts.sourceUrl,
             timeToLive: 5
         };

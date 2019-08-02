@@ -303,6 +303,7 @@ export const System = {
     },
     getInstalledRuntimes: function(identity, callback, errorCallback) {
         let getInstalledRuntimesOpts = {
+            uuid: identity.uuid,
             sourceUrl: coreState.getConfigUrlByUuid(identity.uuid)
         };
 
