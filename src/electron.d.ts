@@ -1,4 +1,4 @@
-// Type definitions for Electron 6.0.0-beta.12
+// Type definitions for Electron 6.0.0
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -4628,9 +4628,9 @@ declare namespace Electron {
      */
     pid: number;
     /**
-     * Process type (Browser or Tab or GPU etc).
+     * Process type. One of the following values:
      */
-    type: string;
+    type: ('Browser' | 'Tab' | 'Utility' | 'Zygote' | 'GPU' | 'Unknown');
   }
 
   interface Product {
@@ -5196,8 +5196,7 @@ declare namespace Electron {
     setPermissionRequestHandler(handler: ((webContents: WebContents, permission: string, callback: (permissionGranted: boolean) => void, details: PermissionRequestHandlerDetails) => void) | (null)): void;
     /**
      * Adds scripts that will be executed on ALL web contents that are associated with
-     * this session just before normal preload scripts run. Note: For security reasons,
-     * preload scripts can only be loaded from a subpath of the app path.
+     * this session just before normal preload scripts run.
      */
     setPreloads(preloads: string[]): void;
     /**
@@ -5359,30 +5358,6 @@ declare namespace Electron {
                                                   * The new RGBA color the user assigned to be their system accent color.
                                                   */
                                                  newColor: string) => void): this;
-    /**
-     * NOTE: This event is only emitted after you have called
-     * startAppLevelAppearanceTrackingOS
-     */
-    on(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    once(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    addListener(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    removeListener(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
     on(event: 'color-changed', listener: (event: Event) => void): this;
     once(event: 'color-changed', listener: (event: Event) => void): this;
     addListener(event: 'color-changed', listener: (event: Event) => void): this;
@@ -6130,9 +6105,9 @@ declare namespace Electron {
      */
     setContextMenu(menu: (Menu) | (null)): void;
     /**
-     * Sets when the tray's icon background becomes highlighted (in blue). Note: You
-     * can use highlightMode with a BrowserWindow by toggling between 'never' and
-     * 'always' modes when the window visibility changes.
+     * Sets when the tray's icon background becomes highlighted (in blue). Deprecated
+     * Note: You can use highlightMode with a BrowserWindow by toggling between 'never'
+     * and 'always' modes when the window visibility changes.
      */
     setHighlightMode(mode: 'selection' | 'always' | 'never'): void;
     /**
@@ -8330,7 +8305,7 @@ declare namespace Electron {
      * Loads the url in the webview, the url must contain the protocol prefix, e.g. the
      * http:// or file://.
      */
-    loadURL(url: string, options?: LoadURLOptions): void;
+    loadURL(url: string, options?: LoadURLOptions): Promise<void>;
     /**
      * Opens a DevTools window for guest page.
      */
@@ -8506,10 +8481,8 @@ declare namespace Electron {
      * will be loaded by require in guest page under the hood. When the guest page
      * doesn't have node integration this script will still have access to all Node
      * APIs, but global objects injected by Node will be deleted after this script has
-     * finished executing. Note: For security reasons, preload scripts can only be
-     * loaded from a subpath of the app path. Note: This option will be appear as
-     * preloadURL (not preload) in the webPreferences specified to the
-     * will-attach-webview event.
+     * finished executing. Note: This option will be appear as preloadURL (not preload)
+     * in the webPreferences specified to the will-attach-webview event.
      */
     preload?: string;
     /**
@@ -14121,9 +14094,9 @@ declare namespace Electron {
      */
     nodeIntegrationInWorker?: boolean;
     /**
-     * Experimental option for enabling NodeJS support in sub-frames such as iframes.
-     * All your preloads will load for every iframe, you can use process.isMainFrame to
-     * determine if you are in the main frame or not.
+     * Experimental option for enabling Node.js support in sub-frames such as iframes
+     * and child windows. All your preloads will load for every iframe, you can use
+     * process.isMainFrame to determine if you are in the main frame or not.
      */
     nodeIntegrationInSubFrames?: boolean;
     /**
@@ -14131,8 +14104,7 @@ declare namespace Electron {
      * This script will always have access to node APIs no matter whether node
      * integration is turned on or off. The value should be the absolute file path to
      * the script. When node integration is turned off, the preload script can
-     * reintroduce Node global symbols back to the global scope. See example . For
-     * security reasons, preload scripts can only be loaded from a subpath of the .
+     * reintroduce Node global symbols back to the global scope. See example .
      */
     preload?: string;
     /**
@@ -14271,7 +14243,8 @@ declare namespace Electron {
     contextIsolation?: boolean;
     /**
      * Whether to use native window.open(). Defaults to false. Child windows will
-     * always have node integration disabled. This option is currently experimental.
+     * always have node integration disabled unless nodeIntegrationInSubFrames is true.
+     * This option is currently experimental.
      */
     nativeWindowOpen?: boolean;
     /**
