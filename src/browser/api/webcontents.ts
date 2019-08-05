@@ -1,4 +1,8 @@
 import * as url from 'url';
+import { app } from 'electron';
+import ofEvents from '../of_events';
+import route from '../../common/route';
+import { InjectableContext, EntityType } from '../../shapes';
 
 export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {
     webContents.executeJavaScript(code, true, (result) => {
@@ -77,4 +81,35 @@ function createNavigationEndPromise(webContents: Electron.WebContents): Promise<
         webContents.once('did-fail-load', didFail);
         webContents.once('did-finish-load', didSucceed);
     });
+}
+
+
+export function setIframeHandlers (webContents: Electron.WebContents, contextObj: InjectableContext, uuid: string, name: string) {
+    webContents.registerIframe = (frameName: string, frameRoutingId: number) => {
+        // called for all iframes, but not for main frame of windows
+        app.vlog(1, `registerIframe ${frameName} ${frameRoutingId}`);
+        const frameInfo = {
+            name: frameName,
+            uuid,
+            parent: { uuid, name },
+            frameRoutingId,
+            entityType: EntityType.IFRAME
+        };
+
+        contextObj.frames.set(frameName, frameInfo);
+    };
+
+    // called in the WebContents class in the runtime
+    webContents.unregisterIframe = (closedFrameName: string, frameRoutingId: number) => {
+        // called for all iframes AND for main frames
+        app.vlog(1, `unregisterIframe ${frameRoutingId} ${closedFrameName}`);
+        const frameName = closedFrameName || name; // the parent name is considered a frame as well
+        const frameInfo = contextObj.frames.get(closedFrameName);
+        const entityType = frameInfo ? 'iframe' : 'window';
+        const payload = { uuid, name, frameName, entityType };
+
+        contextObj.frames.delete(closedFrameName);
+        ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
+        ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
+    };
 }

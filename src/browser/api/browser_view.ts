@@ -4,7 +4,7 @@ import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, 
 import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
 import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
-import {getInfo as getWebContentsInfo} from './webcontents';
+import {getInfo as getWebContentsInfo, setIframeHandlers} from './webcontents';
 import of_events from '../of_events';
 import route from '../../common/route';
 
@@ -29,6 +29,7 @@ export async function create(options: BrowserViewOpts) {
     const ofView = addBrowserView(fullOptions, view);
     await attach(ofView, options.target);
     view.webContents.loadURL(options.url || 'about:blank');
+    setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
     } if (options.bounds) {
