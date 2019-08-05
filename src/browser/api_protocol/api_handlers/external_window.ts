@@ -123,11 +123,10 @@ async function isExternalWindowShowing(identity: Identity, message: APIMessage) 
   return ExternalWindow.isExternalWindowShowing(targetIdentity);
 }
 
-async function joinExternalWindowGroup(identity: Identity, message: APIMessage) {
-  const { payload } = message;
-  const targetIdentity = getTargetExternalWindowIdentity(payload);
-  const groupingIdentity = getGroupingWindowIdentity(payload);
-  return ExternalWindow.joinExternalWindowGroup(targetIdentity, groupingIdentity);
+async function joinExternalWindowGroup(identity: Identity, message: APIMessage, ack: any, nack: any) {
+  // nack if joining an ExternalWindow since certain methods don't work without injection
+  nack(new Error('Joining a group with an ExternalWindow is not supported'));
+  return;
 }
 
 async function leaveExternalWindowGroup(identity: Identity, message: APIMessage) {
