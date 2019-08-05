@@ -16,7 +16,7 @@ import {
     GroupWindow
 } from '../../../shapes';
 import { ActionSpecMap } from '../shapes';
-import {hijackMovesForGroupedWindows} from './grouped_window_moves';
+import { hijackMovesForGroupedWindows } from './grouped_window_moves';
 import { argo } from '../../core_state';
 
 const successAck: APIPayloadAck = { success: true };
@@ -25,6 +25,7 @@ export const windowApiMap = {
     'animate-window': animateWindow,
     'blur-window': blurWindow,
     'bring-window-to-front': bringWindowToFront,
+    'center-window': centerWindow,
     'close-window': closeWindow,
     'disable-window-frame': disableUserMovement,
     'dock-window': dockWindow,
@@ -71,8 +72,8 @@ export const windowApiMap = {
 
 export function init() {
     const registerThis = !argo['use-legacy-window-groups']
-       ? hijackMovesForGroupedWindows(windowApiMap)
-       : windowApiMap;
+        ? hijackMovesForGroupedWindows(windowApiMap)
+        : windowApiMap;
     registerActionMap(registerThis, 'Window');
 }
 
@@ -119,7 +120,7 @@ function stopFlashWindow(identity: Identity, message: APIMessage, ack: Acker): v
 function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     const { payload } = message;
     const { top, left, width, height } = payload;
-    const {uuid, name} = getTargetWindowIdentity(payload);
+    const { uuid, name } = getTargetWindowIdentity(payload);
     Window.setBounds({ uuid, name }, left, top, width, height, () => ack(successAck), nack);
 }
 
@@ -359,6 +360,14 @@ function focusWindow(identity: Identity, message: APIMessage, ack: Acker): void 
     const windowIdentity = getTargetWindowIdentity(payload);
 
     Window.focus(windowIdentity);
+    ack(successAck);
+}
+
+function centerWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { payload } = message;
+    const windowIdentity = getTargetWindowIdentity(payload);
+
+    Window.center(windowIdentity);
     ack(successAck);
 }
 
