@@ -58,7 +58,11 @@ export const SystemApiMap: APIHandlerMap = {
     'generate-guid': generateGuid,
     'get-all-applications': getAllApplications,
     'get-all-external-applications': getAllExternalApplications,
-    'get-all-external-windows': getAllExternalWindows,
+    'get-all-external-windows': {
+        apiFunc: getAllExternalWindows,
+        apiPath: '.getAllExternalWindows',
+        defaultPermission: false
+    },
     'get-all-windows': getAllWindows,
     'get-app-asset-info': getAppAssetInfo,
     'get-command-line-arguments': { apiFunc: getCommandLineArguments, apiPath: '.getCommandLineArguments' },

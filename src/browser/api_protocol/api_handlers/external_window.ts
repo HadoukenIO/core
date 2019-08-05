@@ -46,7 +46,7 @@ export function init(): void {
     ? ExternalWindowApiMap
     : hijackMovesForGroupedWindows(ExternalWindowApiMap);
 
-  registerActionMap(registrationMap, 'ExternalWindow');
+  registerActionMap(registrationMap);
 }
 
 async function bringExternalWindowToFront(identity: Identity, message: APIMessage) {
