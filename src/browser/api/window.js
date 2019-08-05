@@ -140,12 +140,12 @@ function genWindowKey(identity) {
     that you just set
 */
 let optionSetters = {
-    contextMenu: function (newVal, browserWin) {
+    contextMenu: function(newVal, browserWin) {
         // so old API still works
         let contextMenuBool = !!newVal;
         optionSetters['contextMenuSettings']({ enable: contextMenuBool }, browserWin);
     },
-    contextMenuSettings: function (newVal, browserWin) {
+    contextMenuSettings: function(newVal, browserWin) {
         if (!newVal ||
             (typeof newVal.enable !== 'undefined' && typeof newVal.enable !== 'boolean') ||
             (typeof newVal.devtools !== 'undefined' && typeof newVal.devtools !== 'boolean') ||
@@ -159,10 +159,10 @@ let optionSetters = {
         browserWin.setMenu(null);
         browserWin.webContents.updateContextMenuSettings(val);
     },
-    customData: function (newVal, browserWin) {
+    customData: function(newVal, browserWin) {
         setOptOnBrowserWin('customData', newVal, browserWin);
     },
-    frame: function (newVal, browserWin) {
+    frame: function(newVal, browserWin) {
         let frameBool = !!newVal;
         const prevBool = getOptFromBrowserWin('frame', browserWin, true);
         setOptOnBrowserWin('frame', frameBool, browserWin);
@@ -217,7 +217,7 @@ let optionSetters = {
             }
         });
     },
-    alphaMask: function (newVal, browserWin) {
+    alphaMask: function(newVal, browserWin) {
         if (!newVal || typeof newVal.red !== 'number' || typeof newVal.green !== 'number' || typeof newVal.blue !== 'number') {
             return;
         }
@@ -229,7 +229,7 @@ let optionSetters = {
         });
         setOptOnBrowserWin('alphaMask', newVal, browserWin);
     },
-    hideOnClose: function (newVal, browserWin) {
+    hideOnClose: function(newVal, browserWin) {
         let newHideOnCloseBool = !!newVal; // ensure bool
         let oldHideOnCloseBool = getOptFromBrowserWin('hideOnClose', browserWin, false);
 
@@ -247,13 +247,13 @@ let optionSetters = {
 
         setOptOnBrowserWin('hideOnClose', newHideOnCloseBool, browserWin);
     },
-    alwaysOnTop: function (newVal, browserWin) {
+    alwaysOnTop: function(newVal, browserWin) {
         var onTopBool = !!newVal; // ensure bool
 
         browserWin.setAlwaysOnTop(onTopBool);
         setOptOnBrowserWin('alwaysOnTop', onTopBool, browserWin);
     },
-    cornerRounding: function (newVal, browserWin) {
+    cornerRounding: function(newVal, browserWin) {
         if (!newVal || typeof newVal.width !== 'number' || typeof newVal.height !== 'number') {
             return;
         }
@@ -264,43 +264,43 @@ let optionSetters = {
         }
         setOptOnBrowserWin('cornerRounding', newVal, browserWin);
     },
-    maxHeight: function (newVal, browserWin) {
+    maxHeight: function(newVal, browserWin) {
         var maxWidth = getOptFromBrowserWin('maxWidth', browserWin, -1);
 
         browserWin.setMaximumSize(maxWidth, newVal);
         setOptOnBrowserWin('maxHeight', newVal, browserWin);
     },
-    maxWidth: function (newVal, browserWin) {
+    maxWidth: function(newVal, browserWin) {
         var maxHeight = getOptFromBrowserWin('maxHeight', browserWin, -1);
 
         browserWin.setMaximumSize(newVal, maxHeight);
         setOptOnBrowserWin('maxWidth', newVal, browserWin);
     },
-    maximizable: function (newVal, browserWin) {
+    maximizable: function(newVal, browserWin) {
         let maxBool = !!newVal;
 
         browserWin.setMaximizable(maxBool);
         setOptOnBrowserWin('maximizable', maxBool, browserWin);
     },
-    minimizable: function (newVal, browserWin) {
+    minimizable: function(newVal, browserWin) {
         let minBool = !!newVal;
 
         browserWin.setMinimizable(minBool);
         setOptOnBrowserWin('minimizable', minBool, browserWin);
     },
-    minHeight: function (newVal, browserWin) {
+    minHeight: function(newVal, browserWin) {
         var minWidth = getOptFromBrowserWin('minWidth', browserWin, -1);
 
         browserWin.setMinimumSize(minWidth, newVal);
         setOptOnBrowserWin('minHeight', newVal, browserWin);
     },
-    minWidth: function (newVal, browserWin) {
+    minWidth: function(newVal, browserWin) {
         var minHeight = getOptFromBrowserWin('minHeight', browserWin, -1);
 
         browserWin.setMinimumSize(newVal, minHeight);
         setOptOnBrowserWin('minWidth', newVal, browserWin);
     },
-    opacity: function (newVal, browserWin) {
+    opacity: function(newVal, browserWin) {
         if (typeof newVal !== 'number') {
             return;
         }
@@ -324,20 +324,20 @@ let optionSetters = {
         });
         setOptOnBrowserWin('opacity', opacity, browserWin);
     },
-    resizable: function (newVal, browserWin) {
+    resizable: function(newVal, browserWin) {
         var resizeBool = !!newVal; // ensure bool val
 
         browserWin.setResizable(resizeBool);
         setOptOnBrowserWin('resizable', resizeBool, browserWin);
     },
-    icon: function (newVal, browserWin) {
+    icon: function(newVal, browserWin) {
         if (typeof newVal !== 'string') {
             return;
         }
         setOptOnBrowserWin('icon', newVal, browserWin);
         setTaskbarIcon(browserWin, getWinOptsIconUrl(browserWin._options));
     },
-    taskbarIcon: function (newVal, browserWin) {
+    taskbarIcon: function(newVal, browserWin) {
         if (typeof newVal !== 'string') {
             return;
         }
@@ -345,7 +345,7 @@ let optionSetters = {
         // NOTE: as long as 'icon' is defined, this will never have any effect
         setTaskbarIcon(browserWin, getWinOptsIconUrl(browserWin._options));
     },
-    applicationIcon: function (newVal, browserWin) {
+    applicationIcon: function(newVal, browserWin) {
         if (typeof newVal !== 'string') {
             return;
         }
@@ -353,7 +353,7 @@ let optionSetters = {
         // NOTE: as long as 'icon' and 'taskbarIcon' are defined, this will never have any effect
         setTaskbarIcon(browserWin, getWinOptsIconUrl(browserWin._options));
     },
-    resizeRegion: function (newVal, browserWin) {
+    resizeRegion: function(newVal, browserWin) {
         if (newVal) {
             if (typeof newVal.size === 'number' && typeof newVal.bottomRightCorner === 'number') {
 
@@ -380,19 +380,19 @@ let optionSetters = {
             setOptOnBrowserWin('resizeRegion', newVal, browserWin);
         }
     },
-    aspectRatio: function (newVal, browserWin) {
-        if (typeof (newVal) !== 'number') {
+    aspectRatio: function(newVal, browserWin) {
+        if (typeof(newVal) !== 'number') {
             return;
         }
         browserWin.setAspectRatio(newVal);
         setOptOnBrowserWin('aspectRatio', newVal, browserWin);
     },
-    hasLoaded: function (newVal, browserWin) {
-        if (typeof (newVal) === 'boolean') {
+    hasLoaded: function(newVal, browserWin) {
+        if (typeof(newVal) === 'boolean') {
             browserWin._options.hasLoaded = newVal;
         }
     },
-    showTaskbarIcon: function (newVal, browserWin) {
+    showTaskbarIcon: function(newVal, browserWin) {
         let showTaskbarIconBool = !!newVal;
         setOptOnBrowserWin('showTaskbarIcon', showTaskbarIconBool, browserWin);
         browserWin.setSkipTaskbar(!showTaskbarIconBool);
@@ -400,7 +400,7 @@ let optionSetters = {
 };
 
 
-Window.create = function (id, opts) {
+Window.create = function(id, opts) {
     let name = opts.name;
     let uuid = opts.uuid;
     let identity = {
@@ -622,13 +622,13 @@ Window.create = function (id, opts) {
             emitToAppIfMainWin('not-responding');
         });
 
-        let mapEvents = function (eventMap, eventEmitter) {
+        let mapEvents = function(eventMap, eventEmitter) {
             // todo this should be on demand, for now just blast them all
             Object.keys(eventMap).forEach(evnt => {
                 var mappedMeta = eventMap[evnt];
                 var mappedTopic = mappedMeta.topic || '';
 
-                var electronEventListener = function ( /*event , arg1, ... */) {
+                var electronEventListener = function( /*event , arg1, ... */ ) {
 
                     // if the window has already been removed from core_state,
                     // don't propagate anymore events
@@ -1007,15 +1007,15 @@ Window.create = function (id, opts) {
 };
 
 
-Window.wrap = function (uuid, name) {
+Window.wrap = function(uuid, name) {
     return coreState.getWindowByUuidName(uuid, name);
 };
 
-Window.connected = function () { };
+Window.connected = function() {};
 
-Window.isEmbedded = function () { };
+Window.isEmbedded = function() {};
 
-Window.addEventListener = function (identity, targetIdentity, type, listener) {
+Window.addEventListener = function(identity, targetIdentity, type, listener) {
     // TODO this leaves it up the the app to unsubscribe and is a potential
     //      leak. perhaps we need a way to unhook when an app disconnects
     //      automatically
@@ -1062,7 +1062,7 @@ Window.addEventListener = function (identity, targetIdentity, type, listener) {
     return unsubscribe;
 };
 
-Window.animate = function (identity, transitions, options = {}, callback = () => { }, errorCallback = () => { }) {
+Window.animate = function(identity, transitions, options = {}, callback = () => {}, errorCallback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1108,7 +1108,7 @@ Window.animate = function (identity, transitions, options = {}, callback = () =>
     }
 };
 
-Window.blur = function (identity) {
+Window.blur = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1118,7 +1118,7 @@ Window.blur = function (identity) {
     browserWindow.blur();
 };
 
-Window.bringToFront = function (identity) {
+Window.bringToFront = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1129,7 +1129,7 @@ Window.bringToFront = function (identity) {
 
 // TODO investigate the close sequence, there appears to be a case were you
 // try to wrap and close an already closed window
-Window.close = function (identity, force, callback = () => { }) {
+Window.close = function(identity, force, callback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1158,7 +1158,7 @@ Window.close = function (identity, force, callback = () => { }) {
 
 function disabledFrameUnsubDecorator(identity) {
     const windowKey = genWindowKey(identity);
-    return function () {
+    return function() {
         let refCount = disabledFrameRef.get(windowKey) || 0;
         if (refCount > 1) {
             disabledFrameRef.set(windowKey, --refCount);
@@ -1168,7 +1168,7 @@ function disabledFrameUnsubDecorator(identity) {
     };
 }
 
-Window.disableUserMovement = function (requestorIdentity, windowIdentity) {
+Window.disableUserMovement = function(requestorIdentity, windowIdentity) {
     const browserWindow = getElectronBrowserWindow(windowIdentity);
     const windowKey = genWindowKey(windowIdentity);
 
@@ -1182,7 +1182,7 @@ Window.disableUserMovement = function (requestorIdentity, windowIdentity) {
     browserWindow.setUserMovementEnabled(false);
 };
 
-Window.embed = function (identity, parentHwnd) {
+Window.embed = function(identity, parentHwnd) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1204,7 +1204,7 @@ Window.embed = function (identity, parentHwnd) {
     });
 };
 
-Window.enableUserMovement = function (identity) {
+Window.enableUserMovement = function(identity) {
     const windowKey = genWindowKey(identity);
     let browserWindow = getElectronBrowserWindow(identity);
 
@@ -1220,7 +1220,7 @@ Window.enableUserMovement = function (identity) {
     browserWindow.setUserMovementEnabled(true);
 };
 
-Window.executeJavascript = function (identity, code, callback = () => { }) {
+Window.executeJavascript = function(identity, code, callback = () => {}) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1231,7 +1231,7 @@ Window.executeJavascript = function (identity, code, callback = () => { }) {
     WebContents.executeJavascript(browserWindow.webContents, code, callback);
 };
 
-Window.flash = function (identity) {
+Window.flash = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1239,7 +1239,7 @@ Window.flash = function (identity) {
     NativeWindow.flash(browserWindow);
 };
 
-Window.stopFlashing = function (identity) {
+Window.stopFlashing = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1247,7 +1247,7 @@ Window.stopFlashing = function (identity) {
     NativeWindow.stopFlashing(browserWindow);
 };
 
-Window.focus = function (identity) {
+Window.focus = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1255,7 +1255,7 @@ Window.focus = function (identity) {
     NativeWindow.focus(browserWindow);
 };
 
-Window.center = function (identity) {
+Window.center = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1263,7 +1263,7 @@ Window.center = function (identity) {
     NativeWindow.center(browserWindow);
 };
 
-Window.getAllFrames = function (identity) {
+Window.getAllFrames = function(identity) {
     const openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
 
     if (!openfinWindow) {
@@ -1280,7 +1280,7 @@ Window.getAllFrames = function (identity) {
     return framesArr.concat(subFrames);
 };
 
-Window.getBounds = function (identity) {
+Window.getBounds = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1298,7 +1298,7 @@ Window.getBounds = function (identity) {
 };
 
 
-Window.getGroup = function (identity) {
+Window.getGroup = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1310,7 +1310,7 @@ Window.getGroup = function (identity) {
 };
 
 
-Window.getWindowInfo = function (identity) {
+Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
     const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
     const windowInfo = Object.assign({
@@ -1320,22 +1320,22 @@ Window.getWindowInfo = function (identity) {
 };
 
 
-Window.getAbsolutePath = function (identity, path) {
+Window.getAbsolutePath = function(identity, path) {
     let browserWindow = getElectronBrowserWindow(identity, 'get URL for');
     return (path || path === 0) ? WebContents.getAbsolutePath(browserWindow.webContents, path) : '';
 };
 
 
-Window.getNativeId = function (identity) {
+Window.getNativeId = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'get ID for');
 
     return browserWindow.nativeId;
 };
 
 
-Window.getNativeWindow = function () { };
+Window.getNativeWindow = function() {};
 
-Window.getOptions = function (identity) {
+Window.getOptions = function(identity) {
     // In the case that the identity passed does not exist, or is not a window,
     // return the entity info object. The fail case is used for frame identity on spin up.
     try {
@@ -1345,19 +1345,19 @@ Window.getOptions = function (identity) {
     }
 };
 
-Window.getParentApplication = function () {
+Window.getParentApplication = function() {
     let app = coreState.getAppByWin(this.id);
 
     return app && app.appObj;
 };
 
 
-Window.getParentWindow = function () { };
+Window.getParentWindow = function() {};
 
 /**
  * Sets/updates window's preload script state and emits relevant events
  */
-Window.setWindowPreloadState = function (identity, payload) {
+Window.setWindowPreloadState = function(identity, payload) {
     const { uuid, name } = identity;
     const { url, state, allDone } = payload;
     const updateTopic = allDone ? 'preload-scripts-state-changed' : 'preload-scripts-state-changing';
@@ -1439,7 +1439,7 @@ Window.getSnapshot = (opts) => {
 };
 
 
-Window.getState = function (identity) {
+Window.getState = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return 'normal';
@@ -1448,7 +1448,7 @@ Window.getState = function (identity) {
 };
 
 
-Window.hide = function (identity) {
+Window.hide = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1456,12 +1456,12 @@ Window.hide = function (identity) {
     NativeWindow.hide(browserWindow);
 };
 
-Window.isNotification = function (name) {
+Window.isNotification = function(name) {
     const noteGuidRegex = /^A21B62E0-16B1-4B10-8BE3-BBB6B489D862/;
     return noteGuidRegex.test(name);
 };
 
-Window.isShowing = function (identity) {
+Window.isShowing = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return false;
@@ -1470,12 +1470,12 @@ Window.isShowing = function (identity) {
 };
 
 
-Window.joinGroup = function (identity, grouping) {
+Window.joinGroup = function(identity, grouping) {
     return WindowGroups.joinGroup({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
-Window.leaveGroup = function (identity) {
+Window.leaveGroup = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1487,7 +1487,7 @@ Window.leaveGroup = function (identity) {
 };
 
 
-Window.maximize = function (identity) {
+Window.maximize = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'maximize');
     let maximizable = getOptFromBrowserWin('maximizable', browserWindow, true);
     if (maximizable) {
@@ -1496,12 +1496,12 @@ Window.maximize = function (identity) {
 };
 
 
-Window.mergeGroups = function (identity, grouping) {
+Window.mergeGroups = function(identity, grouping) {
     return WindowGroups.mergeGroups({ uuid: identity.uuid, name: identity.name }, { uuid: grouping.uuid, name: grouping.name });
 };
 
 
-Window.minimize = function (identity) {
+Window.minimize = function(identity) {
     let browserWindow = getElectronBrowserWindow(identity, 'minimize');
     let minimizable = getOptFromBrowserWin('minimizable', browserWindow, true);
     if (minimizable) {
@@ -1510,7 +1510,7 @@ Window.minimize = function (identity) {
 };
 
 
-Window.moveBy = function (identity, deltaLeft, deltaTop) {
+Window.moveBy = function(identity, deltaLeft, deltaTop) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1519,7 +1519,7 @@ Window.moveBy = function (identity, deltaLeft, deltaTop) {
 };
 
 
-Window.moveTo = function (identity, left, top) {
+Window.moveTo = function(identity, left, top) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1527,32 +1527,32 @@ Window.moveTo = function (identity, left, top) {
     NativeWindow.moveTo(browserWindow, { left, top });
 };
 
-Window.navigate = function (identity, url) {
+Window.navigate = function(identity, url) {
     const browserWindow = getElectronBrowserWindow(identity, 'navigate');
     return WebContents.navigate(browserWindow.webContents, url);
 };
 
-Window.navigateBack = function (identity) {
+Window.navigateBack = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'navigate back');
     return WebContents.navigateBack(browserWindow.webContents);
 };
 
-Window.navigateForward = function (identity) {
+Window.navigateForward = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'navigate forward');
     return WebContents.navigateForward(browserWindow.webContents);
 };
 
-Window.reload = function (identity, ignoreCache = false) {
+Window.reload = function(identity, ignoreCache = false) {
     const browserWindow = getElectronBrowserWindow(identity, 'reload');
     WebContents.reload(browserWindow.webContents, ignoreCache);
 };
 
-Window.stopNavigation = function (identity) {
+Window.stopNavigation = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'stop navigating');
     WebContents.stopNavigation(browserWindow.webContents);
 };
 
-Window.removeEventListener = function (identity, type, listener) {
+Window.removeEventListener = function(identity, type, listener) {
     let browserWindow = getElectronBrowserWindow(identity, 'remove event listener for');
     ofEvents.removeListener(route.window(type, browserWindow.id), listener);
 };
@@ -1588,7 +1588,7 @@ function areNewBoundsWithinConstraints(options, width, height) {
     return acceptableWidth && acceptableHeight && (aspectRatio <= 0 || roundedProposedRatio === roundedAspectRatio);
 }
 
-Window.resizeBy = function (identity, deltaWidth, deltaHeight, anchor, callback, errorCallback) {
+Window.resizeBy = function(identity, deltaWidth, deltaHeight, anchor, callback, errorCallback) {
     const browserWindow = getElectronBrowserWindow(identity);
     const opts = { anchor, deltaHeight, deltaWidth };
     if (!browserWindow) {
@@ -1614,7 +1614,7 @@ Window.resizeBy = function (identity, deltaWidth, deltaHeight, anchor, callback,
 };
 
 
-Window.resizeTo = function (identity, width, height, anchor, callback, errorCallback) {
+Window.resizeTo = function(identity, width, height, anchor, callback, errorCallback) {
     const browserWindow = getElectronBrowserWindow(identity);
     const opts = { anchor, height, width };
     if (!browserWindow) {
@@ -1637,13 +1637,13 @@ Window.resizeTo = function (identity, width, height, anchor, callback, errorCall
 };
 
 
-Window.restore = function (identity) {
+Window.restore = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'restore');
     NativeWindow.restore(browserWindow);
 };
 
 
-Window.setAsForeground = function (identity) {
+Window.setAsForeground = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
         return;
@@ -1652,7 +1652,7 @@ Window.setAsForeground = function (identity) {
 };
 
 
-Window.setBounds = function (identity, left, top, width, height, callback, errorCallback) {
+Window.setBounds = function(identity, left, top, width, height, callback, errorCallback) {
     const browserWindow = getElectronBrowserWindow(identity, 'set window bounds for');
     const opts = { height, left, top, width };
     if (!browserWindow) {
@@ -1675,7 +1675,7 @@ Window.setBounds = function (identity, left, top, width, height, callback, error
 };
 
 
-Window.show = function (identity, force = false) {
+Window.show = function(identity, force = false) {
     const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1689,7 +1689,7 @@ Window.show = function (identity, force = false) {
 };
 
 
-Window.showAt = function (identity, left, top, force = false) {
+Window.showAt = function(identity, left, top, force = false) {
     const browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1704,7 +1704,7 @@ Window.showAt = function (identity, left, top, force = false) {
     handleForceActions(identity, force, 'show-requested', payload, defaultAction);
 };
 
-Window.showMenu = function (identity, x, y, editable, hasSelectedText) {
+Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
     let browserWindow = getElectronBrowserWindow(identity);
 
     if (!browserWindow) {
@@ -1754,33 +1754,33 @@ Window.showMenu = function (identity, x, y, editable, hasSelectedText) {
             browserWindow.webContents.reloadIgnoringCache();
         }
     }, {
-            label: 'Reload app and restart children',
-            click: () => {
-                try {
-                    const Application = require('./application.js').Application;
-                    const app = Application.wrap(identity.uuid);
+        label: 'Reload app and restart children',
+        click: () => {
+            try {
+                const Application = require('./application.js').Application;
+                const app = Application.wrap(identity.uuid);
 
-                    Application.getChildWindows(identity).forEach(childWin => {
-                        Window.close({
-                            name: childWin.name,
-                            uuid: childWin.uuid
-                        }, true);
-                    });
+                Application.getChildWindows(identity).forEach(childWin => {
+                    Window.close({
+                        name: childWin.name,
+                        uuid: childWin.uuid
+                    }, true);
+                });
 
-                    app.mainWindow.webContents.reloadIgnoringCache();
-                } catch (e) {
-                    console.log(e);
-                }
+                app.mainWindow.webContents.reloadIgnoringCache();
+            } catch (e) {
+                console.log(e);
             }
-        }, {
-            type: 'separator'
-        }, {
-            label: 'Inspect element',
-            click: () => {
-                browserWindow.webContents.inspectElement(x, y);
-            },
-            accelerator: 'CommandOrControl+Shift+I'
-        });
+        }
+    }, {
+        type: 'separator'
+    }, {
+        label: 'Inspect element',
+        click: () => {
+            browserWindow.webContents.inspectElement(x, y);
+        },
+        accelerator: 'CommandOrControl+Shift+I'
+    });
 
     const currentMenu = Menu.buildFromTemplate(menuTemplate);
     currentMenu.popup(browserWindow, {
@@ -1788,10 +1788,10 @@ Window.showMenu = function (identity, x, y, editable, hasSelectedText) {
     });
 };
 
-Window.defineDraggableArea = function () { };
+Window.defineDraggableArea = function() {};
 
 
-Window.updateOptions = function (identity, updateObj) {
+Window.updateOptions = function(identity, updateObj) {
     let browserWindow = getElectronBrowserWindow(identity, 'update settings for');
     let { uuid, name } = identity;
     let diff = {},
@@ -1824,11 +1824,11 @@ Window.updateOptions = function (identity, updateObj) {
     }
 };
 
-Window.exists = function (identity) {
+Window.exists = function(identity) {
     return coreState.windowExists(identity.uuid, identity.name);
 };
 
-Window.getBoundsFromDisk = function (identity, callback, errorCallback) {
+Window.getBoundsFromDisk = function(identity, callback, errorCallback) {
     getBoundsCacheSafeFileName(identity, cacheFile => {
         try {
             fs.readFile(cacheFile, 'utf8', (err, data) => {
@@ -1848,12 +1848,12 @@ Window.getBoundsFromDisk = function (identity, callback, errorCallback) {
     }, errorCallback);
 };
 
-Window.authenticate = function (identity, username, password, callback) {
+Window.authenticate = function(identity, username, password, callback) {
     let {
         authCallback
     } = getPendingAuthRequest(identity);
 
-    if (authCallback && typeof (authCallback) === 'function') {
+    if (authCallback && typeof(authCallback) === 'function') {
         authCallback(username, password);
         deletePendingAuthRequest(identity);
         callback();
@@ -1862,12 +1862,12 @@ Window.authenticate = function (identity, username, password, callback) {
     }
 };
 
-Window.getZoomLevel = function (identity, callback) {
+Window.getZoomLevel = function(identity, callback) {
     let browserWindow = getElectronBrowserWindow(identity, 'get zoom level for');
     WebContents.getZoomLevel(browserWindow.webContents, callback);
 };
 
-Window.setZoomLevel = function (identity, level) {
+Window.setZoomLevel = function(identity, level) {
     let browserWindow = getElectronBrowserWindow(identity, 'set zoom level for');
     WebContents.setZoomLevel(browserWindow.webContents, level);
 };
@@ -1969,7 +1969,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     //    Save the window state to disk
     //    Close all child windows
     //    Wait for the close event.
-    return function () {
+    return function() {
         let ofWindow = Window.wrap(identity.uuid, identity.name);
         let childWindows = coreState.getChildrenByWinId(id) || [];
         // remove from core state earlier rather than later
@@ -2190,7 +2190,7 @@ function boundsChangeDecorator(payload, args) {
     let shouldExtendPayload = payloadIsObject && allRequiredKeysPresent;
 
     if (shouldExtendPayload) {
-        Object.keys(boundsChangePayload).forEach(function (key) {
+        Object.keys(boundsChangePayload).forEach(function(key) {
             payload[key] = boundsChangePayload[key];
         });
 
@@ -2316,7 +2316,7 @@ function loadFailedDecorator(payload, args) {
     return true;
 }
 
-function noOpDecorator( /*payload*/) {
+function noOpDecorator( /*payload*/ ) {
 
     return true;
 }
@@ -2384,7 +2384,7 @@ function setTaskbar(browserWindow, forceFetch = false) {
     }
 }
 
-function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => { }) {
+function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => {}) {
     const identity = getIdentityFromObject(browserWindow._options);
 
     cachedFetch(identity, iconUrl, (error, iconFilepath) => {
@@ -2396,7 +2396,7 @@ function setTaskbarIcon(browserWindow, iconUrl, errorCallback = () => { }) {
     });
 }
 
-function setIcon(browserWindow, iconFilepath, errorCallback = () => { }) {
+function setIcon(browserWindow, iconFilepath, errorCallback = () => {}) {
     if (!browserWindow.isDestroyed()) {
         let icon = nativeImage.createFromPath(iconFilepath);
         if (icon.isEmpty()) {
@@ -2437,7 +2437,7 @@ function handleCustomAlerts(id, opts) {
             topic: topic,
             type: type
         };
-        if (typeof (e.preventDefault) === 'function') {
+        if (typeof(e.preventDefault) === 'function') {
             e.preventDefault();
         }
         ofEvents.emit(route(topic, type, opts.uuid), payload);
