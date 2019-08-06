@@ -18,6 +18,7 @@ import {
 import { ActionSpecMap } from '../shapes';
 import {hijackMovesForGroupedWindows} from './grouped_window_moves';
 import { argo } from '../../core_state';
+import { System } from '../../api/system';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -244,11 +245,15 @@ function leaveWindowGroup(identity: Identity, message: APIMessage, ack: Acker): 
     return Window.leaveGroup(windowIdentity).then(() => ack(successAck));
 }
 
-function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
+function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const groupingIdentity = getGroupingWindowIdentity(payload);
-
+    if (System.getAllExternalWindows().some(w => w.uuid === groupingIdentity.uuid)) {
+        // nack if joining an ExternalWindow since certain methods don't work without injection
+        nack(new Error('Joining a group with an ExternalWindow is not supported'));
+        return;
+    }
     return Window.joinGroup(windowIdentity, groupingIdentity).then(() => ack(successAck));
 }
 
