@@ -1,4 +1,60 @@
 import * as url from 'url';
+import { Identity } from '../../shapes';
+import of_events from '../of_events';
+import { WindowRoute } from '../../common/route';
+
+export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid, name }: Identity, topic: string, route: WindowRoute) {
+    webContents.on('did-get-response-details', (e,
+        status,
+        newUrl,
+        originalUrl,
+        httpResponseCode,
+        requestMethod,
+        referrer,
+        headers,
+        resourceType
+    ) => {
+        const type = 'resource-response-received';
+
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            status,
+            newUrl,
+            originalUrl,
+            httpResponseCode,
+            requestMethod,
+            referrer,
+            headers,
+            resourceType
+        };
+        of_events.emit(route(type, uuid, name), payload);
+    });
+    webContents.on('did-fail-load', (e,
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame
+    ) => {
+        const type = 'resource-load-failed';
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            errorCode,
+            errorDescription,
+            validatedURL,
+            isMainFrame
+        };
+        of_events.emit(route(type, uuid, name), payload);
+    });
+    webContents.once('destroyed', () => {
+        webContents.removeAllListeners();
+    });
+}
 
 export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {
     webContents.executeJavaScript(code, true, (result) => {
@@ -17,10 +73,10 @@ export function getInfo(webContents: Electron.WebContents) {
 
 export function getAbsolutePath(webContents: Electron.WebContents, path: string) {
     const windowURL = webContents.getURL();
-    return  url.resolve(windowURL, path);
+    return url.resolve(windowURL, path);
 }
 
-export function navigate (webContents: Electron.WebContents, url: string) {
+export function navigate(webContents: Electron.WebContents, url: string) {
     // todo: replace everything here with "return webContents.loadURL(url)" once we get to electron 5.*
     // reason: starting electron v5, loadUrl returns a promise that resolves according to the same logic we apply here
     const navigationEnd = createNavigationEndPromise(webContents);
@@ -28,13 +84,13 @@ export function navigate (webContents: Electron.WebContents, url: string) {
     return navigationEnd;
 }
 
-export async function navigateBack (webContents: Electron.WebContents) {
+export async function navigateBack(webContents: Electron.WebContents) {
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goBack();
     return navigationEnd;
 }
 
-export async function navigateForward (webContents: Electron.WebContents) {
+export async function navigateForward(webContents: Electron.WebContents) {
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goForward();
     return navigationEnd;
