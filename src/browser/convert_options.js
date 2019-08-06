@@ -64,6 +64,10 @@ function five0BaseOptions() {
         'aspectRatio': 0,
         'autoShow': false,
         'backgroundThrottling': false,
+        'contentNavigation': {
+            'whitelist': ['<all_urls>'],
+            'blacklist': []
+        },
         'contextMenuSettings': contextMenuSettings,
         'cornerRounding': {
             'height': 0,
@@ -152,13 +156,13 @@ function validate(base, user) {
     let options = {};
 
     _.each(base, (value, key) => {
-        const baseType = typeof base[key];
-        const userType = typeof user[key];
+        const baseType = [typeof base[key], Array.isArray(base[key])];
+        const userType = [typeof user[key], Array.isArray(user[key])];
 
-        if (baseType === 'object') {
+        if (baseType[0] === 'object' && !baseType[1]) {
             options[key] = validate(base[key], user[key] || {});
         } else {
-            options[key] = (userType !== baseType) ? base[key] : user[key];
+            options[key] = !_.isEqual(userType, baseType) ? base[key] : user[key];
         }
     });
 

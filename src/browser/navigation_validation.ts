@@ -23,11 +23,10 @@ export function validateNavigationRules(uuid: string, url: string, parentUuid: s
     electronApp.vlog(1, `validateNavigationRules for ${uuid} to ${url}`);
     let isAllowed = true;
     if (baseOpts.contentNavigation) {
-        if (baseOpts.contentNavigation.whitelist) {
-            isAllowed = electronApp.matchesURL(url, baseOpts.contentNavigation.whitelist);
-        } else if (baseOpts.contentNavigation.blacklist) {
+        if (baseOpts.contentNavigation.blacklist.length) {
             isAllowed = !electronApp.matchesURL(url, baseOpts.contentNavigation.blacklist);
         }
+        isAllowed = electronApp.matchesURL(url, baseOpts.contentNavigation.whitelist);
     }
     if (!isAllowed) {
         electronApp.vlog(1, `Navigation is blocked by rules for ${baseOpts.uuid} to ${url}`);
