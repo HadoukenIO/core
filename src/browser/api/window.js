@@ -10,6 +10,7 @@ let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let Menu = electron.Menu;
 let nativeImage = electron.nativeImage;
+let currentContextMenu = null;
 
 // npm modules
 let _ = require('underscore');
@@ -443,38 +444,6 @@ Window.create = function(id, opts) {
     if (!opts._noregister) {
 
         browserWindow = BrowserWindow.fromId(id);
-
-        // called in the WebContents class in the runtime
-        browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
-            // called for all iframes, but not for main frame of windows
-            electronApp.vlog(1, `registerIframe ${frameName} ${frameRoutingId}`);
-            const parentFrameId = id;
-            const frameInfo = {
-                name: frameName,
-                uuid,
-                parentFrameId,
-                parent: { uuid, name },
-                frameRoutingId,
-                entityType: 'iframe'
-            };
-
-            winObj.frames.set(frameName, frameInfo);
-        };
-
-        // called in the WebContents class in the runtime
-        browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
-            // called for all iframes AND for main frames
-            electronApp.vlog(1, `unregisterIframe ${frameRoutingId} ${closedFrameName}`);
-            const frameName = closedFrameName || name; // the parent name is considered a frame as well
-            const frameInfo = winObj.frames.get(closedFrameName);
-            const entityType = frameInfo ? 'iframe' : 'window';
-            const payload = { uuid, name, frameName, entityType };
-
-            winObj.frames.delete(closedFrameName);
-            ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
-            ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
-        };
-
         webContents = browserWindow.webContents;
 
         //Legacy 5.0 feature, if customWindowAlert flag is found all alerts will be suppresed,
@@ -860,7 +829,8 @@ Window.create = function(id, opts) {
                 //if saveWindowState:false and autoShow:true and waitForPageLoad:false are present
                 //we show as soon as we restore the window position instead of waiting for the connected event
                 if (_options.autoShow && (!_options.waitForPageLoad)) {
-                    browserWindow.show();
+                    // Need to go through Window.show here so that the show-requested logic comes into play
+                    Window.show(identity);
                 }
             } else if (_options.waitForPageLoad) {
                 browserWindow.once('ready-to-show', () => {
@@ -871,7 +841,8 @@ Window.create = function(id, opts) {
                     //if autoShow:true and waitForPageLoad:false are present we show as soon as we restore the window position
                     //instead of waiting for the connected event
                     if (_options.autoShow) {
-                        browserWindow.show();
+                        // Need to go through Window.show here so that the show-requested logic comes into play
+                        Window.show(identity);
                     }
                     observer.next();
                 });
@@ -1002,6 +973,7 @@ Window.create = function(id, opts) {
             name
         });
     }
+    WebContents.setIframeHandlers(browserWindow.webContents, winObj, uuid, name);
 
     return winObj;
 };
@@ -1126,6 +1098,13 @@ Window.bringToFront = function(identity) {
     NativeWindow.bringToFront(browserWindow);
 };
 
+Window.center = function (identity) {
+    const browserWindow = getElectronBrowserWindow(identity);
+    if (!browserWindow) {
+        return;
+    }
+    NativeWindow.center(browserWindow);
+};
 
 // TODO investigate the close sequence, there appears to be a case were you
 // try to wrap and close an already closed window
@@ -1253,14 +1232,6 @@ Window.focus = function(identity) {
         return;
     }
     NativeWindow.focus(browserWindow);
-};
-
-Window.center = function(identity) {
-    const browserWindow = getElectronBrowserWindow(identity);
-    if (!browserWindow) {
-        return;
-    }
-    NativeWindow.center(browserWindow);
 };
 
 Window.getAllFrames = function(identity) {
@@ -1782,9 +1753,13 @@ Window.showMenu = function(identity, x, y, editable, hasSelectedText) {
         accelerator: 'CommandOrControl+Shift+I'
     });
 
-    const currentMenu = Menu.buildFromTemplate(menuTemplate);
-    currentMenu.popup(browserWindow, {
-        async: true
+    currentContextMenu = Menu.buildFromTemplate(menuTemplate);
+    currentContextMenu.popup({
+        window: browserWindow,
+        async: true,
+        callback: () => {
+            currentContextMenu = null;
+        }
     });
 };
 
@@ -2483,7 +2458,10 @@ function restoreWindowPosition(identity, cb) {
             savedBounds.left = displayRoot.x;
         }
 
-        Window.setBounds(identity, savedBounds.left, savedBounds.top, savedBounds.width, savedBounds.height);
+        const browserWindow = getElectronBrowserWindow(identity);
+        const { left, top, width, height } = savedBounds;
+        NativeWindow.setBounds(browserWindow, { left, top, width, height });
+
         switch (savedBounds.windowState) {
             case 'maximized':
                 Window.maximize(identity);
