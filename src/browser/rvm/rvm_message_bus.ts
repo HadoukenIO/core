@@ -405,7 +405,7 @@ export class RVMMessageBus extends EventEmitter  {
         });
     }
 
-    public getInstalledRuntimes(opts: GetInstalledRuntimesOptions, callback: (x: any) => any = () => void) {
+    public getInstalledRuntimes(opts: GetInstalledRuntimesOptions, callback: (x: any) => void) {
         const rvmPayload = {
             topic: 'system',
             action: 'get-installed-runtimes',
