@@ -302,12 +302,12 @@ export const System = {
         }, theme);
     },
     getInstalledRuntimes: function(identity, callback, errorCallback) {
-        let getInstalledRuntimesOpts = {
+        var getInstalledRuntimesOpts = {
             uuid: identity.uuid,
             sourceUrl: coreState.getConfigUrlByUuid(identity.uuid)
         };
 
-        let handleResponse = function(dataObj) {
+        var handleResponse = function(dataObj) {
             var failed = _.has(dataObj, 'time-to-live-expiration');
             if (!failed) {
                 callback(dataObj.payload);
