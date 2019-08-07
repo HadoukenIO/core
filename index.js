@@ -641,6 +641,10 @@ function launchApp(argo, startExternalAdapterServer) {
                 deleteApp(uuid);
                 duplicateUuidTransport.broadcast({ argv, uuid });
                 failedMutexCheck = true;
+                // close the runtime if it's only app
+                if (coreState.shouldCloseRuntime()) {
+                    app.quit();
+                }
             } else {
                 passedMutexCheck = true;
             }
