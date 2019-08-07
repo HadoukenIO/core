@@ -55,7 +55,9 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
                 const oldwinMap = windowCloseListenerMap.get(oldWin);
                 if (oldwinMap) {
                     const listener = oldwinMap.get(ofView);
-                    of_events.removeListener(route.window('closed', ofView.target.uuid, ofView.target.name), listener);
+                    if (typeof listener === 'function') {
+                        of_events.removeListener(route.window('closed', ofView.target.uuid, ofView.target.name), listener);
+                    }
                     oldwinMap.delete(ofView);
                 }
             }
