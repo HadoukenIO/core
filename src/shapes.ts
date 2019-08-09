@@ -7,12 +7,15 @@ import {
 } from 'electron';
 import { ERROR_BOX_TYPES } from './common/errors';
 import { AnchorType } from '../js-adapter/src/shapes';
+import { WritableOptions } from 'stream';
+import { OfView } from './browser/core_state';
 
 export interface Identity {
     uuid: string;
     name?: string;
     runtimeUuid?: string;
     entityType?: EntityType;
+    parentFrame?: string;
 }
 
 export interface ProviderIdentity extends Identity {
@@ -26,7 +29,12 @@ export interface ResourceFetchIdentity extends Identity {
     resourceFetch?: boolean;
 }
 
-export type EntityType = 'window' | 'iframe' | 'external connection' | 'unknown';
+export enum EntityType {
+   WINDOW = 'window',
+   IFRAME = 'iframe',
+   EXTERNAL = 'external connection',
+   UNKNOWN = 'unknown'
+}
 export type AuthCallback = (username: string, password: string) => void;
 export type Listener = (...args: any[]) => void;
 
@@ -85,6 +93,7 @@ export interface App {
     parentUuid?: string;
     sentHideSplashScreen: boolean;
     uuid: string;
+    readonly views: ReadonlyArray<OfView>;
 }
 
 export interface Window {
@@ -93,23 +102,28 @@ export interface Window {
     openfinWindow: OpenFinWindow|null;
     parentId?: number;
 }
-
-export interface OpenFinWindow {
+export interface InjectableContext {
+    uuid: string;
+    name: string;
+    _options: WebOptions;
+    frames: Map<string, ChildFrameInfo>;
+}
+export interface WebOptions {
+    uuid: string;
+    name: string;
+}
+export interface OpenFinWindow extends InjectableContext {
     isIframe?: boolean;
-    parentFrameId?: number;
     _options: WindowOptions;
     _window: BrowserWindow;
     app_uuid: string;
     browserWindow: BrowserWindow;
     children: OpenFinWindow[];
-    frames: Map<string, ChildFrameInfo>;
     forceClose: boolean;
     groupUuid: string|null;
     hideReason: string;
     id: number;
-    name: string;
     preloadScripts: PreloadScriptState[];
-    uuid: string;
     mainFrameRoutingId: number;
     isProxy?: boolean;
 }
@@ -140,7 +154,7 @@ export type WebRequestHeaderConfig = {
     headers: WebRequestHeader[]  // key=value is added to headers
 };
 
-export interface WindowOptions {
+export interface WindowOptions extends WebOptions {
     accelerator?: {
         devtools: boolean;
         reload: boolean;

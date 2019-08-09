@@ -4,7 +4,7 @@ import ofEvents from '../of_events';
 import route from '../../common/route';
 import { AckFunc, NackFunc, AckMessage, AckPayload, NackPayload } from '../api_protocol/transport_strategy/ack';
 import { sendToIdentity } from '../api_protocol/api_handlers/api_protocol_base';
-import { getExternalOrOfWindowIdentity } from '../core_state';
+import { getEntityIdentity } from '../core_state';
 import SubscriptionManager from '../subscription_manager';
 
 const subscriptionManager = new SubscriptionManager();
@@ -79,7 +79,7 @@ export module Channel {
             throw new Error(nackString);
         }
 
-        const providerApp = getExternalOrOfWindowIdentity(identity);
+        const providerApp = getEntityIdentity(identity);
         const channelId = getChannelId(identity, channelName);
         const providerIdentity = { ...providerApp, channelName, channelId };
         channelMap.set(channelId, providerIdentity);
@@ -134,9 +134,13 @@ export module Channel {
 
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { channelName, payload: connectionPayload } = payload;
-        const { uuid, name } = identity;
 
+        const connectingWindow = getEntityIdentity(identity);
         const providerIdentity = Channel.getChannelByChannelName(channelName);
+
+        if (connectingWindow && connectingWindow.isExternal && connectionPayload && connectionPayload.nameAlias) {
+            identity.name = connectionPayload.nameAlias;
+        }
 
         if (providerIdentity) {
             const ackToSender = createAckToSender(identity, messageId, providerIdentity);
@@ -154,7 +158,7 @@ export module Channel {
 
             // handle client reload or navigatation events
             const disconnectedEvent = 'client-disconnected';
-            const unloadEvent = route.window('unload', uuid, name, false);
+            const unloadEvent = route.window('unload', identity.uuid, identity.name, false);
             const unloadListener = () => subscriptionManager.removeSubscription(identity, `${disconnectedEvent}-${channelName}`);
             ofEvents.once(unloadEvent, unloadListener);
 
@@ -177,18 +181,19 @@ export module Channel {
 
     export function sendChannelMessage(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { uuid, name, payload: messagePayload, action: channelAction, providerIdentity } = payload;
-        const targetIdentity = { uuid, name };
+        const intendedTargetIdentity = { uuid, name };
 
         const ackToSender = createAckToSender(identity, messageId, providerIdentity);
 
-        sendToIdentity(targetIdentity, {
+        sendToIdentity(intendedTargetIdentity, {
             action: CHANNEL_APP_ACTION,
             payload: {
                 ackToSender,
                 providerIdentity,
                 action: channelAction,
                 senderIdentity: identity,
-                payload: messagePayload
+                payload: messagePayload,
+                intendedTargetIdentity
             }
         });
     }
