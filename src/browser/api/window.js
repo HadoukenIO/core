@@ -1098,6 +1098,14 @@ Window.bringToFront = function(identity) {
     NativeWindow.bringToFront(browserWindow);
 };
 
+Window.center = function(identity) {
+    const browserWindow = getElectronBrowserWindow(identity);
+    if (!browserWindow) {
+        return;
+    }
+    NativeWindow.center(browserWindow);
+};
+
 
 // TODO investigate the close sequence, there appears to be a case were you
 // try to wrap and close an already closed window

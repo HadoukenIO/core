@@ -26,6 +26,7 @@ export const windowApiMap = {
     'animate-window': animateWindow,
     'blur-window': blurWindow,
     'bring-window-to-front': bringWindowToFront,
+    'center-window': centerWindow,
     'close-window': closeWindow,
     'disable-window-frame': disableUserMovement,
     'dock-window': dockWindow,
@@ -464,5 +465,13 @@ function registerWindowName(identity: Identity, message: APIMessage, ack: Acker)
     const windowIdentity = getTargetWindowIdentity(payload);
 
     Window.registerWindowName(windowIdentity);
+    ack(successAck);
+}
+
+function centerWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { payload } = message;
+    const windowIdentity = getTargetWindowIdentity(payload);
+
+    Window.center(windowIdentity);
     ack(successAck);
 }
