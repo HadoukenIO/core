@@ -93,7 +93,7 @@ export interface App {
     parentUuid?: string;
     sentHideSplashScreen: boolean;
     uuid: string;
-    views: OfView[];
+    readonly views: ReadonlyArray<OfView>;
 }
 
 export interface Window {
@@ -126,7 +126,6 @@ export interface OpenFinWindow extends InjectableContext {
     preloadScripts: PreloadScriptState[];
     mainFrameRoutingId: number;
     isProxy?: boolean;
-    view?: OfView;
 }
 
 export interface BrowserWindow extends BrowserWindowElectron {
