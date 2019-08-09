@@ -75,6 +75,7 @@ export const SystemApiMap: APIHandlerMap = {
     'get-focused-window': getFocusedWindow,
     'get-focused-external-window': getFocusedExternalWindow,
     'get-host-specs': { apiFunc: getHostSpecs, apiPath: '.getHostSpecs' },
+    'get-installed-runtimes': {apiFunc: getInstalledRuntimes, apiPath: '.getInstalledRuntimes' },
     'get-machine-id': { apiFunc: getMachineId, apiPath: '.getMachineId' },
     'get-min-log-level': getMinLogLevel,
     'get-monitor-info': { apiFunc: getMonitorInfo, apiPath: '.getMonitorInfo' },
@@ -452,6 +453,14 @@ function getRuntimeInfo(identity: Identity, message: APIMessage, ack: Acker, nac
 
 function getRvmInfo(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
     System.getRvmInfo(identity, (data: any) => {
+        const dataAck = Object.assign({}, successAck);
+        dataAck.data = data;
+        ack(dataAck);
+    }, nack);
+}
+
+function getInstalledRuntimes(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker) : void {
+    System.getInstalledRuntimes(identity, (data: any) => {
         const dataAck = Object.assign({}, successAck);
         dataAck.data = data;
         ack(dataAck);
