@@ -19,6 +19,12 @@ export interface BrowserViewOpts extends BrowserViewCreationOptions {
 }
 
 export async function create(options: BrowserViewOpts) {
+    // checking if the name-uuid combination is already in use
+    const { uuid, name } = options;
+    if (getWindowByUuidName(uuid, name) || getBrowserViewByIdentity({ uuid, name })) {
+        throw new Error('Provided name-uuid combination is already in use');
+    }
+
     if (!options.target) {
         throw new Error('Must supply target identity');
     }
