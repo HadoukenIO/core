@@ -1,9 +1,10 @@
 
 import RequestHandler from '../transport_strategy/base_handler';
-import { appByUuid, windowExists } from '../../core_state';
+import { appByUuid, windowExists, getBrowserViewByIdentity } from '../../core_state';
 import { applicationApiMap } from './application.js';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { windowApiMap } from './window.js';
+import { browserViewActionMap } from './browser_view';
 import { webContentsApiMap } from './webcontents';
 
 const apisToIgnore = new Set([
@@ -16,7 +17,9 @@ const apisToIgnore = new Set([
     'run-application',
     // Window
     'window-exists',
-    'window-is-notification-type'
+    'window-is-notification-type',
+    //BrowserView
+    'create-browser-view'
 ]);
 
 /**
@@ -69,6 +72,11 @@ function verifyEntityExistence(msg: MessagePackage, next: () => void): void {
 
         if (!wndExists) {
             return nack('Could not locate the requested window');
+        }
+    } else if (browserViewActionMap.hasOwnProperty(action)) {
+        const exists = getBrowserViewByIdentity({uuid, name});
+        if (!exists) {
+            return nack('Could not locate the requested view');
         }
     }
 

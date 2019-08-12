@@ -10,7 +10,7 @@
 * */
 
 import * as minimist from 'minimist';
-import { app, webContents, session, Session, WebContents, BrowserWindow } from 'electron';
+import { app, Session, WebContents, BrowserWindow, BrowserView } from 'electron';
 import { ExternalApplication } from './api/external_application';
 import { PortInfo } from './port_discovery';
 import * as Shapes from '../shapes';
@@ -18,6 +18,8 @@ import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
 import { getIdentityFromObject, isEnableChromiumBuild } from '../common/main';
+import { BrowserViewOpts } from './api/browser_view';
+import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 
 interface ProxySettingsArgs {
     proxyAddress?: string;
@@ -47,6 +49,7 @@ export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
 let apps: Shapes.App[] = [];
+let views: OfView[] = [];
 
 let startManifest = {};
 const manifests: Map <string, Shapes.Manifest> = new Map();
@@ -111,7 +114,7 @@ export function getEntityInfo(identity: Shapes.Identity) {
         const externalAppInfo = ExternalApplication.getInfo(identity);
         return new FrameInfo({
             uuid: identity.uuid,
-            entityType: 'external connection',
+            entityType: Shapes.EntityType.EXTERNAL,
             parent: externalAppInfo.parent
         });
     } else {
@@ -122,8 +125,8 @@ export function getEntityInfo(identity: Shapes.Identity) {
     }
 }
 
-export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes.ProviderIdentity|undefined {
-    const { uuid, name } = identity;
+export function getEntityIdentity(identity: Shapes.Identity): Shapes.ProviderIdentity|undefined {
+    const { uuid, name, entityType, parentFrame } = identity;
     const externalConn = getExternalAppObjByUuid(uuid);
     if (externalConn) {
         return {...externalConn, isExternal: true };
@@ -133,6 +136,13 @@ export function getExternalOrOfWindowIdentity(identity: Shapes.Identity): Shapes
     const browserWindow = ofWindow && ofWindow.browserWindow;
     if (browserWindow && !browserWindow.isDestroyed()) {
         return { uuid, name, isExternal: false };
+    }
+
+    if (entityType && entityType === 'iframe' && parentFrame) {
+        const hostWindow = getWindowByUuidName(uuid, parentFrame);
+        if (hostWindow && !hostWindow.browserWindow.isDestroyed() && hostWindow.frames.has(name)) {
+            return { uuid, name, isExternal: false };
+        }
     }
 }
 
@@ -408,7 +418,9 @@ export function addApp(id: number, uuid: string): Shapes.App[] {
         id: id,
         isRunning: false,
         uuid,
-
+        get views () {
+            return views.filter(v => v.uuid === uuid);
+        },
         // hide-splashscreen is sent to RVM on 1st window show &
         // immediately on subsequent app launches if already sent once
         sentHideSplashScreen: false
@@ -736,7 +748,7 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
                     name,
                     uuid,
                     parent,
-                    entityType: 'window'
+                    entityType: Shapes.EntityType.WINDOW
                 };
             } else if (openfinWindow.frames.get(frame)) {
                 return openfinWindow.frames.get(frame);
@@ -767,7 +779,6 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
             const { uuid, name } = openfinWindow;
             let browserWindow: Shapes.BrowserWindow;
             browserWindow = openfinWindow.browserWindow;
-
             if (!openfinWindow.mainFrameRoutingId) {
                 // save bit time here by not calling webContents.mainFrameRoutingId every time
                 // mainFrameRoutingId is wrong during setWindowObj
@@ -804,23 +815,68 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
         } else {
             writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
+    } for (const ofView of app.views) {
+        if (frame === ofView.name) {
+            return {
+                name: frame,
+                webContents: ofView.view.webContents,
+                frameRoutingId: ofView.view.webContents.mainFrameRoutingId,
+                mainFrameRoutingId: ofView.view.webContents.mainFrameRoutingId,
+                frameName: frame,
+                _options: ofView._options
+            };
+        }
     }
 }
 function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
-    return win.openfinWindow;
+    return win && win.openfinWindow;
 }
-
+export interface OfView extends Identity {
+    name: string;
+    view: BrowserView;
+    frames: Map<string, Shapes.ChildFrameInfo>;
+    target: Identity;
+    _options: Shapes.WebOptions;
+}
+export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
+    const {uuid, name, target} = opts;
+    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target };
+    views.push(ofView);
+    return ofView;
+}
+export function updateViewTarget(id: Identity, newTarget: Identity) {
+    const view = getBrowserViewByIdentity(id);
+    if (view) {
+        view.target = newTarget;
+    }
+}
+export function removeBrowserView (view: OfView) {
+    const app = appByUuid(view.uuid);
+    views = views.filter(v => v.uuid !== view.uuid && v.name !== view.name);
+}
+export function getBrowserViewByIdentity({uuid, name}: Identity) {
+    return views.find(v => v.uuid === uuid && v.name === name);
+}
+function getBrowserViewByWebContentsId(webContentsId: number) {
+    return views.find(v => v.view.webContents.id === webContentsId);
+}
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
     const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
     return getOptionsFromOpenFinWindow(ofWin);
 }
 export function getWebContentsInitialOptionSet(webContentsId: number) {
     const ofWin = getWinObjByWebcontentsId(webContentsId);
-    return getOptionsFromOpenFinWindow(ofWin);
+    if (ofWin) {
+        return getOptionsFromOpenFinWindow(ofWin);
+    }
+    const bview = getBrowserViewByWebContentsId(webContentsId);
+    if (bview) {
+        return getOptionsFromOpenFinWindow(bview);
+    }
 }
 
-function getOptionsFromOpenFinWindow(ofWin: Shapes.OpenFinWindow) {
+function getOptionsFromOpenFinWindow(ofWin: Shapes.InjectableContext) {
     if (ofWin) {
         const options = ofWin._options;
         const { uuid, name } = options;
