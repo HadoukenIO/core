@@ -1,4 +1,4 @@
-// Type definitions for Electron 7.0.0-nightly.20190710
+// Type definitions for Electron 7.0.0-nightly.20190731
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -124,6 +124,8 @@ declare namespace Electron {
      * assistive technologies, such as screen readers, are enabled or disabled. See
      * https://www.chromium.org/developers/design-documents/accessibility for more
      * details.
+     *
+     * @platform darwin,win32
      */
     on(event: 'accessibility-support-changed', listener: (event: Event,
                                                           /**
@@ -150,6 +152,8 @@ declare namespace Electron {
      * event, such as launching the application for the first time, attempting to
      * re-launch the application when it's already running, or clicking on the
      * application's dock or taskbar icon.
+     *
+     * @platform darwin
      */
     on(event: 'activate', listener: (event: Event,
                                      hasVisibleWindows: boolean) => void): this;
@@ -162,6 +166,8 @@ declare namespace Electron {
     /**
      * Emitted during Handoff after an activity from this device was successfully
      * resumed on another one.
+     *
+     * @platform darwin
      */
     on(event: 'activity-was-continued', listener: (event: Event,
                                                    /**
@@ -298,6 +304,8 @@ declare namespace Electron {
      * ID as the activity's source app and that supports the activity's type. Supported
      * activity types are specified in the app's `Info.plist` under the
      * `NSUserActivityTypes` key.
+     *
+     * @platform darwin
      */
     on(event: 'continue-activity', listener: (event: Event,
                                               /**
@@ -338,6 +346,8 @@ declare namespace Electron {
     /**
      * Emitted during Handoff when an activity from a different device fails to be
      * resumed.
+     *
+     * @platform darwin
      */
     on(event: 'continue-activity-error', listener: (event: Event,
                                                     /**
@@ -436,6 +446,8 @@ declare namespace Electron {
     /**
      * Emitted when the user clicks the native macOS new tab button. The new tab button
      * is only visible if the current `BrowserWindow` has a `tabbingIdentifier`
+     *
+     * @platform darwin
      */
     on(event: 'new-window-for-tab', listener: (event: Event) => void): this;
     once(event: 'new-window-for-tab', listener: (event: Event) => void): this;
@@ -453,6 +465,8 @@ declare namespace Electron {
      *
      * On Windows, you have to parse `process.argv` (in the main process) to get the
      * filepath.
+     *
+     * @platform darwin
      */
     on(event: 'open-file', listener: (event: Event,
                                       path: string) => void): this;
@@ -468,6 +482,8 @@ declare namespace Electron {
      * `CFBundleURLTypes` key, and set `NSPrincipalClass` to `AtomApplication`.
      * 
 You should call `event.preventDefault()` if you want to handle this event.
+     *
+     * @platform darwin
      */
     on(event: 'open-url', listener: (event: Event,
                                      url: string) => void): this;
@@ -701,6 +717,8 @@ You should call `event.preventDefault()` if you want to handle this event.
      * immediately, construct a new `userInfo` dictionary and call
      * `app.updateCurrentActiviy()` in a timely manner. Otherwise, the operation will
      * fail and `continue-activity-error` will be called.
+     *
+     * @platform darwin
      */
     on(event: 'update-activity-state', listener: (event: Event,
                                                   /**
@@ -753,6 +771,8 @@ You should call `event.preventDefault()` if you want to handle this event.
      * Emitted during Handoff before an activity from a different device wants to be
      * resumed. You should call `event.preventDefault()` if you want to handle this
      * event.
+     *
+     * @platform darwin
      */
     on(event: 'will-continue-activity', listener: (event: Event,
                                                    /**
@@ -821,10 +841,14 @@ In most cases, you should do everything in the `ready` event handler.
      *
      * This list is managed by the OS. On Windows, you can visit the list from the task
      * bar, and on macOS, you can visit it from dock menu.
+     *
+     * @platform darwin,win32
      */
     addRecentDocument(path: string): void;
     /**
      * Clears the recent documents list.
+     *
+     * @platform darwin,win32
      */
     clearRecentDocuments(): void;
     closeLogfile(): void;
@@ -847,6 +871,8 @@ This method can only be called before app is ready.
      * Enables full sandbox mode on the app.
      * 
 This method can only be called before app is ready.
+     *
+     * @experimental
      */
     enableSandbox(): void;
     /**
@@ -883,6 +909,8 @@ This method can only be called before app is ready.
      * The current value displayed in the counter badge.
 
 **Deprecated**
+     *
+     * @platform linux,darwin
      */
     getBadgeCount(): number;
     /**
@@ -899,6 +927,8 @@ This method can only be called before app is ready.
     getCommandLineArgv(): string[];
     /**
      * The type of the currently running activity.
+     *
+     * @platform darwin
      */
     getCurrentActivityType(): string;
     /**
@@ -939,7 +969,7 @@ This method can only be called before app is ready.
      * Using `basic` should be preferred if only basic information like `vendorId` or
      * `driverId` is needed.
      */
-    getGPUInfo(infoType: string): Promise<unknown>;
+    getGPUInfo(infoType: 'basic' | 'complete'): Promise<unknown>;
     getGpuName(): string;
     /**
      * This call will return the same value on subsequent calls on the same
@@ -953,6 +983,8 @@ A unique (UUID) identifier for the machine.
      * The runtime integrity level of the app.
      * 
 Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
+     *
+     * @platform win32
      */
     getIntegrityLevel(): number;
     /**
@@ -963,6 +995,8 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
      * in the Jump List. These items must not be re-added to the Jump List in the
      * **next** call to `app.setJumpList()`, Windows will not display any custom
      * category that contains any of the removed items.
+     *
+     * @platform win32
      */
     getJumpListSettings(): JumpListSettings;
     /**
@@ -1001,10 +1035,14 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
      * that should restore the state from the previous session. This indicates that the
      * app should restore the windows that were open the last time the app was closed.
      * This setting is not available on MAS builds.
+     *
+     * @platform darwin,win32
      */
     getLoginItemSettings(options?: LoginItemSettingsOptions): LoginItemSettings;
     /**
      * The hardware UUID of the machine.
+     *
+     * @platform darwin
      */
     getMachineId(): string;
     /**
@@ -1031,30 +1069,8 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
     /**
      * A path to a special directory or file associated with `name`. On failure, an
      * `Error` is thrown.
-     *
-     * You can request the following paths by the name:
-     *
-     * * `home` User's home directory.
-     * * `appData` Per-user application data directory, which by default points to:
-     *   * `%APPDATA%` on Windows
-     *   * `$XDG_CONFIG_HOME` or `~/.config` on Linux
-     *   * `~/Library/Application Support` on macOS
-     * * `userData` The directory for storing your app's configuration files, which by
-     * default it is the `appData` directory appended with your app's name.
-     * * `temp` Temporary directory.
-     * * `exe` The current executable file.
-     * * `module` The `libchromiumcontent` library.
-     * * `desktop` The current user's Desktop directory.
-     * * `documents` Directory for a user's "My Documents".
-     * * `downloads` Directory for a user's downloads.
-     * * `music` Directory for a user's music.
-     * * `pictures` Directory for a user's pictures.
-     * * `videos` Directory for a user's videos.
-     * * `logs` Directory for your app's log folder.
-     * * `pepperFlashSystemPlugin` Full path to the system version of the Pepper Flash
-     * plugin.
      */
-    getPath(name: string): ('home' | 'appData' | 'userData' | 'temp' | 'exe' | 'module' | 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos' | 'logs' | 'pepperFlashSystemPlugin');
+    getPath(name: 'home' | 'appData' | 'userData' | 'cache' | 'temp' | 'exe' | 'module' | 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos' | 'logs' | 'pepperFlashSystemPlugin'): string;
     /**
      * The process id of the window represented by `nativeId`.
      */
@@ -1085,6 +1101,8 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
     hasSingleInstanceLock(): boolean;
     /**
      * Hides all application windows without minimizing them.
+     *
+     * @platform darwin
      */
     hide(): void;
     /**
@@ -1092,10 +1110,14 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
      * `callback` is called with the `result` of import operation, a value of `0`
      * indicates success while any other value indicates failure according to Chromium
      * net_error_list.
+     *
+     * @platform linux
      */
     importCertificate(options: ImportCertificateOptions, callback: (result: number) => void): void;
     /**
      * Invalidates the current Handoff user activity.
+     *
+     * @platform darwin
      */
     invalidateCurrentActivity(): void;
     invokeNamedCallback(key: string, ...args: any[]): any;
@@ -1107,6 +1129,8 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
      * details.
 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     isAccessibilitySupportEnabled(): boolean;
     isAeroGlassEnabled(): boolean;
@@ -1131,6 +1155,8 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
     /**
      * Whether the application is currently running from the systems Application
      * folder. Use in combination with `app.moveToApplicationsFolder()`
+     *
+     * @platform darwin
      */
     isInApplicationsFolder(): boolean;
     /**
@@ -1139,6 +1165,8 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
     isReady(): boolean;
     /**
      * Whether the current desktop environment is Unity launcher.
+     *
+     * @platform linux
      */
     isUnityRunning(): boolean;
     /**
@@ -1162,9 +1190,28 @@ The result message.
      * move to fail. For instance if the user cancels the authorization dialog, this
      * method returns false. If we fail to perform the copy, then this method will
      * throw an error. The message in the error should be informative and tell you
-     * exactly what went wrong
+     * exactly what went wrong.
+     *
+     * By default, if an app of the same name as the one being moved exists in the
+     * Applications directory and is _not_ running, the existing app will be trashed
+     * and the active app moved into its place. If it _is_ running, the pre-existing
+     * running app will assume focus and the the previously active app will quit
+     * itself. This behavior can be changed by providing the optional conflict handler,
+     * where the boolean returned by the handler determines whether or not the move
+     * conflict is resolved with default behavior.  i.e. returning `false` will ensure
+     * no further action is taken, returning `true` will result in the default behavior
+     * and the method continuing.
+     *
+     * For example:
+     *
+     * Would mean that if an app already exists in the user directory, if the user
+     * chooses to 'Continue Move' then the function would continue with its default
+     * behavior and the existing app will be trashed and the active app moved into its
+     * place.
+     *
+     * @platform darwin
      */
-    moveToApplicationsFolder(): boolean;
+    moveToApplicationsFolder(options?: MoveToApplicationsFolderOptions): boolean;
     /**
      * The current time.
      *
@@ -1205,6 +1252,8 @@ The result message.
      * bytes:
 
 * `type` String - The registry value's type. See list here.
+     *
+     * @platform win32
      */
     readRegistryValue(regRootKey: string, regSubkey: string, regValue: string): ReadRegistryValue;
     registerNamedCallback(key: string, callback: () => void): void;
@@ -1237,6 +1286,8 @@ The result message.
      *
      * This method checks if the current executable as the default handler for a
      * protocol (aka URI scheme). If so, it will remove the app as the default handler.
+     *
+     * @platform darwin,win32
      */
     removeAsDefaultProtocolClient(protocol: string, path?: string, args?: string[]): boolean;
     removeNamedCallback(key: string): void;
@@ -1264,12 +1315,16 @@ The result message.
     requestSingleInstanceLock(): boolean;
     /**
      * Marks the current Handoff user activity as inactive without invalidating it.
+     *
+     * @platform darwin
      */
     resignCurrentActivity(): void;
     /**
      * Set the about panel options. This will override the values defined in the app's
      * `.plist` file on MacOS. See the Apple docs for more details. On Linux, values
      * must be set in order to be shown; there are no defaults.
+     *
+     * @platform darwin,linux
      */
     setAboutPanelOptions(options: AboutPanelOptionsOptions): void;
     /**
@@ -1283,19 +1338,23 @@ The result message.
      * of your app. It should not be enabled by default.
 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     setAccessibilitySupportEnabled(enabled: boolean): void;
     /**
      * Sets or creates a directory your app's logs which can then be manipulated with
      * `app.getPath()` or `app.setPath(pathName, newPath)`.
      *
-     * On _macOS_, this directory will be set by default to
-     * `/Library/Logs/YourAppName`, and on _Linux_ and _Windows_ it will be placed
-     * inside your `userData` directory.
+     * Calling `app.setAppLogsPath()` without a `path` parameter will result in this
+     * directory being set to `/Library/Logs/YourAppName` on _macOS_, and inside the
+     * `userData` directory on _Linux_ and _Windows_.
      */
     setAppLogsPath(path?: string): void;
     /**
      * Changes the Application User Model ID to `id`.
+     *
+     * @platform win32
      */
     setAppUserModelId(id: string): void;
     /**
@@ -1338,6 +1397,8 @@ The result message.
      * for more information please read Desktop Environment Integration.
      * 
 **Deprecated**
+     *
+     * @platform linux,darwin
      */
     setBadgeCount(count: number): boolean;
     /**
@@ -1371,6 +1432,8 @@ The result message.
      * be obtained using `app.getJumpListSettings()`.
      * 
 Here's a very simple example of creating a custom Jump List:
+     *
+     * @platform win32
      */
     setJumpList(categories: (JumpListCategory[]) | (null)): void;
     /**
@@ -1379,6 +1442,8 @@ Here's a very simple example of creating a custom Jump List:
      * To work with Electron's `autoUpdater` on Windows, which uses Squirrel, you'll
      * want to set the launch path to Update.exe, and pass arguments that specify your
      * application name. For example:
+     *
+     * @platform darwin,win32
      */
     setLoginItemSettings(settings: Settings): void;
     setMinLogLevel(level: number): void;
@@ -1403,6 +1468,8 @@ Here's a very simple example of creating a custom Jump List:
     /**
      * Creates an `NSUserActivity` and sets it as the current activity. The activity is
      * eligible for Handoff to another device afterward.
+     *
+     * @platform darwin
      */
     setUserActivity(type: string, userInfo: any, webpageURL?: string): void;
     /**
@@ -1414,20 +1481,28 @@ Here's a very simple example of creating a custom Jump List:
      *
      * **Note:** If you'd like to customize the Jump List even more use
      * `app.setJumpList(categories)` instead.
+     *
+     * @platform win32
      */
     setUserTasks(tasks: Task[]): boolean;
     /**
      * Shows application windows after they were hidden. Does not automatically focus
      * them.
+     *
+     * @platform darwin
      */
     show(): void;
     /**
      * Show the app's about panel options. These options can be overridden with
      * `app.setAboutPanelOptions(options)`.
+     *
+     * @platform darwin,linux
      */
     showAboutPanel(): void;
     /**
      * Show the platform's native emoji picker.
+     *
+     * @platform darwin,win32
      */
     showEmojiPanel(): void;
     /**
@@ -1440,11 +1515,15 @@ Here's a very simple example of creating a custom Jump List:
      * applications that are packaged for the Mac App Store may reach outside their
      * sandbox to access files chosen by the user. See Apple's documentation for a
      * description of how this system works.
+     *
+     * @platform mas
      */
     startAccessingSecurityScopedResource(bookmarkData: string): Function;
     /**
      * Updates the current activity if its type matches `type`, merging the entries
      * from `userInfo` into its current `userInfo` dictionary.
+     *
+     * @platform darwin
      */
     updateCurrentActivity(type: string, userInfo: any): void;
     verifyFileSignature(fileName: string, interfaceType: number, flags: number): string;
@@ -1468,6 +1547,8 @@ Here's a very simple example of creating a custom Jump List:
      *
      * **Note:** Rendering accessibility tree can significantly affect the performance
      * of your app. It should not be enabled by default.
+     *
+     * @platform darwin,win32
      */
     accessibilitySupportEnabled: boolean;
     /**
@@ -1496,24 +1577,30 @@ Here's a very simple example of creating a custom Jump List:
      *
      * **Note:** Unity launcher requires the existence of a `.desktop` file to work,
      * for more information please read Desktop Environment Integration.
+     *
+     * @platform linux,darwin
      */
     badgeCount: number;
     /**
      * A `CommandLine` object that allows you to read and manipulate the command line
      * arguments that Chromium uses.
+     *
      */
-    commandLine: CommandLine;
+    readonly commandLine: CommandLine;
     /**
      * A `Dock` object that allows you to perform actions on your app icon in the
      * user's dock on macOS.
+     *
+     * @platform darwin
      */
-    dock: Dock;
+    readonly dock: Dock;
     /**
      * A `Boolean` property that returns  `true` if the app is packaged, `false`
      * otherwise. For many apps, this property can be used to distinguish development
      * and production environments.
+     *
      */
-    isPackaged: boolean;
+    readonly isPackaged: boolean;
     /**
      * A `String` property that indicates the current application's name, which is the
      * name in the application's `package.json` file.
@@ -1645,7 +1732,7 @@ Here's a very simple example of creating a custom Jump List:
     deviceName: string;
   }
 
-  class BrowserView extends NodeJS.EventEmitter {
+  class BrowserView {
 
     // Docs: http://electronjs.org/docs\api\browser-view
 
@@ -1673,6 +1760,12 @@ Here's a very simple example of creating a custom Jump List:
      */
     destroy(): void;
     /**
+     * The `bounds` of this BrowserView instance as `Object`.
+     *
+     * @experimental
+     */
+    getBounds(): Rectangle;
+    /**
      * Whether the view is destroyed.
      */
     isDestroyed(): boolean;
@@ -1680,6 +1773,8 @@ Here's a very simple example of creating a custom Jump List:
     setBackgroundColor(color: string): void;
     /**
      * Resizes and moves the view to the supplied bounds relative to the window.
+     *
+     * @experimental
      */
     setBounds(bounds: Rectangle): void;
     id: number;
@@ -1714,6 +1809,8 @@ Here's a very simple example of creating a custom Jump List:
      * 
 * `browser-backward`
 * `browser-forward`
+     *
+     * @platform win32,linux
      */
     on(event: 'app-command', listener: (event: Event,
                                         command: string) => void): this;
@@ -1760,6 +1857,8 @@ Here's a very simple example of creating a custom Jump List:
     removeListener(event: 'closed', listener: Function): this;
     /**
      * Emitted when `setBounds` is called on a minimized or hidden window.
+     *
+     * @platform win32
      */
     on(event: 'deferred-set-bounds', listener: Function): this;
     once(event: 'deferred-set-bounds', listener: Function): this;
@@ -1768,6 +1867,8 @@ Here's a very simple example of creating a custom Jump List:
     /**
      * Emitted when user movement is disabled after all prevent user changes in
      * window's size and/or position have completed.
+     *
+     * @platform win32
      */
     on(event: 'disabled-frame-bounds-changed', listener: Function): this;
     once(event: 'disabled-frame-bounds-changed', listener: Function): this;
@@ -1776,6 +1877,8 @@ Here's a very simple example of creating a custom Jump List:
     /**
      * Emitted when user movement is disabled during prevented user changes to a
      * window's size and/or position.
+     *
+     * @platform win32
      */
     on(event: 'disabled-frame-bounds-changing', listener: Function): this;
     once(event: 'disabled-frame-bounds-changing', listener: Function): this;
@@ -1833,6 +1936,8 @@ Here's a very simple example of creating a custom Jump List:
     /**
      * Emitted when a WM_COPYDATA is received. The first param is the wParam of the
      * received message. The second param is the message.
+     *
+     * @platform win32
      */
     on(event: 'message/wm-copydata', listener: Function): this;
     once(event: 'message/wm-copydata', listener: Function): this;
@@ -1856,6 +1961,8 @@ __Note__: On macOS this event is an alias of `moved`.
     removeListener(event: 'move', listener: Function): this;
     /**
      * Emitted once when the window is moved to a new position.
+     *
+     * @platform darwin
      */
     on(event: 'moved', listener: Function): this;
     once(event: 'moved', listener: Function): this;
@@ -1863,6 +1970,8 @@ __Note__: On macOS this event is an alias of `moved`.
     removeListener(event: 'moved', listener: Function): this;
     /**
      * Emitted when the native new tab button is clicked.
+     *
+     * @platform darwin
      */
     on(event: 'new-window-for-tab', listener: Function): this;
     once(event: 'new-window-for-tab', listener: Function): this;
@@ -1915,7 +2024,26 @@ __Note__: On macOS this event is an alias of `moved`.
     addListener(event: 'restore', listener: Function): this;
     removeListener(event: 'restore', listener: Function): this;
     /**
+     * Emitted on trackpad rotation gesture. Continually emitted until rotation gesture
+     * is ended. The `rotation` value on each emission is the angle in degrees rotated
+     * since the last emission. The last emitted event upon a rotation gesture will
+     * always be of value `0`. Counter-clockwise rotation values are positive, while
+     * clockwise ones are negative.
+     *
+     * @platform darwin
+     */
+    on(event: 'rotate-gesture', listener: (event: Event,
+                                           rotation: number) => void): this;
+    once(event: 'rotate-gesture', listener: (event: Event,
+                                           rotation: number) => void): this;
+    addListener(event: 'rotate-gesture', listener: (event: Event,
+                                           rotation: number) => void): this;
+    removeListener(event: 'rotate-gesture', listener: (event: Event,
+                                           rotation: number) => void): this;
+    /**
      * Emitted when scroll wheel event phase has begun.
+     *
+     * @platform darwin
      */
     on(event: 'scroll-touch-begin', listener: Function): this;
     once(event: 'scroll-touch-begin', listener: Function): this;
@@ -1923,6 +2051,8 @@ __Note__: On macOS this event is an alias of `moved`.
     removeListener(event: 'scroll-touch-begin', listener: Function): this;
     /**
      * Emitted when scroll wheel event phase filed upon reaching the edge of element.
+     *
+     * @platform darwin
      */
     on(event: 'scroll-touch-edge', listener: Function): this;
     once(event: 'scroll-touch-edge', listener: Function): this;
@@ -1930,6 +2060,8 @@ __Note__: On macOS this event is an alias of `moved`.
     removeListener(event: 'scroll-touch-edge', listener: Function): this;
     /**
      * Emitted when scroll wheel event phase has ended.
+     *
+     * @platform darwin
      */
     on(event: 'scroll-touch-end', listener: Function): this;
     once(event: 'scroll-touch-end', listener: Function): this;
@@ -1938,6 +2070,8 @@ __Note__: On macOS this event is an alias of `moved`.
     /**
      * Emitted when window session is going to end due to force shutdown or machine
      * restart or session log off.
+     *
+     * @platform win32
      */
     on(event: 'session-end', listener: Function): this;
     once(event: 'session-end', listener: Function): this;
@@ -1945,6 +2079,8 @@ __Note__: On macOS this event is an alias of `moved`.
     removeListener(event: 'session-end', listener: Function): this;
     /**
      * Emitted when the window opens a sheet.
+     *
+     * @platform darwin
      */
     on(event: 'sheet-begin', listener: Function): this;
     once(event: 'sheet-begin', listener: Function): this;
@@ -1952,6 +2088,8 @@ __Note__: On macOS this event is an alias of `moved`.
     removeListener(event: 'sheet-begin', listener: Function): this;
     /**
      * Emitted when the window has closed a sheet.
+     *
+     * @platform darwin
      */
     on(event: 'sheet-end', listener: Function): this;
     once(event: 'sheet-end', listener: Function): this;
@@ -1967,6 +2105,8 @@ __Note__: On macOS this event is an alias of `moved`.
     /**
      * Emitted on 3-finger swipe. Possible directions are `up`, `right`, `down`,
      * `left`.
+     *
+     * @platform darwin
      */
     on(event: 'swipe', listener: (event: Event,
                                   direction: string) => void): this;
@@ -1978,6 +2118,8 @@ __Note__: On macOS this event is an alias of `moved`.
                                   direction: string) => void): this;
     /**
      * Emitted when the Windows desktop theme changes.
+     *
+     * @platform win32
      */
     on(event: 'theme-changed', listener: Function): this;
     once(event: 'theme-changed', listener: Function): this;
@@ -1999,6 +2141,8 @@ __Note__: On macOS this event is an alias of `moved`.
     removeListener(event: 'unresponsive', listener: Function): this;
     /**
      * Emitted when user movement becomes disabled for the window.
+     *
+     * @platform win32
      */
     on(event: 'user-movement-disabled', listener: Function): this;
     once(event: 'user-movement-disabled', listener: Function): this;
@@ -2006,6 +2150,8 @@ __Note__: On macOS this event is an alias of `moved`.
     removeListener(event: 'user-movement-disabled', listener: Function): this;
     /**
      * Emitted when user movement becomes enabled for the window.
+     *
+     * @platform win32
      */
     on(event: 'user-movement-enabled', listener: Function): this;
     once(event: 'user-movement-enabled', listener: Function): this;
@@ -2026,6 +2172,8 @@ __Note__: On macOS this event is an alias of `moved`.
      *
      * Note that this is only emitted when the window is being resized manually.
      * Resizing the window with `setBounds`/`setSize` will not emit this event.
+     *
+     * @platform win32
      */
     on(event: 'will-move', listener: (event: Event,
                                       /**
@@ -2053,6 +2201,8 @@ __Note__: On macOS this event is an alias of `moved`.
      *
      * Note that this is only emitted when the window is being resized manually.
      * Resizing the window with `setBounds`/`setSize` will not emit this event.
+     *
+     * @platform darwin,win32
      */
     on(event: 'will-resize', listener: (event: Event,
                                         /**
@@ -2162,10 +2312,14 @@ __Note__: On macOS this event is an alias of `moved`.
     activate(): void;
     /**
      * Replacement API for setBrowserView supporting work with multi browser views.
+     *
+     * @experimental
      */
     addBrowserView(browserView: BrowserView): void;
     /**
      * Adds a window as a tab on this window, after the tab for the window instance.
+     *
+     * @platform darwin
      */
     addTabbedWindow(browserWindow: BrowserWindow): void;
     /**
@@ -2201,6 +2355,8 @@ __Note__: On macOS this event is an alias of `moved`.
     close(): void;
     /**
      * Closes the currently open Quick Look panel.
+     *
+     * @platform darwin
      */
     closeFilePreview(): void;
     /**
@@ -2222,24 +2378,34 @@ __Note__: On macOS this event is an alias of `moved`.
      * Return the alpha mask as an integer `(r << 16) | (g << 8) | (b)`.
      */
     getAlphaMask(): void;
+    /**
+     * The `bounds` of the window as `Object`.
+     */
     getBounds(): Rectangle;
     /**
      * an BrowserView what is attached. Returns `null` if none is attached. Throw error
      * if multiple BrowserViews is attached.
+     *
+     * @experimental
      */
     getBrowserView(): (BrowserView) | (null);
     /**
-     * Returns array of `BrowserView` what was an attached with addBrowserView or
-     * setBrowserView.
+     * an array of all BrowserViews that have been attached with `addBrowserView` or
+     * `setBrowserView`.
      *
      * **Note:** The BrowserView API is currently experimental and may change or be
      * removed in future Electron releases.
+     *
+     * @experimental
      */
-    getBrowserViews(): void;
+    getBrowserViews(): BrowserView[];
     /**
      * All child windows.
      */
     getChildWindows(): BrowserWindow[];
+    /**
+     * The `bounds` of the window's client area as `Object`.
+     */
     getContentBounds(): Rectangle;
     /**
      * Contains the window's client area's width and height.
@@ -2279,6 +2445,8 @@ __Note__: On macOS this event is an alias of `moved`.
     getOpacity(): void;
     /**
      * between 0.0 (fully transparent) and 1.0 (fully opaque)
+     *
+     * @platform win32,darwin
      */
     getOpacity(): number;
     /**
@@ -2291,6 +2459,8 @@ __Note__: On macOS this event is an alias of `moved`.
     getPosition(): number[];
     /**
      * The pathname of the file the window represents.
+     *
+     * @platform darwin
      */
     getRepresentedFilename(): string;
     /**
@@ -2316,6 +2486,8 @@ __Note__: On macOS this event is an alias of `moved`.
      * Whether the window has a shadow.
 
 On Windows and Linux always returns `true`.
+     *
+     * @platform darwin
      */
     hasShadow(): boolean;
     /**
@@ -2325,6 +2497,8 @@ On Windows and Linux always returns `true`.
     /**
      * Hooks a windows message. The `callback` is called when the message is received
      * in the WndProc.
+     *
+     * @platform win32
      */
     hookWindowMessage(message: number, callback: (wParam: any, lParam: any) => void): void;
     /**
@@ -2341,6 +2515,8 @@ On Windows and Linux always returns `true`.
 On Linux always returns `true`.
 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     isClosable(): boolean;
     /**
@@ -2349,8 +2525,14 @@ On Linux always returns `true`.
     isDestroyed(): boolean;
     /**
      * Whether the window's document has been edited.
+     *
+     * @platform darwin
      */
     isDocumentEdited(): boolean;
+    /**
+     * Returns Boolean - whether the window is enabled.
+     */
+    isEnabled(): void;
     /**
      * Whether the window is focused.
      */
@@ -2376,6 +2558,8 @@ On Linux always returns `true`.
 On Linux always returns `true`.
 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     isMaximizable(): boolean;
     /**
@@ -2398,6 +2582,8 @@ On Linux always returns `true`.
 On Linux always returns `true`.
 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     isMinimizable(): boolean;
     /**
@@ -2414,6 +2600,8 @@ On Linux always returns `true`.
 On Linux always returns `true`.
 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     isMovable(): boolean;
     /**
@@ -2429,6 +2617,8 @@ On Linux always returns `true`.
     isResizable(): boolean;
     /**
      * Whether the window is in simple (pre-Lion) fullscreen mode.
+     *
+     * @platform darwin
      */
     isSimpleFullScreen(): boolean;
     /**
@@ -2449,6 +2639,8 @@ On Linux always returns `true`.
     isVisibleOnAllWorkspaces(): boolean;
     /**
      * `true` or `false` depending on whether the message is hooked.
+     *
+     * @platform win32
      */
     isWindowMessageHooked(message: number): boolean;
     /**
@@ -2484,6 +2676,8 @@ On Linux always returns `true`.
     /**
      * Merges all windows into one window with multiple tabs when native tabs are
      * enabled and there is more than one open window.
+     *
+     * @platform darwin
      */
     mergeAllWindows(): void;
     /**
@@ -2494,6 +2688,8 @@ On Linux always returns `true`.
     /**
      * Moves the current tab into a new window if native tabs are enabled and there is
      * more than one tab in the current window.
+     *
+     * @platform darwin
      */
     moveTabToNewWindow(): void;
     /**
@@ -2502,6 +2698,8 @@ On Linux always returns `true`.
     moveTop(): void;
     /**
      * Uses Quick Look to preview a file at a given path.
+     *
+     * @platform darwin
      */
     previewFile(path: string, displayName?: string): void;
     /**
@@ -2511,6 +2709,8 @@ On Linux always returns `true`.
     removeBrowserView(browserView: BrowserView): void;
     /**
      * Remove the window's menu bar.
+     *
+     * @platform linux,win32
      */
     removeMenu(): void;
     /**
@@ -2524,15 +2724,21 @@ On Linux always returns `true`.
     /**
      * Selects the next tab when native tabs are enabled and there are other tabs in
      * the window.
+     *
+     * @platform darwin
      */
     selectNextTab(): void;
     /**
      * Selects the previous tab when native tabs are enabled and there are other tabs
      * in the window.
+     *
+     * @platform darwin
      */
     selectPreviousTab(): void;
     /**
      * Sends a message as WM_COPYDATA to the target window.
+     *
+     * @platform win32
      */
     sendMessageToWindowByHwnd(hwnd: string, timeout: number, message: string): void;
     /**
@@ -2551,6 +2757,8 @@ On Linux always returns `true`.
      *
      * **Note:** `relaunchCommand` and `relaunchDisplayName` must always be set
      * together. If one of those properties is not set, then neither will be used.
+     *
+     * @platform win32
      */
     setAppDetails(options: AppDetailsOptions): void;
     /**
@@ -2570,10 +2778,14 @@ On Linux always returns `true`.
      *
      * Calling this function with a value of `0` will remove any previously set aspect
      * ratios.
+     *
+     * @platform darwin
      */
     setAspectRatio(aspectRatio: number, extraSize?: Size): void;
     /**
      * Controls whether to hide cursor when typing.
+     *
+     * @platform darwin
      */
     setAutoHideCursor(autoHide: boolean): void;
     /**
@@ -2594,12 +2806,14 @@ On Linux always returns `true`.
      * Resizes and moves the window to the supplied bounds. Any properties that are not
      * supplied will default to their current values.
      */
-    setBounds(bounds: Rectangle, animate?: boolean): void;
-    setBrowserView(browserView: BrowserView): void;
+    setBounds(bounds: Partial<Rectangle>, animate?: boolean): void;
+    setBrowserView(browserView: (BrowserView) | (null)): void;
     /**
      * Sets whether the window can be manually closed by user. On Linux does nothing.
      * 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     setClosable(closable: boolean): void;
     /**
@@ -2612,6 +2826,8 @@ On Linux always returns `true`.
      *
      * On macOS it sets the NSWindow's sharingType to NSWindowSharingNone. On Windows
      * it calls SetWindowDisplayAffinity with `WDA_MONITOR`.
+     *
+     * @platform darwin,win32
      */
     setContentProtection(enable: boolean): void;
     /**
@@ -2621,6 +2837,8 @@ On Linux always returns `true`.
     /**
      * Specifies whether the window’s document has been edited, and the icon in title
      * bar will become gray when set to `true`.
+     *
+     * @platform darwin
      */
     setDocumentEdited(edited: boolean): void;
     /**
@@ -2631,6 +2849,8 @@ On Linux always returns `true`.
      * Changes whether the window can be focused.
      * 
 On macOS it does not remove the focus from the window.
+     *
+     * @platform darwin,win32
      */
     setFocusable(focusable: boolean): void;
     /**
@@ -2646,10 +2866,14 @@ On macOS it does not remove the focus from the window.
     setFullScreenable(fullscreenable: boolean): void;
     /**
      * Sets whether the window should have a shadow. On Windows and Linux does nothing.
+     *
+     * @platform darwin
      */
     setHasShadow(hasShadow: boolean): void;
     /**
      * Changes window icon.
+     *
+     * @platform win32,linux
      */
     setIcon(icon: NativeImage): void;
     /**
@@ -2668,6 +2892,8 @@ On macOS it does not remove the focus from the window.
      * nothing.
 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     setMaximizable(maximizable: boolean): void;
     /**
@@ -2676,11 +2902,15 @@ On macOS it does not remove the focus from the window.
     setMaximumSize(width: number, height: number): void;
     /**
      * Sets the `menu` as the window's menu bar.
+     *
+     * @platform linux,win32
      */
     setMenu(menu: (Menu) | (null)): void;
     /**
      * Sets whether the menu bar should be visible. If the menu bar is auto-hide, users
      * can still bring up the menu bar by pressing the single `Alt` key.
+     *
+     * @platform win32,linux
      */
     setMenuBarVisibility(visible: boolean): void;
     /**
@@ -2688,6 +2918,8 @@ On macOS it does not remove the focus from the window.
      * nothing.
 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     setMinimizable(minimizable: boolean): void;
     /**
@@ -2698,26 +2930,32 @@ On macOS it does not remove the focus from the window.
      * Sets whether the window can be moved by user. On Linux does nothing.
      * 
 **Deprecated**
+     *
+     * @platform darwin,win32
      */
     setMovable(movable: boolean): void;
-    /**
-     * Sets the opacity of the window. On Linux does nothing.
-     */
-    setOpacity(opacity: number): void;
     /**
      * Set the transparency of the window. 0 is transparent. 1 is opaque. 0.5 is half.
      */
     setOpacity(opacity: number): void;
     /**
+     * Sets the opacity of the window. On Linux does nothing.
+     *
+     * @platform win32,darwin
+     */
+    setOpacity(opacity: number): void;
+    /**
      * Sets a 16 x 16 pixel overlay onto the current taskbar icon, usually used to
      * convey some sort of application status or to passively notify the user.
+     *
+     * @platform win32
      */
     setOverlayIcon(overlay: (NativeImage) | (null), description: string): void;
     /**
      * Sets `parent` as current window's parent window, passing `null` will turn
      * current window into a top-level window.
      */
-    setParentWindow(parent: BrowserWindow): void;
+    setParentWindow(parent: (BrowserWindow) | (null)): void;
     /**
      * Moves window to `x` and `y`.
      */
@@ -2740,6 +2978,8 @@ On macOS it does not remove the focus from the window.
     /**
      * Sets the pathname of the file the window represents, and the icon of the file
      * will show in window's title bar.
+     *
+     * @platform darwin
      */
     setRepresentedFilename(filename: string): void;
     /**
@@ -2767,12 +3007,17 @@ On macOS it does not remove the focus from the window.
      * will be drawn and no mouse events will be registered. Mouse events outside of
      * the region will not be received by that window, but will fall through to
      * whatever is behind the window.
+     *
+     * @experimental
+     * @platform win32,linux
      */
     setShape(rects: Rectangle[]): void;
     /**
      * Changes the attachment point for sheets on macOS. By default, sheets are
      * attached just below the window frame, but you may want to display them beneath a
      * HTML-rendered toolbar. For example:
+     *
+     * @platform darwin
      */
     setSheetOffset(offsetY: number, offsetX?: number): void;
     /**
@@ -2780,6 +3025,8 @@ On macOS it does not remove the focus from the window.
      *
      * Simple fullscreen mode emulates the native fullscreen behavior found in versions
      * of Mac OS X prior to Lion (10.7).
+     *
+     * @platform darwin
      */
     setSimpleFullScreen(flag: boolean): void;
     /**
@@ -2796,6 +3043,8 @@ On macOS it does not remove the focus from the window.
      * same taskbar group will have their icons grouped together. `app.setUserTasks()`
      * can be used to assign jumplists for a taskbar group. Setting `groupName` to ''
      * (empty) will cause the taskbar group name to be the `uuid` of the app.
+     *
+     * @platform win32
      */
     setTaskbarGroup(groupName: string): void;
     /**
@@ -2835,6 +3084,8 @@ On macOS it does not remove the focus from the window.
      * * `noninteractive` - The button is enabled but not interactive; no pressed
      * button state is drawn. This value is intended for instances where the button is
      * used in a notification.
+     *
+     * @platform win32
      */
     setThumbarButtons(buttons: ThumbarButton[]): boolean;
     /**
@@ -2842,11 +3093,15 @@ On macOS it does not remove the focus from the window.
      * hovering over the window in the taskbar. You can reset the thumbnail to be the
      * entire window by specifying an empty region: `{ x: 0, y: 0, width: 0, height: 0
      * }`.
+     *
+     * @platform win32
      */
     setThumbnailClip(region: Rectangle): void;
     /**
      * Sets the toolTip that is displayed when hovering over the window thumbnail in
      * the taskbar.
+     *
+     * @platform win32
      */
     setThumbnailToolTip(toolTip: string): void;
     /**
@@ -2860,8 +3115,11 @@ On macOS it does not remove the focus from the window.
      *
      * **Note:** The TouchBar API is currently experimental and may change or be
      * removed in future Electron releases.
+     *
+     * @experimental
+     * @platform darwin
      */
-    setTouchBar(touchBar: TouchBar): void;
+    setTouchBar(touchBar: (TouchBar) | (null)): void;
     /**
      * Enable/disable user changes to size and position of the window.
      * 
@@ -2874,8 +3132,10 @@ On macOS it does not remove the focus from the window.
      *
      * Note that `appearance-based`, `light`, `dark`, `medium-light`, and `ultra-dark`
      * have been deprecated and will be removed in an upcoming version of macOS.
+     *
+     * @platform darwin
      */
-    setVibrancy(type: (('appearance-based' | 'light' | 'dark' | 'titlebar' | 'selection' | 'menu' | 'popover' | 'sidebar' | 'medium-light' | 'ultra-dark')) | (null)): void;
+    setVibrancy(type: (('appearance-based' | 'light' | 'dark' | 'titlebar' | 'selection' | 'menu' | 'popover' | 'sidebar' | 'medium-light' | 'ultra-dark' | 'header' | 'sheet' | 'window' | 'hud' | 'fullscreen-ui' | 'tooltip' | 'content' | 'under-window' | 'under-page')) | (null)): void;
     /**
      * Sets whether the window should be visible on all workspaces.
      * 
@@ -2886,10 +3146,14 @@ On macOS it does not remove the focus from the window.
      * Sets whether the window traffic light buttons should be visible.
      * 
 This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
+     *
+     * @platform darwin
      */
     setWindowButtonVisibility(visible: boolean): void;
     /**
      * Sets the windows position and size. Useful when the window is minimized.
+     *
+     * @platform win32
      */
     setWindowPlacement(bounds: Bounds): void;
     /**
@@ -2898,6 +3162,8 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
     show(): void;
     /**
      * Same as `webContents.showDefinitionForSelection()`.
+     *
+     * @platform darwin
      */
     showDefinitionForSelection(): void;
     /**
@@ -2907,31 +3173,47 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
     /**
      * Subscribe or unsubscribe to `WM_WTSESSION_CHANGE` messages on Windows. To
      * receive the notifications, use `hookWindowMessage(689, ...)`.
+     *
+     * @platform win32
      */
     subscribeSessionNotifications(subscribe: boolean): void;
     /**
      * Toggles the visibility of the tab bar if native tabs are enabled and there is
      * only one tab in the current window.
+     *
+     * @platform darwin
      */
     toggleTabBar(): void;
     /**
      * Unhooks all of the window messages.
+     *
+     * @platform win32
      */
     unhookAllWindowMessages(): void;
     /**
      * Unhook the window message.
+     *
+     * @platform win32
      */
     unhookWindowMessage(message: number): void;
     /**
      * Unmaximizes the window.
      */
     unmaximize(): void;
-    id: number;
+    autoHideMenuBar: boolean;
+    closable: boolean;
+    excludedFromShownWindowsMenu: boolean;
+    fullScreenable: boolean;
+    readonly id: number;
+    maximizable: boolean;
+    minimizable: boolean;
+    movable: boolean;
     nativeId: string;
-    webContents: WebContents;
+    resizable: boolean;
+    readonly webContents: WebContents;
   }
 
-  class BrowserWindowProxy extends NodeJS.EventEmitter {
+  class BrowserWindowProxy {
 
     // Docs: http://electronjs.org/docs\api\browser-window-proxy
 
@@ -3260,7 +3542,7 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
     chunkedEncoding: boolean;
   }
 
-  interface Clipboard extends NodeJS.EventEmitter {
+  interface Clipboard {
 
     // Docs: http://electronjs.org/docs\api\clipboard
 
@@ -3274,10 +3556,14 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
     clear(type?: 'selection' | 'clipboard'): void;
     /**
      * Whether the clipboard supports the specified `format`.
+     *
+     * @experimental
      */
     has(format: string, type?: 'selection' | 'clipboard'): boolean;
     /**
      * Reads `format` type from the clipboard.
+     *
+     * @experimental
      */
     read(format: string): string;
     /**
@@ -3287,16 +3573,22 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
      * Returns an Object containing `title` and `url` keys representing the bookmark in
      * the clipboard. The `title` and `url` values will be empty strings when the
      * bookmark is unavailable.
+     *
+     * @platform darwin,win32
      */
     readBookmark(): ReadBookmark;
     /**
      * Reads `format` type from the clipboard.
+     *
+     * @experimental
      */
     readBuffer(format: string): Buffer;
     /**
      * The text on the find pasteboard. This method uses synchronous IPC when called
      * from the renderer process. The cached value is reread from the find pasteboard
      * whenever the application is activated.
+     *
+     * @platform darwin
      */
     readFindText(): string;
     /**
@@ -3325,15 +3617,21 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
      * **Note:** Most apps on Windows don't support pasting bookmarks into them so you
      * can use `clipboard.write` to write both a bookmark and fallback text to the
      * clipboard.
+     *
+     * @platform darwin,win32
      */
     writeBookmark(title: string, url: string, type?: 'selection' | 'clipboard'): void;
     /**
      * Writes the `buffer` into the clipboard as `format`.
+     *
+     * @experimental
      */
     writeBuffer(format: string, buffer: Buffer, type?: 'selection' | 'clipboard'): void;
     /**
      * Writes the `text` into the find pasteboard as plain text. This method uses
      * synchronous IPC when called from the renderer process.
+     *
+     * @platform darwin
      */
     writeFindText(text: string): void;
     /**
@@ -3389,7 +3687,7 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
     hasSwitch(the_switch: string): boolean;
   }
 
-  interface ContentTracing extends NodeJS.EventEmitter {
+  interface ContentTracing {
 
     // Docs: http://electronjs.org/docs\api\content-tracing
 
@@ -3559,6 +3857,8 @@ Sets a cookie with `details`.
      * `start` was called. This API is only available on macOS and windows, if you need
      * to add/update extra parameters on Linux after your first call to `start` you can
      * call `start` again with the updated `extra` options.
+     *
+     * @platform darwin,win32
      */
     addExtraParameter(key: string, value: string): void;
     /**
@@ -3587,6 +3887,8 @@ Sets a cookie with `details`.
     /**
      * Remove a extra parameter from the current set of parameters so that it will not
      * be sent with the crash report.
+     *
+     * @platform darwin,win32
      */
     removeExtraParameter(key: string): void;
     /**
@@ -3734,7 +4036,7 @@ Send given command to the debugging target.
     sendCommand(method: string, commandParams?: any): Promise<any>;
   }
 
-  interface DesktopCapturer extends NodeJS.EventEmitter {
+  interface DesktopCapturer {
 
     // Docs: http://electronjs.org/docs\api\desktop-capturer
 
@@ -3784,7 +4086,7 @@ Send given command to the debugging target.
     thumbnail: NativeImage;
   }
 
-  interface Dialog extends NodeJS.EventEmitter {
+  interface Dialog {
 
     // Docs: http://electronjs.org/docs\api\dialog
 
@@ -3802,6 +4104,8 @@ Send given command to the debugging target.
      * dialog.
      * * The `browserWindow` argument is ignored since it is not possible to make this
      * confirmation dialog modal.
+     *
+     * @platform darwin,win32
      */
     showCertificateTrustDialog(browserWindow: BrowserWindow, options: CertificateTrustDialogOptions): Promise<void>;
     /**
@@ -3818,6 +4122,8 @@ Send given command to the debugging target.
      * dialog.
      * * The `browserWindow` argument is ignored since it is not possible to make this
      * confirmation dialog modal.
+     *
+     * @platform darwin,win32
      */
     showCertificateTrustDialog(options: CertificateTrustDialogOptions): Promise<void>;
     /**
@@ -3879,8 +4185,8 @@ Send given command to the debugging target.
      * Resolve with an object containing the following:
      *
      * * `canceled` Boolean - whether or not the dialog was canceled.
-     * * `filePaths` String[] (optional) - An array of file paths chosen by the user.
-     * If the dialog is cancelled this will be an empty array.
+     * * `filePaths` String[] - An array of file paths chosen by the user. If the
+     * dialog is cancelled this will be an empty array.
      * * `bookmarks` String[] (optional) _macOS_ _mas_ - An array matching the
      * `filePaths` array of base64 encoded strings which contains security scoped
      * bookmark data. `securityScopedBookmarks` must be enabled for this to be
@@ -3905,8 +4211,8 @@ Send given command to the debugging target.
      * Resolve with an object containing the following:
      *
      * * `canceled` Boolean - whether or not the dialog was canceled.
-     * * `filePaths` String[] (optional) - An array of file paths chosen by the user.
-     * If the dialog is cancelled this will be an empty array.
+     * * `filePaths` String[] - An array of file paths chosen by the user. If the
+     * dialog is cancelled this will be an empty array.
      * * `bookmarks` String[] (optional) _macOS_ _mas_ - An array matching the
      * `filePaths` array of base64 encoded strings which contains security scoped
      * bookmark data. `securityScopedBookmarks` must be enabled for this to be
@@ -4087,46 +4393,68 @@ Send given command to the debugging target.
      * or the request is canceled.
 
 an ID representing the request.
+     *
+     * @platform darwin
      */
     bounce(type?: 'critical' | 'informational'): number;
     /**
      * Cancel the bounce of `id`.
+     *
+     * @platform darwin
      */
     cancelBounce(id: number): void;
     /**
      * Bounces the Downloads stack if the filePath is inside the Downloads folder.
+     *
+     * @platform darwin
      */
     downloadFinished(filePath: string): void;
     /**
      * The badge string of the dock.
+     *
+     * @platform darwin
      */
     getBadge(): string;
     /**
      * The application's [dock menu][dock-menu].
+     *
+     * @platform darwin
      */
     getMenu(): (Menu) | (null);
     /**
      * Hides the dock icon.
+     *
+     * @platform darwin
      */
     hide(): void;
     /**
      * Whether the dock icon is visible.
+     *
+     * @platform darwin
      */
     isVisible(): boolean;
     /**
      * Sets the string to be displayed in the dock’s badging area.
+     *
+     * @platform darwin
      */
     setBadge(text: string): void;
     /**
      * Sets the `image` associated with this dock icon.
+     *
+     * @platform darwin
      */
     setIcon(image: (NativeImage) | (string)): void;
     /**
      * Sets the application's [dock menu][dock-menu].
+     *
+     * @platform darwin
      */
     setMenu(menu: Menu): void;
     /**
      * Resolves when the dock icon is shown.
+     *
+     * @platform darwin
      */
     show(): Promise<void>;
   }
@@ -4319,10 +4647,6 @@ If the size is unknown, it returns 0.
     // Docs: http://electronjs.org/docs\api\external-process
 
     /**
-     * ExternalProcess
-     */
-    constructor();
-    /**
      * attaches to the application specified by <pid>. <pid> is the process id of a
      * running process.
 
@@ -4343,6 +4667,10 @@ Returns the process id and handle in an object.
 Terminates the process.
      */
     static terminate(): void;
+    /**
+     * ExternalProcess
+     */
+    constructor();
   }
 
   interface FileFilter {
@@ -4387,7 +4715,7 @@ Terminates the process.
     path: string;
   }
 
-  interface GlobalShortcut extends NodeJS.EventEmitter {
+  interface GlobalShortcut {
 
     // Docs: http://electronjs.org/docs\api\global-shortcut
 
@@ -4523,6 +4851,8 @@ Terminates the process.
     isIdle(): boolean;
     /**
      * true if screen saver is running; false otherwise.  Supported on Windows only.
+     *
+     * @platform win32
      */
     isScreenSaverRunning(): boolean;
   }
@@ -4628,6 +4958,18 @@ Retrieves the product descriptions.
     httpVersionMinor: number;
     statusCode: number;
     statusMessage: string;
+  }
+
+  interface InputEvent {
+
+    // Docs: http://electronjs.org/docs\api\structures\input-event
+
+    /**
+     * An array of modifiers of the event, can be `shift`, `control`, `alt`, `meta`,
+     * `isKeypad`, `isAutoRepeat`, `leftButtonDown`, `middleButtonDown`,
+     * `rightButtonDown`, `capsLock`, `numLock`, `left`, `right`.
+     */
+    modifiers: Array<'shift' | 'control' | 'alt' | 'meta' | 'isKeypad' | 'isAutoRepeat' | 'leftButtonDown' | 'middleButtonDown' | 'rightButtonDown' | 'capsLock' | 'numLock' | 'left' | 'right'>;
   }
 
   interface IOCounters {
@@ -4931,6 +5273,42 @@ For example:
     triggeredByAccelerator?: boolean;
   }
 
+  interface KeyboardInputEvent extends InputEvent {
+
+    // Docs: http://electronjs.org/docs\api\structures\keyboard-input-event
+
+    /**
+     * The character that will be sent as the keyboard event. Should only use the valid
+     * key codes in Accelerator.
+     */
+    keyCode: string;
+    /**
+     * The type of the event, can be `keyDown`, `keyUp` or `char`.
+     */
+    type: ('keyDown' | 'keyUp' | 'char');
+  }
+
+  interface MemoryInfo {
+
+    // Docs: http://electronjs.org/docs\api\structures\memory-info
+
+    /**
+     * The maximum amount of memory that has ever been pinned to actual physical RAM.
+     */
+    peakWorkingSetSize: number;
+    /**
+     * The amount of memory not shared by other processes, such as JS heap or HTML
+     * content.
+     *
+     * @platform win32
+     */
+    privateBytes?: number;
+    /**
+     * The amount of memory currently pinned to actual physical RAM.
+     */
+    workingSetSize: number;
+  }
+
   interface MemoryUsageDetails {
 
     // Docs: http://electronjs.org/docs\api\structures\memory-usage-details
@@ -4984,6 +5362,8 @@ For example:
      *
      * See the macOS Cocoa Event Handling Guide for more information on macOS' native
      * actions.
+     *
+     * @platform darwin
      */
     static sendActionToFirstResponder(action: string): void;
     /**
@@ -5048,6 +5428,7 @@ For example:
     role?: ('undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'pasteandmatchstyle' | 'delete' | 'selectall' | 'reload' | 'forcereload' | 'toggledevtools' | 'resetzoom' | 'zoomin' | 'zoomout' | 'togglefullscreen' | 'window' | 'minimize' | 'close' | 'help' | 'about' | 'services' | 'hide' | 'hideothers' | 'unhide' | 'quit' | 'startspeaking' | 'stopspeaking' | 'close' | 'minimize' | 'zoom' | 'front' | 'appMenu' | 'fileMenu' | 'editMenu' | 'viewMenu' | 'windowMenu');
     sublabel: string;
     submenu?: Menu;
+    toolTip: string;
     type: ('normal' | 'separator' | 'submenu' | 'checkbox' | 'radio');
     visible: boolean;
   }
@@ -5107,6 +5488,46 @@ For example:
      * The mimeType of the Buffer that you are sending.
      */
     mimeType: string;
+  }
+
+  interface MouseInputEvent extends InputEvent {
+
+    // Docs: http://electronjs.org/docs\api\structures\mouse-input-event
+
+    /**
+     * The button pressed, can be `left`, `middle`, `right`.
+     */
+    button?: ('left' | 'middle' | 'right');
+    clickCount?: number;
+    globalX?: number;
+    globalY?: number;
+    movementX?: number;
+    movementY?: number;
+    /**
+     * The type of the event, can be `mouseDown`, `mouseUp`, `mouseEnter`,
+     * `mouseLeave`, `contextMenu`, `mouseWheel` or `mouseMove`.
+     */
+    type: ('mouseDown' | 'mouseUp' | 'mouseEnter' | 'mouseLeave' | 'contextMenu' | 'mouseWheel' | 'mouseMove');
+    x: number;
+    y: number;
+  }
+
+  interface MouseWheelInputEvent extends MouseInputEvent {
+
+    // Docs: http://electronjs.org/docs\api\structures\mouse-wheel-input-event
+
+    accelerationRatioX?: number;
+    accelerationRatioY?: number;
+    canScroll?: boolean;
+    deltaX?: number;
+    deltaY?: number;
+    hasPreciseScrollingDeltas?: boolean;
+    /**
+     * The type of the event, can be `mouseWheel`.
+     */
+    type: ('mouseWheel');
+    wheelTicksX?: number;
+    wheelTicksY?: number;
   }
 
   interface NamedMutex extends NodeJS.EventEmitter {
@@ -5184,6 +5605,8 @@ For example:
      * }' | clang -otest -x objective-c -framework Cocoa - && ./test`
      * 
 where `SYSTEM_IMAGE_NAME` should be replaced with any value from this list.
+     *
+     * @platform darwin
      */
     static createFromNamedImage(imageName: string, hslShift?: number[]): NativeImage;
     /**
@@ -5197,6 +5620,8 @@ where `SYSTEM_IMAGE_NAME` should be replaced with any value from this list.
      * image.
 
 Please note that this property only has an effect on macOS.
+     *
+     * @platform darwin
      */
     static isMacTemplateImage: boolean;
     /**
@@ -5228,6 +5653,8 @@ Please note that this property only has an effect on macOS.
      * Notice that the returned pointer is a weak pointer to the underlying native
      * image instead of a copy, so you _must_ ensure that the associated `nativeImage`
      * instance is kept around.
+     *
+     * @platform darwin
      */
     getNativeHandle(): Buffer;
     getSize(): Size;
@@ -5349,7 +5776,7 @@ Please note that this property only has an effect on macOS.
     visible: boolean;
   }
 
-  interface Net extends NodeJS.EventEmitter {
+  interface Net {
 
     // Docs: http://electronjs.org/docs\api\net
 
@@ -5362,7 +5789,7 @@ Please note that this property only has an effect on macOS.
     request(options: (any) | (string)): ClientRequest;
   }
 
-  interface NetLog extends NodeJS.EventEmitter {
+  interface NetLog {
 
     // Docs: http://electronjs.org/docs\api\net-log
 
@@ -5371,7 +5798,7 @@ Please note that this property only has an effect on macOS.
      * 
 Starts recording network events to `path`.
      */
-    startLogging(path: string): Promise<void>;
+    startLogging(path: string, options?: StartLoggingOptions): Promise<void>;
     /**
      * resolves with a file path to which network logs were recorded.
      *
@@ -5381,12 +5808,15 @@ Starts recording network events to `path`.
     stopLogging(): Promise<string>;
     /**
      * A `Boolean` property that indicates whether network logs are recorded.
+     *
      */
-    currentlyLogging: boolean;
+    readonly currentlyLogging: boolean;
     /**
      * A `String` property that returns the path to the current log file.
+     *
+     * @deprecated
      */
-    currentlyLoggingPath: string;
+    readonly currentlyLoggingPath: string;
   }
 
   class Notification extends NodeJS.EventEmitter {
@@ -5433,6 +5863,8 @@ Starts recording network events to `path`.
     /**
      * Emitted when the user clicks the "Reply" button on a notification with
      * `hasReply: true`.
+     *
+     * @platform darwin
      */
     on(event: 'reply', listener: (event: Event,
                                   /**
@@ -5485,6 +5917,15 @@ Starts recording network events to `path`.
      * previously shown notification and create a new one with identical properties.
      */
     show(): void;
+    actions: NotificationAction[];
+    body: string;
+    closeButtonText: string;
+    hasReply: boolean;
+    replyPlaceholder: string;
+    silent: boolean;
+    sound: string;
+    subtitle: string;
+    title: string;
   }
 
   interface NotificationAction {
@@ -5515,6 +5956,8 @@ Starts recording network events to `path`.
 
     /**
      * Emitted when the system is about to lock the screen.
+     *
+     * @platform darwin,win32
      */
     on(event: 'lock-screen', listener: Function): this;
     once(event: 'lock-screen', listener: Function): this;
@@ -5522,6 +5965,8 @@ Starts recording network events to `path`.
     removeListener(event: 'lock-screen', listener: Function): this;
     /**
      * Emitted when the system changes to AC power.
+     *
+     * @platform win32
      */
     on(event: 'on-ac', listener: Function): this;
     once(event: 'on-ac', listener: Function): this;
@@ -5529,6 +5974,8 @@ Starts recording network events to `path`.
     removeListener(event: 'on-ac', listener: Function): this;
     /**
      * Emitted when system changes to battery power.
+     *
+     * @platform win32
      */
     on(event: 'on-battery', listener: Function): this;
     once(event: 'on-battery', listener: Function): this;
@@ -5546,6 +5993,8 @@ Starts recording network events to `path`.
      * invokes `e.preventDefault()`, Electron will attempt to delay system shutdown in
      * order for the app to exit cleanly. If `e.preventDefault()` is called, the app
      * should exit as soon as possible by calling something like `app.quit()`.
+     *
+     * @platform linux,darwin
      */
     on(event: 'shutdown', listener: Function): this;
     once(event: 'shutdown', listener: Function): this;
@@ -5560,6 +6009,8 @@ Starts recording network events to `path`.
     removeListener(event: 'suspend', listener: Function): this;
     /**
      * Emitted as soon as the systems screen is unlocked.
+     *
+     * @platform darwin,win32
      */
     on(event: 'unlock-screen', listener: Function): this;
     once(event: 'unlock-screen', listener: Function): this;
@@ -5581,7 +6032,7 @@ Calculate system idle time in seconds.
     getSystemIdleTime(): number;
   }
 
-  interface PowerSaveBlocker extends NodeJS.EventEmitter {
+  interface PowerSaveBlocker {
 
     // Docs: http://electronjs.org/docs\api\power-save-blocker
 
@@ -5625,10 +6076,6 @@ Calculate system idle time in seconds.
 
     // Docs: http://electronjs.org/docs\api\process-info
 
-    /**
-     * ProcessInfo
-     */
-    constructor(pid: number);
     /**
      * Return the CPU usage as it differs from the last call.
      */
@@ -5703,6 +6150,10 @@ Calculate system idle time in seconds.
      * An `Integer` representing process id, same as `processId`.
      */
     static uuid: number;
+    /**
+     * ProcessInfo
+     */
+    constructor(pid: number);
   }
 
   interface ProcessMemoryInfo {
@@ -5716,6 +6167,8 @@ Calculate system idle time in seconds.
     private: number;
     /**
      * The amount of memory currently pinned to actual physical RAM in Kilobytes.
+     *
+     * @platform linux,win32
      */
     residentSet: number;
     /**
@@ -5742,30 +6195,34 @@ Calculate system idle time in seconds.
     creationTime: number;
     /**
      * One of the following values:
+     *
+     * @platform win32
      */
     integrityLevel?: ('untrusted' | 'low' | 'medium' | 'high' | 'unknown');
+    /**
+     * Memory information for the process.
+     */
+    memory: MemoryInfo;
     /**
      * Process id of the process.
      */
     pid: number;
     /**
      * Whether the process is sandboxed on OS level.
+     *
+     * @platform darwin,win32
      */
     sandboxed?: boolean;
     /**
-     * Process type (Browser or Tab or GPU etc).
+     * Process type. One of the following values:
      */
-    type: string;
+    type: ('Browser' | 'Tab' | 'Utility' | 'Zygote' | 'Sandbox helper' | 'GPU' | 'Pepper Plugin' | 'Pepper Plugin Broker' | 'Unknown');
   }
 
   class ProcessMonitor extends NodeJS.EventEmitter {
 
     // Docs: http://electronjs.org/docs\api\process-monitor
 
-    /**
-     * ProcessMonitor
-     */
-    constructor();
     /**
      * Emitted when a monitored process is terminated.
      */
@@ -5836,6 +6293,10 @@ Calculate system idle time in seconds.
      * add() method.
      */
     static stop(): void;
+    /**
+     * ProcessMonitor
+     */
+    constructor();
   }
 
   interface Product {
@@ -5878,7 +6339,7 @@ Calculate system idle time in seconds.
     productIdentifier: string;
   }
 
-  interface Protocol extends NodeJS.EventEmitter {
+  interface Protocol {
 
     // Docs: http://electronjs.org/docs\api\protocol
 
@@ -6188,8 +6649,9 @@ e.g.
     /**
      * A `NodeJS.Process` object.  The `process` object in the main process. This is
      * the same as `remote.getGlobal('process')` but is cached.
+     *
      */
-    process: NodeJS.Process;
+    readonly process: NodeJS.Process;
   }
 
   interface RemoveClientCertificate {
@@ -6298,6 +6760,8 @@ e.g.
     /**
      * Converts a screen DIP point to a screen physical point. The DPI scale is
      * performed relative to the display containing the DIP point.
+     *
+     * @platform win32
      */
     dipToScreenPoint(point: Point): Point;
     /**
@@ -6308,6 +6772,8 @@ e.g.
      * Converts a screen DIP rect to a screen physical rect. The DPI scale is performed
      * relative to the display nearest to `window`. If `window` is null, scaling will
      * be performed to the display nearest to `rect`.
+     *
+     * @platform win32
      */
     dipToScreenRect(window: (BrowserWindow) | (null), rect: Rectangle): Rectangle;
     /**
@@ -6367,6 +6833,8 @@ e.g.
     /**
      * Converts a screen physical point to a screen DIP point. The DPI scale is
      * performed relative to the display containing the physical point.
+     *
+     * @platform win32
      */
     screenToDipPoint(point: Point): Point;
     /**
@@ -6377,6 +6845,8 @@ e.g.
      * Converts a screen physical rect to a screen DIP rect. The DPI scale is performed
      * relative to the display nearest to `window`. If `window` is null, scaling will
      * be performed to the display nearest to `rect`.
+     *
+     * @platform win32
      */
     screenToDipRect(window: (BrowserWindow) | (null), rect: Rectangle): Rectangle;
     /**
@@ -6527,6 +6997,8 @@ Clears the host resolver cache.
 * `proxy` String
 
 Returns the system's proxy configuration.
+     *
+     * @platform win32
      */
     getProxySettings(): ProxySettings;
     /**
@@ -6635,10 +7107,10 @@ Returns the system's proxy configuration.
      * `webContents.setUserAgent` to override the session-wide user agent.
      */
     setUserAgent(userAgent: string, acceptLanguages?: string): void;
-    cookies: Cookies;
-    netLog: NetLog;
-    protocol: Protocol;
-    webRequest: WebRequest;
+    readonly cookies: Cookies;
+    readonly netLog: NetLog;
+    readonly protocol: Protocol;
+    readonly webRequest: WebRequest;
   }
 
   interface Shell {
@@ -6670,6 +7142,8 @@ Open the given file in the desktop's default manner.
      * Resolves the shortcut link at `shortcutPath`.
      * 
 An exception will be thrown when any error happens.
+     *
+     * @platform win32
      */
     readShortcutLink(shortcutPath: string): ShortcutDetails;
     /**
@@ -6680,12 +7154,16 @@ An exception will be thrown when any error happens.
      * Whether the shortcut was created successfully.
      * 
 Creates or updates a shortcut link at `shortcutPath`.
+     *
+     * @platform win32
      */
     writeShortcutLink(shortcutPath: string, operation: 'create' | 'update' | 'replace', options: ShortcutDetails): boolean;
     /**
      * Whether the shortcut was created successfully.
      * 
 Creates or updates a shortcut link at `shortcutPath`.
+     *
+     * @platform win32
      */
     writeShortcutLink(shortcutPath: string, options: ShortcutDetails): boolean;
   }
@@ -6860,6 +7338,8 @@ Creates or updates a shortcut link at `shortcutPath`.
      *
      * This user consent was not required until macOS 10.14 Mojave, so this method will
      * always return `true` if your system is running 10.13 High Sierra or lower.
+     *
+     * @platform darwin
      */
     askForMediaAccess(mediaType: 'microphone' | 'camera'): Promise<boolean>;
     /**
@@ -6869,12 +7349,16 @@ Creates or updates a shortcut link at `shortcutPath`.
      * 10.12.2.
 
 **Deprecated**
+     *
+     * @platform darwin
      */
     canPromptTouchID(): boolean;
     /**
      * The users current system wide accent color preference in RGBA hexadecimal form.
      * 
 This API is only available on macOS 10.14 Mojave or newer.
+     *
+     * @platform win32,darwin
      */
     getAccentColor(): string;
     /**
@@ -6895,11 +7379,17 @@ Returns an object with system animation settings.
      * Gets the macOS appearance setting that you have declared you want for your
      * application, maps to NSApplication.appearance. You can use the
      * `setAppLevelAppearance` API to set this value.
+
+**Deprecated**
+     *
+     * @platform darwin
      */
     getAppLevelAppearance(): ('dark' | 'light' | 'unknown');
     /**
      * The system color setting in RGB hexadecimal form (`#ABCDEF`). See the Windows
      * docs and the MacOS docs for more details.
+     *
+     * @platform win32,darwin
      */
     getColor(color: '3d-dark-shadow' | '3d-face' | '3d-highlight' | '3d-light' | '3d-shadow' | 'active-border' | 'active-caption' | 'active-caption-gradient' | 'app-workspace' | 'button-text' | 'caption-text' | 'desktop' | 'disabled-text' | 'highlight' | 'highlight-text' | 'hotlight' | 'inactive-border' | 'inactive-caption' | 'inactive-caption-gradient' | 'inactive-caption-text' | 'info-background' | 'info-text' | 'menu' | 'menu-highlight' | 'menubar' | 'menu-text' | 'scrollbar' | 'window' | 'window-frame' | 'window-text' | 'alternate-selected-control-text' | 'control-background' | 'control' | 'control-text' | 'disabled-control-text' | 'find-highlight' | 'grid' | 'header-text' | 'highlight' | 'keyboard-focus-indicator' | 'label' | 'link' | 'placeholder-text' | 'quaternary-label' | 'scrubber-textured-background' | 'secondary-label' | 'selected-content-background' | 'selected-control' | 'selected-control-text' | 'selected-menu-item' | 'selected-text-background' | 'selected-text' | 'separator' | 'shadow' | 'tertiary-label' | 'text-background' | 'text' | 'under-page-background' | 'unemphasized-selected-content-background' | 'unemphasized-selected-text-background' | 'unemphasized-selected-text' | 'window-background' | 'window-frame-text'): string;
     /**
@@ -6915,6 +7405,8 @@ Returns an object with system animation settings.
      * `Info.plist` to `false`.  If you are using `electron-packager` or
      * `electron-forge` just set the `enableDarwinDarkMode` packager option to `true`.
      * See the Electron Packager API for more details.
+     *
+     * @platform darwin
      */
     getEffectiveAppearance(): ('dark' | 'light' | 'unknown');
     /**
@@ -6922,14 +7414,20 @@ Returns an object with system animation settings.
      *
      * This user consent was not required until macOS 10.14 Mojave, so this method will
      * always return `granted` if your system is running 10.13 High Sierra or lower.
+     *
+     * @platform darwin
      */
     getMediaAccessStatus(mediaType: string): ('not-determined' | 'granted' | 'denied' | 'restricted' | 'unknown');
     /**
+     * The standard system color formatted as `#RRGGBBAA`.
+     *
      * Returns one of several standard system colors that automatically adapt to
      * vibrancy and changes in accessibility settings like 'Increase contrast' and
      * 'Reduce transparency'. See Apple Documentation for  more details.
+     *
+     * @platform darwin
      */
-    getSystemColor(color: 'blue' | 'brown' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'yellow'): void;
+    getSystemColor(color: 'blue' | 'brown' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'yellow'): string;
     /**
      * The value of `key` in `NSUserDefaults`.
      *
@@ -6942,6 +7440,8 @@ Returns an object with system animation settings.
      * * `NSNavRecentPlaces`: `array`
      * * `NSPreferredWebServices`: `dictionary`
      * * `NSUserDictionaryReplacementItems`: `array`
+     *
+     * @platform darwin
      */
     getUserDefault(key: string, type: 'string' | 'boolean' | 'integer' | 'float' | 'double' | 'url' | 'array' | 'dictionary'): any;
     /**
@@ -6949,43 +7449,66 @@ Returns an object with system animation settings.
      *
      * An example of using it to determine if you should create a transparent window or
      * not (transparent windows won't work correctly when DWM composition is disabled):
+     *
+     * @platform win32
      */
     isAeroGlassEnabled(): boolean;
     /**
      * Whether the system is in Dark Mode.
+     *
+     * **Note:** On macOS 10.15 Catalina in order for this API to return the correct
+     * value when in the "automatic" dark mode setting you must either have
+     * `NSRequiresAquaSystemAppearance=false` in your `Info.plist` or be on Electron
+     * `>=7.0.0`.  See the dark mode guide for more information.
+     *
+     * @platform darwin,win32
      */
     isDarkMode(): boolean;
     /**
      * `true` if a high contrast theme is active, `false` otherwise.
+     *
+     * @platform darwin,win32
      */
     isHighContrastColorScheme(): boolean;
     /**
      * `true` if an inverted color scheme (a high contrast color scheme with light text
      * and dark backgrounds) is active, `false` otherwise.
+     *
+     * @platform win32
      */
     isInvertedColorScheme(): boolean;
     /**
      * Whether the Swipe between pages setting is on.
+     *
+     * @platform darwin
      */
     isSwipeTrackingFromScrollEventsEnabled(): boolean;
     /**
      * `true` if the current process is a trusted accessibility client and `false` if
      * it is not.
+     *
+     * @platform darwin
      */
     isTrustedAccessibilityClient(prompt: boolean): boolean;
     /**
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
+     *
+     * @platform darwin
      */
     postLocalNotification(event: string, userInfo: any): void;
     /**
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
+     *
+     * @platform darwin
      */
     postNotification(event: string, userInfo: any, deliverImmediately?: boolean): void;
     /**
      * Posts `event` as native notifications of macOS. The `userInfo` is an Object that
      * contains the user information dictionary sent along with the notification.
+     *
+     * @platform darwin
      */
     postWorkspaceNotification(event: string, userInfo: any): void;
     /**
@@ -7000,15 +7523,21 @@ Returns an object with system animation settings.
      *
      * **NOTE:** This API will return a rejected Promise on macOS systems older than
      * Sierra 10.12.2.
+     *
+     * @platform darwin
      */
     promptTouchID(reason: string): Promise<void>;
     /**
      * Add the specified defaults to your application's `NSUserDefaults`.
+     *
+     * @platform darwin
      */
     registerDefaults(defaults: any): void;
     /**
      * Removes the `key` in `NSUserDefaults`. This can be used to restore the default
      * or global value of a `key` previously set with `setUserDefault`.
+     *
+     * @platform darwin
      */
     removeUserDefault(key: string): void;
     /**
@@ -7016,6 +7545,8 @@ Returns an object with system animation settings.
      * system default and override the value of `getEffectiveAppearance`.
      * 
 **Deprecated**
+     *
+     * @platform darwin
      */
     setAppLevelAppearance(appearance: (('dark' | 'light')) | (null)): void;
     /**
@@ -7027,6 +7558,8 @@ Returns an object with system animation settings.
 Some popular `key` and `type`s are:
 
 * `ApplePressAndHoldEnabled`: `boolean`
+     *
+     * @platform darwin
      */
     setUserDefault(key: string, type: string, value: string): void;
     /**
@@ -7035,15 +7568,18 @@ Some popular `key` and `type`s are:
      * Same as `subscribeNotification`, but uses `NSNotificationCenter` for local
      * defaults. This is necessary for events such as
      * `NSUserDefaultsDidChangeNotification`.
+     *
+     * @platform darwin
      */
-    subscribeLocalNotification(event: string, callback: (event: string, userInfo: any) => void): number;
+    subscribeLocalNotification(event: string, callback: (event: string, userInfo: any, object: string) => void): number;
     /**
      * The ID of this subscription
      *
      * Subscribes to native notifications of macOS, `callback` will be called with
      * `callback(event, userInfo)` when the corresponding `event` happens. The
      * `userInfo` is an Object that contains the user information dictionary sent along
-     * with the notification.
+     * with the notification. The `object` is the sender of the notification, and only
+     * supports `NSString` values for now.
      *
      * The `id` of the subscriber is returned, which can be used to unsubscribe the
      * `event`.
@@ -7055,26 +7591,36 @@ Some popular `key` and `type`s are:
      * * `AppleAquaColorVariantChanged`
      * * `AppleColorPreferencesChangedNotification`
      * * `AppleShowScrollBarsSettingChanged`
+     *
+     * @platform darwin
      */
-    subscribeNotification(event: string, callback: (event: string, userInfo: any) => void): number;
+    subscribeNotification(event: string, callback: (event: string, userInfo: any, object: string) => void): number;
     /**
      * Same as `subscribeNotification`, but uses
      * `NSWorkspace.sharedWorkspace.notificationCenter`. This is necessary for events
      * such as `NSWorkspaceDidActivateApplicationNotification`.
+     *
+     * @platform darwin
      */
-    subscribeWorkspaceNotification(event: string, callback: (event: string, userInfo: any) => void): void;
+    subscribeWorkspaceNotification(event: string, callback: (event: string, userInfo: any, object: string) => void): void;
     /**
      * Same as `unsubscribeNotification`, but removes the subscriber from
      * `NSNotificationCenter`.
+     *
+     * @platform darwin
      */
     unsubscribeLocalNotification(id: number): void;
     /**
      * Removes the subscriber with `id`.
+     *
+     * @platform darwin
      */
     unsubscribeNotification(id: number): void;
     /**
      * Same as `unsubscribeNotification`, but removes the subscriber from
      * `NSWorkspace.sharedWorkspace.notificationCenter`.
+     *
+     * @platform darwin
      */
     unsubscribeWorkspaceNotification(id: number): void;
     /**
@@ -7084,6 +7630,10 @@ Some popular `key` and `type`s are:
      *
      * Possible values that can be set are `dark` and `light`, and possible return
      * values are `dark`, `light`, and `unknown`.
+     * 
+This property is only available on macOS 10.14 Mojave or newer.
+     *
+     * @platform darwin
      */
     appLevelAppearance: string;
   }
@@ -7147,7 +7697,7 @@ Some popular `key` and `type`s are:
     tooltip?: string;
   }
 
-  class TouchBar extends NodeJS.EventEmitter {
+  class TouchBar {
 
     // Docs: http://electronjs.org/docs\api\touch-bar
 
@@ -7167,7 +7717,7 @@ Some popular `key` and `type`s are:
     static TouchBarSpacer: typeof TouchBarSpacer;
   }
 
-  class TouchBarButton extends NodeJS.EventEmitter {
+  class TouchBarButton {
 
     // Docs: http://electronjs.org/docs\api\touch-bar-button
 
@@ -7344,11 +7894,10 @@ Some popular `key` and `type`s are:
      */
     memory_dump_config?: MemoryDumpConfig;
     /**
-     * one of "record-until-full" | "record-continuously" |
-     * "record-as-much-as-possible" | "trace-to-console". Defaults to
-     * "record-until-full".
+     * Can be `record-until-full`, `record-continuously`, `record-as-much-as-possible`
+     * or `trace-to-console`. Defaults to `record-until-full`.
      */
-    recording_mode?: string;
+    recording_mode?: ('record-until-full' | 'record-continuously' | 'record-as-much-as-possible' | 'trace-to-console');
     /**
      * maximum size of the trace recording buffer in events.
      */
@@ -7397,6 +7946,8 @@ Some popular `key` and `type`s are:
 
     /**
      * Emitted when the tray balloon is clicked.
+     *
+     * @platform win32
      */
     on(event: 'balloon-click', listener: Function): this;
     once(event: 'balloon-click', listener: Function): this;
@@ -7405,6 +7956,8 @@ Some popular `key` and `type`s are:
     /**
      * Emitted when the tray balloon is closed because of timeout or user manually
      * closes it.
+     *
+     * @platform win32
      */
     on(event: 'balloon-closed', listener: Function): this;
     once(event: 'balloon-closed', listener: Function): this;
@@ -7412,6 +7965,8 @@ Some popular `key` and `type`s are:
     removeListener(event: 'balloon-closed', listener: Function): this;
     /**
      * Emitted when the tray balloon shows.
+     *
+     * @platform win32
      */
     on(event: 'balloon-show', listener: Function): this;
     once(event: 'balloon-show', listener: Function): this;
@@ -7458,6 +8013,8 @@ Some popular `key` and `type`s are:
                                   position: Point) => void): this;
     /**
      * Emitted when the tray icon is double clicked.
+     *
+     * @platform darwin,win32
      */
     on(event: 'double-click', listener: (event: KeyboardEvent,
                                          /**
@@ -7481,6 +8038,8 @@ Some popular `key` and `type`s are:
                                          bounds: Rectangle) => void): this;
     /**
      * Emitted when a drag operation ends on the tray or ends at another location.
+     *
+     * @platform darwin
      */
     on(event: 'drag-end', listener: Function): this;
     once(event: 'drag-end', listener: Function): this;
@@ -7488,6 +8047,8 @@ Some popular `key` and `type`s are:
     removeListener(event: 'drag-end', listener: Function): this;
     /**
      * Emitted when a drag operation enters the tray icon.
+     *
+     * @platform darwin
      */
     on(event: 'drag-enter', listener: Function): this;
     once(event: 'drag-enter', listener: Function): this;
@@ -7495,6 +8056,8 @@ Some popular `key` and `type`s are:
     removeListener(event: 'drag-enter', listener: Function): this;
     /**
      * Emitted when a drag operation exits the tray icon.
+     *
+     * @platform darwin
      */
     on(event: 'drag-leave', listener: Function): this;
     once(event: 'drag-leave', listener: Function): this;
@@ -7502,6 +8065,8 @@ Some popular `key` and `type`s are:
     removeListener(event: 'drag-leave', listener: Function): this;
     /**
      * Emitted when any dragged items are dropped on the tray icon.
+     *
+     * @platform darwin
      */
     on(event: 'drop', listener: Function): this;
     once(event: 'drop', listener: Function): this;
@@ -7509,6 +8074,8 @@ Some popular `key` and `type`s are:
     removeListener(event: 'drop', listener: Function): this;
     /**
      * Emitted when dragged files are dropped in the tray icon.
+     *
+     * @platform darwin
      */
     on(event: 'drop-files', listener: (event: Event,
                                        /**
@@ -7532,6 +8099,8 @@ Some popular `key` and `type`s are:
                                        files: string[]) => void): this;
     /**
      * Emitted when dragged text is dropped in the tray icon.
+     *
+     * @platform darwin
      */
     on(event: 'drop-text', listener: (event: Event,
                                       /**
@@ -7555,6 +8124,8 @@ Some popular `key` and `type`s are:
                                       text: string) => void): this;
     /**
      * Emitted when the user hovers the mouse over the tray icon.
+     *
+     * @platform win32
      */
     on(event: 'hover', listener: Function): this;
     once(event: 'hover', listener: Function): this;
@@ -7562,6 +8133,8 @@ Some popular `key` and `type`s are:
     removeListener(event: 'hover', listener: Function): this;
     /**
      * Emitted when the mouse enters the tray icon.
+     *
+     * @platform darwin
      */
     on(event: 'mouse-enter', listener: (event: KeyboardEvent,
                                         /**
@@ -7585,6 +8158,8 @@ Some popular `key` and `type`s are:
                                         position: Point) => void): this;
     /**
      * Emitted when the mouse exits the tray icon.
+     *
+     * @platform darwin
      */
     on(event: 'mouse-leave', listener: (event: KeyboardEvent,
                                         /**
@@ -7608,6 +8183,8 @@ Some popular `key` and `type`s are:
                                         position: Point) => void): this;
     /**
      * Emitted when the mouse moves in the tray icon.
+     *
+     * @platform darwin,win32
      */
     on(event: 'mouse-move', listener: (event: KeyboardEvent,
                                        /**
@@ -7631,6 +8208,8 @@ Some popular `key` and `type`s are:
                                        position: Point) => void): this;
     /**
      * Emitted when the tray icon is right clicked.
+     *
+     * @platform darwin,win32
      */
     on(event: 'right-click', listener: (event: KeyboardEvent,
                                         /**
@@ -7662,10 +8241,14 @@ Some popular `key` and `type`s are:
     destroy(): void;
     /**
      * Displays a tray balloon.
+     *
+     * @platform win32
      */
     displayBalloon(options: DisplayBalloonOptions): void;
     /**
      * The `bounds` of this tray icon as `Object`.
+     *
+     * @platform darwin,win32
      */
     getBounds(): Rectangle;
     /**
@@ -7680,10 +8263,14 @@ Returns the location of the tray icon in screen coordinates.
     getIconRect(): void;
     /**
      * Whether double click events will be ignored.
+     *
+     * @platform darwin
      */
     getIgnoreDoubleClickEvents(): boolean;
     /**
      * the title displayed next to the tray icon in the status bar
+     *
+     * @platform darwin
      */
     getTitle(): string;
     /**
@@ -7695,6 +8282,8 @@ Returns the location of the tray icon in screen coordinates.
      * will be shown instead of the tray icon's context menu.
      * 
 The `position` is only available on Windows, and it is (0, 0) by default.
+     *
+     * @platform darwin,win32
      */
     popUpContextMenu(menu?: Menu, position?: Point): void;
     /**
@@ -7704,8 +8293,12 @@ The `position` is only available on Windows, and it is (0, 0) by default.
     /**
      * Sets when the tray's icon background becomes highlighted (in blue).
      *
+     * **Deprecated**
+     *
      * **Note:** You can use `highlightMode` with a `BrowserWindow` by toggling between
      * `'never'` and `'always'` modes when the window visibility changes.
+     *
+     * @platform darwin
      */
     setHighlightMode(mode: 'selection' | 'always' | 'never'): void;
     /**
@@ -7713,6 +8306,8 @@ The `position` is only available on Windows, and it is (0, 0) by default.
      * to detect every individual click of the tray icon.
      * 
 This value is set to false by default.
+     *
+     * @platform darwin
      */
     setIgnoreDoubleClickEvents(ignore: boolean): void;
     /**
@@ -7721,11 +8316,15 @@ This value is set to false by default.
     setImage(image: (NativeImage) | (string)): void;
     /**
      * Sets the `image` associated with this tray icon when pressed on macOS.
+     *
+     * @platform darwin
      */
     setPressedImage(image: (NativeImage) | (string)): void;
     /**
      * Sets the title displayed next to the tray icon in the status bar (Support ANSI
      * colors).
+     *
+     * @platform darwin
      */
     setTitle(title: string): void;
     /**
@@ -9171,6 +9770,8 @@ Calling `event.preventDefault()` will prevent the navigation.
      * In the browser window some HTML APIs like `requestFullScreen` can only be
      * invoked by a gesture from the user. Setting `userGesture` to `true` will remove
      * this limitation.
+
+Code execution will be suspended until web page stop loading.
      */
     executeJavaScript(code: string, userGesture?: boolean): Promise<any>;
     /**
@@ -9275,7 +9876,7 @@ Returns `PrinterInfo[]`.
      * Injects CSS into the current web page and returns a unique key for the inserted
      * stylesheet.
      */
-    insertCSS(css: string): Promise<string>;
+    insertCSS(css: string, options?: InsertCSSOptions): Promise<string>;
     /**
      * Inserts `text` to the focused element.
      */
@@ -9474,35 +10075,8 @@ An example of sending messages from the main process to the renderer process:
     /**
      * Sends an input `event` to the page. **Note:** The `BrowserWindow` containing the
      * contents needs to be focused for `sendInputEvent()` to work.
-     *
-     * For keyboard events, the `event` object also have following properties:
-     *
-     * * `keyCode` String (**required**) - The character that will be sent as the
-     * keyboard event. Should only use the valid key codes in Accelerator.
-     *
-     * For mouse events, the `event` object also have following properties:
-     *
-     * * `x` Integer (**required**)
-     * * `y` Integer (**required**)
-     * * `button` String - The button pressed, can be `left`, `middle`, `right`.
-     * * `globalX` Integer
-     * * `globalY` Integer
-     * * `movementX` Integer
-     * * `movementY` Integer
-     * * `clickCount` Integer
-     *
-     * For the `mouseWheel` event, the `event` object also have following properties:
-     *
-     * * `deltaX` Integer
-     * * `deltaY` Integer
-     * * `wheelTicksX` Integer
-     * * `wheelTicksY` Integer
-     * * `accelerationRatioX` Integer
-     * * `accelerationRatioY` Integer
-     * * `hasPreciseScrollingDeltas` Boolean
-* `canScroll` Boolean
      */
-    sendInputEvent(event: Event): void;
+    sendInputEvent(inputEvent: (MouseInputEvent) | (MouseWheelInputEvent) | (KeyboardInputEvent)): void;
     /**
      * Send an asynchronous message to a specific frame in a renderer process via
      * `channel`. Arguments will be serialized as JSON internally and as such no
@@ -9562,6 +10136,8 @@ An example of showing devtools in a `BrowserWindow`:
     setFrameRate(fps: number): void;
     /**
      * Ignore application menu shortcuts while this web contents is focused.
+     *
+     * @experimental
      */
     setIgnoreMenuShortcuts(ignore: boolean): void;
     /**
@@ -9604,6 +10180,8 @@ An example of showing devtools in a `BrowserWindow`:
     setZoomLevel(level: number): void;
     /**
      * Shows pop-up dictionary that searches the selected word on the page.
+     *
+     * @platform darwin
      */
     showDefinitionForSelection(): void;
     /**
@@ -9647,12 +10225,12 @@ Takes a V8 heap snapshot and saves it to `filePath`.
      */
     unselect(): void;
     audioMuted: boolean;
-    debugger: Debugger;
-    devToolsWebContents: WebContents;
+    readonly debugger: Debugger;
+    readonly devToolsWebContents: WebContents;
     frameRate: number;
-    hostWebContents: WebContents;
-    id: number;
-    session: Session;
+    readonly hostWebContents: WebContents;
+    readonly id: number;
+    readonly session: Session;
     userAgent: string;
     zoomFactor: number;
     zoomLevel: number;
@@ -9785,42 +10363,49 @@ An example of using node-spellchecker as provider:
      */
     setZoomLevel(level: number): void;
     /**
-     * A `WebFrame` representing the first child frame of `webFrame`, the property
-     * would be `null` if `webFrame` has no children or if first child is not in the
-     * current renderer process.
+     * A `WebFrame | null` representing the first child frame of `webFrame`, the
+     * property would be `null` if `webFrame` has no children or if first child is not
+     * in the current renderer process.
+     *
      */
-    firstChild: WebFrame;
+    readonly firstChild: (WebFrame) | (null);
     /**
-     * A `WebFrame` representing next sibling frame, the property would be `null` if
-     * `webFrame` is the last frame in its parent or if the next sibling is not in the
-     * current renderer process.
+     * A `WebFrame | null` representing next sibling frame, the property would be
+     * `null` if `webFrame` is the last frame in its parent or if the next sibling is
+     * not in the current renderer process.
+     *
      */
-    nextSibling: WebFrame;
+    readonly nextSibling: (WebFrame) | (null);
     /**
-     * A `WebFrame` representing the frame which opened `webFrame`, the property would
-     * be `null` if there's no opener or opener is not in the current renderer process.
+     * A `WebFrame | null` representing the frame which opened `webFrame`, the property
+     * would be `null` if there's no opener or opener is not in the current renderer
+     * process.
+     *
      */
-    opener: WebFrame;
+    readonly opener: (WebFrame) | (null);
     /**
-     * A `WebFrame` representing parent frame of `webFrame`, the property would be
-     * `null` if `webFrame` is top or parent is not in the current renderer process.
+     * A `WebFrame | null` representing parent frame of `webFrame`, the property would
+     * be `null` if `webFrame` is top or parent is not in the current renderer process.
+     *
      */
-    parent: WebFrame;
+    readonly parent: (WebFrame) | (null);
     /**
      * An `Integer` representing the unique frame id in the current renderer process.
      * Distinct WebFrame instances that refer to the same underlying frame will have
      * the same `routingId`.
+     *
      */
-    routingId: number;
+    readonly routingId: number;
     /**
-     * A `WebFrame` representing top frame in frame hierarchy to which `webFrame`
-     * belongs, the property would be `null` if top frame is not in the current
-     * renderer process.
+     * A `WebFrame | null` representing top frame in frame hierarchy to which
+     * `webFrame` belongs, the property would be `null` if top frame is not in the
+     * current renderer process.
+     *
      */
-    top: WebFrame;
+    readonly top: (WebFrame) | (null);
   }
 
-  class WebRequest extends NodeJS.EventEmitter {
+  class WebRequest {
 
     // Docs: http://electronjs.org/docs\api\web-request
 
@@ -9839,8 +10424,10 @@ An example of using node-spellchecker as provider:
      * is about to occur.
      *
      * The `uploadData` is an array of `UploadData` objects.
+     *
+     * The `callback` has to be called with an `response` object.
      * 
-The `callback` has to be called with an `response` object.
+Some examples of valid `urls`:
      */
     onBeforeRequest(listener: ((details: OnBeforeRequestListenerDetails, callback: (response: Response) => void) => void) | (null)): void;
     /**
@@ -9848,8 +10435,10 @@ The `callback` has to be called with an `response` object.
      * is about to occur.
      *
      * The `uploadData` is an array of `UploadData` objects.
+     *
+     * The `callback` has to be called with an `response` object.
      * 
-The `callback` has to be called with an `response` object.
+Some examples of valid `urls`:
      */
     onBeforeRequest(filter: OnBeforeRequestFilter, listener: ((details: OnBeforeRequestListenerDetails, callback: (response: Response) => void) => void) | (null)): void;
     /**
@@ -10404,6 +10993,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     setZoomLevel(level: number): void;
     /**
      * Shows pop-up dictionary that searches the selected word on the page.
+     *
+     * @platform darwin
      */
     showDefinitionForSelection(): void;
     /**
@@ -10534,6 +11125,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
 
     /**
      * Emitted when `setWindowPos` is called on a hidden or minimized window.
+     *
+     * @platform win32
      */
     on(event: 'deferred-set-window-pos', listener: (event: Event,
                                                     bounds: DeferredSetWindowPosBounds) => void): this;
@@ -10644,23 +11237,33 @@ See webContents.sendInputEvent for detailed description of `event` object.
     copyright?: string;
     /**
      * The app's build version number.
+     *
+     * @platform darwin
      */
     version?: string;
     /**
      * Credit information.
+     *
+     * @platform darwin
      */
     credits?: string;
     /**
      * List of app authors.
+     *
+     * @platform linux
      */
     authors?: string[];
     /**
      * The app's website.
+     *
+     * @platform linux
      */
     website?: string;
     /**
      * Path to the app's icon. Will be shown as 64x64 pixels while retaining aspect
      * ratio.
+     *
+     * @platform linux
      */
     iconPath?: string;
   }
@@ -10744,22 +11347,22 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * If `true`, the view's width will grow and shrink together with the window.
      * `false` by default.
      */
-    width: boolean;
+    width?: boolean;
     /**
      * If `true`, the view's height will grow and shrink together with the window.
      * `false` by default.
      */
-    height: boolean;
+    height?: boolean;
     /**
      * If `true`, the view's x position and width will grow and shrink proportionally
      * with the window. `false` by default.
      */
-    horizontal: boolean;
+    horizontal?: boolean;
     /**
      * If `true`, the view's y position and height will grow and shrink proportionally
      * with the window. `false` by default.
      */
-    vertical: boolean;
+    vertical?: boolean;
   }
 
   interface BitmapOptions {
@@ -10968,7 +11571,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     darkTheme?: boolean;
     /**
-     * Makes the window transparent. Default is `false`.
+     * Makes the window transparent. Default is `false`. On Windows, does not work
+     * unless the window is frameless.
      */
     transparent?: boolean;
     /**
@@ -11001,13 +11605,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Add a type of vibrancy effect to the window, only on macOS. Can be
      * `appearance-based`, `light`, `dark`, `titlebar`, `selection`, `menu`, `popover`,
-     * `sidebar`, `medium-light` or `ultra-dark`.  Please note that using `frame:
-     * false` in combination with a vibrancy value requires that you use a non-default
-     * `titleBarStyle` as well. Also note that `appearance-based`, `light`, `dark`,
-     * `medium-light`, and `ultra-dark` have been deprecated and will be removed in an
-     * upcoming version of macOS.
+     * `sidebar`, `medium-light`, `ultra-dark`, `header`, `sheet`, `window`, `hud`,
+     * `fullscreen-ui`, `tooltip`, `content`, `under-window`, or `under-page`.  Please
+     * note that using `frame: false` in combination with a vibrancy value requires
+     * that you use a non-default `titleBarStyle` as well. Also note that
+     * `appearance-based`, `light`, `dark`, `medium-light`, and `ultra-dark` have been
+     * deprecated and will be removed in an upcoming version of macOS.
      */
-    vibrancy?: ('appearance-based' | 'light' | 'dark' | 'titlebar' | 'selection' | 'menu' | 'popover' | 'sidebar' | 'medium-light' | 'ultra-dark');
+    vibrancy?: ('appearance-based' | 'light' | 'dark' | 'titlebar' | 'selection' | 'menu' | 'popover' | 'sidebar' | 'medium-light' | 'ultra-dark' | 'header' | 'sheet' | 'window' | 'hud' | 'fullscreen-ui' | 'tooltip' | 'content' | 'under-window' | 'under-page');
     /**
      * Controls the behavior on macOS when option-clicking the green stoplight button
      * on the toolbar or by clicking the Window > Zoom menu item. If `true`, the window
@@ -11406,10 +12011,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
     url: string;
     /**
      * HTTP request headers.
+     *
+     * @platform darwin
      */
     headers?: Headers;
     /**
      * Either `json` or `default`, see the Squirrel.Mac README for more information.
+     *
+     * @platform darwin
      */
     serverType?: string;
   }
@@ -11516,6 +12125,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * If true, forwards mouse move messages to Chromium, enabling mouse related events
      * such as `mouseleave`. Only used when `ignore` is true. If `ignore` is false,
      * forwarding is always disabled regardless of this value.
+     *
+     * @platform darwin,win32
      */
     forward?: boolean;
   }
@@ -11579,6 +12190,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Equivalent to KeyboardEvent.metaKey.
      */
     meta: boolean;
+  }
+
+  interface InsertCSSOptions {
+    /**
+     * Can be either 'user' or 'author'; Specifying 'user' enables you to prevent
+     * websites from overriding the CSS you insert. Default is 'author'.
+     */
+    cssOrigin?: string;
   }
 
   interface IpcMessageEvent extends Event {
@@ -11663,17 +12282,23 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * `true` if the app is set to open as hidden at login. This setting is not
      * available on MAS builds.
+     *
+     * @platform darwin
      */
     openAsHidden: boolean;
     /**
      * `true` if the app was opened at login automatically. This setting is not
      * available on MAS builds.
+     *
+     * @platform darwin
      */
     wasOpenedAtLogin: boolean;
     /**
      * `true` if the app was opened as a hidden login item. This indicates that the app
      * should not open any windows at startup. This setting is not available on MAS
      * builds.
+     *
+     * @platform darwin
      */
     wasOpenedAsHidden: boolean;
     /**
@@ -11681,6 +12306,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * the previous session. This indicates that the app should restore the windows
      * that were open the last time the app was closed. This setting is not available
      * on MAS builds.
+     *
+     * @platform darwin
      */
     restoreState: boolean;
   }
@@ -11688,10 +12315,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
   interface LoginItemSettingsOptions {
     /**
      * The executable path to compare against. Defaults to `process.execPath`.
+     *
+     * @platform win32
      */
     path?: string;
     /**
      * The command-line arguments to compare against. Defaults to an empty array.
+     *
+     * @platform win32
      */
     args?: string[];
   }
@@ -11721,6 +12352,12 @@ See webContents.sendInputEvent for detailed description of `event` object.
     type?: ('normal' | 'separator' | 'submenu' | 'checkbox' | 'radio');
     label?: string;
     sublabel?: string;
+    /**
+     * Hover text for this menu item.
+     *
+     * @platform darwin
+     */
+    toolTip?: string;
     accelerator?: Accelerator;
     icon?: (NativeImage) | (string);
     /**
@@ -11730,6 +12367,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * default is `true`, and when `false` will prevent the accelerator from triggering
      * the item if the item is not visible`.
+     *
+     * @platform darwin
      */
     acceleratorWorksWhenHidden?: boolean;
     /**
@@ -11743,6 +12382,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * If false, the accelerator won't be registered with the system, but it will still
      * be displayed. Defaults to true.
+     *
+     * @platform linux,win32
      */
     registerAccelerator?: boolean;
     /**
@@ -11923,6 +12564,13 @@ See webContents.sendInputEvent for detailed description of `event` object.
     normalizeAccessKeys?: boolean;
   }
 
+  interface MoveToApplicationsFolderOptions {
+    /**
+     * A handler for potential conflict in move failure.
+     */
+    conflictHandler?: (conflictType: 'exists' | 'existsAndRunning') => boolean;
+  }
+
   interface NewWindowEvent extends Event {
     url: string;
     frameName: string;
@@ -11945,6 +12593,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     title: string;
     /**
      * A subtitle for the notification, which will be displayed below the title.
+     *
+     * @platform darwin
      */
     subtitle?: string;
     /**
@@ -11962,24 +12612,34 @@ See webContents.sendInputEvent for detailed description of `event` object.
     icon?: (string) | (NativeImage);
     /**
      * Whether or not to add an inline reply option to the notification.
+     *
+     * @platform darwin
      */
     hasReply?: boolean;
     /**
      * The placeholder to write in the inline reply input field.
+     *
+     * @platform darwin
      */
     replyPlaceholder?: string;
     /**
      * The name of the sound file to play when the notification is shown.
+     *
+     * @platform darwin
      */
     sound?: string;
     /**
      * Actions to add to the notification. Please read the available actions and
      * limitations in the `NotificationAction` documentation.
+     *
+     * @platform darwin
      */
     actions?: NotificationAction[];
     /**
      * A custom title for the close button of an alert. An empty string will cause the
      * default localized text to be used.
+     *
+     * @platform darwin
      */
     closeButtonText?: string;
   }
@@ -12188,10 +12848,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
     properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles' | 'createDirectory' | 'promptToCreate' | 'noResolveAliases' | 'treatPackageAsDirectory'>;
     /**
      * Message to display above input boxes.
+     *
+     * @platform darwin
      */
     message?: string;
     /**
      * Create security scoped bookmarks when packaged for the Mac App Store.
+     *
+     * @platform darwin,mas
      */
     securityScopedBookmarks?: boolean;
   }
@@ -12205,11 +12869,13 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * An array of file paths chosen by the user. If the dialog is cancelled this will
      * be an empty array.
      */
-    filePaths?: string[];
+    filePaths: string[];
     /**
      * An array matching the `filePaths` array of base64 encoded strings which contains
      * security scoped bookmark data. `securityScopedBookmarks` must be enabled for
      * this to be populated.
+     *
+     * @platform darwin,mas
      */
     bookmarks?: string[];
   }
@@ -12230,10 +12896,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
     properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles' | 'createDirectory' | 'promptToCreate' | 'noResolveAliases' | 'treatPackageAsDirectory'>;
     /**
      * Message to display above input boxes.
+     *
+     * @platform darwin
      */
     message?: string;
     /**
      * Create security scoped bookmarks when packaged for the Mac App Store.
+     *
+     * @platform darwin,mas
      */
     securityScopedBookmarks?: boolean;
   }
@@ -12241,10 +12911,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
   interface OpenExternalOptions {
     /**
      * `true` to bring the opened application to the foreground. The default is `true`.
+     *
+     * @platform darwin
      */
     activate?: boolean;
     /**
      * The working directory.
+     *
+     * @platform win32
      */
     workingDirectory?: string;
   }
@@ -12368,6 +13042,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * The index of the menu item to be positioned under the mouse cursor at the
      * specified coordinates. Default is -1.
+     *
+     * @platform darwin
      */
     positioningItem?: number;
     /**
@@ -12423,7 +13099,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Set the duplex mode of the printed web page. Can be `simplex`, `shortEdge`, or
      * `longEdge`.
      */
-    duplexMode?: ('simplex' | 'shortEdge');
+    duplexMode?: ('simplex' | 'shortEdge' | 'longEdge');
     dpi?: Dpi;
   }
 
@@ -12512,6 +13188,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Mode for the progress bar. Can be `none`, `normal`, `indeterminate`, `error` or
      * `paused`.
+     *
+     * @platform win32
      */
     mode: ('none' | 'normal' | 'indeterminate' | 'error' | 'paused');
   }
@@ -12628,20 +13306,28 @@ See webContents.sendInputEvent for detailed description of `event` object.
     filters?: FileFilter[];
     /**
      * Message to display above text fields.
+     *
+     * @platform darwin
      */
     message?: string;
     /**
      * Custom label for the text displayed in front of the filename text field.
+     *
+     * @platform darwin
      */
     nameFieldLabel?: string;
     /**
      * Show the tags input box, defaults to `true`.
+     *
+     * @platform darwin
      */
     showsTagField?: boolean;
     /**
      * Create a security scoped bookmark when packaged for the Mac App Store. If this
      * option is enabled and the file doesn't already exist a blank file will be
      * created at the chosen path.
+     *
+     * @platform darwin,mas
      */
     securityScopedBookmarks?: boolean;
   }
@@ -12658,6 +13344,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Base64 encoded string which contains the security scoped bookmark data for the
      * saved file. `securityScopedBookmarks` must be enabled for this to be present.
+     *
+     * @platform darwin,mas
      */
     bookmark?: string;
   }
@@ -12676,20 +13364,28 @@ See webContents.sendInputEvent for detailed description of `event` object.
     filters?: FileFilter[];
     /**
      * Message to display above text fields.
+     *
+     * @platform darwin
      */
     message?: string;
     /**
      * Custom label for the text displayed in front of the filename text field.
+     *
+     * @platform darwin
      */
     nameFieldLabel?: string;
     /**
      * Show the tags input box, defaults to `true`.
+     *
+     * @platform darwin
      */
     showsTagField?: boolean;
     /**
      * Create a security scoped bookmark when packaged for the Mac App Store. If this
      * option is enabled and the file doesn't already exist a blank file will be
      * created at the chosen path.
+     *
+     * @platform darwin,mas
      */
     securityScopedBookmarks?: boolean;
   }
@@ -12705,15 +13401,21 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * setting from the System Preferences so
      * `app.getLoginItemSettings().wasOpenedAsHidden` should be checked when the app is
      * opened to know the current value. This setting is not available on MAS builds.
+     *
+     * @platform darwin
      */
     openAsHidden?: boolean;
     /**
      * The executable to launch at login. Defaults to `process.execPath`.
+     *
+     * @platform win32
      */
     path?: string;
     /**
      * The command-line arguments to pass to the executable. Defaults to an empty
      * array. Take care to wrap paths in quotes.
+     *
+     * @platform win32
      */
     args?: string[];
   }
@@ -12744,6 +13446,21 @@ See webContents.sendInputEvent for detailed description of `event` object.
     fetchWindowIcons?: boolean;
   }
 
+  interface StartLoggingOptions {
+    /**
+     * What kinds of data should be captured. By default, only metadata about requests
+     * will be captured. Setting this to `includeSensitive` will include cookies and
+     * authentication data. Setting it to `everything` will include all bytes
+     * transferred on sockets. Can be `default`, `includeSensitive` or `everything`.
+     */
+    captureMode?: ('default' | 'includeSensitive' | 'everything');
+    /**
+     * When the log grows beyond this size, logging will automatically stop. Defaults
+     * to unlimited.
+     */
+    maxFileSize?: number;
+  }
+
   interface StartOFCrashReporter {
     isRunning: boolean;
     diagnosticMode: boolean;
@@ -12760,10 +13477,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
     free: number;
     /**
      * The total amount of swap memory in Kilobytes available to the system.
+     *
+     * @platform win32,linux
      */
     swapTotal: number;
     /**
      * The free amount of swap memory in Kilobytes available to the system.
+     *
+     * @platform win32,linux
      */
     swapFree: number;
   }
@@ -12801,7 +13522,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Button icon.
      */
-    icon?: NativeImage;
+    icon?: (NativeImage) | (string);
     /**
      * Can be `left`, `right` or `overlay`.
      */
@@ -12828,7 +13549,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
   }
 
   interface TouchBarConstructorOptions {
-    items: Array<(TouchBarButton) | (TouchBarColorPicker) | (TouchBarGroup) | (TouchBarLabel) | (TouchBarPopover) | (TouchBarScrubber) | (TouchBarSegmentedControl) | (TouchBarSlider) | (TouchBarSpacer)>;
+    items?: Array<(TouchBarButton) | (TouchBarColorPicker) | (TouchBarGroup) | (TouchBarLabel) | (TouchBarPopover) | (TouchBarScrubber) | (TouchBarSegmentedControl) | (TouchBarSlider) | (TouchBarSpacer)>;
     escapeItem?: (TouchBarButton) | (TouchBarColorPicker) | (TouchBarGroup) | (TouchBarLabel) | (TouchBarPopover) | (TouchBarScrubber) | (TouchBarSegmentedControl) | (TouchBarSlider) | (TouchBarSpacer) | (null);
   }
 
@@ -12878,31 +13599,31 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Called when the user taps an item that was not the last tapped item.
      */
-    select: (selectedIndex: number) => void;
+    select?: (selectedIndex: number) => void;
     /**
      * Called when the user taps any item.
      */
-    highlight: (highlightedIndex: number) => void;
+    highlight?: (highlightedIndex: number) => void;
     /**
      * Selected item style. Defaults to `null`.
      */
-    selectedStyle: string;
+    selectedStyle?: string;
     /**
      * Selected overlay item style. Defaults to `null`.
      */
-    overlayStyle: string;
+    overlayStyle?: string;
     /**
      * Defaults to `false`.
      */
-    showArrowButtons: boolean;
+    showArrowButtons?: boolean;
     /**
      * Defaults to `free`.
      */
-    mode: string;
+    mode?: string;
     /**
      * Defaults to `true`.
      */
-    continuous: boolean;
+    continuous?: boolean;
   }
 
   interface TouchBarSegmentedControlConstructorOptions {
@@ -12926,7 +13647,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Called when the user selects a new segment.
      */
-    change: (selectedIndex: number, isSelected: boolean) => void;
+    change?: (selectedIndex: number, isSelected: boolean) => void;
   }
 
   interface TouchBarSliderConstructorOptions {
@@ -12990,6 +13711,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
   interface VisibleOnAllWorkspacesOptions {
     /**
      * Sets whether the window should be visible above fullscreen windows
+     *
+     * @platform darwin
      */
     visibleOnFullScreen?: boolean;
   }
@@ -13112,7 +13835,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Can be `default`, `none`, `printableArea`, or `custom`. If `custom` is chosen,
      * you will also need to specify `top`, `bottom`, `left`, and `right`.
      */
-    marginType?: ('default' | 'none' | 'printableArea');
+    marginType?: ('default' | 'none' | 'printableArea' | 'custom');
     /**
      * The top margin of the printed web page, in pixels.
      */
@@ -13560,6 +14283,8 @@ declare namespace NodeJS {
     /**
      * Sets the file descriptor soft limit to `maxDescriptors` or the OS hard limit,
      * whichever is lower for the current process.
+     *
+     * @platform darwin,linux
      */
     setFdLimit(maxDescriptors: number): void;
     /**
@@ -13570,17 +14295,20 @@ Takes a V8 heap snapshot and saves it to `filePath`.
     takeHeapSnapshot(filePath: string): boolean;
     /**
      * A `String` representing Chrome's version string.
+     *
      */
-    chrome: string;
+    readonly chrome: string;
     /**
      * A `Boolean`. When app is started by being passed as parameter to the default
      * app, this property is `true` in the main process, otherwise it is `undefined`.
+     *
      */
-    defaultApp: boolean;
+    readonly defaultApp: boolean;
     /**
      * A `String` representing Electron's version string.
+     *
      */
-    electron: string;
+    readonly electron: string;
     /**
      * A `Boolean` that controls whether or not deprecation warnings are printed to
      * `stderr` when formerly callback-based APIs converted to Promises are invoked
@@ -13591,13 +14319,15 @@ Takes a V8 heap snapshot and saves it to `filePath`.
      * A `Boolean`, `true` when the current renderer context is the "main" renderer
      * frame. If you want the ID of the current frame you should use
      * `webFrame.routingId`.
+     *
      */
-    isMainFrame: boolean;
+    readonly isMainFrame: boolean;
     /**
      * A `Boolean`. For Mac App Store build, this property is `true`, for other builds
      * it is `undefined`.
+     *
      */
-    mas: boolean;
+    readonly mas: boolean;
     /**
      * A `Boolean` that controls ASAR support inside your application. Setting this to
      * `true` will disable the support for `asar` archives in Node's built-in modules.
@@ -13611,13 +14341,15 @@ Takes a V8 heap snapshot and saves it to `filePath`.
     noDeprecation: boolean;
     /**
      * A `String` representing the path to the resources directory.
+     *
      */
-    resourcesPath: string;
+    readonly resourcesPath: string;
     /**
      * A `Boolean`. When the renderer process is sandboxed, this property is `true`,
      * otherwise it is `undefined`.
+     *
      */
-    sandboxed: boolean;
+    readonly sandboxed: boolean;
     /**
      * A `Boolean` that controls whether or not deprecation warnings will be thrown as
      * exceptions. Setting this to `true` will throw errors for deprecations. This
@@ -13641,17 +14373,19 @@ Takes a V8 heap snapshot and saves it to `filePath`.
     /**
      * A `String` representing the current process's type, can be `"browser"` (i.e.
      * main process), `"renderer"`, or `"worker"` (i.e. web worker).
+     *
      */
-    type: string;
+    readonly type: string;
     /**
      * A `Boolean`. If the app is running as a Windows Store app (appx), this property
      * is `true`, for otherwise it is `undefined`.
+     *
      */
-    windowsStore: boolean;
+    readonly windowsStore: boolean;
   }
   interface ProcessVersions {
-    electron: string;
-    chrome: string;
+    readonly electron: string;
+    readonly chrome: string;
     combinedId: string;
     mainFrameRoutingId: number;
     cachePath: string;
