@@ -25,7 +25,8 @@ export async function create(options: BrowserViewOpts) {
     // checking if the name-uuid combination is already in use
     const { uuid, name } = options;
     if (getWindowByUuidName(uuid, name) || getBrowserViewByIdentity({ uuid, name }) || getInfoByUuidFrame({ uuid, name })) {
-        throw new Error('Provided name-uuid combination is already in use');
+        throw new Error('Trying to create a BrowserView with name-uuid combination already in use - '
+            + JSON.stringify({ name, uuid }));
     }
 
     if (!options.target) {
