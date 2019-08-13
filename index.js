@@ -659,6 +659,12 @@ function launchApp(argo, startExternalAdapterServer) {
                 '',
                 argo['user-app-config-args']
             );
+        } else {
+            // close the runtime if it's only app
+            if (coreState.shouldCloseRuntime()) {
+                app.quit();
+                return;
+            }
         }
 
         if (startExternalAdapterServer && successfulInitialLaunch) {
