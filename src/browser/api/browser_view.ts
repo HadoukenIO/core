@@ -1,6 +1,9 @@
 import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions, webContents, BrowserWindow } from 'electron';
 import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
-import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView, updateViewTarget } from '../core_state';
+import {
+    addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView,
+    updateViewTarget, getInfoByUuidFrame
+} from '../core_state';
 import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
 import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
@@ -19,6 +22,13 @@ export interface BrowserViewOpts extends BrowserViewCreationOptions {
 }
 
 export async function create(options: BrowserViewOpts) {
+    // checking if the name-uuid combination is already in use
+    const { uuid, name } = options;
+    if (getWindowByUuidName(uuid, name) || getBrowserViewByIdentity({ uuid, name }) || getInfoByUuidFrame({ uuid, name })) {
+        throw new Error('Trying to create a BrowserView with name-uuid combination already in use - '
+            + JSON.stringify({ name, uuid }));
+    }
+
     if (!options.target) {
         throw new Error('Must supply target identity');
     }
