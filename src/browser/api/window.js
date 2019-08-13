@@ -1317,13 +1317,6 @@ Window.getOptions = function(identity) {
     }
 };
 
-Window.getParentApplication = function() {
-    let app = coreState.getAppByWin(this.id);
-
-    return app && app.appObj;
-};
-
-
 Window.getParentWindow = function() {};
 
 /**
