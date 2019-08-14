@@ -33,13 +33,11 @@ declare namespace Electron {
         fromProcessAndFrameIds: (processId: number, frameId: number) => WebContents;
         getOwnerBrowserWindow: () => BrowserWindow | void;
         mainFrameRoutingId: number;
-        readonly session: Session;
         registerIframe: (frameName: string, frameRoutingId: number) => void;
         unregisterIframe: (frameName: string, frameRoutingId: number) => void;
     }
 
     export interface BrowserWindow {
-        readonly id: number;
         nativeId: string;
 
         activate(): void;
