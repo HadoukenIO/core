@@ -25,7 +25,11 @@ export const ExternalWindowApiMap: APIHandlerMap = {
   'minimize-external-window': minimizeExternalWindow,
   'move-external-window-by': moveExternalWindowBy,
   'move-external-window': moveExternalWindow,
-  'register-native-external-window': registerNativeExternalWindow,
+  'register-native-external-window': {
+    apiFunc: registerNativeExternalWindow,
+    apiPath: '.wrap',
+    defaultPermission: false
+  },
   'resize-external-window-by': resizeExternalWindowBy,
   'resize-external-window': resizeExternalWindowTo,
   'restore-external-window': restoreExternalWindow,
@@ -42,7 +46,7 @@ export function init(): void {
     ? ExternalWindowApiMap
     : hijackMovesForGroupedWindows(ExternalWindowApiMap);
 
-  registerActionMap(registrationMap);
+  registerActionMap(registrationMap, 'ExternalWindow');
 }
 
 async function bringExternalWindowToFront(identity: Identity, message: APIMessage) {

@@ -1083,6 +1083,14 @@ Window.bringToFront = function(identity) {
     NativeWindow.bringToFront(browserWindow);
 };
 
+Window.center = function(identity) {
+    const browserWindow = getElectronBrowserWindow(identity);
+    if (!browserWindow) {
+        return;
+    }
+    NativeWindow.center(browserWindow);
+};
+
 
 // TODO investigate the close sequence, there appears to be a case were you
 // try to wrap and close an already closed window
@@ -1262,8 +1270,11 @@ Window.getGroup = function(identity) {
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
     const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
+    const windowKey = genWindowKey(identity);
+    const isUserMovementEnabled = !disabledFrameRef.has(windowKey) || disabledFrameRef.get(windowKey) === 0;
     const windowInfo = Object.assign({
         preloadScripts,
+        isUserMovementEnabled
     }, WebContents.getInfo(browserWindow.webContents));
     return windowInfo;
 };
@@ -1293,13 +1304,6 @@ Window.getOptions = function(identity) {
         return System.getEntityInfo(identity);
     }
 };
-
-Window.getParentApplication = function() {
-    let app = coreState.getAppByWin(this.id);
-
-    return app && app.appObj;
-};
-
 
 Window.getParentWindow = function() {};
 

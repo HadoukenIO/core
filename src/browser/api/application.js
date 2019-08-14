@@ -749,10 +749,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     const { preloadScripts } = mainWindowOpts;
     const loadUrl = () => {
         app.mainWindow.loadURL(app._options.url);
-        coreState.setAppRunningState(uuid, true);
         ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
     };
-
+    coreState.setAppRunningState(uuid, true);
     if (isValidChromePageUrl(app._options.url) || appWasAlreadyRunning) {
         loadUrl();
         // no API injection for chrome pages, so call .show here

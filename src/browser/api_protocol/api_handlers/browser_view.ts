@@ -1,8 +1,6 @@
 import * as apiProtocolBase from './api_protocol_base';
 import { ActionSpecMap } from '../shapes';
-import { Channel } from '../../api/channel';
-import { Identity, APIMessage, ProviderIdentity } from '../../../shapes';
-import { AckFunc, NackFunc } from '../transport_strategy/ack';
+import { Identity, APIMessage } from '../../../shapes';
 import * as browser_view from '../../api/browser_view';
 import { getBrowserViewByIdentity } from '../../core_state';
 
@@ -35,11 +33,26 @@ async function getInfo(identity: Identity, message: APIMessage) {
     const view = getBrowserViewByIdentity({ uuid, name });
     return browser_view.getInfo(view);
 }
+async function show(identity: Identity, message: APIMessage) {
+    const { payload } = message;
+    const { uuid, name } = payload;
+    const view = getBrowserViewByIdentity({ uuid, name });
+    await browser_view.show(view);
+    return successAck;
+} async function hide(identity: Identity, message: APIMessage) {
+    const { payload } = message;
+    const { uuid, name } = payload;
+    const view = getBrowserViewByIdentity({ uuid, name });
+    await browser_view.hide(view);
+    return successAck;
+}
 export const browserViewActionMap: ActionSpecMap = {
     'create-browser-view': create,
     'attach-browser-view': attach,
     'set-browser-view-bounds': setBounds,
-    'get-browser-view-info': getInfo
+    'get-browser-view-info': getInfo,
+    'hide-browser-view': hide,
+    'show-browser-view': show
 };
 
 export function init() {
