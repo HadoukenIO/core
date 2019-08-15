@@ -58,6 +58,7 @@ export const applicationApiMap = {
     'remove-tray-icon': removeTrayIcon,
     'restart-application': restartApplication,
     'run-application': runApplication,
+    'run-applications': runApplications,
     'send-application-log': sendApplicationLog,
     'set-app-log-username': setAppLogUsername,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
@@ -381,6 +382,62 @@ function runApplication(identity, message, ack, nack) {
             nack(`Application with specified UUID is already running: ${uuid}`);
             return;
         }
+    }
+}
+
+async function runApplications(identity, message, ack, nack) {
+    const { payload } = message;
+    const { applications } = payload;
+
+    const appsToRunWithRVM = [];
+
+    for (let idx = 0; idx < applications.length; idx++) {
+        const application = applications[idx];
+        const { uuid, manifestUrl } = application;
+
+        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(application);
+        let remoteSubscriptionUnSubscribe;
+        const remoteSubscription = {
+            uuid,
+            name: uuid,
+            listenType: 'once',
+            className: 'window',
+            eventName: 'fire-constructor-callback'
+        };
+
+        if (coreState.getAppRunningState(uuid)) {
+            Application.emitRunRequested(appIdentity);
+            nack(`Application with specified UUID is already running: ${uuid}`);
+            return;
+        }
+
+        ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
+            if (loadInfo.success) {
+                const successReturn = _.clone(successAck);
+                successReturn.data = loadInfo.data;
+                ack(successReturn);
+            } else {
+                const theErr = new Error(loadInfo.data.message);
+                theErr.networkErrorCode = loadInfo.data.networkErrorCode;
+                nack(theErr);
+            }
+
+            if (typeof remoteSubscriptionUnSubscribe === 'function') {
+                remoteSubscriptionUnSubscribe();
+            }
+        });
+
+        if (manifestUrl) {
+            const unSubscribe = await addRemoteSubscription(remoteSubscription);
+            remoteSubscriptionUnSubscribe = unSubscribe;
+            appsToRunWithRVM.push(manifestUrl);
+        } else {
+            Application.run(appIdentity);
+        }
+    }
+
+    if (appsToRunWithRVM.length > 0) {
+        Application.batchRunWithRVM(identity, appsToRunWithRVM).catch(nack);
     }
 }
 
