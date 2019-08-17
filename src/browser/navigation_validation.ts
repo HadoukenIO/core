@@ -1,5 +1,5 @@
 const coreState = require('./core_state');
-const electronApp = require('electron').app;
+import { BrowserWindow, app as electronApp } from 'electron';
 import SubscriptionManager from './subscription_manager';
 import ofEvents from './of_events';
 import route from '../common/route';
@@ -19,43 +19,47 @@ export function validateNavigation(webContents: any, identity: any, validator: (
 }
 
 // check rules for all ancestors. returns false if rejected by any ancestor's rules
-export function validateNavigationRules(uuid: string, url: string, parentId: string, baseOpts: any): boolean {
-    electronApp.vlog(1, `validateNavigationRules for ${uuid} to ${url}`);
+export function validateNavigationRules(url: string, options: any): boolean {
     let isAllowed = true;
-    if (baseOpts.contentNavigation) {
-        if (baseOpts.contentNavigation.blacklist.length) {
-            isAllowed = !electronApp.matchesURL(url, baseOpts.contentNavigation.blacklist);
+    if (options.contentNavigation) {
+        if (options.contentNavigation.blacklist.length) {
+            isAllowed = !electronApp.matchesURL(url, options.contentNavigation.blacklist);
         } else {
-            isAllowed = electronApp.matchesURL(url, baseOpts.contentNavigation.whitelist);
+            isAllowed = electronApp.matchesURL(url, options.contentNavigation.whitelist);
         }
     }
-    if (!isAllowed) {
-        electronApp.vlog(1, `Navigation is blocked by rules for ${baseOpts.uuid} to ${url}`);
-        return false;
-    } else if (parentId) {
-        electronApp.vlog(1, `validateNavigationRules app ${uuid} check parent ${parentId}`);
-        const parentWindow = coreState.getWinById(parentId);
-        if (parentWindow) {
-            const parentOpts = parentWindow.openfinWindow._options;
-            isAllowed = validateNavigationRules(uuid, url, parentWindow.parentId, parentOpts);
-        } else {
-            electronApp.vlog(1, `validateNavigationRules missing parent ${parentId}`);
-        }
-    } else {
-        electronApp.vlog(1, `validateNavigationRules no parent ${uuid}`);
+    return isAllowed;
+}
+
+function validateWindowNavigation(url: string, windowId: number): boolean {
+    let isAllowed = true;
+    const { openfinWindow = null, parentId = null } = { ...coreState.getWinById(windowId) };
+    if (openfinWindow) {
+        isAllowed = validateNavigationRules(url, openfinWindow._options) && validateWindowNavigation(url, parentId);
+    }
+    return isAllowed;
+}
+
+function validateApplicationNavigation(url: string, uuid: string): boolean {
+    let isAllowed = true;
+    const appObject = coreState.getAppObjByUuid(uuid);
+    const appMetaInfo = coreState.appByUuid(uuid);
+    if (appObject) {
+        isAllowed = validateNavigationRules(url, appObject._options) && validateApplicationNavigation(url, appMetaInfo.parentUuid);
     }
     return isAllowed;
 }
 
 export function navigationValidator(uuid: string, name: string, id: number) {
     return (event: any, url: string) => {
-        const { openfinWindow, parentId } = coreState.getWinById(id);
         const isMailTo = /^mailto:/i.test(url);
-        const allowed = isMailTo || validateNavigationRules(uuid, url, parentId, openfinWindow._options) &&
+        electronApp.vlog(1, `Validating navigation rules for ${uuid} to ${url}`);
+        const allowed = isMailTo || validateWindowNavigation(url, id) && validateApplicationNavigation(url, uuid) &&
                                     isURLAllowed(url);
         if (!allowed) {
             electronApp.vlog(1, 'Navigation is blocked ' + url);
             const self = coreState.getWinById(id);
+            const webContents = BrowserWindow.fromId(id);
             let sourceName = name;
             if (self.parentId) {
                 const parent = coreState.getWinById(self.parentId);

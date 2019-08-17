@@ -25,11 +25,7 @@ export function getAbsolutePath(webContents: Electron.WebContents, path: string)
 }
 
 export function navigate (webContents: Electron.WebContents, url: string) {
-    // todo: replace everything here with "return webContents.loadURL(url)" once we get to electron 5.*
-    // reason: starting electron v5, loadUrl returns a promise that resolves according to the same logic we apply here
-    const navigationEnd = createNavigationEndPromise(webContents);
-    webContents.loadURL(url);
-    return navigationEnd;
+    return webContents.loadURL(url);
 }
 
 export async function navigateBack (webContents: Electron.WebContents) {
