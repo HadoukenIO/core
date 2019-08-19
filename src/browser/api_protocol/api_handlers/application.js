@@ -397,6 +397,11 @@ async function runApplications(identity, message, ack, nack) {
 
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(application);
         let remoteSubscriptionUnSubscribe;
+        const logMsg = manifestUrl ?
+            `unsub called before duplicate uuid transport listener removed for ${uuid}` :
+            '';
+        /*jshint loopfunc: true */
+        let unsub = () => writeToLog('error', logMsg);
         const remoteSubscription = {
             uuid,
             name: uuid,
@@ -421,7 +426,7 @@ async function runApplications(identity, message, ack, nack) {
                 theErr.networkErrorCode = loadInfo.data.networkErrorCode;
                 nack(theErr);
             }
-
+            unsub();
             if (typeof remoteSubscriptionUnSubscribe === 'function') {
                 remoteSubscriptionUnSubscribe();
             }
@@ -430,9 +435,21 @@ async function runApplications(identity, message, ack, nack) {
         if (manifestUrl) {
             const unSubscribe = await addRemoteSubscription(remoteSubscription);
             remoteSubscriptionUnSubscribe = unSubscribe;
+            unsub = duplicateUuidTransport.subscribeToUuid(uuid, (e) => {
+                nack(`Application with specified UUID is already running: ${uuid}`);
+                remoteSubscriptionUnSubscribe();
+                unsub();
+            });
             appsToRunWithRVM.push(manifestUrl);
         } else {
-            Application.run(appIdentity);
+            // For the purposes of the Save & Restore fix, this shouldn't be hit, but may be utilized in the future.
+            if (lockUuid(uuid)) {
+                Application.run(appIdentity);
+            } else {
+                Application.emitRunRequested(appIdentity);
+                nack(`Application with specified UUID is already running: ${uuid}`);
+                return;
+            }
         }
     }
 
