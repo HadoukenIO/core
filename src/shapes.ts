@@ -464,13 +464,13 @@ export interface Process extends Omit<ProcessElectron, 'imageName'> {
     pid: number;
 }
 
-export interface NativeWindowInfo extends Omit<NativeWindowInfoElectron, 'process'> {
+export interface NativeWindowInfo extends Omit<NativeWindowInfoElectron, 'process'|'id'> {
     process: Process;
     name: string;
     uuid: string;
 }
 
-export type NativeWindowInfoLite = Pick<NativeWindowInfo, 'name'|'process'|'title'|'uuid'|'visible'>;
+export type NativeWindowInfoLite = (Pick<NativeWindowInfo, 'name'|'process'|'title'|'uuid'|'visible'>) & { nativeId: string };
 
 export type GroupWindow = (ExternalWindow | OpenFinWindow) & {
     isExternalWindow?: boolean;
