@@ -458,6 +458,17 @@ export interface ExternalWindow extends BrowserWindowElectron {
     name: string;
     uuid: string;
 }
+interface NativeWinIdUuidOptional {
+    nativeId: string;
+    uuid?: string;
+    name?: string;
+}
+
+interface NativeWinIdNativeIdOptional extends Identity {
+    nativeId?: string;
+}
+
+export type NativeWindowIdentity = NativeWinIdUuidOptional | NativeWinIdNativeIdOptional;
 
 export interface Process extends Omit<ProcessElectron, 'imageName'> {
     injected: boolean;
