@@ -391,8 +391,7 @@ async function runApplications(identity, message, ack, nack) {
 
     const appsToRunWithRVM = [];
 
-    for (let idx = 0; idx < applications.length; idx++) {
-        const application = applications[idx];
+    async function runManifest(application) {
         const { uuid, manifestUrl } = application;
 
         const appIdentity = apiProtocolBase.getTargetApplicationIdentity(application);
@@ -412,19 +411,13 @@ async function runApplications(identity, message, ack, nack) {
 
         if (coreState.getAppRunningState(uuid)) {
             Application.emitRunRequested(appIdentity);
-            nack(`Application with specified UUID is already running: ${uuid}`);
+            writeToLog('error', `Application with specified UUID is already running: ${uuid}`);
             return;
         }
 
         ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
-            if (loadInfo.success) {
-                const successReturn = _.clone(successAck);
-                successReturn.data = loadInfo.data;
-                ack(successReturn);
-            } else {
-                const theErr = new Error(loadInfo.data.message);
-                theErr.networkErrorCode = loadInfo.data.networkErrorCode;
-                nack(theErr);
+            if (!loadInfo.success) {
+                writeToLog('error', loadInfo.data.message);
             }
             unsub();
             if (typeof remoteSubscriptionUnSubscribe === 'function') {
@@ -436,25 +429,20 @@ async function runApplications(identity, message, ack, nack) {
             const unSubscribe = await addRemoteSubscription(remoteSubscription);
             remoteSubscriptionUnSubscribe = unSubscribe;
             unsub = duplicateUuidTransport.subscribeToUuid(uuid, (e) => {
-                nack(`Application with specified UUID is already running: ${uuid}`);
+                writeToLog('error', `Application with specified UUID is already running: ${uuid}`);
                 remoteSubscriptionUnSubscribe();
                 unsub();
             });
             appsToRunWithRVM.push(manifestUrl);
-        } else {
-            // For the purposes of the Save & Restore fix, this shouldn't be hit, but may be utilized in the future.
-            if (lockUuid(uuid)) {
-                Application.run(appIdentity);
-            } else {
-                Application.emitRunRequested(appIdentity);
-                nack(`Application with specified UUID is already running: ${uuid}`);
-                return;
-            }
         }
     }
 
+    await Promise.all(applications.map(runManifest));
+
     if (appsToRunWithRVM.length > 0) {
-        Application.batchRunWithRVM(identity, appsToRunWithRVM).catch(nack);
+        Application.batchRunWithRVM(identity, appsToRunWithRVM)
+            .then(ack)
+            .catch(nack);
     }
 }
 
