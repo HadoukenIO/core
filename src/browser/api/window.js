@@ -2429,7 +2429,7 @@ function handleCustomAlerts(id, opts) {
 }
 
 //If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
-function getElectronBrowserWindow(identity, errDesc) {
+export function getElectronBrowserWindow(identity, errDesc) {
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
     let browserWindow = openfinWindow && openfinWindow.browserWindow;
 
