@@ -11,7 +11,7 @@ import { getInfo as getWebContentsInfo, setIframeHandlers, hookWebContentsEvents
 import of_events from '../of_events';
 import route from '../../common/route';
 import { browserViewActionMap } from '../api_protocol/api_handlers/browser_view';
-import { getElectronBrowserWindow } from '../api_protocol/api_handlers/webcontents';
+import { getElectronBrowserWindow } from './window';
 import { OpenFinWindow } from '../../shapes';
 
 
