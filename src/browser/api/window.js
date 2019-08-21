@@ -1285,8 +1285,11 @@ Window.getGroup = function(identity) {
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
     const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
+    const windowKey = genWindowKey(identity);
+    const isUserMovementEnabled = !disabledFrameRef.has(windowKey) || disabledFrameRef.get(windowKey) === 0;
     const windowInfo = Object.assign({
         preloadScripts,
+        isUserMovementEnabled
     }, WebContents.getInfo(browserWindow.webContents));
     return windowInfo;
 };

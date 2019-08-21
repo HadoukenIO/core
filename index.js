@@ -54,7 +54,7 @@ import route from './src/common/route';
 
 import { createWillDownloadEventListener } from './src/browser/api/file_download';
 import duplicateUuidTransport from './src/browser/duplicate_uuid_delegation';
-import { deleteApp, argv } from './src/browser/core_state';
+import { deleteApp } from './src/browser/core_state';
 import { lockUuid } from './src/browser/uuid_availability';
 
 // locals
@@ -645,7 +645,15 @@ function launchApp(argo, startExternalAdapterServer) {
         if (uuid && !isRunning) {
             if (!lockUuid(uuid)) {
                 deleteApp(uuid);
-                duplicateUuidTransport.broadcast({ argv, uuid });
+                // We need to rebuild a new argv to have correct app info in it.
+                let newArgv = Object.keys(argo).map(key => {
+                    if (key === '_') {
+                        return argo[key].length === 1 ? argo[key][0] : argo[key];
+                    } else {
+                        return '--' + key + '=' + argo[key];
+                    }
+                });
+                duplicateUuidTransport.broadcast({ argv: newArgv, uuid });
                 failedMutexCheck = true;
             } else {
                 passedMutexCheck = true;
@@ -665,6 +673,12 @@ function launchApp(argo, startExternalAdapterServer) {
                 '',
                 argo['user-app-config-args']
             );
+        } else {
+            // close the runtime if it's only app
+            if (coreState.shouldCloseRuntime()) {
+                app.quit();
+                return;
+            }
         }
 
         if (startExternalAdapterServer && successfulInitialLaunch) {
