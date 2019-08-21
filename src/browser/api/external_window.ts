@@ -13,6 +13,7 @@ import route from '../../common/route';
 import WindowGroups, { GroupChangedEvent, GroupEvent } from '../window_groups';
 import ProcessTracker from '../process_tracker';
 import SubscriptionManager from '../subscription_manager';
+import { releaseUuid } from '../uuid_availability';
 
 electronApp.on('ready', () => {
   subToGlobalWinEventHooks();
@@ -276,6 +277,9 @@ function findExistingNativeWindow(identity: Shapes.NativeWindowIdentity): Shapes
   Returns a registered native window or creates a new one if not found.
 */
 export function getExternalWindow(identity: Shapes.NativeWindowIdentity): Shapes.ExternalWindow {
+  // TODO:
+  // 1. ensure no dupe instances: check for pre-existing win with same nativeid even when new uuid
+  // 2. ensure no dupe uuids
   const { uuid } = identity;
   let externalWindow = externalWindows.get(uuid);
 
@@ -666,7 +670,7 @@ export function isValidExternalWindow(rawNativeWindowInfo: NativeWindowInfo, ign
 */
 function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void {
   const key = getKey(externalWindow);
-  const { nativeId } = externalWindow;
+  const { nativeId, uuid } = externalWindow;
   const winEventHooks = winEventHooksEmitters.get(key);
   const injectionBus = injectionBuses.get(key);
   const externalWindowEventAdapter = externalWindowEventAdapters.get(key);
@@ -690,6 +694,7 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
   externalWindow.emit('closed');
   externalWindow.removeAllListeners();
   externalWindows.delete(nativeId);
+  releaseUuid(uuid);
 }
 
 /*
