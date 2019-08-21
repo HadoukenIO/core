@@ -301,6 +301,23 @@ export const System = {
             screenSaver: state.isScreenSaverRunning(),
         }, theme);
     },
+    getInstalledRuntimes: function(identity, callback, errorCallback) {
+        var getInstalledRuntimesOpts = {
+            uuid: identity.uuid,
+            sourceUrl: coreState.getConfigUrlByUuid(identity.uuid)
+        };
+
+        var handleResponse = function(dataObj) {
+            var failed = _.has(dataObj, 'time-to-live-expiration');
+            if (!failed) {
+                callback(dataObj.payload);
+            } else {
+                errorCallback(dataObj.payload);
+            }
+        };
+
+        rvmBus.getInstalledRuntimes(getInstalledRuntimesOpts, handleResponse);
+    },
     getLog: function(name, resolve) {
         // Prevent abuse of trying to read files with a path relative to cache directory
         var pathSafeName = path.basename(name);
