@@ -191,6 +191,10 @@ export function windowExists(uuid: string, name: string): boolean {
     return !!getOfWindowByUuidName(uuid, name) || pendingWindowExists;
 }
 
+export function viewExists(uuid: string, name: string): boolean {
+    return !!getBrowserViewByIdentity({ uuid, name });
+}
+
 export function removeChildById(id: number): void {
     const app = getAppByWin(id);
 
