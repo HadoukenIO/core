@@ -274,10 +274,6 @@ export class WindowGroups extends EventEmitter {
                 win.groupUuid = null;
             }));
             delete this._windowGroups[groupUuid];
-            if (!argo['use-legacy-window-groups']) {
-                groupTracker.deleteGroupInfoCache(groupUuid);
-            }
-
         }
     };
 }
