@@ -134,6 +134,15 @@ const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOrigi
         console.error(error);
         console.error(error.stack);
         electron.ipcRenderer.send(routingId, 'api-injection-failed', routingId);
+    } finally {
+        delete w.require;
+        delete w.process;
+        delete w.module;
+        delete w.Buffer;
+        delete w.routingId;
+        delete w.isMainFrame;
+        delete w.global;
+        delete w.getFrameData;
     }
 
     susbcribeForTeardown(routingId, teardownHandlers);
