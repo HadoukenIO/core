@@ -384,6 +384,7 @@ function runApplication(identity, message, ack, nack) {
     }
 }
 
+// This function is currently configured to only run applications from manifest. It will not run any applications programmatically.
 async function runApplications(identity, message, ack, nack) {
     const { payload } = message;
     const { applications } = payload;
@@ -393,47 +394,17 @@ async function runApplications(identity, message, ack, nack) {
     async function runManifest(application) {
         const { uuid, manifestUrl } = application;
 
-        const appIdentity = apiProtocolBase.getTargetApplicationIdentity(application);
-        let remoteSubscriptionUnSubscribe;
-        const logMsg = manifestUrl ?
-            `unsub called before duplicate uuid transport listener removed for ${uuid}` :
-            '';
-        /*jshint loopfunc: true */
-        let unsub = () => writeToLog('error', logMsg);
-        const remoteSubscription = {
-            uuid,
-            name: uuid,
-            listenType: 'once',
-            className: 'window',
-            eventName: 'fire-constructor-callback'
-        };
+        if (!manifestUrl) {
+            return;
+        }
 
         if (coreState.getAppRunningState(uuid)) {
-            Application.emitRunRequested(appIdentity);
+            Application.emitRunRequested({ uuid });
             writeToLog('error', `Application with specified UUID is already running: ${uuid}`);
             return;
         }
 
-        ofEvents.once(route.window('fire-constructor-callback', uuid, uuid), loadInfo => {
-            if (!loadInfo.success) {
-                writeToLog('error', loadInfo.data.message);
-            }
-            unsub();
-            if (typeof remoteSubscriptionUnSubscribe === 'function') {
-                remoteSubscriptionUnSubscribe();
-            }
-        });
-
-        if (manifestUrl) {
-            const unSubscribe = await addRemoteSubscription(remoteSubscription);
-            remoteSubscriptionUnSubscribe = unSubscribe;
-            unsub = duplicateUuidTransport.subscribeToUuid(uuid, (e) => {
-                writeToLog('error', `Application with specified UUID is already running: ${uuid}`);
-                remoteSubscriptionUnSubscribe();
-                unsub();
-            });
-            appsToRunWithRVM.push(manifestUrl);
-        }
+        appsToRunWithRVM.push(manifestUrl);
     }
 
     await Promise.all(applications.map(runManifest));
