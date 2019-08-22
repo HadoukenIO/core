@@ -8,7 +8,7 @@ let _ = require('underscore');
 // local modules
 let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
-let coreState = require('../../core_state.js');
+import * as coreState from '../../core_state';
 import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
