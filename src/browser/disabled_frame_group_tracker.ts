@@ -94,17 +94,16 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
         //Proposed move differs from requested move
         throw new Error('Attempted move violates group constraints');
     }
-    handleBatchedMove(moves, changeType);
+    handleBatchedMove(moves);
     emitChange('bounds-changed', leader, changeType, 'self');
     otherWindows.map(move => emitChange('bounds-changed', move, changeType, 'group'));
     return leader.rect;
 }
 
-function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFront: boolean = false) {
+function handleBatchedMove(moves: Move[]) {
     if (isWin32) {
         moves.forEach(({ ofWin, rect }) => {
             (<any>ExternalWindow).setBoundsWithoutShadow(ofWin.browserWindow.nativeId, rect);
-            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
 
         // Leave window transaction Logic here for later use
@@ -121,7 +120,6 @@ function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFro
     } else {
         moves.forEach(({ ofWin, rect }) => {
             ofWin.browserWindow.setBounds(rect);
-            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
     }
 }
@@ -234,13 +232,13 @@ export function addWindowToGroup(win: GroupWindow) {
                 boundsChanging = true;
                 const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changed';
                 win.browserWindow.once(endingEvent, handleEndBoundsChanging);
-                moves.forEach(({ ofWin }) => ofWin.browserWindow.bringToFront());
+                WindowGroups.getGroup(win.groupUuid).forEach(win => win.browserWindow.bringToFront());
             } else if (moves.length) {
                 // bounds-changing is not emitted for the leader, but is for the other windows
                 const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
                 emitChange('bounds-changing', leaderMove, changeType, 'self');
             }
-            handleBatchedMove(moves, changeType);
+            handleBatchedMove(moves);
         } catch (error) {
             writeToLog('error', error);
         }
