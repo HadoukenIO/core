@@ -16,6 +16,7 @@ import { lockUuid } from '../../uuid_availability';
 import duplicateUuidTransport from '../../duplicate_uuid_delegation';
 import { writeToLog } from '../../log';
 import { WINDOWS_MESSAGE_MAP } from '../../../common/windows_messages';
+import { ExternalApplication } from '../../api/external_application';
 
 const SetWindowPosition = {
     SWP_HIDEWINDOW: 0x0080,
@@ -337,7 +338,7 @@ function runApplication(identity, message, ack, nack) {
         className: 'window',
         eventName: 'fire-constructor-callback'
     };
-    if (coreState.getAppRunningState(uuid)) {
+    if (coreState.getAppRunningState(uuid) || ExternalApplication.getExternalConnectionByUuid(uuid)) {
         Application.emitRunRequested(appIdentity);
         nack(`Application with specified UUID is already running: ${uuid}`);
         return;

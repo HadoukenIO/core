@@ -649,6 +649,13 @@ function launchApp(argo, startExternalAdapterServer) {
                 });
                 duplicateUuidTransport.broadcast({ argv: newArgv, uuid });
                 failedMutexCheck = true;
+
+                // close the runtime if it's only app.
+                if (coreState.shouldCloseRuntime()) {
+                    app.quit();
+                    return;
+                }
+
             } else {
                 passedMutexCheck = true;
             }
@@ -667,12 +674,6 @@ function launchApp(argo, startExternalAdapterServer) {
                 '',
                 argo['user-app-config-args']
             );
-        } else {
-            // close the runtime if it's only app
-            if (coreState.shouldCloseRuntime()) {
-                app.quit();
-                return;
-            }
         }
 
         if (startExternalAdapterServer && successfulInitialLaunch) {

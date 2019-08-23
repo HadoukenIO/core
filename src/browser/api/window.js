@@ -113,22 +113,17 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
+    },
+    'will-move': {
+        topic: 'will-move',
+        decorator: willMoveOrResizeDecorator
+    },
+    'will-resize': {
+        topic: 'will-resize',
+        decorator: willMoveOrResizeDecorator
     }
-    // 'move': {
-    //     topic: 'bounds-changing'
-    // }
 };
 
-let webContentsEventMap = {
-    'did-get-response-details': {
-        topic: 'resource-response-received',
-        decorator: responseReceivedDecorator
-    },
-    'did-fail-load': {
-        topic: 'resource-load-failed',
-        decorator: loadFailedDecorator
-    }
-};
 
 function genWindowKey(identity) {
     return `${identity.uuid}-${identity.name}`;
@@ -540,10 +535,6 @@ Window.create = function(id, opts) {
             ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type: type, uuid, name });
         });
 
-        webContents.once('close', () => {
-            webContents.removeAllListeners();
-        });
-
         const isMainWindow = (uuid === name);
         const emitToAppIfMainWin = (type, payload) => {
             // Window crashed: inform Window "namespace"
@@ -644,8 +635,7 @@ Window.create = function(id, opts) {
         };
 
         mapEvents(browserWindowEventMap, browserWindow);
-        mapEvents(webContentsEventMap, webContents);
-
+        WebContents.hookWebContentsEvents(webContents, { uuid, name }, 'window', route.window);
         // hideOnClose is deprecated; treat it as if it's just another
         // listener on the 'close-requested' event
         if (getOptFromBrowserWin('hideOnClose', browserWindow, false)) {
@@ -2199,6 +2189,20 @@ function disabledFrameBoundsChangeDecorator(payload, args) {
     return propogate;
 }
 
+function willMoveOrResizeDecorator(payload, args) {
+    const { x, y, height, width } = args[1];
+    const monitorInfo = System.getMonitorInfo();
+    const monitorScaleFactor = monitorInfo.deviceScaleFactor;
+    Object.assign(payload, {
+        monitorScaleFactor,
+        left: x,
+        top: y,
+        height,
+        width
+    });
+    return true;
+}
+
 function opacityChangedDecorator(payload, args) {
     let _win = Window.wrap(payload.uuid, payload.name);
     let _browserWin = _win && _win.browserWindow;
@@ -2240,53 +2244,7 @@ function visibilityChangedDecorator(payload, args) {
     return propogate;
 }
 
-function responseReceivedDecorator(payload, args) {
-    var [
-        /*event*/
-        ,
-        status,
-        newUrl,
-        originalUrl,
-        httpResponseCode,
-        requestMethod,
-        referrer,
-        headers,
-        resourceType
-    ] = args;
 
-    Object.assign(payload, {
-        status,
-        newUrl,
-        originalUrl,
-        httpResponseCode,
-        requestMethod,
-        referrer,
-        headers,
-        resourceType
-    });
-
-    return true;
-}
-
-function loadFailedDecorator(payload, args) {
-    var [
-        /*event*/
-        ,
-        errorCode,
-        errorDescription,
-        validatedURL,
-        isMainFrame
-    ] = args;
-
-    Object.assign(payload, {
-        errorCode,
-        errorDescription,
-        validatedURL,
-        isMainFrame
-    });
-
-    return true;
-}
 
 function noOpDecorator( /*payload*/ ) {
 
@@ -2429,7 +2387,7 @@ function handleCustomAlerts(id, opts) {
 }
 
 //If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
-function getElectronBrowserWindow(identity, errDesc) {
+export function getElectronBrowserWindow(identity, errDesc) {
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
     let browserWindow = openfinWindow && openfinWindow.browserWindow;
 
