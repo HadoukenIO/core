@@ -228,18 +228,19 @@ export function addWindowToGroup(win: GroupWindow) {
                 rawPayloadBounds = Rectangle.CREATE_FROM_BOUNDS(adjustedBounds);
             }
             const moves = generateWindowMoves(win, rawPayloadBounds, changeType);
-            handleBatchedMove(moves, changeType, true);
             // Keep track of which windows have moved in order to emit events
             moves.forEach(({ofWin}) => moved.add(ofWin));
             if (!boundsChanging) {
                 boundsChanging = true;
                 const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changed';
                 win.browserWindow.once(endingEvent, handleEndBoundsChanging);
+                moves.forEach(({ ofWin }) => ofWin.browserWindow.bringToFront());
             } else if (moves.length) {
                 // bounds-changing is not emitted for the leader, but is for the other windows
                 const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
                 emitChange('bounds-changing', leaderMove, changeType, 'self');
             }
+            handleBatchedMove(moves, changeType);
         } catch (error) {
             writeToLog('error', error);
         }
