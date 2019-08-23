@@ -6,7 +6,7 @@
   "scripts": {
     "build": "grunt build-pac",
     "deploy": "grunt deploy",
-    "postinstall": "grunt",
+    "postinstall": "grunt --force",
     "pretest": "grunt babel && grunt ts",
     "test": "grunt test"
   },
