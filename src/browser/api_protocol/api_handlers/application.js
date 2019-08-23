@@ -386,13 +386,13 @@ function runApplication(identity, message, ack, nack) {
 }
 
 // This function is currently configured to only run applications from manifest. It will not run any applications programmatically.
-async function runApplications(identity, message, ack, nack) {
+function runApplications(identity, message, ack, nack) {
     const { payload } = message;
     const { applications } = payload;
 
     const appsToRunWithRVM = [];
 
-    async function runManifest(application) {
+    applications.forEach(application => {
         const { uuid, manifestUrl } = application;
 
         if (!manifestUrl) {
@@ -406,13 +406,11 @@ async function runApplications(identity, message, ack, nack) {
         }
 
         appsToRunWithRVM.push(manifestUrl);
-    }
-
-    await Promise.all(applications.map(runManifest));
+    });
 
     if (appsToRunWithRVM.length > 0) {
         Application.batchRunWithRVM(identity, appsToRunWithRVM)
-            .then(ack)
+            .then(() => ack(successAck))
             .catch(nack);
     }
 }
