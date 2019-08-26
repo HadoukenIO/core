@@ -787,6 +787,20 @@ Application.runWithRVM = function(manifestUrl, appIdentity) {
     }
 };
 
+/**
+ * Run an application via RVM
+ */
+Application.batchRunWithRVM = function(identity, manifestUrls) {
+    return sendToRVM({
+        topic: 'application',
+        action: 'launch-apps',
+        sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
+        data: {
+            configUrlArray: manifestUrls
+        }
+    });
+};
+
 Application.send = function() {
     console.warn('Deprecated. Please use InterAppBus');
 };

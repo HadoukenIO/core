@@ -58,6 +58,7 @@ export const applicationApiMap = {
     'remove-tray-icon': removeTrayIcon,
     'restart-application': restartApplication,
     'run-application': runApplication,
+    'run-applications': runApplications,
     'send-application-log': sendApplicationLog,
     'set-app-log-username': setAppLogUsername,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
@@ -381,6 +382,36 @@ function runApplication(identity, message, ack, nack) {
             nack(`Application with specified UUID is already running: ${uuid}`);
             return;
         }
+    }
+}
+
+// This function is currently configured to only run applications from manifest. It will not run any applications programmatically.
+function runApplications(identity, message, ack, nack) {
+    const { payload } = message;
+    const { applications } = payload;
+
+    const appsToRunWithRVM = [];
+
+    applications.forEach(application => {
+        const { uuid, manifestUrl } = application;
+
+        if (!manifestUrl) {
+            return;
+        }
+
+        if (coreState.getAppRunningState(uuid)) {
+            Application.emitRunRequested({ uuid });
+            writeToLog('error', `Application with specified UUID is already running: ${uuid}`);
+            return;
+        }
+
+        appsToRunWithRVM.push(manifestUrl);
+    });
+
+    if (appsToRunWithRVM.length > 0) {
+        Application.batchRunWithRVM(identity, appsToRunWithRVM)
+            .then(() => ack(successAck))
+            .catch(nack);
     }
 }
 
