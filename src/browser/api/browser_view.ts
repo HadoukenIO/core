@@ -108,3 +108,6 @@ export async function setBounds(ofView: OfView, bounds: Rectangle) {
 export function getInfo (ofView: OfView) {
     return getWebContentsInfo(ofView.view.webContents);
 }
+export function getCurrentWindow(ofView: OfView) {
+    return ofView.target;
+}
