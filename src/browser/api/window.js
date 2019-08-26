@@ -877,9 +877,6 @@ Window.create = function(id, opts) {
         // TODO this should be removed once it's safe in favor of the
         //      more descriptive browserWindow key
         _window: browserWindow,
-        get attachedViews() {
-            return coreState.getAllViews().filter(v => v.target.uuid === uuid && v.target.name === name);
-        }
     };
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
