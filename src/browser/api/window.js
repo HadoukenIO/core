@@ -49,6 +49,7 @@ import {
 } from '../../common/errors';
 import * as NativeWindow from './native_window';
 import { WINDOWS_MESSAGE_MAP } from '../../common/windows_messages';
+import * as BrowserView from './browser_view';
 
 const subscriptionManager = new SubscriptionManager();
 const isWin32 = process.platform === 'win32';
@@ -964,7 +965,9 @@ Window.create = function(id, opts) {
         });
     }
     WebContents.setIframeHandlers(browserWindow.webContents, winObj, uuid, name);
-
+    if(_options.defaultFrame) {
+        BrowserView.create({uuid, name: 'frame', url: 'https://tomer-openfin.github.io'});
+    }
     return winObj;
 };
 
