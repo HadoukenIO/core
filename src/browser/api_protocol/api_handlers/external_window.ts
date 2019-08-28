@@ -60,7 +60,7 @@ async function closeExternalWindow(identity: Identity, message: APIMessage) {
 async function disableExternalWindowUserMovement(identity: Identity, message: APIMessage) {
   const { payload } = message;
   const targetIdentity = getTargetExternalWindowIdentity(payload);
-  return ExternalWindow.disableExternalWindowUserMovement(targetIdentity);
+  return ExternalWindow.disableExternalWindowUserMovement(targetIdentity, identity);
 }
 
 async function enableExternaWindowUserMovement(identity: Identity, message: APIMessage) {

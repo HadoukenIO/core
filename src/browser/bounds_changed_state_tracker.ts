@@ -3,7 +3,7 @@
  */
 
 import * as _ from 'underscore';
-import * as animations from './animations.js';
+import animations from './animations.js';
 import * as coreState from './core_state.js';
 import * as Deferred from './deferred';
 import WindowGroups from './window_groups';
@@ -273,7 +273,7 @@ export default class BoundsChangedStateTracker {
         const thisRect = Rectangle.CREATE_FROM_BOUNDS(bounds);
         const currentBounds = this.getCurrentBounds();
         const cachedBounds = this.getCachedBounds();
-        const moved = thisRect.move(cachedBounds, currentBounds);
+        const moved = thisRect.propagateMoveToThisRect(cachedBounds, currentBounds);
         return clipBounds(moved, windowToUpdate.browserWindow);
     };
 

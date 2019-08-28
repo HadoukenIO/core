@@ -67,6 +67,9 @@ const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOrigi
         if (window.location.protocol === 'chrome-devtools:') {
             return;
         }
+        if (!initialOptions) {
+            return;
+        }
 
         // Mock as a Node/Electron environment
         // ===================================

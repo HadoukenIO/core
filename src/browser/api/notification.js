@@ -1,4 +1,4 @@
-function Notification() {
+export function Notification() {
     this.getCurrentNotification = function() {};
     this.getCurrent = function() {};
 }
@@ -11,6 +11,3 @@ Notification.prototype.close = function(callback) {
 
 Notification.prototype.sendMessage = function( /*message, callback*/ ) {};
 Notification.prototype.sendMessageToApplication = function( /*message, callback*/ ) {};
-
-
-module.exports.Notification = Notification;

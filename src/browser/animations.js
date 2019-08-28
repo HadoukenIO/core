@@ -3,15 +3,12 @@
  *
  *  Functions that support the window animations
  */
+import { app, BrowserWindow, nativeTimer as NativeTimer, windowTransaction, screen } from 'electron';
 
-let app = require('electron').app;
-let BrowserWindow = require('electron').BrowserWindow;
-let NativeTimer = require('electron').nativeTimer;
-let windowTransaction = require('electron').windowTransaction;
 
 import { clipBounds } from './utils';
-let Deferred = require('./deferred.js');
-let Tweens = require('./animation/tween.js');
+import { handleMove } from './deferred';
+import Tweens from './animation/tween.js';
 import {
     toSafeInt
 } from '../common/safe_int';
@@ -23,22 +20,22 @@ let _screen;
 let _animationHandler;
 // TODO this needs to be moved to a central location
 app.on('ready', function() {
-    _screen = require('electron').screen;
+    _screen = screen;
     _animationHandler = new AnimationHandler(1000.0 / 40.0);
 });
 
 
-function getAnimationHandler() {
+export function getAnimationHandler() {
     return _animationHandler;
 }
 
 
-function getScreen() {
+export function getScreen() {
     return _screen;
 }
 
 
-function AnimationHandler(desiredInterval) {
+export function AnimationHandler(desiredInterval) {
     var me = this,
         interval = Math.round(desiredInterval),
         _transitionsPerWindow = {},
@@ -226,7 +223,7 @@ function AnimationHandler(desiredInterval) {
                                 wt.on('deferred-set-window-pos', (event, payload) => {
                                     payload.forEach((winPos) => {
                                         let bwId = hwndToId[parseInt(winPos.hwnd)];
-                                        Deferred.handleMove(bwId, winPos);
+                                        handleMove(bwId, winPos);
                                     });
                                 });
                             }
@@ -339,7 +336,7 @@ function AnimationHandler(desiredInterval) {
 
 
 
-module.exports = {
+export default {
     getScreen,
     AnimationHandler,
     getAnimationHandler

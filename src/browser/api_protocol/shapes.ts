@@ -12,6 +12,7 @@ export type Endpoint = {
     apiFunc: ApiFunc;
     apiPath?: ApiPath;
     apiPolicyDelegate?: ApiPolicyDelegate;
+    defaultPermission?: boolean;  // true if undefined
     // future endpoint properties go here
 };
 export interface ActionMap {
