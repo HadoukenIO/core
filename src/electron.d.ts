@@ -1,4 +1,4 @@
-// Type definitions for Electron 4.2.0
+// Type definitions for Electron 6.0.0
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -8,6 +8,7 @@
 type GlobalEvent = Event;
 
 declare namespace Electron {
+  // TODO: Replace this declaration with NodeJS.EventEmitter
   class EventEmitter {
     addListener(event: string, listener: Function): this;
     on(event: string, listener: Function): this;
@@ -21,28 +22,17 @@ declare namespace Electron {
     listenerCount(type: string): number;
     prependListener(event: string, listener: Function): this;
     prependOnceListener(event: string, listener: Function): this;
-    eventNames(): string[];
+    eventNames(): Array<(string | symbol)>;
   }
 
   class Accelerator extends String {
 
   }
 
-  interface Event extends GlobalEvent {
-    preventDefault: () => void;
-    sender: WebContents;
-    returnValue: any;
-    ctrlKey?: boolean;
-    metaKey?: boolean;
-    shiftKey?: boolean;
-    altKey?: boolean;
-  }
-
   interface CommonInterface {
     clipboard: Clipboard;
     crashReporter: CrashReporter;
     nativeImage: typeof NativeImage;
-    screen: Screen;
     shell: Shell;
   }
 
@@ -51,30 +41,37 @@ declare namespace Electron {
     autoUpdater: AutoUpdater;
     BrowserView: typeof BrowserView;
     BrowserWindow: typeof BrowserWindow;
+    ChromeIpcClient: typeof ChromeIpcClient;
     ClientRequest: typeof ClientRequest;
     contentTracing: ContentTracing;
     Cookies: typeof Cookies;
     Debugger: typeof Debugger;
     dialog: Dialog;
     DownloadItem: typeof DownloadItem;
+    fileLock: FileLock;
     globalShortcut: GlobalShortcut;
+    IdleState: typeof IdleState;
     inAppPurchase: InAppPurchase;
     IncomingMessage: typeof IncomingMessage;
     ipcMain: IpcMain;
     Menu: typeof Menu;
     MenuItem: typeof MenuItem;
+    MessageWindow: typeof MessageWindow;
+    NativeTimer: typeof NativeTimer;
     net: Net;
     netLog: NetLog;
     Notification: typeof Notification;
     powerMonitor: PowerMonitor;
     powerSaveBlocker: PowerSaveBlocker;
     protocol: Protocol;
+    screen: Screen;
     session: typeof Session;
     systemPreferences: SystemPreferences;
     TouchBar: typeof TouchBar;
     Tray: typeof Tray;
     webContents: typeof WebContents;
     WebRequest: typeof WebRequest;
+    WindowTransaction: typeof WindowTransaction;
     WinEventHookEmitter: typeof WinEventHookEmitter;
   }
 
@@ -96,6 +93,7 @@ declare namespace Electron {
   const crashReporter: CrashReporter;
   const desktopCapturer: DesktopCapturer;
   const dialog: Dialog;
+  const fileLock: FileLock;
   const globalShortcut: GlobalShortcut;
   const inAppPurchase: InAppPurchase;
   const ipcMain: IpcMain;
@@ -204,9 +202,9 @@ declare namespace Electron {
                                                    userInfo: any) => void): this;
     /**
      * Emitted before the application starts closing its windows. Calling
-     * event.preventDefault() will prevent the default behaviour, which is terminating
+     * event.preventDefault() will prevent the default behavior, which is terminating
      * the application. Note: If application quit was initiated by
-     * autoUpdater.quitAndInstall() then before-quit is emitted after emitting close
+     * autoUpdater.quitAndInstall(), then before-quit is emitted after emitting close
      * event on all windows and closing them. Note: On Windows, this event will not be
      * emitted if the app is closed due to a shutdown/restart of the system or a user
      * logout.
@@ -374,6 +372,18 @@ declare namespace Electron {
                                                      */
                                                     error: string) => void): this;
     /**
+     * Emitted when desktopCapturer.getSources() is called in the renderer process of
+     * webContents. Calling event.preventDefault() will make it return empty sources.
+     */
+    on(event: 'desktop-capturer-get-sources', listener: (event: Event,
+                                                         webContents: WebContents) => void): this;
+    once(event: 'desktop-capturer-get-sources', listener: (event: Event,
+                                                         webContents: WebContents) => void): this;
+    addListener(event: 'desktop-capturer-get-sources', listener: (event: Event,
+                                                         webContents: WebContents) => void): this;
+    removeListener(event: 'desktop-capturer-get-sources', listener: (event: Event,
+                                                         webContents: WebContents) => void): this;
+    /**
      * Emitted when the gpu process crashes or is killed.
      */
     on(event: 'gpu-process-crashed', listener: (event: Event,
@@ -386,7 +396,7 @@ declare namespace Electron {
                                                 killed: boolean) => void): this;
     /**
      * Emitted when webContents wants to do basic auth. The default behavior is to
-     * cancel all authentications, to override this you should prevent the default
+     * cancel all authentications. To override this you should prevent the default
      * behavior with event.preventDefault() and call callback(username, password) with
      * the credentials.
      */
@@ -568,12 +578,29 @@ declare namespace Electron {
                                            webContents: WebContents,
                                            moduleName: string) => void): this;
     /**
+     * Emitted when the renderer process of webContents crashes or is killed.
+     */
+    on(event: 'renderer-process-crashed', listener: (event: Event,
+                                                     webContents: WebContents,
+                                                     killed: boolean) => void): this;
+    once(event: 'renderer-process-crashed', listener: (event: Event,
+                                                     webContents: WebContents,
+                                                     killed: boolean) => void): this;
+    addListener(event: 'renderer-process-crashed', listener: (event: Event,
+                                                     webContents: WebContents,
+                                                     killed: boolean) => void): this;
+    removeListener(event: 'renderer-process-crashed', listener: (event: Event,
+                                                     webContents: WebContents,
+                                                     killed: boolean) => void): this;
+    /**
      * This event will be emitted inside the primary instance of your application when
-     * a second instance has been executed. argv is an Array of the second instance's
-     * command line arguments, and workingDirectory is its current working directory.
-     * Usually applications respond to this by making their primary window focused and
-     * non-minimized. This event is guaranteed to be emitted after the ready event of
-     * app gets emitted.
+     * a second instance has been executed and calls app.requestSingleInstanceLock().
+     * argv is an Array of the second instance's command line arguments, and
+     * workingDirectory is its current working directory. Usually applications respond
+     * to this by making their primary window focused and non-minimized. This event is
+     * guaranteed to be emitted after the ready event of app gets emitted. Note: Extra
+     * command line arguments might be added by Chromium, such as
+     * --original-process-start-time.
      */
     on(event: 'second-instance', listener: (event: Event,
                                             /**
@@ -648,8 +675,8 @@ declare namespace Electron {
      * Emitted when Handoff is about to be resumed on another device. If you need to
      * update the state to be transferred, you should call event.preventDefault()
      * immediately, construct a new userInfo dictionary and call
-     * app.updateCurrentActiviy() in a timely manner. Otherwise the operation will fail
-     * and continue-activity-error will be called.
+     * app.updateCurrentActiviy() in a timely manner. Otherwise, the operation will
+     * fail and continue-activity-error will be called.
      */
     on(event: 'update-activity-state', listener: (event: Event,
                                                   /**
@@ -761,14 +788,16 @@ declare namespace Electron {
     removeListener(event: 'window-all-closed', listener: Function): this;
     /**
      * Adds path to the recent documents list. This list is managed by the OS. On
-     * Windows you can visit the list from the task bar, and on macOS you can visit it
-     * from dock menu.
+     * Windows, you can visit the list from the task bar, and on macOS, you can visit
+     * it from dock menu.
      */
     addRecentDocument(path: string): void;
     /**
      * Clears the recent documents list.
      */
     clearRecentDocuments(): void;
+    closeLogfile(): void;
+    compareFileSignature(fileName: string, signerType: string, signer: string): boolean;
     /**
      * By default, Chromium disables 3D APIs (e.g. WebGL) until restart on a per domain
      * basis if the GPU processes crashes too frequently. This function disables that
@@ -781,19 +810,14 @@ declare namespace Electron {
      */
     disableHardwareAcceleration(): void;
     /**
-     * Enables mixed sandbox mode on the app. This method can only be called before app
-     * is ready.
-     */
-    enableMixedSandbox(): void;
-    /**
      * Enables full sandbox mode on the app. This method can only be called before app
      * is ready.
      */
     enableSandbox(): void;
     /**
      * Exits immediately with exitCode. exitCode defaults to 0. All windows will be
-     * closed immediately without asking user and the before-quit and will-quit events
-     * will not be emitted.
+     * closed immediately without asking the user, and the before-quit and will-quit
+     * events will not be emitted.
      */
     exit(exitCode?: number): void;
     /**
@@ -802,37 +826,32 @@ declare namespace Electron {
      */
     focus(): void;
     generateGUID(): string;
-    /**
-     * Returns NativeWindowInfo[] - An Array of NativeWindowInfo objects for all
-     * top-level windows of the current user's desktop.
-     */
-    getAllNativeWindowInfo(skipOwnWindows: boolean): any[];
+    getAllNativeWindowInfo(skipOwnWindows: boolean): NativeWindowInfo[];
     getAppMetrics(): ProcessMetric[];
     getAppPath(): string;
     getBadgeCount(): number;
-    /**
-     * Returns the system's unique identifier used by the RVM.
-     */
-    GetCombinedId(): void;
-    /**
-     * Returns a string of the command line arguments passed to the runtime.
-     */
-    getCommandLineArguments(): void;
-    /**
-     * Returns the command line arguments passed to the runtime as an array of strings.
-     */
-    getCommandLineArgv(): void;
+    getCombinedId(): string;
+    getCommandLineArguments(): string;
+    getCommandLineArgv(): string[];
     getCurrentActivityType(): string;
     /**
-     * Fetches a path's associated icon. On Windows, there a 2 kinds of icons: On Linux
-     * and macOS, icons depend on the application associated with file mime type.
+     * Fetches a path's associated icon. On Windows, there are 2 kinds of icons: On
+     * Linux and macOS, icons depend on the application associated with file mime type.
+     * Deprecated Soon
+     */
+    getFileIcon(path: string, callback: (error: Error, icon: NativeImage) => void): void;
+    /**
+     * Fetches a path's associated icon. On Windows, there are 2 kinds of icons: On
+     * Linux and macOS, icons depend on the application associated with file mime type.
+     * Deprecated Soon
      */
     getFileIcon(path: string, options: FileIconOptions, callback: (error: Error, icon: NativeImage) => void): void;
     /**
      * Fetches a path's associated icon. On Windows, there a 2 kinds of icons: On Linux
      * and macOS, icons depend on the application associated with file mime type.
      */
-    getFileIcon(path: string, callback: (error: Error, icon: NativeImage) => void): void;
+    getFileIcon(path: string, options?: FileIconOptions): Promise<Electron.NativeImage>;
+    getFileSignature(fileName: string): FileSignature;
     getFocusedNativeId(): string;
     getGPUFeatureStatus(): GPUFeatureStatus;
     /**
@@ -844,34 +863,37 @@ declare namespace Electron {
      * be preferred if only basic information like vendorId or driverId is needed.
      */
     getGPUInfo(infoType: string): Promise<any>;
+    getGpuName(): string;
     /**
-     * Returns a unique (UUID) identifier for the machine. This call will return the
-     * same value on subsequent calls on the same machine(host). The values will be
-     * different on different machines, and should be considered globally unique.
+     * This call will return the same value on subsequent calls on the same
+     * machine(host). The values will be different on different machines, and should be
+     * considered globally unique.
      */
-    getHostToken(): void;
+    getHostToken(): string;
+    getHostToken(): string;
     /**
-     * Returns the runtime integrity level of the app as an integer Values: Unknown = 0
-     * Low = 1 Medium = 2 High = 3 System = 4
+     * Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
      */
-    getIntegrityLevel(): void;
+    getIntegrityLevel(): number;
     getJumpListSettings(): JumpListSettings;
     /**
      * To set the locale, you'll want to use a command line switch at app startup,
      * which may be found here. Note: When distributing your packaged app, you have to
-     * also ship the locales folder. Note: On Windows you have to call it after the
+     * also ship the locales folder. Note: On Windows, you have to call it after the
      * ready events gets emitted.
      */
     getLocale(): string;
     /**
-     * If you provided path and args options to app.setLoginItemSettings then you need
+     * Note: When unable to detect locale country code, it returns empty string.
+     */
+    getLocaleCountryCode(): string;
+    /**
+     * If you provided path and args options to app.setLoginItemSettings, then you need
      * to pass the same arguments here for openAtLogin to be set correctly.
      */
     getLoginItemSettings(options?: LoginItemSettingsOptions): LoginItemSettings;
-    /**
-     * Returns the hardware UUID of the machine as a string.
-     */
-    getMachineId(): void;
+    getMachineId(): string;
+    getMinLogLevel(): number;
     /**
      * Usually the name field of package.json is a short lowercased name, according to
      * the npm modules spec. You should usually also specify a productName field, which
@@ -879,22 +901,22 @@ declare namespace Electron {
      * name by Electron.
      */
     getName(): string;
-    /**
-     * Returns NativeWindowInfo - A NativeWindowInfo object for the window represented
-     * by nativeId.
-     */
-    getNativeWindowInfoForNativeId(nativeId: string): void;
+    getNamedCallback(key: string): Function;
+    getNativeWindowInfoForNativeId(nativeId: string): NativeWindowInfo;
     /**
      * You can request the following paths by the name:
      */
     getPath(name: string): string;
     getProcessIdForNativeId(nativeId: string): number;
-    /**
-     * Returns the number of milliseconds that have elapsed since the system was
-     * started.
-     */
-    getTickCount(): void;
+    getProcessLogfileName(): string;
+    getRuntimeVersion(): string;
+    getServicePack(): string;
+    getSystemArch(): string;
+    getSystemArch(): string;
+    getSystemName(): string;
+    getTickCount(): number;
     getVersion(): string;
+    hasNamedCallback(key: string): boolean;
     /**
      * This method returns whether or not this instance of your app is currently
      * holding the single instance lock.  You can request the lock with
@@ -916,7 +938,12 @@ declare namespace Electron {
      * Invalidates the current Handoff user activity.
      */
     invalidateCurrentActivity(type: string): void;
+    invokeNamedCallback(key: string, ...args: any[]): any;
+    /**
+     * Deprecated Soon
+     */
     isAccessibilitySupportEnabled(): boolean;
+    isAeroGlassEnabled(): boolean;
     /**
      * This method checks if the current executable is the default handler for a
      * protocol (aka URI scheme). If so, it will return true. Otherwise, it will return
@@ -927,6 +954,7 @@ declare namespace Electron {
      * the Windows Registry and LSCopyDefaultHandlerForURLScheme internally.
      */
     isDefaultProtocolClient(protocol: string, path?: string, args?: string[]): boolean;
+    isEmojiPanelSupported(): boolean;
     isInApplicationsFolder(): boolean;
     isReady(): boolean;
     isUnityRunning(): boolean;
@@ -934,29 +962,31 @@ declare namespace Electron {
      * Outputs message to the debug.log using the specified level. Accepted values for
      * level are info, warning, and error.
      */
-    log(level: string, message: string): void;
+    log(level: string, message: string): string;
+    makeSingleInstance(oldStyleFn: Function): boolean;
+    matchesURL(url: string, patterns: string[]): boolean;
+    migrateLocalStorage(oldPath: string, newPath: string, startupUrl: string): void;
     /**
-     * No confirmation dialog will be presented by default, if you wish to allow the
-     * user to confirm the operation you may do so using the dialog API. NOTE: This
+     * No confirmation dialog will be presented by default. If you wish to allow the
+     * user to confirm the operation, you may do so using the dialog API. NOTE: This
      * method throws errors if anything other than the user causes the move to fail.
-     * For instance if the user cancels the authorization dialog this method returns
-     * false. If we fail to perform the copy then this method will throw an error. The
+     * For instance if the user cancels the authorization dialog, this method returns
+     * false. If we fail to perform the copy, then this method will throw an error. The
      * message in the error should be informative and tell you exactly what went wrong
      */
     moveToApplicationsFolder(): boolean;
     /**
-     * Returns the current time. Watch out, the system might adjust its clock in which
-     * case time will actually go backwards. We don't guarantee that times are
-     * increasing, or that two calls to Now() won't be the same.
+     * Watch out, the system might adjust its clock in which case time will actually go
+     * backwards. We don't guarantee that times are increasing, or that two calls to
+     * Now() won't be the same.
      */
-    now(): void;
+    now(): number;
     /**
-     * Returns the current time. Same as Now() except that this function always uses
-     * system time so that there are no discrepancies between the returned time and
-     * system time even on virtual environments. For timing sensitive functionality,
-     * this function should be used.
+     * Same as Now() except that this function always uses system time so that there
+     * are no discrepancies between the returned time and system time even on virtual
+     * environments. For timing sensitive functionality, this function should be used.
      */
-    nowFromSystemTime(): void;
+    nowFromSystemTime(): number;
     /**
      * Try to close all windows. The before-quit event will be emitted first. If all
      * windows are successfully closed, the will-quit event will be emitted and by
@@ -966,20 +996,25 @@ declare namespace Electron {
      * handler.
      */
     quit(): void;
-    readRegistryValue(regRootKey: string, regSubkey: string, regValue: string): ReadRegistryValue;
     /**
-     * Relaunches the app when current instance exits. By default the new instance will
-     * use the same working directory and command line arguments with current instance.
-     * When args is specified, the args will be passed as command line arguments
-     * instead. When execPath is specified, the execPath will be executed for relaunch
-     * instead of current app. Note that this method does not quit the app when
-     * executed, you have to call app.quit or app.exit after calling app.relaunch to
-     * make the app restart. When app.relaunch is called for multiple times, multiple
-     * instances will be started after current instance exited. An example of
+     * Reads registry value.
+     */
+    readRegistryValue(regRootKey: string, regSubkey: string, regValue: string): ReadRegistryValue;
+    registerNamedCallback(key: string, callback: Function): void;
+    /**
+     * Relaunches the app when current instance exits. By default, the new instance
+     * will use the same working directory and command line arguments with current
+     * instance. When args is specified, the args will be passed as command line
+     * arguments instead. When execPath is specified, the execPath will be executed for
+     * relaunch instead of current app. Note that this method does not quit the app
+     * when executed, you have to call app.quit or app.exit after calling app.relaunch
+     * to make the app restart. When app.relaunch is called for multiple times,
+     * multiple instances will be started after current instance exited. An example of
      * restarting current instance immediately and adding a new command line argument
      * to the new instance:
      */
     relaunch(options?: RelaunchOptions): void;
+    releaseSingleInstance(): void;
     /**
      * Releases all locks that were created by requestSingleInstanceLock. This will
      * allow multiple instances of the application to once again run side by side.
@@ -990,28 +1025,28 @@ declare namespace Electron {
      * protocol (aka URI scheme). If so, it will remove the app as the default handler.
      */
     removeAsDefaultProtocolClient(protocol: string, path?: string, args?: string[]): boolean;
+    removeNamedCallback(key: string): void;
+    reopenLogfile(): void;
     /**
-     * This method makes your application a Single Instance Application - instead of
-     * allowing multiple instances of your app to run, this will ensure that only a
-     * single instance of your app is running, and other instances signal this instance
-     * and exit. The return value of this method indicates whether or not this instance
-     * of your application successfully obtained the lock.  If it failed to obtain the
-     * lock you can assume that another instance of your application is already running
-     * with the lock and exit immediately. I.e. This method returns true if your
-     * process is the primary instance of your application and your app should continue
-     * loading.  It returns false if your process should immediately quit as it has
-     * sent its parameters to another instance that has already acquired the lock. On
-     * macOS the system enforces single instance automatically when users try to open a
-     * second instance of your app in Finder, and the open-file and open-url events
-     * will be emitted for that. However when users start your app in command line the
-     * system's single instance mechanism will be bypassed and you have to use this
+     * The return value of this method indicates whether or not this instance of your
+     * application successfully obtained the lock.  If it failed to obtain the lock,
+     * you can assume that another instance of your application is already running with
+     * the lock and exit immediately. I.e. This method returns true if your process is
+     * the primary instance of your application and your app should continue loading.
+     * It returns false if your process should immediately quit as it has sent its
+     * parameters to another instance that has already acquired the lock. On macOS, the
+     * system enforces single instance automatically when users try to open a second
+     * instance of your app in Finder, and the open-file and open-url events will be
+     * emitted for that. However when users start your app in command line, the
+     * system's single instance mechanism will be bypassed, and you have to use this
      * method to ensure single instance. An example of activating the window of primary
      * instance when a second instance starts:
      */
     requestSingleInstanceLock(): boolean;
     /**
      * Set the about panel options. This will override the values defined in the app's
-     * .plist file. See the Apple docs for more details.
+     * .plist file on MacOS. See the Apple docs for more details. On Linux, values must
+     * be set in order to be shown; there are no defaults.
      */
     setAboutPanelOptions(options: AboutPanelOptionsOptions): void;
     /**
@@ -1020,9 +1055,16 @@ declare namespace Electron {
      * accessibility docs for more details. Disabled by default. This API must be
      * called after the ready event is emitted. Note: Rendering accessibility tree can
      * significantly affect the performance of your app. It should not be enabled by
-     * default.
+     * default. Deprecated Soon
      */
     setAccessibilitySupportEnabled(enabled: boolean): void;
+    /**
+     * Sets or creates a directory your app's logs which can then be manipulated with
+     * app.getPath() or app.setPath(pathName, newPath). On macOS, this directory will
+     * be set by deafault to /Library/Logs/YourAppName, and on Linux and Windows it
+     * will be placed inside your userData directory.
+     */
+    setAppLogsPath(path?: string): void;
     /**
      * Changes the Application User Model ID to id.
      */
@@ -1032,20 +1074,23 @@ declare namespace Electron {
      * (aka URI scheme). It allows you to integrate your app deeper into the operating
      * system. Once registered, all links with your-protocol:// will be opened with the
      * current executable. The whole link, including protocol, will be passed to your
-     * application as a parameter. On Windows you can provide optional parameters path,
-     * the path to your executable, and args, an array of arguments to be passed to
-     * your executable when it launches. Note: On macOS, you can only register
+     * application as a parameter. On Windows, you can provide optional parameters
+     * path, the path to your executable, and args, an array of arguments to be passed
+     * to your executable when it launches. Note: On macOS, you can only register
      * protocols that have been added to your app's info.plist, which can not be
      * modified at runtime. You can however change the file with a simple text editor
      * or script during build time. Please refer to Apple's documentation for details.
-     * The API uses the Windows Registry and LSSetDefaultHandlerForURLScheme
-     * internally.
+     * Note: In a Windows Store environment (when packaged as an appx) this API will
+     * return true for all calls but the registry key it sets won't be accessible by
+     * other applications.  In order to register your Windows Store application as a
+     * default protocol handler you must declare the protocol in your manifest. The API
+     * uses the Windows Registry and LSSetDefaultHandlerForURLScheme internally.
      */
     setAsDefaultProtocolClient(protocol: string, path?: string, args?: string[]): boolean;
     /**
      * Sets the counter badge for current app. Setting the count to 0 will hide the
-     * badge. On macOS it shows on the dock icon. On Linux it only works for Unity
-     * launcher, Note: Unity launcher requires the existence of a .desktop file to
+     * badge. On macOS, it shows on the dock icon. On Linux, it only works for Unity
+     * launcher. Note: Unity launcher requires the existence of a .desktop file to
      * work, for more information please read Desktop Environment Integration.
      */
     setBadgeCount(count: number): boolean;
@@ -1071,18 +1116,19 @@ declare namespace Electron {
      * and pass arguments that specify your application name. For example:
      */
     setLoginItemSettings(settings: Settings): void;
+    setMinLogLevel(level: number): void;
     /**
      * Overrides the current application's name.
      */
     setName(name: string): void;
     /**
      * Overrides the path to a special directory or file associated with name. If the
-     * path specifies a directory that does not exist, the directory will be created by
-     * this method. On failure an Error is thrown. You can only override paths of a
-     * name defined in app.getPath. By default, web pages' cookies and caches will be
-     * stored under the userData directory. If you want to change this location, you
-     * have to override the userData path before the ready event of the app module is
-     * emitted.
+     * path specifies a directory that does not exist, an Error is thrown. In that
+     * case, the directory should be created with fs.mkdirSync or similar. You can only
+     * override paths of a name defined in app.getPath. By default, web pages' cookies
+     * and caches will be stored under the userData directory. If you want to change
+     * this location, you have to override the userData path before the ready event of
+     * the app module is emitted.
      */
     setPath(name: string, path: string): void;
     /**
@@ -1102,10 +1148,14 @@ declare namespace Electron {
      */
     show(): void;
     /**
-     * Show the about panel with the values defined in the app's .plist file or with
-     * the options set via app.setAboutPanelOptions(options).
+     * Show the app's about panel options. These options can be overridden with
+     * app.setAboutPanelOptions(options).
      */
     showAboutPanel(): void;
+    /**
+     * Show the platform's native emoji picker.
+     */
+    showEmojiPanel(): void;
     /**
      * Start accessing a security scoped resource. With this method Electron
      * applications that are packaged for the Mac App Store may reach outside their
@@ -1118,7 +1168,37 @@ declare namespace Electron {
      * userInfo into its current userInfo dictionary.
      */
     updateCurrentActivity(type: string, userInfo: any): void;
+    verifyFileSignature(fileName: string, interfaceType: number, flags: number): string;
+    vlog(level: number, message: string): void;
     whenReady(): Promise<void>;
+    /**
+     * A Boolean property that's true if Chrome's accessibility support is enabled,
+     * false otherwise. This property will be true if the use of assistive
+     * technologies, such as screen readers, has been detected. Setting this property
+     * to true manually enables Chrome's accessibility support, allowing developers to
+     * expose accessibility switch to users in application settings. See Chromium's
+     * accessibility docs for more details. Disabled by default. This API must be
+     * called after the ready event is emitted. Note: Rendering accessibility tree can
+     * significantly affect the performance of your app. It should not be enabled by
+     * default.
+     */
+    accessibilitySupportEnabled?: boolean;
+    /**
+     * A Boolean which when true disables the overrides that Electron has in place to
+     * ensure renderer processes are restarted on every navigation.  The current
+     * default value for this property is false. The intention is for these overrides
+     * to become disabled by default and then at some point in the future this property
+     * will be removed.  This property impacts which native modules you can use in the
+     * renderer process.  For more information on the direction Electron is going with
+     * renderer process restarts and usage of native modules in the renderer process
+     * please check out this Tracking Issue.
+     */
+    allowRendererProcessReuse?: boolean;
+    /**
+     * A Menu property that return Menu if one has been set and null otherwise. Users
+     * can pass a Menu to set this property.
+     */
+    applicationMenu?: Menu;
     commandLine: CommandLine;
     dock: Dock;
     /**
@@ -1282,7 +1362,8 @@ declare namespace Electron {
      * media keys or browser commands, as well as the "Back" button built into some
      * mice on Windows. Commands are lowercased, underscores are replaced with hyphens,
      * and the APPCOMMAND_ prefix is stripped off. e.g. APPCOMMAND_BROWSER_BACKWARD is
-     * emitted as browser-backward.
+     * emitted as browser-backward. The following app commands are explictly supported
+     * on Linux:
      */
     on(event: 'app-command', listener: (event: Event,
                                         command: string) => void): this;
@@ -1474,8 +1555,7 @@ declare namespace Electron {
     addListener(event: 'moved', listener: Function): this;
     removeListener(event: 'moved', listener: Function): this;
     /**
-     * Emitted when the native new tab button is clicked. <!-- OpenFin Instance Events
-     * -->
+     * Emitted when the native new tab button is clicked.
      */
     on(event: 'new-window-for-tab', listener: Function): this;
     once(event: 'new-window-for-tab', listener: Function): this;
@@ -1483,16 +1563,21 @@ declare namespace Electron {
     removeListener(event: 'new-window-for-tab', listener: Function): this;
     /**
      * Emitted when the document changed its title, calling event.preventDefault() will
-     * prevent the native window's title from changing.
+     * prevent the native window's title from changing. explicitSet is false when title
+     * is synthesized from file url.
      */
     on(event: 'page-title-updated', listener: (event: Event,
-                                               title: string) => void): this;
+                                               title: string,
+                                               explicitSet: boolean) => void): this;
     once(event: 'page-title-updated', listener: (event: Event,
-                                               title: string) => void): this;
+                                               title: string,
+                                               explicitSet: boolean) => void): this;
     addListener(event: 'page-title-updated', listener: (event: Event,
-                                               title: string) => void): this;
+                                               title: string,
+                                               explicitSet: boolean) => void): this;
     removeListener(event: 'page-title-updated', listener: (event: Event,
-                                               title: string) => void): this;
+                                               title: string,
+                                               explicitSet: boolean) => void): this;
     /**
      * Emitted when the web page has been rendered (while not being shown) and window
      * can be displayed without a visual flash.
@@ -1726,6 +1811,10 @@ declare namespace Electron {
      */
     activate(): void;
     /**
+     * Replacement API for setBrowserView supporting work with multi browser views.
+     */
+    addBrowserView(browserView: BrowserView): void;
+    /**
      * Adds a window as a tab on this window, after the tab for the window instance.
      */
     addTabbedWindow(browserWindow: BrowserWindow): void;
@@ -1740,13 +1829,24 @@ declare namespace Electron {
      */
     bringToFront(): void;
     /**
-     * Same as webContents.capturePage([rect, ]callback).
-     */
-    capturePage(rect: Rectangle, callback: (image: NativeImage) => void): void;
-    /**
-     * Same as webContents.capturePage([rect, ]callback).
+     * Captures a snapshot of the page within rect. Upon completion callback will be
+     * called with callback(image). The image is an instance of NativeImage that stores
+     * data of the snapshot. Omitting rect will capture the whole visible page.
+     * Deprecated Soon
      */
     capturePage(callback: (image: NativeImage) => void): void;
+    /**
+     * Captures a snapshot of the page within rect. Omitting rect will capture the
+     * whole visible page.
+     */
+    capturePage(rect?: Rectangle): Promise<Electron.NativeImage>;
+    /**
+     * Captures a snapshot of the page within rect. Upon completion callback will be
+     * called with callback(image). The image is an instance of NativeImage that stores
+     * data of the snapshot. Omitting rect will capture the whole visible page.
+     * Deprecated Soon
+     */
+    capturePage(rect: Rectangle, callback: (image: NativeImage) => void): void;
     /**
      * Moves window to the center of the screen.
      */
@@ -1785,11 +1885,13 @@ declare namespace Electron {
      */
     getAlphaMask(): void;
     getBounds(): Rectangle;
-    /**
-     * Note: The BrowserView API is currently experimental and may change or be removed
-     * in future Electron releases. <!-- OpenFin Instance Methods -->
-     */
     getBrowserView(): (BrowserView) | (null);
+    /**
+     * Returns array of BrowserView what was an attached with addBrowserView or
+     * setBrowserView. Note: The BrowserView API is currently experimental and may
+     * change or be removed in future Electron releases.
+     */
+    getBrowserViews(): void;
     getChildWindows(): BrowserWindow[];
     getContentBounds(): Rectangle;
     getContentSize(): number[];
@@ -1811,17 +1913,17 @@ declare namespace Electron {
      * Rectangle.
      */
     getNormalBounds(): Rectangle;
-    getOpacity(): number;
     /**
      * Return the current opacity as a double between 0.0 and 1.0
      */
     getOpacity(): void;
+    getOpacity(): number;
     getParentWindow(): BrowserWindow;
     getPosition(): number[];
     getRepresentedFilename(): string;
     getSize(): number[];
     /**
-     * Note: The title of web page can be different from the title of the native
+     * Note: The title of the web page can be different from the title of the native
      * window.
      */
     getTitle(): string;
@@ -1845,7 +1947,7 @@ declare namespace Electron {
      * Hooks a windows message. The callback is called when the message is received in
      * the WndProc.
      */
-    hookWindowMessage(message: number, callback: Function): void;
+    hookWindowMessage(message: number, callback: (wParam: any, lParam: any) => void): void;
     /**
      * Cause the window to redraw it's rounded corner regions.
      */
@@ -1896,7 +1998,7 @@ declare namespace Electron {
      * Same as webContents.loadFile, filePath should be a path to an HTML file relative
      * to the root of your application.  See the webContents docs for more information.
      */
-    loadFile(filePath: string, options?: LoadFileOptions): void;
+    loadFile(filePath: string, options?: LoadFileOptions): Promise<void>;
     /**
      * Same as webContents.loadURL(url[, options]). The url can be a remote address
      * (e.g. http://) or a path to a local HTML file using the file:// protocol. To
@@ -1904,7 +2006,7 @@ declare namespace Electron {
      * url.format method: You can load a URL using a POST request with URL-encoded data
      * by doing the following:
      */
-    loadURL(url: string, options?: LoadURLOptions): void;
+    loadURL(url: string, options?: LoadURLOptions): Promise<void>;
     /**
      * Maximizes the window. This will also show (but not focus) the window if it isn't
      * being displayed already.
@@ -1937,6 +2039,11 @@ declare namespace Electron {
      * Same as webContents.reload.
      */
     reload(): void;
+    removeBrowserView(browserView: BrowserView): void;
+    /**
+     * Remove the window's menu bar.
+     */
+    removeMenu(): void;
     /**
      * Reset the window to regular (non-rounded) corners.
      */
@@ -2081,8 +2188,7 @@ declare namespace Electron {
      */
     setMaximumSize(width: number, height: number): void;
     /**
-     * Sets the menu as the window's menu bar, setting it to null will remove the menu
-     * bar.
+     * Sets the menu as the window's menu bar.
      */
     setMenu(menu: (Menu) | (null)): void;
     /**
@@ -2104,11 +2210,11 @@ declare namespace Electron {
      */
     setMovable(movable: boolean): void;
     /**
-     * Sets the opacity of the window. On Linux does nothing.
+     * Set the transparency of the window. 0 is transparent. 1 is opaque. 0.5 is half.
      */
     setOpacity(opacity: number): void;
     /**
-     * Set the transparency of the window. 0 is transparent. 1 is opaque. 0.5 is half.
+     * Sets the opacity of the window. On Linux does nothing.
      */
     setOpacity(opacity: number): void;
     /**
@@ -2153,7 +2259,7 @@ declare namespace Electron {
      * Override the grab area size of the bottom right corner of the window with a
      * custom size.
      */
-    setResizeRegionBottomRight(): void;
+    setResizeRegionBottomRight(size: number): void;
     /**
      * Set rounded corners on the window.
      */
@@ -2403,6 +2509,44 @@ declare namespace Electron {
     state: string;
   }
 
+  class ChromeIpcClient extends EventEmitter {
+
+    // Docs: http://electronjs.org/docs/api/chrome-ipc-client
+
+    /**
+     * Emitted when the IPC channel is connected after calling connect().
+     */
+    on(event: 'channel-connected', listener: (event: Event) => void): this;
+    once(event: 'channel-connected', listener: (event: Event) => void): this;
+    addListener(event: 'channel-connected', listener: (event: Event) => void): this;
+    removeListener(event: 'channel-connected', listener: (event: Event) => void): this;
+    /**
+     * Emitted when the IPC channel is closed due to an error.
+     */
+    on(event: 'channel-error', listener: (event: Event) => void): this;
+    once(event: 'channel-error', listener: (event: Event) => void): this;
+    addListener(event: 'channel-error', listener: (event: Event) => void): this;
+    removeListener(event: 'channel-error', listener: (event: Event) => void): this;
+    /**
+     * Emitted when data is received on the IPC channel.
+     */
+    on(event: 'channel-receive', listener: (event: Event) => void): this;
+    once(event: 'channel-receive', listener: (event: Event) => void): this;
+    addListener(event: 'channel-receive', listener: (event: Event) => void): this;
+    removeListener(event: 'channel-receive', listener: (event: Event) => void): this;
+    constructor();
+    close(): void;
+    /**
+     * Attempts to connect to a listener with the given channel name.
+     */
+    connect(channel_name: string): void;
+    /**
+     * Sends the data 'msg' over the connected channel.
+     */
+    send(msg: string): void;
+    sendwait(msg: string, timeout: number): void;
+  }
+
   class ClientRequest extends EventEmitter {
 
     // Docs: http://electronjs.org/docs/api/client-request
@@ -2564,12 +2708,12 @@ declare namespace Electron {
 
     // Docs: http://electronjs.org/docs/api/clipboard
 
-    availableFormats(type?: string): string[];
+    availableFormats(type?: 'selection' | 'clipboard'): string[];
     /**
      * Clears the clipboard content.
      */
-    clear(type?: string): void;
-    has(format: string, type?: string): boolean;
+    clear(type?: 'selection' | 'clipboard'): void;
+    has(format: string, type?: 'selection' | 'clipboard'): boolean;
     read(format: string): string;
     /**
      * Returns an Object containing title and url keys representing the bookmark in the
@@ -2579,24 +2723,24 @@ declare namespace Electron {
     readBookmark(): ReadBookmark;
     readBuffer(format: string): Buffer;
     readFindText(): string;
-    readHTML(type?: string): string;
-    readImage(type?: string): NativeImage;
-    readRTF(type?: string): string;
-    readText(type?: string): string;
+    readHTML(type?: 'selection' | 'clipboard'): string;
+    readImage(type?: 'selection' | 'clipboard'): NativeImage;
+    readRTF(type?: 'selection' | 'clipboard'): string;
+    readText(type?: 'selection' | 'clipboard'): string;
     /**
      * Writes data to the clipboard.
      */
-    write(data: Data, type?: string): void;
+    write(data: Data, type?: 'selection' | 'clipboard'): void;
     /**
      * Writes the title and url into the clipboard as a bookmark. Note: Most apps on
      * Windows don't support pasting bookmarks into them so you can use clipboard.write
      * to write both a bookmark and fallback text to the clipboard.
      */
-    writeBookmark(title: string, url: string, type?: string): void;
+    writeBookmark(title: string, url: string, type?: 'selection' | 'clipboard'): void;
     /**
      * Writes the buffer into the clipboard as format.
      */
-    writeBuffer(format: string, buffer: Buffer, type?: string): void;
+    writeBuffer(format: string, buffer: Buffer, type?: 'selection' | 'clipboard'): void;
     /**
      * Writes the text into the find pasteboard as plain text. This method uses
      * synchronous IPC when called from the renderer process.
@@ -2605,19 +2749,19 @@ declare namespace Electron {
     /**
      * Writes markup to the clipboard.
      */
-    writeHTML(markup: string, type?: string): void;
+    writeHTML(markup: string, type?: 'selection' | 'clipboard'): void;
     /**
      * Writes image to the clipboard.
      */
-    writeImage(image: NativeImage, type?: string): void;
+    writeImage(image: NativeImage, type?: 'selection' | 'clipboard'): void;
     /**
      * Writes the text into the clipboard in RTF.
      */
-    writeRTF(text: string, type?: string): void;
+    writeRTF(text: string, type?: 'selection' | 'clipboard'): void;
     /**
      * Writes the text into the clipboard as plain text.
      */
-    writeText(text: string, type?: string): void;
+    writeText(text: string, type?: 'selection' | 'clipboard'): void;
   }
 
   interface ContentTracing extends EventEmitter {
@@ -2625,46 +2769,41 @@ declare namespace Electron {
     // Docs: http://electronjs.org/docs/api/content-tracing
 
     /**
-     * Get the current monitoring traced data. Child processes typically cache trace
-     * data and only rarely flush and send trace data back to the main process. This is
-     * because it may be an expensive operation to send the trace data over IPC and we
-     * would like to avoid unneeded runtime overhead from tracing. So, to end tracing,
-     * we must asynchronously ask all child processes to flush any pending trace data.
-     * Once all child processes have acknowledged the captureMonitoringSnapshot request
-     * the callback will be called with a file that contains the traced data.
-     */
-    captureMonitoringSnapshot(resultFilePath: string, callback: (resultFilePath: string) => void): void;
-    /**
      * Get a set of category groups. The category groups can change as new code paths
      * are reached. Once all child processes have acknowledged the getCategories
-     * request the callback is invoked with an array of category groups.
+     * request the callback is invoked with an array of category groups. Deprecated
+     * Soon
      */
     getCategories(callback: (categories: string[]) => void): void;
     /**
+     * Get a set of category groups. The category groups can change as new code paths
+     * are reached.
+     */
+    getCategories(): Promise<string[]>;
+    /**
      * Get the maximum usage across processes of trace buffer as a percentage of the
      * full state. When the TraceBufferUsage value is determined the callback is
-     * called.
+     * called. Deprecated Soon
      */
-    getTraceBufferUsage(callback: (value: number, percentage: number) => void): void;
+    getTraceBufferUsage(callback: (value: number) => void): void;
     /**
-     * Start monitoring on all processes. Monitoring begins immediately locally and
-     * asynchronously on child processes as soon as they receive the startMonitoring
-     * request. Once all child processes have acknowledged the startMonitoring request
-     * the callback will be called.
+     * Get the maximum usage across processes of trace buffer as a percentage of the
+     * full state.
      */
-    startMonitoring(options: StartMonitoringOptions, callback: Function): void;
+    getTraceBufferUsage(): Promise<any>;
     /**
      * Start recording on all processes. Recording begins immediately locally and
      * asynchronously on child processes as soon as they receive the EnableRecording
      * request. The callback will be called once all child processes have acknowledged
-     * the startRecording request.
+     * the startRecording request. Deprecated Soon
      */
     startRecording(options: (TraceCategoriesAndOptions) | (TraceConfig), callback: Function): void;
     /**
-     * Stop monitoring on all processes. Once all child processes have acknowledged the
-     * stopMonitoring request the callback is called.
+     * Start recording on all processes. Recording begins immediately locally and
+     * asynchronously on child processes as soon as they receive the EnableRecording
+     * request.
      */
-    stopMonitoring(callback: Function): void;
+    startRecording(options: (TraceCategoriesAndOptions) | (TraceConfig)): Promise<void>;
     /**
      * Stop recording on all processes. Child processes typically cache trace data and
      * only rarely flush and send trace data back to the main process. This helps to
@@ -2674,9 +2813,18 @@ declare namespace Electron {
      * acknowledged the stopRecording request, callback will be called with a file that
      * contains the traced data. Trace data will be written into resultFilePath if it
      * is not empty or into a temporary file. The actual file path will be passed to
-     * callback if it's not null.
+     * callback if it's not null. Deprecated Soon
      */
     stopRecording(resultFilePath: string, callback: (resultFilePath: string) => void): void;
+    /**
+     * Stop recording on all processes. Child processes typically cache trace data and
+     * only rarely flush and send trace data back to the main process. This helps to
+     * minimize the runtime overhead of tracing since sending trace data over IPC can
+     * be an expensive operation. So, to end tracing, we must asynchronously ask all
+     * child processes to flush any pending trace data. Trace data will be written into
+     * resultFilePath if it is not empty or into a temporary file.
+     */
+    stopRecording(resultFilePath: string): Promise<string>;
   }
 
   interface Cookie {
@@ -2788,20 +2936,37 @@ declare namespace Electron {
     /**
      * Writes any unwritten cookies data to disk.
      */
+    flushStore(): Promise<void>;
+    /**
+     * Writes any unwritten cookies data to disk. Deprecated Soon
+     */
     flushStore(callback: Function): void;
     /**
+     * Sends a request to get all cookies matching filter, and resolves a promise with
+     * the response.
+     */
+    get(filter: Filter): Promise<Electron.Cookie[]>;
+    /**
      * Sends a request to get all cookies matching filter, callback will be called with
-     * callback(error, cookies) on complete.
+     * callback(error, cookies) on complete. Deprecated Soon
      */
     get(filter: Filter, callback: (error: Error, cookies: Cookie[]) => void): void;
     /**
+     * Removes the cookies matching url and name
+     */
+    remove(url: string, name: string): Promise<void>;
+    /**
      * Removes the cookies matching url and name, callback will called with callback()
-     * on complete.
+     * on complete. Deprecated Soon
      */
     remove(url: string, name: string, callback: Function): void;
     /**
+     * Sets a cookie with details.
+     */
+    set(details: Details): Promise<void>;
+    /**
      * Sets a cookie with details, callback will be called with callback(error) on
-     * complete.
+     * complete. Deprecated Soon
      */
     set(details: Details, callback: (error: Error) => void): void;
   }
@@ -2829,15 +2994,15 @@ declare namespace Electron {
     id: string;
   }
 
-  interface CrashReporter extends EventEmitter {
+  interface CrashReporter {
 
     // Docs: http://electronjs.org/docs/api/crash-reporter
 
     /**
      * Set an extra parameter to be sent with the crash report. The values specified
      * here will be sent in addition to any values set via the extra option when start
-     * was called. This API is only available on macOS, if you need to add/update extra
-     * parameters on Linux and Windows after your first call to start you can call
+     * was called. This API is only available on macOS and windows, if you need to
+     * add/update extra parameters on Linux after your first call to start you can call
      * start again with the updated extra options.
      */
     addExtraParameter(key: string, value: string): void;
@@ -2881,13 +3046,10 @@ declare namespace Electron {
      * reports from them, use process.crashReporter.start instead. Pass the same
      * options as above along with an additional one called crashesDirectory that
      * should point to a directory to store the crash reports temporarily. You can test
-     * this out by calling process.crash() to crash the child process. Note: To collect
-     * crash reports from child process in Windows, you need to add this extra code as
-     * well. This will start the process that will monitor and send the crash reports.
-     * Replace submitURL, productName and crashesDirectory with appropriate values.
-     * Note: If you need send additional/updated extra parameters after your first call
-     * start you can call addExtraParameter on macOS or call start again with the
-     * new/updated extra parameters on Linux and Windows. Note: On macOS, Electron uses
+     * this out by calling process.crash() to crash the child process. Note: If you
+     * need send additional/updated extra parameters after your first call start you
+     * can call addExtraParameter on macOS or call start again with the new/updated
+     * extra parameters on Linux and Windows. Note: On macOS and windows, Electron uses
      * a new crashpad client for crash collection and reporting. If you want to enable
      * crash reporting, initializing crashpad from the main process using
      * crashReporter.start is required regardless of which process you want to collect
@@ -2897,6 +3059,18 @@ declare namespace Electron {
      * companyName, productName or any of the extra information.
      */
     start(options: CrashReporterStartOptions): void;
+    startOFCrashReporter(options: any): StartOFCrashReporter;
+  }
+
+  interface CustomScheme {
+
+    // Docs: http://electronjs.org/docs/api/structures/custom-scheme
+
+    privileges?: Privileges;
+    /**
+     * Custom schemes to be registered with options.
+     */
+    scheme: string;
   }
 
   class Debugger extends EventEmitter {
@@ -2980,9 +3154,13 @@ declare namespace Electron {
     detach(): void;
     isAttached(): boolean;
     /**
-     * Send given command to the debugging target.
+     * Send given command to the debugging target. Deprecated Soon
      */
     sendCommand(method: string, commandParams?: any, callback?: (error: any, result: any) => void): void;
+    /**
+     * Send given command to the debugging target.
+     */
+    sendCommand(method: string, commandParams?: any): Promise<any>;
   }
 
   interface DesktopCapturer extends EventEmitter {
@@ -2993,15 +3171,22 @@ declare namespace Electron {
      * Starts gathering information about all available desktop media sources, and
      * calls callback(error, sources) when finished. sources is an array of
      * DesktopCapturerSource objects, each DesktopCapturerSource represents a screen or
-     * an individual window that can be captured.
+     * an individual window that can be captured. Deprecated Soon
      */
     getSources(options: SourcesOptions, callback: (error: Error, sources: DesktopCapturerSource[]) => void): void;
+    getSources(options: SourcesOptions): Promise<Electron.DesktopCapturerSource[]>;
   }
 
   interface DesktopCapturerSource {
 
     // Docs: http://electronjs.org/docs/api/structures/desktop-capturer-source
 
+    /**
+     * An icon image of the application that owns the window or null if the source has
+     * a type screen. The size of the icon is not known in advance and depends on what
+     * the the application provides.
+     */
+    appIcon: NativeImage;
     /**
      * A unique identifier that will correspond to the id of the matching returned by
      * the . On some platforms, this is equivalent to the XX portion of the id field
@@ -3038,7 +3223,7 @@ declare namespace Electron {
      * information, and gives the user the option of trusting/importing the
      * certificate. If you provide a browserWindow argument the dialog will be attached
      * to the parent window, making it modal. On Windows the options are more limited,
-     * due to the Win32 APIs used:
+     * due to the Win32 APIs used: Deprecated Soon
      */
     showCertificateTrustDialog(browserWindow: BrowserWindow, options: CertificateTrustDialogOptions, callback: Function): void;
     /**
@@ -3048,6 +3233,14 @@ declare namespace Electron {
      * to the parent window, making it modal. On Windows the options are more limited,
      * due to the Win32 APIs used:
      */
+    showCertificateTrustDialog(options: CertificateTrustDialogOptions): Promise<void>;
+    /**
+     * On macOS, this displays a modal dialog that shows a message and certificate
+     * information, and gives the user the option of trusting/importing the
+     * certificate. If you provide a browserWindow argument the dialog will be attached
+     * to the parent window, making it modal. On Windows the options are more limited,
+     * due to the Win32 APIs used: Deprecated Soon
+     */
     showCertificateTrustDialog(options: CertificateTrustDialogOptions, callback: Function): void;
     /**
      * On macOS, this displays a modal dialog that shows a message and certificate
@@ -3055,6 +3248,14 @@ declare namespace Electron {
      * certificate. If you provide a browserWindow argument the dialog will be attached
      * to the parent window, making it modal. On Windows the options are more limited,
      * due to the Win32 APIs used:
+     */
+    showCertificateTrustDialog(browserWindow: BrowserWindow, options: CertificateTrustDialogOptions): Promise<void>;
+    /**
+     * On macOS, this displays a modal dialog that shows a message and certificate
+     * information, and gives the user the option of trusting/importing the
+     * certificate. If you provide a browserWindow argument the dialog will be attached
+     * to the parent window, making it modal. On Windows the options are more limited,
+     * due to the Win32 APIs used: Deprecated Soon
      */
     showCertificateTrustDialog(browserWindow: BrowserWindow, options: CertificateTrustDialogOptions, callback: Function): void;
     /**
@@ -3066,73 +3267,140 @@ declare namespace Electron {
     showErrorBox(title: string, content: string): void;
     /**
      * Shows a message box, it will block the process until the message box is closed.
-     * It returns the index of the clicked button. The browserWindow argument allows
-     * the dialog to attach itself to a parent window, making it modal. If a callback
-     * is passed, the dialog will not block the process. The API call will be
-     * asynchronous and the result will be passed via callback(response).
+     * The browserWindow argument allows the dialog to attach itself to a parent
+     * window, making it modal.
      */
-    showMessageBox(browserWindow: BrowserWindow, options: MessageBoxOptions, callback?: (response: number, checkboxChecked: boolean) => void): number;
+    showMessageBox(browserWindow: BrowserWindow, options: MessageBoxOptions): Promise<Electron.MessageBoxReturnValue>;
+    /**
+     * Shows a message box, it will block the process until the message box is closed.
+     * The browserWindow argument allows the dialog to attach itself to a parent
+     * window, making it modal.
+     */
+    showMessageBox(options: MessageBoxOptions): Promise<Electron.MessageBoxReturnValue>;
     /**
      * Shows a message box, it will block the process until the message box is closed.
      * It returns the index of the clicked button. The browserWindow argument allows
-     * the dialog to attach itself to a parent window, making it modal. If a callback
-     * is passed, the dialog will not block the process. The API call will be
-     * asynchronous and the result will be passed via callback(response).
+     * the dialog to attach itself to a parent window, making it modal.
      */
-    showMessageBox(options: MessageBoxOptions, callback?: (response: number, checkboxChecked: boolean) => void): number;
+    showMessageBoxSync(browserWindow: BrowserWindow, options: MessageBoxSyncOptions): number;
+    /**
+     * Shows a message box, it will block the process until the message box is closed.
+     * It returns the index of the clicked button. The browserWindow argument allows
+     * the dialog to attach itself to a parent window, making it modal.
+     */
+    showMessageBoxSync(options: MessageBoxSyncOptions): number;
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
      * be displayed or selected when you want to limit the user to a specific type. For
      * example: The extensions array should contain extensions without wildcards or
      * dots (e.g. 'png' is good but '.png' and '*.png' are bad). To show all files, use
-     * the '*' wildcard (no other wildcard is supported). If a callback is passed, the
-     * API call will be asynchronous and the result will be passed via
-     * callback(filenames). Note: On Windows and Linux an open dialog can not be both a
-     * file selector and a directory selector, so if you set properties to ['openFile',
-     * 'openDirectory'] on these platforms, a directory selector will be shown.
+     * the '*' wildcard (no other wildcard is supported). Note: On Windows and Linux an
+     * open dialog can not be both a file selector and a directory selector, so if you
+     * set properties to ['openFile', 'openDirectory'] on these platforms, a directory
+     * selector will be shown.
      */
-    showOpenDialog(browserWindow: BrowserWindow, options: OpenDialogOptions, callback?: (filePaths: string[], bookmarks: string[]) => void): (string[]) | (undefined);
+    showOpenDialog(browserWindow: BrowserWindow, options: OpenDialogOptions, callback?: Function): Promise<Electron.OpenDialogReturnValue>;
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
      * be displayed or selected when you want to limit the user to a specific type. For
      * example: The extensions array should contain extensions without wildcards or
      * dots (e.g. 'png' is good but '.png' and '*.png' are bad). To show all files, use
-     * the '*' wildcard (no other wildcard is supported). If a callback is passed, the
-     * API call will be asynchronous and the result will be passed via
-     * callback(filenames). Note: On Windows and Linux an open dialog can not be both a
-     * file selector and a directory selector, so if you set properties to ['openFile',
-     * 'openDirectory'] on these platforms, a directory selector will be shown.
+     * the '*' wildcard (no other wildcard is supported). Note: On Windows and Linux an
+     * open dialog can not be both a file selector and a directory selector, so if you
+     * set properties to ['openFile', 'openDirectory'] on these platforms, a directory
+     * selector will be shown.
      */
-    showOpenDialog(options: OpenDialogOptions, callback?: (filePaths: string[], bookmarks: string[]) => void): (string[]) | (undefined);
+    showOpenDialog(options: OpenDialogOptions, callback?: Function): Promise<Electron.OpenDialogReturnValue>;
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
-     * be displayed, see dialog.showOpenDialog for an example. If a callback is passed,
-     * the API call will be asynchronous and the result will be passed via
-     * callback(filename).
+     * be displayed or selected when you want to limit the user to a specific type. For
+     * example: The extensions array should contain extensions without wildcards or
+     * dots (e.g. 'png' is good but '.png' and '*.png' are bad). To show all files, use
+     * the '*' wildcard (no other wildcard is supported). Note: On Windows and Linux an
+     * open dialog can not be both a file selector and a directory selector, so if you
+     * set properties to ['openFile', 'openDirectory'] on these platforms, a directory
+     * selector will be shown.
      */
-    showSaveDialog(browserWindow: BrowserWindow, options: SaveDialogOptions, callback?: (filename: string, bookmark: string) => void): (string) | (undefined);
+    showOpenDialogSync(browserWindow: BrowserWindow, options: OpenDialogSyncOptions): void;
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
-     * be displayed, see dialog.showOpenDialog for an example. If a callback is passed,
-     * the API call will be asynchronous and the result will be passed via
-     * callback(filename).
+     * be displayed or selected when you want to limit the user to a specific type. For
+     * example: The extensions array should contain extensions without wildcards or
+     * dots (e.g. 'png' is good but '.png' and '*.png' are bad). To show all files, use
+     * the '*' wildcard (no other wildcard is supported). Note: On Windows and Linux an
+     * open dialog can not be both a file selector and a directory selector, so if you
+     * set properties to ['openFile', 'openDirectory'] on these platforms, a directory
+     * selector will be shown.
      */
-    showSaveDialog(options: SaveDialogOptions, callback?: (filename: string, bookmark: string) => void): (string) | (undefined);
+    showOpenDialogSync(options: OpenDialogSyncOptions): void;
+    /**
+     * The browserWindow argument allows the dialog to attach itself to a parent
+     * window, making it modal. The filters specifies an array of file types that can
+     * be displayed, see dialog.showOpenDialog for an example. Note: On macOS, using
+     * the asynchronous version is recommended to avoid issues when expanding and
+     * collapsing the dialog.
+     */
+    showSaveDialog(options: SaveDialogOptions): Promise<Electron.SaveDialogReturnValue>;
+    /**
+     * The browserWindow argument allows the dialog to attach itself to a parent
+     * window, making it modal. The filters specifies an array of file types that can
+     * be displayed, see dialog.showOpenDialog for an example. Note: On macOS, using
+     * the asynchronous version is recommended to avoid issues when expanding and
+     * collapsing the dialog.
+     */
+    showSaveDialog(browserWindow: BrowserWindow, options: SaveDialogOptions): Promise<Electron.SaveDialogReturnValue>;
+    /**
+     * The browserWindow argument allows the dialog to attach itself to a parent
+     * window, making it modal. The filters specifies an array of file types that can
+     * be displayed, see dialog.showOpenDialog for an example.
+     */
+    showSaveDialogSync(options: SaveDialogSyncOptions): (string) | (undefined);
+    /**
+     * The browserWindow argument allows the dialog to attach itself to a parent
+     * window, making it modal. The filters specifies an array of file types that can
+     * be displayed, see dialog.showOpenDialog for an example.
+     */
+    showSaveDialogSync(browserWindow: BrowserWindow, options: SaveDialogSyncOptions): (string) | (undefined);
   }
 
   interface Display {
 
     // Docs: http://electronjs.org/docs/api/structures/display
 
+    /**
+     * Can be available, unavailable, unknown.
+     */
+    accelerometerSupport: ('available' | 'unavailable' | 'unknown');
     bounds: Rectangle;
+    /**
+     * The number of bits per pixel.
+     */
+    colorDepth: number;
+    /**
+     * represent a color space (three-dimensional object which contains all realizable
+     * color combinations) for the purpose of color conversions
+     */
+    colorSpace: string;
+    /**
+     * The number of bits per color component.
+     */
+    depthPerComponent: number;
     /**
      * Unique identifier associated with the display.
      */
     id: number;
+    /**
+     * true for an internal display and false for an external display
+     */
+    internal: boolean;
+    /**
+     * Whether or not the display is a monochrome display.
+     */
+    monochrome: boolean;
     /**
      * Can be 0, 90, 180, 270, represents screen rotation in clock-wise degrees.
      */
@@ -3219,6 +3487,7 @@ declare namespace Electron {
     getLastModifiedTime(): string;
     getMimeType(): string;
     getReceivedBytes(): number;
+    getSaveDialogOptions(): SaveDialogOptions;
     getSavePath(): string;
     getStartTime(): number;
     /**
@@ -3246,11 +3515,24 @@ declare namespace Electron {
      */
     resume(): void;
     /**
+     * This API allows the user to set custom options for the save dialog that opens
+     * for the download item by default. The API is only available in session's
+     * will-download callback function.
+     */
+    setSaveDialogOptions(options: SaveDialogOptions): void;
+    /**
      * The API is only available in session's will-download callback function. If user
      * doesn't set the save path via the API, Electron will use the original routine to
      * determine the save path(Usually prompts a save dialog).
      */
     setSavePath(path: string): void;
+  }
+
+  interface Event extends GlobalEvent {
+
+    // Docs: http://electronjs.org/docs/api/structures/event
+
+    preventDefault: (() => void);
   }
 
   interface FileFilter {
@@ -3259,6 +3541,21 @@ declare namespace Electron {
 
     extensions: string[];
     name: string;
+  }
+
+  interface FileLock extends EventEmitter {
+
+    // Docs: http://electronjs.org/docs/api/file-lock
+
+    releaseLock(name: string): number;
+    /**
+     * Note that if a process has already locked a given file, whether it can lock the
+     * same file is OS-specific: on Windows, subsequent lock attempts will fail, while
+     * on Unix-like systems they will succeed, and replace the old file lock with a new
+     * one. In any case, the process must call releaseLock() exactly once to release
+     * the file lock so other processes can lock it.
+     */
+    tryLock(name: string): number;
   }
 
   interface GlobalShortcut extends EventEmitter {
@@ -3281,6 +3578,16 @@ declare namespace Electron {
      * accessibility client:
      */
     register(accelerator: Accelerator, callback: Function): boolean;
+    /**
+     * Registers a global shortcut of all accelerator items in accelerators. The
+     * callback is called when any of the registered shortcuts are pressed by the user.
+     * When a given accelerator is already taken by other applications, this call will
+     * silently fail. This behavior is intended by operating systems, since they don't
+     * want applications to fight for global shortcuts. The following accelerators will
+     * not be registered successfully on macOS 10.14 Mojave unless the app has been
+     * authorized as a trusted accessibility client:
+     */
+    registerAll(accelerators: string[], callback: Function): void;
     /**
      * Unregisters the global shortcut of accelerator.
      */
@@ -3349,6 +3656,16 @@ declare namespace Electron {
     webgl2: string;
   }
 
+  class IdleState extends EventEmitter {
+
+    // Docs: http://electronjs.org/docs/api/idle-state
+
+    constructor();
+    elapsedTime(): number;
+    isIdle(): boolean;
+    isScreenSaverRunning(): boolean;
+  }
+
   interface InAppPurchase extends EventEmitter {
 
     // Docs: http://electronjs.org/docs/api/in-app-purchase
@@ -3386,15 +3703,24 @@ declare namespace Electron {
      */
     finishTransactionByDate(date: string): void;
     /**
-     * Retrieves the product descriptions.
+     * Retrieves the product descriptions. Deprecated Soon
      */
     getProducts(productIDs: string[], callback: (products: Product[]) => void): void;
+    /**
+     * Retrieves the product descriptions.
+     */
+    getProducts(productIDs: string[]): Promise<Electron.Product[]>;
     getReceiptURL(): string;
+    /**
+     * You should listen for the transactions-updated event as soon as possible and
+     * certainly before you call purchaseProduct. Deprecated Soon
+     */
+    purchaseProduct(productID: string, quantity?: number, callback?: (isProductValid: boolean) => void): void;
     /**
      * You should listen for the transactions-updated event as soon as possible and
      * certainly before you call purchaseProduct.
      */
-    purchaseProduct(productID: string, quantity?: number, callback?: (isProductValid: boolean) => void): void;
+    purchaseProduct(productID: string, quantity?: number): Promise<boolean>;
   }
 
   class IncomingMessage extends EventEmitter {
@@ -3496,12 +3822,12 @@ declare namespace Electron {
      * Listens to channel, when a new message arrives listener would be called with
      * listener(event, args...).
      */
-    on(channel: string, listener: Function): this;
+    on(channel: string, listener: (event: IpcMainEvent, ...args: any[]) => void): this;
     /**
      * Adds a one time listener function for the event. This listener is invoked only
      * the next time a message is sent to channel, after which it is removed.
      */
-    once(channel: string, listener: Function): this;
+    once(channel: string, listener: (event: IpcMainEvent, ...args: any[]) => void): this;
     /**
      * Removes listeners of the specified channel.
      */
@@ -3513,20 +3839,46 @@ declare namespace Electron {
     removeListener(channel: string, listener: Function): this;
   }
 
+  interface IpcMainEvent extends Event {
+
+    // Docs: http://electronjs.org/docs/api/structures/ipc-main-event
+
+    /**
+     * The ID of the renderer frame that sent this message
+     */
+    frameId: number;
+    /**
+     * A function that will send an IPC message to the renderer frame that sent the
+     * original message that you are currently handling. You should use this method to
+     * "reply" to the sent message in order to guaruntee the reply will go to the
+     * correct process and frame.
+     */
+    reply: Function;
+    /**
+     * Set this to the value to be returned in a syncronous message
+     */
+    returnValue: any;
+    /**
+     * Returns the webContents that sent the message
+     */
+    sender: WebContents;
+  }
+
   interface IpcRenderer extends EventEmitter {
 
     // Docs: http://electronjs.org/docs/api/ipc-renderer
 
+    getFrameRoutingID(): number;
     /**
      * Listens to channel, when a new message arrives listener would be called with
      * listener(event, args...).
      */
-    on(channel: string, listener: Function): this;
+    on(channel: string, listener: (event: IpcRendererEvent, ...args: any[]) => void): this;
     /**
      * Adds a one time listener function for the event. This listener is invoked only
      * the next time a message is sent to channel, after which it is removed.
      */
-    once(channel: string, listener: Function): this;
+    once(channel: string, listener: (event: IpcRendererEvent, ...args: any[]) => void): this;
     /**
      * Removes all listeners, or those of the specified channel.
      */
@@ -3542,7 +3894,7 @@ declare namespace Electron {
      * no functions or prototype chain will be included. The main process handles it by
      * listening for channel with ipcMain module.
      */
-    send(channel: string, ...args: any[]): void;
+    send(...args: any[]): void;
     /**
      * Send a message to the main process synchronously via channel, you can also send
      * arbitrary arguments. Arguments will be serialized in JSON internally and hence
@@ -3551,7 +3903,7 @@ declare namespace Electron {
      * event.returnValue. Note: Sending a synchronous message will block the whole
      * renderer process, unless you know what you are doing you should never use it.
      */
-    sendSync(channel: string, ...args: any[]): any;
+    sendSync(...args: any[]): any;
     /**
      * Sends a message to a window with webContentsId via channel.
      */
@@ -3560,7 +3912,24 @@ declare namespace Electron {
      * Like ipcRenderer.send but the event will be sent to the <webview> element in the
      * host page instead of the main process.
      */
-    sendToHost(channel: string, ...args: any[]): void;
+    sendToHost(...args: any[]): void;
+  }
+
+  interface IpcRendererEvent extends Event {
+
+    // Docs: http://electronjs.org/docs/api/structures/ipc-renderer-event
+
+    /**
+     * The IpcRenderer instance that emitted the event originally
+     */
+    sender: IpcRenderer;
+    /**
+     * The webContents.id that sent the message, you can call
+     * event.sender.sendTo(event.senderId, ...) to reply to the message, see for more
+     * information. This only applies to messages sent from a different renderer.
+     * Messages sent directly from the main process set event.senderId to 0.
+     */
+    senderId: number;
   }
 
   interface JumpListCategory {
@@ -3626,35 +3995,37 @@ declare namespace Electron {
      * One of the following:
      */
     type?: ('task' | 'separator' | 'file');
+    /**
+     * The working directory. Default is empty.
+     */
+    workingDirectory?: string;
   }
 
-  interface MemoryInfo {
+  interface KeyboardEvent extends Event {
 
-    // Docs: http://electronjs.org/docs/api/structures/memory-info
+    // Docs: http://electronjs.org/docs/api/structures/keyboard-event
 
     /**
-     * The maximum amount of memory that has ever been pinned to actual physical RAM.
-     * On macOS its value will always be 0.
+     * whether an Alt key was used in an accelerator to trigger the Event
      */
-    peakWorkingSetSize: number;
+    altKey?: boolean;
     /**
-     * Process id of the process.
+     * whether the Control key was used in an accelerator to trigger the Event
      */
-    pid: number;
+    ctrlKey?: boolean;
     /**
-     * The amount of memory not shared by other processes, such as JS heap or HTML
-     * content.
+     * whether a meta key was used in an accelerator to trigger the Event
      */
-    privateBytes: number;
+    metaKey?: boolean;
     /**
-     * The amount of memory shared between processes, typically memory consumed by the
-     * Electron code itself
+     * whether a Shift key was used in an accelerator to trigger the Event
      */
-    sharedBytes: number;
+    shiftKey?: boolean;
     /**
-     * The amount of memory currently pinned to actual physical RAM.
+     * whether an accelerator was used to trigger the event as opposed to another user
+     * gesture like mouse click
      */
-    workingSetSize: number;
+    triggeredByAccelerator?: boolean;
   }
 
   interface MemoryUsageDetails {
@@ -3690,7 +4061,7 @@ declare namespace Electron {
      * usage can be referenced above. You can also attach other fields to the element
      * of the template and they will become properties of the constructed menu items.
      */
-    static buildFromTemplate(template: MenuItemConstructorOptions[]): Menu;
+    static buildFromTemplate(template: Array<(MenuItemConstructorOptions) | (MenuItem)>): Menu;
     /**
      * Note: The returned Menu instance doesn't support dynamic addition or removal of
      * menu items. Instance properties can still be dynamically modified.
@@ -3705,9 +4076,16 @@ declare namespace Electron {
     static sendActionToFirstResponder(action: string): void;
     /**
      * Sets menu as the application menu on macOS. On Windows and Linux, the menu will
-     * be set as each window's top menu. Passing null will remove the menu bar on
-     * Windows and Linux but has no effect on macOS. Note: This API has to be called
-     * after the ready event of app module.
+     * be set as each window's top menu. Also on Windows and Linux, you can use a & in
+     * the top-level item name to indicate which letter should get a generated
+     * accelerator. For example, using &File for the file menu would result in a
+     * generated Alt-F accelerator that opens the associated menu. The indicated
+     * character in the button label gets an underline. The & character is not
+     * displayed on the button label. Passing null will suppress the default menu. On
+     * Windows and Linux, this has the additional effect of removing the menu bar from
+     * the window. Note: The default menu will be created automatically if the app does
+     * not set one. It contains standard items such as File, Edit, View, Window and
+     * Help.
      */
     static setApplicationMenu(menu: (Menu) | (null)): void;
     /**
@@ -3735,11 +4113,58 @@ declare namespace Electron {
     // Docs: http://electronjs.org/docs/api/menu-item
 
     constructor(options: MenuItemConstructorOptions);
+    accelerator: string;
     checked: boolean;
     click: Function;
+    commandId: number;
     enabled: boolean;
+    icon: NativeImage;
+    id: string;
     label: string;
+    menu: Menu;
+    registerAccelerator: boolean;
+    role: string;
+    sublabel: string;
+    submenu: Menu;
+    type: string;
     visible: boolean;
+  }
+
+  class MessageWindow extends EventEmitter {
+
+    // Docs: http://electronjs.org/docs/api/message-window
+
+    /**
+     * Emitted when the window receives a WM_COPYDATA message
+     */
+    on(event: 'data', listener: (event: Event,
+                                 data: DataData) => void): this;
+    once(event: 'data', listener: (event: Event,
+                                 data: DataData) => void): this;
+    addListener(event: 'data', listener: (event: Event,
+                                 data: DataData) => void): this;
+    removeListener(event: 'data', listener: (event: Event,
+                                 data: DataData) => void): this;
+    constructor(classname: string, windowname: string);
+    /**
+     * Destroys instance.
+     */
+    destroy(): void;
+    isDestroyed(): boolean;
+    /**
+     * Sends a message to the window with the target id.
+     */
+    sendbyid(id: number, message: string, maskPayload?: boolean): boolean;
+    /**
+     * Sends a message to the window with the specified classname and windowname.
+     * windowname can be an empty string.
+     */
+    sendbyname(classname: string, windowname: string, message: string, maskPayload?: boolean): boolean;
+    /**
+     * Sets message timeout.
+     */
+    setmessagetimeout(timeout: number): void;
+    id: any;
   }
 
   interface MimeTypedBuffer {
@@ -3765,7 +4190,13 @@ declare namespace Electron {
      */
     static createEmpty(): NativeImage;
     /**
-     * Creates a new NativeImage instance from buffer.
+     * Creates a new NativeImage instance from buffer that contains the raw bitmap
+     * pixel data returned by toBitmap(). The specific format is platform-dependent.
+     */
+    static createFromBitmap(buffer: Buffer, options: CreateFromBitmapOptions): NativeImage;
+    /**
+     * Creates a new NativeImage instance from buffer. Tries to decode as PNG or JPEG
+     * first.
      */
     static createFromBuffer(buffer: Buffer, options?: CreateFromBufferOptions): NativeImage;
     /**
@@ -3828,6 +4259,22 @@ declare namespace Electron {
     toDataURL(options?: ToDataURLOptions): string;
     toJPEG(quality: number): Buffer;
     toPNG(options?: ToPNGOptions): Buffer;
+  }
+
+  class NativeTimer extends EventEmitter {
+
+    // Docs: http://electronjs.org/docs/api/native-timer
+
+    constructor(callback: Function, delay: number);
+    isRunning(): boolean;
+    /**
+     * Restarts the timer.
+     */
+    reset(): void;
+    /**
+     * Stops the timer.
+     */
+    stop(): void;
   }
 
   interface NativeWindowInfo {
@@ -3908,9 +4355,14 @@ declare namespace Electron {
     startLogging(path: string): void;
     /**
      * Stops recording network events. If not called, net logging will automatically
-     * end when app quits.
+     * end when app quits. Deprecated Soon
      */
     stopLogging(callback?: (path: string) => void): void;
+    /**
+     * Stops recording network events. If not called, net logging will automatically
+     * end when app quits.
+     */
+    stopLogging(): Promise<string>;
     /**
      * A Boolean property that indicates whether network logs are recorded.
      */
@@ -4089,6 +4541,26 @@ declare namespace Electron {
     once(event: 'unlock-screen', listener: Function): this;
     addListener(event: 'unlock-screen', listener: Function): this;
     removeListener(event: 'unlock-screen', listener: Function): this;
+    /**
+     * Calculate the system idle state. idleThreshold is the amount of time (in
+     * seconds) before considered idle.  locked is available on supported systems only.
+     */
+    getSystemIdleState(idleThreshold: number): ('active' | 'idle' | 'locked' | 'unknown');
+    /**
+     * Calculate system idle time in seconds.
+     */
+    getSystemIdleTime(): number;
+    /**
+     * Calculate the system idle state. idleThreshold is the amount of time (in
+     * seconds) before considered idle. callback will be called synchronously on some
+     * systems and with an idleState argument that describes the system's state. locked
+     * is available on supported systems only.
+     */
+    querySystemIdleState(idleThreshold: number, callback: (idleState: 'active' | 'idle' | 'locked' | 'unknown') => void): void;
+    /**
+     * Calculate system idle time in seconds.
+     */
+    querySystemIdleTime(callback: (idleTime: number) => void): void;
   }
 
   interface PowerSaveBlocker extends EventEmitter {
@@ -4123,6 +4595,26 @@ declare namespace Electron {
     status: number;
   }
 
+  interface ProcessMemoryInfo {
+
+    // Docs: http://electronjs.org/docs/api/structures/process-memory-info
+
+    /**
+     * The amount of memory not shared by other processes, such as JS heap or HTML
+     * content in Kilobytes.
+     */
+    private: number;
+    /**
+     * and The amount of memory currently pinned to actual physical RAM in Kilobytes.
+     */
+    residentSet: number;
+    /**
+     * The amount of memory shared between processes, typically memory consumed by the
+     * Electron code itself in Kilobytes.
+     */
+    shared: number;
+  }
+
   interface ProcessMetric {
 
     // Docs: http://electronjs.org/docs/api/structures/process-metric
@@ -4136,9 +4628,9 @@ declare namespace Electron {
      */
     pid: number;
     /**
-     * Process type (Browser or Tab or GPU etc).
+     * Process type. One of the following values:
      */
-    type: string;
+    type: ('Browser' | 'Tab' | 'Utility' | 'Zygote' | 'GPU' | 'Unknown');
   }
 
   interface Product {
@@ -4154,14 +4646,15 @@ declare namespace Electron {
      */
     contentVersion: string;
     /**
-     * A Boolean value that indicates whether the App Store has downloadable content
-     * for this product.
-     */
-    downloadable: boolean;
-    /**
      * The locale formatted price of the product.
      */
     formattedPrice: string;
+    /**
+     * A Boolean value that indicates whether the App Store has downloadable content
+     * for this product. true if at least one file has been associated with the
+     * product.
+     */
+    isDownloadable: boolean;
     /**
      * A description of the product.
      */
@@ -4211,9 +4704,10 @@ declare namespace Electron {
     interceptStringProtocol(scheme: string, handler: (request: InterceptStringProtocolRequest, callback: (data?: string) => void) => void, completion?: (error: Error) => void): void;
     /**
      * The callback will be called with a boolean that indicates whether there is
-     * already a handler for scheme.
+     * already a handler for scheme. Deprecated Soon
      */
-    isProtocolHandled(scheme: string, callback: (error: Error) => void): void;
+    isProtocolHandled(scheme: string, callback: (handled: boolean) => void): void;
+    isProtocolHandled(scheme: string): Promise<boolean>;
     /**
      * Registers a protocol of scheme that will send a Buffer as a response. The usage
      * is the same with registerFileProtocol, except that the callback should be called
@@ -4228,13 +4722,14 @@ declare namespace Electron {
      * scheme is successfully registered or completion(error) when failed. To handle
      * the request, the callback should be called with either the file's path or an
      * object that has a path property, e.g. callback(filePath) or callback({ path:
-     * filePath }). When callback is called with nothing, a number, or an object that
-     * has an error property, the request will fail with the error number you
-     * specified. For the available error numbers you can use, please see the net error
-     * list. By default the scheme is treated like http:, which is parsed differently
-     * than protocols that follow the "generic URI syntax" like file:, so you probably
-     * want to call protocol.registerStandardSchemes to have your scheme treated as a
-     * standard scheme.
+     * filePath }). The object may also have a headers property which gives a map of
+     * headers to values for the response headers, e.g. callback({ path: filePath,
+     * headers: {"Content-Security-Policy": "default-src 'none'"]}). When callback is
+     * called with nothing, a number, or an object that has an error property, the
+     * request will fail with the error number you specified. For the available error
+     * numbers you can use, please see the net error list. By default the scheme is
+     * treated like http:, which is parsed differently than protocols that follow the
+     * "generic URI syntax" like file:.
      */
     registerFileProtocol(scheme: string, handler: (request: RegisterFileProtocolRequest, callback: (filePath?: string) => void) => void, completion?: (error: Error) => void): void;
     /**
@@ -4246,24 +4741,31 @@ declare namespace Electron {
      * set session to null. For POST requests the uploadData object must be provided.
      */
     registerHttpProtocol(scheme: string, handler: (request: RegisterHttpProtocolRequest, callback: (redirectRequest: RedirectRequest) => void) => void, completion?: (error: Error) => void): void;
-    registerServiceWorkerSchemes(schemes: string[]): void;
     /**
-     * A standard scheme adheres to what RFC 3986 calls generic URI syntax. For example
-     * http and https are standard schemes, while file is not. Registering a scheme as
-     * standard, will allow relative and absolute resources to be resolved correctly
-     * when served. Otherwise the scheme will behave like the file protocol, but
-     * without the ability to resolve relative URLs. For example when you load
-     * following page with custom protocol without registering it as standard scheme,
-     * the image will not be loaded because non-standard schemes can not recognize
-     * relative URLs: Registering a scheme as standard will allow access to files
-     * through the FileSystem API. Otherwise the renderer will throw a security error
-     * for the scheme. By default web storage apis (localStorage, sessionStorage,
-     * webSQL, indexedDB, cookies) are disabled for non standard schemes. So in general
-     * if you want to register a custom protocol to replace the http protocol, you have
-     * to register it as a standard scheme: Note: This method can only be used before
-     * the ready event of the app module gets emitted.
+     * Note: This method can only be used before the ready event of the app module gets
+     * emitted and can be called only once. Registers the scheme as standard, secure,
+     * bypasses content security policy for resources, allows registering ServiceWorker
+     * and supports fetch API. Specify a privilege with the value of true to enable the
+     * capability. An example of registering a privileged scheme, with bypassing
+     * Content Security Policy: A standard scheme adheres to what RFC 3986 calls
+     * generic URI syntax. For example http and https are standard schemes, while file
+     * is not. Registering a scheme as standard, will allow relative and absolute
+     * resources to be resolved correctly when served. Otherwise the scheme will behave
+     * like the file protocol, but without the ability to resolve relative URLs. For
+     * example when you load following page with custom protocol without registering it
+     * as standard scheme, the image will not be loaded because non-standard schemes
+     * can not recognize relative URLs: Registering a scheme as standard will allow
+     * access to files through the FileSystem API. Otherwise the renderer will throw a
+     * security error for the scheme. By default web storage apis (localStorage,
+     * sessionStorage, webSQL, indexedDB, cookies) are disabled for non standard
+     * schemes. So in general if you want to register a custom protocol to replace the
+     * http protocol, you have to register it as a standard scheme.
+     * protocol.registerSchemesAsPrivileged can be used to replicate the functionality
+     * of the previous protocol.registerStandardSchemes, webFrame.registerURLSchemeAs*
+     * and protocol.registerServiceWorkerSchemes functions that existed prior to
+     * Electron 5.0.0, for example: before (<= v4.x) after (>= v5.x)
      */
-    registerStandardSchemes(schemes: string[], options?: RegisterStandardSchemesOptions): void;
+    registerSchemesAsPrivileged(customSchemes: CustomScheme[]): void;
     /**
      * Registers a protocol of scheme that will send a Readable as a response. The
      * usage is similar to the other register{Any}Protocol, except that the callback
@@ -4332,18 +4834,18 @@ declare namespace Electron {
 
     // Docs: http://electronjs.org/docs/api/remote
 
-    getCurrentWebContents(): WebContents;
+    getCurrentWebContents(frameId?: number): WebContents;
     /**
      * Note: Do not use removeAllListeners on BrowserWindow. Use of this can remove all
      * blur listeners, disable click events on touch bar buttons, and other unintended
      * consequences.
      */
-    getCurrentWindow(): BrowserWindow;
+    getCurrentWindow(frameId?: number): BrowserWindow;
     getGlobal(name: string): any;
     /**
      * e.g.
      */
-    require(module: string): any;
+    require(module: string, frameId?: number): any;
     /**
      * The process object in the main process. This is the same as
      * remote.getGlobal('process') but is cached.
@@ -4416,7 +4918,7 @@ declare namespace Electron {
     /**
      * Emitted when one or more metrics change in a display. The changedMetrics is an
      * array of strings that describe the changes. Possible changes are bounds,
-     * workArea, scaleFactor and rotation. <!-- OpenFin Events -->
+     * workArea, scaleFactor and rotation.
      */
     on(event: 'display-metrics-changed', listener: (event: Event,
                                                     display: Display,
@@ -4466,7 +4968,7 @@ declare namespace Electron {
     /**
      * Converts a screen DIP rect to a screen physical rect. The DPI scale is performed
      * relative to the display nearest to window. If window is null, scaling will be
-     * performed to the display nearest to rect. <!-- OpenFin Methods -->
+     * performed to the display nearest to rect.
      */
     dipToScreenRect(window: (BrowserWindow) | (null), rect: Rectangle): Rectangle;
     /**
@@ -4598,19 +5100,30 @@ declare namespace Electron {
      */
     allowNTLMCredentialsForDomains(domains: string): void;
     /**
-     * Clears the session’s HTTP authentication cache.
+     * Clears the session’s HTTP authentication cache. Deprecated Soon
      */
-    clearAuthCache(options: (RemovePassword) | (RemoveClientCertificate), callback?: Function): void;
+    clearAuthCache(options: (RemovePassword) | (RemoveClientCertificate), callback: Function): void;
+    clearAuthCache(options: (RemovePassword) | (RemoveClientCertificate)): Promise<void>;
+    clearAuthCache(): Promise<void>;
     /**
      * Clears the session’s HTTP cache.
      */
-    clearCache(callback: Function): void;
+    clearCache(): Promise<void>;
+    /**
+     * Clears the session’s HTTP cache. Deprecated Soon
+     */
+    clearCache(callback: (error: number) => void): void;
     /**
      * Clears the host resolver cache.
      */
-    clearHostResolverCache(callback?: Function): void;
+    clearHostResolverCache(): Promise<void>;
     /**
-     * Clears the data of web storages.
+     * Clears the host resolver cache. Deprecated Soon
+     */
+    clearHostResolverCache(callback?: Function): void;
+    clearStorageData(options?: ClearStorageDataOptions): Promise<void>;
+    /**
+     * Clears the storage data for the current session. Deprecated Soon
      */
     clearStorageData(options?: ClearStorageDataOptions, callback?: Function): void;
     /**
@@ -4634,23 +5147,26 @@ declare namespace Electron {
      * Writes any unwritten DOMStorage data to disk.
      */
     flushStorageData(): void;
+    getBlobData(identifier: string): Promise<Buffer>;
+    /**
+     * Deprecated Soon
+     */
     getBlobData(identifier: string, callback: (result: Buffer) => void): void;
+    getCacheSize(): Promise<number>;
     /**
-     * Callback is invoked with the session's current cache size.
+     * Callback is invoked with the session's current cache size. Deprecated Soon
      */
-    getCacheSize(callback: (size: number) => void): void;
-    /**
-     * <!-- OpenFin Instance Methods -->
-     */
+    getCacheSize(callback: (size: number, error: number) => void): void;
     getPreloads(): string[];
     /**
      * Returns the system's proxy configuration.
      */
     getProxySettings(): ProxySettings;
     getUserAgent(): string;
+    resolveProxy(url: string): Promise<string>;
     /**
      * Resolves the proxy information for url. The callback will be called with
-     * callback(proxy) when the request is performed.
+     * callback(proxy) when the request is performed. Deprecated Soon
      */
     resolveProxy(url: string, callback: (proxy: string) => void): void;
     /**
@@ -4689,6 +5205,13 @@ declare namespace Electron {
      * proxyRules has to follow the rules below: For example: The proxyBypassRules is a
      * comma separated list of rules described below:
      */
+    setProxy(config: Config): Promise<void>;
+    /**
+     * Sets the proxy settings. When pacScript and proxyRules are provided together,
+     * the proxyRules option is ignored and pacScript configuration is applied. The
+     * proxyRules has to follow the rules below: For example: The proxyBypassRules is a
+     * comma separated list of rules described below: Deprecated Soon
+     */
     setProxy(config: Config, callback: Function): void;
     /**
      * Overrides the userAgent and acceptLanguages for this session. The
@@ -4720,7 +5243,12 @@ declare namespace Electron {
      * Open the given external protocol URL in the desktop's default manner. (For
      * example, mailto: URLs in the user's default mail agent).
      */
-    openExternal(url: string, options?: OpenExternalOptions, callback?: (error: Error) => void): boolean;
+    openExternal(url: string, options?: OpenExternalOptions): Promise<void>;
+    /**
+     * Open the given external protocol URL in the desktop's default manner. (For
+     * example, mailto: URLs in the user's default mail agent). Deprecated
+     */
+    openExternalSync(url: string, options?: OpenExternalSyncOptions): boolean;
     /**
      * Open the given file in the desktop's default manner.
      */
@@ -4733,7 +5261,7 @@ declare namespace Electron {
     /**
      * Show the given file in a file manager. If possible, select the file.
      */
-    showItemInFolder(fullPath: string): boolean;
+    showItemInFolder(fullPath: string): void;
     /**
      * Creates or updates a shortcut link at shortcutPath.
      */
@@ -4830,56 +5358,52 @@ declare namespace Electron {
                                                   * The new RGBA color the user assigned to be their system accent color.
                                                   */
                                                  newColor: string) => void): this;
-    /**
-     * NOTE: This event is only emitted after you have called
-     * startAppLevelAppearanceTrackingOS
-     */
-    on(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    once(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    addListener(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
-    removeListener(event: 'appearance-changed', listener: (
-                                               /**
-                                                * Can be `dark` or `light`
-                                                */
-                                               newAppearance: ('dark' | 'light')) => void): this;
     on(event: 'color-changed', listener: (event: Event) => void): this;
     once(event: 'color-changed', listener: (event: Event) => void): this;
     addListener(event: 'color-changed', listener: (event: Event) => void): this;
     removeListener(event: 'color-changed', listener: (event: Event) => void): this;
+    on(event: 'high-contrast-color-scheme-changed', listener: (event: Event,
+                                                               /**
+                                                                * `true` if a high contrast theme is being used, `false` otherwise.
+                                                                */
+                                                               highContrastColorScheme: boolean) => void): this;
+    once(event: 'high-contrast-color-scheme-changed', listener: (event: Event,
+                                                               /**
+                                                                * `true` if a high contrast theme is being used, `false` otherwise.
+                                                                */
+                                                               highContrastColorScheme: boolean) => void): this;
+    addListener(event: 'high-contrast-color-scheme-changed', listener: (event: Event,
+                                                               /**
+                                                                * `true` if a high contrast theme is being used, `false` otherwise.
+                                                                */
+                                                               highContrastColorScheme: boolean) => void): this;
+    removeListener(event: 'high-contrast-color-scheme-changed', listener: (event: Event,
+                                                               /**
+                                                                * `true` if a high contrast theme is being used, `false` otherwise.
+                                                                */
+                                                               highContrastColorScheme: boolean) => void): this;
     on(event: 'inverted-color-scheme-changed', listener: (event: Event,
                                                           /**
-                                                           * `true` if an inverted color scheme, such as a high contrast theme, is being
-                                                           * used, `false` otherwise.
+                                                           * `true` if an inverted color scheme (a high contrast color scheme with light text
+                                                           * and dark backgrounds) is being used, `false` otherwise.
                                                            */
                                                           invertedColorScheme: boolean) => void): this;
     once(event: 'inverted-color-scheme-changed', listener: (event: Event,
                                                           /**
-                                                           * `true` if an inverted color scheme, such as a high contrast theme, is being
-                                                           * used, `false` otherwise.
+                                                           * `true` if an inverted color scheme (a high contrast color scheme with light text
+                                                           * and dark backgrounds) is being used, `false` otherwise.
                                                            */
                                                           invertedColorScheme: boolean) => void): this;
     addListener(event: 'inverted-color-scheme-changed', listener: (event: Event,
                                                           /**
-                                                           * `true` if an inverted color scheme, such as a high contrast theme, is being
-                                                           * used, `false` otherwise.
+                                                           * `true` if an inverted color scheme (a high contrast color scheme with light text
+                                                           * and dark backgrounds) is being used, `false` otherwise.
                                                            */
                                                           invertedColorScheme: boolean) => void): this;
     removeListener(event: 'inverted-color-scheme-changed', listener: (event: Event,
                                                           /**
-                                                           * `true` if an inverted color scheme, such as a high contrast theme, is being
-                                                           * used, `false` otherwise.
+                                                           * `true` if an inverted color scheme (a high contrast color scheme with light text
+                                                           * and dark backgrounds) is being used, `false` otherwise.
                                                            */
                                                           invertedColorScheme: boolean) => void): this;
     /**
@@ -4892,15 +5416,26 @@ declare namespace Electron {
      * was not required until macOS 10.14 Mojave, so this method will always return
      * true if your system is running 10.13 High Sierra or lower.
      */
-    askForMediaAccess(mediaType: 'microphone' | 'camera'): Promise<Boolean>;
+    askForMediaAccess(mediaType: 'microphone' | 'camera'): Promise<boolean>;
+    /**
+     * NOTE: This API will return false on macOS systems older than Sierra 10.12.2.
+     */
+    canPromptTouchID(): boolean;
+    /**
+     * This API is only available on macOS 10.14 Mojave or newer.
+     */
     getAccentColor(): string;
+    /**
+     * Returns an object with system animation settings.
+     */
+    getAnimationSettings(): AnimationSettings;
     /**
      * Gets the macOS appearance setting that you have declared you want for your
      * application, maps to NSApplication.appearance. You can use the
      * setAppLevelAppearance API to set this value.
      */
     getAppLevelAppearance(): ('dark' | 'light' | 'unknown');
-    getColor(color: '3d-dark-shadow' | '3d-face' | '3d-highlight' | '3d-light' | '3d-shadow' | 'active-border' | 'active-caption' | 'active-caption-gradient' | 'app-workspace' | 'button-text' | 'caption-text' | 'desktop' | 'disabled-text' | 'highlight' | 'highlight-text' | 'hotlight' | 'inactive-border' | 'inactive-caption' | 'inactive-caption-gradient' | 'inactive-caption-text' | 'info-background' | 'info-text' | 'menu' | 'menu-highlight' | 'menubar' | 'menu-text' | 'scrollbar' | 'window' | 'window-frame' | 'window-text'): string;
+    getColor(color: '3d-dark-shadow' | '3d-dark-shadow' | '3d-face' | '3d-highlight' | '3d-light' | '3d-shadow' | 'active-border' | 'active-caption' | 'active-caption-gradient' | 'app-workspace' | 'button-text' | 'caption-text' | 'desktop' | 'disabled-text' | 'highlight' | 'highlight-text' | 'hotlight' | 'inactive-border' | 'inactive-caption' | 'inactive-caption-gradient' | 'inactive-caption-text' | 'info-background' | 'info-text' | 'menu' | 'menu-highlight' | 'menubar' | 'menu-text' | 'scrollbar' | 'window' | 'window-frame' | 'window-text' | 'alternate-selected-control-text' | 'alternate-selected-control-text' | 'control-background' | 'control' | 'control-text' | 'disabled-control-text' | 'find-highlight' | 'grid' | 'header-text' | 'highlight' | 'keyboard-focus-indicator' | 'label' | 'link' | 'placeholder-text' | 'quaternary-label' | 'scrubber-textured-background' | 'secondary-label' | 'selected-content-background' | 'selected-control' | 'selected-control-text' | 'selected-menu-item' | 'selected-text-background' | 'selected-text' | 'separator' | 'shadow' | 'tertiary-label' | 'text-background' | 'text' | 'under-page-background' | 'unemphasized-selected-content-background' | 'unemphasized-selected-text-background' | 'unemphasized-selected-text' | 'window-background' | 'window-frame-text'): string;
     /**
      * Gets the macOS appearance setting that is currently applied to your application,
      * maps to NSApplication.effectiveAppearance Please note that until Electron is
@@ -4918,6 +5453,12 @@ declare namespace Electron {
      */
     getMediaAccessStatus(mediaType: string): ('not-determined' | 'granted' | 'denied' | 'restricted' | 'unknown');
     /**
+     * Returns one of several standard system colors that automatically adapt to
+     * vibrancy and changes in accessibility settings like 'Increase contrast' and
+     * 'Reduce transparency'. See Apple Documentation for  more details.
+     */
+    getSystemColor(color: 'blue' | 'brown' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'yellow'): void;
+    /**
      * Some popular key and types are:
      */
     getUserDefault(key: string, type: 'string' | 'boolean' | 'integer' | 'float' | 'double' | 'url' | 'array' | 'dictionary'): any;
@@ -4927,6 +5468,7 @@ declare namespace Electron {
      */
     isAeroGlassEnabled(): boolean;
     isDarkMode(): boolean;
+    isHighContrastColorScheme(): boolean;
     isInvertedColorScheme(): boolean;
     isSwipeTrackingFromScrollEventsEnabled(): boolean;
     isTrustedAccessibilityClient(prompt: boolean): boolean;
@@ -4939,12 +5481,22 @@ declare namespace Electron {
      * Posts event as native notifications of macOS. The userInfo is an Object that
      * contains the user information dictionary sent along with the notification.
      */
-    postNotification(event: string, userInfo: any): void;
+    postNotification(event: string, userInfo: any, deliverImmediately?: boolean): void;
     /**
      * Posts event as native notifications of macOS. The userInfo is an Object that
      * contains the user information dictionary sent along with the notification.
      */
     postWorkspaceNotification(event: string, userInfo: any): void;
+    /**
+     * This API itself will not protect your user data; rather, it is a mechanism to
+     * allow you to do so. Native apps will need to set Access Control Constants like
+     * kSecAccessControlUserPresence on the their keychain entry so that reading it
+     * would auto-prompt for Touch ID biometric consent. This could be done with
+     * node-keytar, such that one would store an encryption key with node-keytar and
+     * only fetch it if promptTouchID() resolves. NOTE: This API will return a rejected
+     * Promise on macOS systems older than Sierra 10.12.2.
+     */
+    promptTouchID(reason: string): Promise<void>;
     /**
      * Add the specified defaults to your application's NSUserDefaults.
      */
@@ -5033,6 +5585,10 @@ declare namespace Electron {
      * The string to be displayed in a JumpList.
      */
     title: string;
+    /**
+     * The working directory. Default is empty.
+     */
+    workingDirectory?: string;
   }
 
   interface ThumbarButton {
@@ -5254,7 +5810,7 @@ declare namespace Electron {
     /**
      * Emitted when the tray icon is clicked.
      */
-    on(event: 'click', listener: (event: Event,
+    on(event: 'click', listener: (event: KeyboardEvent,
                                   /**
                                    * The bounds of tray icon.
                                    */
@@ -5263,7 +5819,7 @@ declare namespace Electron {
                                    * The position of the event.
                                    */
                                   position: Point) => void): this;
-    once(event: 'click', listener: (event: Event,
+    once(event: 'click', listener: (event: KeyboardEvent,
                                   /**
                                    * The bounds of tray icon.
                                    */
@@ -5272,7 +5828,7 @@ declare namespace Electron {
                                    * The position of the event.
                                    */
                                   position: Point) => void): this;
-    addListener(event: 'click', listener: (event: Event,
+    addListener(event: 'click', listener: (event: KeyboardEvent,
                                   /**
                                    * The bounds of tray icon.
                                    */
@@ -5281,7 +5837,7 @@ declare namespace Electron {
                                    * The position of the event.
                                    */
                                   position: Point) => void): this;
-    removeListener(event: 'click', listener: (event: Event,
+    removeListener(event: 'click', listener: (event: KeyboardEvent,
                                   /**
                                    * The bounds of tray icon.
                                    */
@@ -5293,22 +5849,22 @@ declare namespace Electron {
     /**
      * Emitted when the tray icon is double clicked.
      */
-    on(event: 'double-click', listener: (event: Event,
+    on(event: 'double-click', listener: (event: KeyboardEvent,
                                          /**
                                           * The bounds of tray icon.
                                           */
                                          bounds: Rectangle) => void): this;
-    once(event: 'double-click', listener: (event: Event,
+    once(event: 'double-click', listener: (event: KeyboardEvent,
                                          /**
                                           * The bounds of tray icon.
                                           */
                                          bounds: Rectangle) => void): this;
-    addListener(event: 'double-click', listener: (event: Event,
+    addListener(event: 'double-click', listener: (event: KeyboardEvent,
                                          /**
                                           * The bounds of tray icon.
                                           */
                                          bounds: Rectangle) => void): this;
-    removeListener(event: 'double-click', listener: (event: Event,
+    removeListener(event: 'double-click', listener: (event: KeyboardEvent,
                                          /**
                                           * The bounds of tray icon.
                                           */
@@ -5429,22 +5985,22 @@ declare namespace Electron {
     /**
      * Emitted when the mouse enters the tray icon.
      */
-    on(event: 'mouse-enter', listener: (event: Event,
+    on(event: 'mouse-enter', listener: (event: KeyboardEvent,
                                         /**
                                          * The position of the event.
                                          */
                                         position: Point) => void): this;
-    once(event: 'mouse-enter', listener: (event: Event,
+    once(event: 'mouse-enter', listener: (event: KeyboardEvent,
                                         /**
                                          * The position of the event.
                                          */
                                         position: Point) => void): this;
-    addListener(event: 'mouse-enter', listener: (event: Event,
+    addListener(event: 'mouse-enter', listener: (event: KeyboardEvent,
                                         /**
                                          * The position of the event.
                                          */
                                         position: Point) => void): this;
-    removeListener(event: 'mouse-enter', listener: (event: Event,
+    removeListener(event: 'mouse-enter', listener: (event: KeyboardEvent,
                                         /**
                                          * The position of the event.
                                          */
@@ -5452,45 +6008,45 @@ declare namespace Electron {
     /**
      * Emitted when the mouse exits the tray icon.
      */
-    on(event: 'mouse-leave', listener: (event: Event,
+    on(event: 'mouse-leave', listener: (event: KeyboardEvent,
                                         /**
                                          * The position of the event.
                                          */
                                         position: Point) => void): this;
-    once(event: 'mouse-leave', listener: (event: Event,
+    once(event: 'mouse-leave', listener: (event: KeyboardEvent,
                                         /**
                                          * The position of the event.
                                          */
                                         position: Point) => void): this;
-    addListener(event: 'mouse-leave', listener: (event: Event,
+    addListener(event: 'mouse-leave', listener: (event: KeyboardEvent,
                                         /**
                                          * The position of the event.
                                          */
                                         position: Point) => void): this;
-    removeListener(event: 'mouse-leave', listener: (event: Event,
+    removeListener(event: 'mouse-leave', listener: (event: KeyboardEvent,
                                         /**
                                          * The position of the event.
                                          */
                                         position: Point) => void): this;
     /**
-     * Emitted when the mouse moves in the tray icon. <!-- OpenFin Instance Events -->
+     * Emitted when the mouse moves in the tray icon.
      */
-    on(event: 'mouse-move', listener: (event: Event,
+    on(event: 'mouse-move', listener: (event: KeyboardEvent,
                                        /**
                                         * The position of the event.
                                         */
                                        position: Point) => void): this;
-    once(event: 'mouse-move', listener: (event: Event,
+    once(event: 'mouse-move', listener: (event: KeyboardEvent,
                                        /**
                                         * The position of the event.
                                         */
                                        position: Point) => void): this;
-    addListener(event: 'mouse-move', listener: (event: Event,
+    addListener(event: 'mouse-move', listener: (event: KeyboardEvent,
                                        /**
                                         * The position of the event.
                                         */
                                        position: Point) => void): this;
-    removeListener(event: 'mouse-move', listener: (event: Event,
+    removeListener(event: 'mouse-move', listener: (event: KeyboardEvent,
                                        /**
                                         * The position of the event.
                                         */
@@ -5498,22 +6054,22 @@ declare namespace Electron {
     /**
      * Emitted when the tray icon is right clicked.
      */
-    on(event: 'right-click', listener: (event: Event,
+    on(event: 'right-click', listener: (event: KeyboardEvent,
                                         /**
                                          * The bounds of tray icon.
                                          */
                                         bounds: Rectangle) => void): this;
-    once(event: 'right-click', listener: (event: Event,
+    once(event: 'right-click', listener: (event: KeyboardEvent,
                                         /**
                                          * The bounds of tray icon.
                                          */
                                         bounds: Rectangle) => void): this;
-    addListener(event: 'right-click', listener: (event: Event,
+    addListener(event: 'right-click', listener: (event: KeyboardEvent,
                                         /**
                                          * The bounds of tray icon.
                                          */
                                         bounds: Rectangle) => void): this;
-    removeListener(event: 'right-click', listener: (event: Event,
+    removeListener(event: 'right-click', listener: (event: KeyboardEvent,
                                         /**
                                          * The bounds of tray icon.
                                          */
@@ -5536,9 +6092,7 @@ declare namespace Electron {
      */
     getIconRect(x: number): void;
     getIgnoreDoubleClickEvents(): boolean;
-    /**
-     * <!-- OpenFin Instance Methods -->
-     */
+    getTitle(title: string): string;
     isDestroyed(): boolean;
     /**
      * Pops up the context menu of the tray icon. When menu is passed, the menu will be
@@ -5551,9 +6105,9 @@ declare namespace Electron {
      */
     setContextMenu(menu: (Menu) | (null)): void;
     /**
-     * Sets when the tray's icon background becomes highlighted (in blue). Note: You
-     * can use highlightMode with a BrowserWindow by toggling between 'never' and
-     * 'always' modes when the window visibility changes.
+     * Sets when the tray's icon background becomes highlighted (in blue). Deprecated
+     * Note: You can use highlightMode with a BrowserWindow by toggling between 'never'
+     * and 'always' modes when the window visibility changes.
      */
     setHighlightMode(mode: 'selection' | 'always' | 'never'): void;
     /**
@@ -5571,7 +6125,7 @@ declare namespace Electron {
      */
     setPressedImage(image: (NativeImage) | (string)): void;
     /**
-     * Sets the title displayed aside of the tray icon in the status bar (Support ANSI
+     * Sets the title displayed next to the tray icon in the status bar (Support ANSI
      * colors).
      */
     setTitle(title: string): void;
@@ -5657,9 +6211,6 @@ declare namespace Electron {
 
     // Docs: http://electronjs.org/docs/api/web-contents
 
-    /**
-     * <!-- OpenFin Methods-->
-     */
     static fromId(id: number): WebContents;
     static fromProcessAndFrameIds(pid: number, fid: number): WebContents;
     static getAllWebContents(): WebContents[];
@@ -5847,6 +6398,14 @@ declare namespace Electron {
                                             * coordinates of the custom cursor's hotspot.
                                             */
                                            hotspot?: Point) => void): this;
+    /**
+     * Emitted when desktopCapturer.getSources() is called in the renderer process.
+     * Calling event.preventDefault() will make it return empty sources.
+     */
+    on(event: 'desktop-capturer-get-sources', listener: (event: Event) => void): this;
+    once(event: 'desktop-capturer-get-sources', listener: (event: Event) => void): this;
+    addListener(event: 'desktop-capturer-get-sources', listener: (event: Event) => void): this;
+    removeListener(event: 'desktop-capturer-get-sources', listener: (event: Event) => void): this;
     /**
      * Emitted when webContents is destroyed.
      */
@@ -6289,6 +6848,13 @@ declare namespace Electron {
     addListener(event: 'drag-over', listener: Function): this;
     removeListener(event: 'drag-over', listener: Function): this;
     /**
+     * Emitted when the window enters a full-screen state triggered by HTML API.
+     */
+    on(event: 'enter-html-full-screen', listener: Function): this;
+    once(event: 'enter-html-full-screen', listener: Function): this;
+    addListener(event: 'enter-html-full-screen', listener: Function): this;
+    removeListener(event: 'enter-html-full-screen', listener: Function): this;
+    /**
      * Emitted when a result is available for [webContents.findInPage] request.
      */
     on(event: 'found-in-page', listener: (event: Event,
@@ -6299,6 +6865,45 @@ declare namespace Electron {
                                           result: Result) => void): this;
     removeListener(event: 'found-in-page', listener: (event: Event,
                                           result: Result) => void): this;
+    /**
+     * Emitted when the renderer process sends an asynchronous message via
+     * ipcRenderer.send().
+     */
+    on(event: 'ipc-message', listener: (event: Event,
+                                        channel: string,
+                                        ...args: any[]) => void): this;
+    once(event: 'ipc-message', listener: (event: Event,
+                                        channel: string,
+                                        ...args: any[]) => void): this;
+    addListener(event: 'ipc-message', listener: (event: Event,
+                                        channel: string,
+                                        ...args: any[]) => void): this;
+    removeListener(event: 'ipc-message', listener: (event: Event,
+                                        channel: string,
+                                        ...args: any[]) => void): this;
+    /**
+     * Emitted when the renderer process sends a synchronous message via
+     * ipcRenderer.sendSync().
+     */
+    on(event: 'ipc-message-sync', listener: (event: Event,
+                                             channel: string,
+                                             ...args: any[]) => void): this;
+    once(event: 'ipc-message-sync', listener: (event: Event,
+                                             channel: string,
+                                             ...args: any[]) => void): this;
+    addListener(event: 'ipc-message-sync', listener: (event: Event,
+                                             channel: string,
+                                             ...args: any[]) => void): this;
+    removeListener(event: 'ipc-message-sync', listener: (event: Event,
+                                             channel: string,
+                                             ...args: any[]) => void): this;
+    /**
+     * Emitted when the window leaves a full-screen state triggered by HTML API.
+     */
+    on(event: 'leave-html-full-screen', listener: Function): this;
+    once(event: 'leave-html-full-screen', listener: Function): this;
+    addListener(event: 'leave-html-full-screen', listener: Function): this;
+    removeListener(event: 'leave-html-full-screen', listener: Function): this;
     /**
      * Emitted when webContents wants to do basic auth. The usage is the same with the
      * login event of app.
@@ -6455,6 +7060,22 @@ declare namespace Electron {
                                                   */
                                                  favicons: string[]) => void): this;
     /**
+     * Fired when page title is set during navigation. explicitSet is false when title
+     * is synthesized from file url.
+     */
+    on(event: 'page-title-updated', listener: (event: Event,
+                                               title: string,
+                                               explicitSet: boolean) => void): this;
+    once(event: 'page-title-updated', listener: (event: Event,
+                                               title: string,
+                                               explicitSet: boolean) => void): this;
+    addListener(event: 'page-title-updated', listener: (event: Event,
+                                               title: string,
+                                               explicitSet: boolean) => void): this;
+    removeListener(event: 'page-title-updated', listener: (event: Event,
+                                               title: string,
+                                               explicitSet: boolean) => void): this;
+    /**
      * Emitted when a new frame is generated. Only the dirty area is passed in the
      * buffer.
      */
@@ -6497,6 +7118,21 @@ declare namespace Electron {
     removeListener(event: 'plugin-crashed', listener: (event: Event,
                                            name: string,
                                            version: string) => void): this;
+    /**
+     * Emitted when the preload script preloadPath throws an unhandled exception error.
+     */
+    on(event: 'preload-error', listener: (event: Event,
+                                          preloadPath: string,
+                                          error: Error) => void): this;
+    once(event: 'preload-error', listener: (event: Event,
+                                          preloadPath: string,
+                                          error: Error) => void): this;
+    addListener(event: 'preload-error', listener: (event: Event,
+                                          preloadPath: string,
+                                          error: Error) => void): this;
+    removeListener(event: 'preload-error', listener: (event: Event,
+                                          preloadPath: string,
+                                          error: Error) => void): this;
     /**
      * Emitted when remote.getBuiltin() is called in the renderer process. Calling
      * event.preventDefault() will prevent the module from being returned. Custom value
@@ -6544,8 +7180,7 @@ declare namespace Electron {
     /**
      * Emitted when <webview>.getWebContents() is called in the renderer process.
      * Calling event.preventDefault() will prevent the object from being returned.
-     * Custom value can be returned by setting event.returnValue. <!-- OpenFin Instance
-     * Events -->
+     * Custom value can be returned by setting event.returnValue.
      */
     on(event: 'remote-get-guest-web-contents', listener: (event: Event,
                                                           guestWebContents: WebContents) => void): this;
@@ -6749,7 +7384,7 @@ declare namespace Electron {
      * part of the page was repainted. If onlyDirty is set to true, image will only
      * contain the repainted area. onlyDirty defaults to false.
      */
-    beginFrameSubscription(onlyDirty: boolean, callback: (image: NativeImage, dirtyRect: Rectangle) => void): void;
+    beginFrameSubscription(callback: (image: NativeImage, dirtyRect: Rectangle) => void): void;
     /**
      * Begin subscribing for presentation events and captured frames, the callback will
      * be called with callback(image, dirtyRect) when there is a presentation event.
@@ -6758,7 +7393,7 @@ declare namespace Electron {
      * part of the page was repainted. If onlyDirty is set to true, image will only
      * contain the repainted area. onlyDirty defaults to false.
      */
-    beginFrameSubscription(callback: (image: NativeImage, dirtyRect: Rectangle) => void): void;
+    beginFrameSubscription(onlyDirty: boolean, callback: (image: NativeImage, dirtyRect: Rectangle) => void): void;
     canGoBack(): boolean;
     canGoForward(): boolean;
     canGoToOffset(offset: number): boolean;
@@ -6766,14 +7401,21 @@ declare namespace Electron {
      * Captures a snapshot of the page within rect. Upon completion callback will be
      * called with callback(image). The image is an instance of NativeImage that stores
      * data of the snapshot. Omitting rect will capture the whole visible page.
+     * Deprecated Soon
      */
-    capturePage(rect: Rectangle, callback: (image: NativeImage) => void): void;
+    capturePage(callback: (image: NativeImage) => void): void;
     /**
      * Captures a snapshot of the page within rect. Upon completion callback will be
      * called with callback(image). The image is an instance of NativeImage that stores
      * data of the snapshot. Omitting rect will capture the whole visible page.
+     * Deprecated Soon
      */
-    capturePage(callback: (image: NativeImage) => void): void;
+    capturePage(rect: Rectangle, callback: (image: NativeImage) => void): void;
+    /**
+     * Captures a snapshot of the page within rect. Omitting rect will capture the
+     * whole visible page.
+     */
+    capturePage(rect?: Rectangle): Promise<Electron.NativeImage>;
     /**
      * Clears the navigation history.
      */
@@ -6818,10 +7460,13 @@ declare namespace Electron {
     /**
      * Evaluates code in page. In the browser window some HTML APIs like
      * requestFullScreen can only be invoked by a gesture from the user. Setting
-     * userGesture to true will remove this limitation. If the result of the executed
-     * code is a promise the callback result will be the resolved value of the promise.
-     * We recommend that you use the returned Promise to handle code that results in a
-     * Promise.
+     * userGesture to true will remove this limitation.
+     */
+    executeJavaScript(code: string, userGesture?: boolean): Promise<any>;
+    /**
+     * Evaluates code in page. In the browser window some HTML APIs like
+     * requestFullScreen can only be invoked by a gesture from the user. Setting
+     * userGesture to true will remove this limitation. Deprecated Soon
      */
     executeJavaScript(code: string, userGesture?: boolean, callback?: (result: any) => void): Promise<any>;
     /**
@@ -6842,23 +7487,12 @@ declare namespace Electron {
     getPrinters(): PrinterInfo[];
     getProcessId(): number;
     getTitle(): string;
-    /**
-     * <!-- OpenFin Instance Methods -->
-     */
     getType(): ('backgroundPage' | 'window' | 'browserView' | 'remote' | 'webview' | 'offscreen');
     getURL(): string;
     getUserAgent(): string;
     getWebRTCIPHandlingPolicy(): string;
-    /**
-     * Sends a request to get current zoom factor, the callback will be called with
-     * callback(zoomFactor).
-     */
-    getZoomFactor(callback: (zoomFactor: number) => void): void;
-    /**
-     * Sends a request to get current zoom level, the callback will be called with
-     * callback(zoomLevel).
-     */
-    getZoomLevel(callback: (zoomLevel: number) => void): void;
+    getZoomFactor(): number;
+    getZoomLevel(): number;
     /**
      * Makes the browser go back a web page.
      */
@@ -6877,11 +7511,6 @@ declare namespace Electron {
     goToOffset(offset: number): void;
     hasFrame(frameName: string): HasFrame;
     /**
-     * Checks if any ServiceWorker is registered and returns a boolean as response to
-     * callback.
-     */
-    hasServiceWorker(callback: (hasWorker: boolean) => void): void;
-    /**
      * Injects CSS into the current web page.
      */
     insertCSS(css: string): void;
@@ -6897,6 +7526,10 @@ declare namespace Electron {
      * Opens the developer tools for the service worker context.
      */
     inspectServiceWorker(): void;
+    /**
+     * Opens the developer tools for the shared worker context.
+     */
+    inspectSharedWorker(): void;
     /**
      * Schedules a full repaint of the window this web contents is in. If offscreen
      * rendering is enabled invalidates the frame and generates a new one through the
@@ -6921,13 +7554,13 @@ declare namespace Electron {
      * relative to the root of your application.  For instance an app structure like
      * this: Would require code like this
      */
-    loadFile(filePath: string, options?: LoadFileOptions): void;
+    loadFile(filePath: string, options?: LoadFileOptions): Promise<void>;
     /**
      * Loads the url in the window. The url must contain the protocol prefix, e.g. the
      * http:// or file://. If the load should bypass http cache then use the pragma
      * header to achieve it.
      */
-    loadURL(url: string, options?: LoadURLOptions): void;
+    loadURL(url: string, options?: LoadURLOptions): Promise<void>;
     /**
      * Opens the devtools. When contents is a <webview> tag, the mode would be detach
      * by default, explicitly passing an empty mode can force using last used dock
@@ -6953,12 +7586,17 @@ declare namespace Electron {
     /**
      * Prints window's web page as PDF with Chromium's preview printing custom
      * settings. The callback will be called with callback(error, data) on completion.
-     * The data is a Buffer that contains the generated PDF data. The landscape will be
-     * ignored if @page CSS at-rule is used in the web page. By default, an empty
-     * options will be regarded as: Use page-break-before: always; CSS style to force
-     * to print to a new page. An example of webContents.printToPDF:
+     * The data is a Buffer that contains the generated PDF data. Deprecated Soon
      */
     printToPDF(options: PrintToPDFOptions, callback: (error: Error, data: Buffer) => void): void;
+    /**
+     * Prints window's web page as PDF with Chromium's preview printing custom
+     * settings. The landscape will be ignored if @page CSS at-rule is used in the web
+     * page. By default, an empty options will be regarded as: Use page-break-before:
+     * always; CSS style to force to print to a new page. An example of
+     * webContents.printToPDF:
+     */
+    printToPDF(options: PrintToPDFOptions): Promise<Buffer>;
     /**
      * Executes the editing command redo in web page.
      */
@@ -6983,7 +7621,7 @@ declare namespace Electron {
      * Executes the editing command replaceMisspelling in web page.
      */
     replaceMisspelling(text: string): void;
-    savePage(fullPath: string, saveType: 'HTMLOnly' | 'HTMLComplete' | 'MHTML', callback: (error: Error) => void): boolean;
+    savePage(fullPath: string, saveType: 'HTMLOnly' | 'HTMLComplete' | 'MHTML'): Promise<void>;
     /**
      * Executes the editing command selectAll in web page.
      */
@@ -7004,6 +7642,16 @@ declare namespace Electron {
      * object also have following properties:
      */
     sendInputEvent(event: Event): void;
+    /**
+     * Send an asynchronous message to a specific frame in a renderer process via
+     * channel. Arguments will be serialized as JSON internally and as such no
+     * functions or prototype chains will be included. The renderer process can handle
+     * the message by listening to channel with the ipcRenderer module. If you want to
+     * get the frameId of a given renderer context you should use the
+     * webFrame.routingId value.  E.g. You can also read frameId from all incoming IPC
+     * messages in the main process.
+     */
+    sendToFrame(frameId: number, channel: string, ...args: any[]): void;
     /**
      * Mute the audio on the current web page.
      */
@@ -7104,12 +7752,6 @@ declare namespace Electron {
      */
     undo(): void;
     /**
-     * Unregisters any ServiceWorker if present and returns a boolean as response to
-     * callback when the JS promise is fulfilled or false when the JS promise is
-     * rejected.
-     */
-    unregisterServiceWorker(callback: (success: boolean) => void): void;
-    /**
      * Executes the editing command unselect in web page.
      */
     unselect(): void;
@@ -7138,11 +7780,22 @@ declare namespace Electron {
      * requestFullScreen can only be invoked by a gesture from the user. Setting
      * userGesture to true will remove this limitation.
      */
+    executeJavaScript(code: string, userGesture?: boolean): Promise<any>;
+    /**
+     * Evaluates code in page. In the browser window some HTML APIs like
+     * requestFullScreen can only be invoked by a gesture from the user. Setting
+     * userGesture to true will remove this limitation. Deprecated Soon
+     */
     executeJavaScript(code: string, userGesture?: boolean, callback?: (result: any) => void): Promise<any>;
     /**
-     * Work like executeJavaScript but evaluates scripts in an isolated context.
+     * Works like executeJavaScript but evaluates scripts in an isolated context.
+     * Deprecated Soon
      */
-    executeJavaScriptInIsolatedWorld(worldId: number, scripts: WebSource[], userGesture?: boolean, callback?: (result: any) => void): void;
+    executeJavaScriptInIsolatedWorld(worldId: number, scripts: WebSource[], userGesture?: boolean, callback?: (result: any) => void): Promise<any>;
+    /**
+     * Works like executeJavaScript but evaluates scripts in an isolated context.
+     */
+    executeJavaScriptInIsolatedWorld(worldId: number, scripts: WebSource[], userGesture?: boolean): Promise<any>;
     findFrameByName(name: string): WebFrame;
     findFrameByRoutingId(routingId: number): WebFrame;
     getFrameForSelector(selector: string): WebFrame;
@@ -7154,21 +7807,13 @@ declare namespace Electron {
     getZoomFactor(): number;
     getZoomLevel(): number;
     /**
+     * Inserts css as a style sheet in the document.
+     */
+    insertCSS(css: string): void;
+    /**
      * Inserts text to the focused element.
      */
     insertText(text: string): void;
-    /**
-     * Resources will be loaded from this scheme regardless of the current page's
-     * Content Security Policy.
-     */
-    registerURLSchemeAsBypassingCSP(scheme: string): void;
-    /**
-     * Registers the scheme as secure, bypasses content security policy for resources,
-     * allows registering ServiceWorker and supports fetch API. Specify an option with
-     * the value of false to omit it from the registration. An example of registering a
-     * privileged scheme, without bypassing Content Security Policy:
-     */
-    registerURLSchemeAsPrivileged(scheme: string, options?: RegisterURLSchemeAsPrivilegedOptions): void;
     /**
      * Set the content security policy of the isolated world.
      */
@@ -7177,6 +7822,11 @@ declare namespace Electron {
      * Set the name of the isolated world. Useful in devtools.
      */
     setIsolatedWorldHumanReadableName(worldId: number, name: string): void;
+    /**
+     * Set the security origin, content security policy and name of the isolated world.
+     * Note: If the csp is specified, then the securityOrigin also has to be specified.
+     */
+    setIsolatedWorldInfo(worldId: number, info: Info): void;
     /**
      * Set the security origin of the isolated world.
      */
@@ -7187,10 +7837,12 @@ declare namespace Electron {
     setLayoutZoomLevelLimits(minimumLevel: number, maximumLevel: number): void;
     /**
      * Sets a provider for spell checking in input fields and text areas. The provider
-     * must be an object that has a spellCheck method that returns whether the word
-     * passed is correctly spelled. An example of using node-spellchecker as provider:
+     * must be an object that has a spellCheck method that accepts an array of
+     * individual words for spellchecking. The spellCheck function runs asynchronously
+     * and calls the callback function with an array of misspelt words when complete.
+     * An example of using node-spellchecker as provider:
      */
-    setSpellCheckProvider(language: string, autoCorrectWord: boolean, provider: Provider): void;
+    setSpellCheckProvider(language: string, provider: Provider): void;
     /**
      * Sets the maximum and minimum pinch-to-zoom level.
      */
@@ -7249,90 +7901,90 @@ declare namespace Electron {
      * The listener will be called with listener(details) when a server initiated
      * redirect is about to occur.
      */
-    onBeforeRedirect(filter: OnBeforeRedirectFilter, listener: (details: OnBeforeRedirectDetails) => void): void;
+    onBeforeRedirect(listener: ((details: OnBeforeRedirectDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when a server initiated
      * redirect is about to occur.
      */
-    onBeforeRedirect(listener: (details: OnBeforeRedirectDetails) => void): void;
+    onBeforeRedirect(filter: OnBeforeRedirectFilter, listener: ((details: OnBeforeRedirectDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) when a request is
      * about to occur. The uploadData is an array of UploadData objects. The callback
      * has to be called with an response object.
      */
-    onBeforeRequest(filter: OnBeforeRequestFilter, listener: (details: OnBeforeRequestDetails, callback: (response: Response) => void) => void): void;
+    onBeforeRequest(listener: ((details: OnBeforeRequestDetails, callback: (response: Response) => void) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) when a request is
      * about to occur. The uploadData is an array of UploadData objects. The callback
      * has to be called with an response object.
      */
-    onBeforeRequest(listener: (details: OnBeforeRequestDetails, callback: (response: Response) => void) => void): void;
+    onBeforeRequest(filter: OnBeforeRequestFilter, listener: ((details: OnBeforeRequestDetails, callback: (response: Response) => void) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) before sending an
      * HTTP request, once the request headers are available. This may occur after a TCP
      * connection is made to the server, but before any http data is sent. The callback
      * has to be called with an response object.
      */
-    onBeforeSendHeaders(filter: OnBeforeSendHeadersFilter, listener: (details: OnBeforeSendHeadersDetails, callback: (response: OnBeforeSendHeadersResponse) => void) => void): void;
+    onBeforeSendHeaders(filter: OnBeforeSendHeadersFilter, listener: ((details: OnBeforeSendHeadersDetails, callback: (response: OnBeforeSendHeadersResponse) => void) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) before sending an
      * HTTP request, once the request headers are available. This may occur after a TCP
      * connection is made to the server, but before any http data is sent. The callback
      * has to be called with an response object.
      */
-    onBeforeSendHeaders(listener: (details: OnBeforeSendHeadersDetails, callback: (response: OnBeforeSendHeadersResponse) => void) => void): void;
+    onBeforeSendHeaders(listener: ((details: OnBeforeSendHeadersDetails, callback: (response: OnBeforeSendHeadersResponse) => void) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when a request is completed.
      */
-    onCompleted(filter: OnCompletedFilter, listener: (details: OnCompletedDetails) => void): void;
+    onCompleted(filter: OnCompletedFilter, listener: ((details: OnCompletedDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when a request is completed.
      */
-    onCompleted(listener: (details: OnCompletedDetails) => void): void;
+    onCompleted(listener: ((details: OnCompletedDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when an error occurs.
      */
-    onErrorOccurred(filter: OnErrorOccurredFilter, listener: (details: OnErrorOccurredDetails) => void): void;
+    onErrorOccurred(listener: ((details: OnErrorOccurredDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when an error occurs.
      */
-    onErrorOccurred(listener: (details: OnErrorOccurredDetails) => void): void;
+    onErrorOccurred(filter: OnErrorOccurredFilter, listener: ((details: OnErrorOccurredDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) when HTTP response
      * headers of a request have been received. The callback has to be called with an
      * response object.
      */
-    onHeadersReceived(filter: OnHeadersReceivedFilter, listener: (details: OnHeadersReceivedDetails, callback: (response: OnHeadersReceivedResponse) => void) => void): void;
+    onHeadersReceived(filter: OnHeadersReceivedFilter, listener: ((details: OnHeadersReceivedDetails, callback: (response: OnHeadersReceivedResponse) => void) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) when HTTP response
      * headers of a request have been received. The callback has to be called with an
      * response object.
      */
-    onHeadersReceived(listener: (details: OnHeadersReceivedDetails, callback: (response: OnHeadersReceivedResponse) => void) => void): void;
+    onHeadersReceived(listener: ((details: OnHeadersReceivedDetails, callback: (response: OnHeadersReceivedResponse) => void) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when first byte of the
      * response body is received. For HTTP requests, this means that the status line
      * and response headers are available.
      */
-    onResponseStarted(filter: OnResponseStartedFilter, listener: (details: OnResponseStartedDetails) => void): void;
+    onResponseStarted(listener: ((details: OnResponseStartedDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) when first byte of the
      * response body is received. For HTTP requests, this means that the status line
      * and response headers are available.
      */
-    onResponseStarted(listener: (details: OnResponseStartedDetails) => void): void;
+    onResponseStarted(filter: OnResponseStartedFilter, listener: ((details: OnResponseStartedDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) just before a request is
      * going to be sent to the server, modifications of previous onBeforeSendHeaders
      * response are visible by the time this listener is fired.
      */
-    onSendHeaders(filter: OnSendHeadersFilter, listener: (details: OnSendHeadersDetails) => void): void;
+    onSendHeaders(filter: OnSendHeadersFilter, listener: ((details: OnSendHeadersDetails) => void) | (null)): void;
     /**
      * The listener will be called with listener(details) just before a request is
      * going to be sent to the server, modifications of previous onBeforeSendHeaders
      * response are visible by the time this listener is fired.
      */
-    onSendHeaders(listener: (details: OnSendHeadersDetails) => void): void;
+    onSendHeaders(listener: ((details: OnSendHeadersDetails) => void) | (null)): void;
   }
 
   interface WebSource {
@@ -7515,7 +8167,7 @@ declare namespace Electron {
     addEventListener(event: 'devtools-closed', listener: (event: Event) => void, useCapture?: boolean): this;
     removeEventListener(event: 'devtools-closed', listener: (event: Event) => void): this;
     /**
-     * Emitted when DevTools is focused / opened. <!-- OpenFin DOM Events -->
+     * Emitted when DevTools is focused / opened.
      */
     addEventListener(event: 'devtools-focused', listener: (event: Event) => void, useCapture?: boolean): this;
     removeEventListener(event: 'devtools-focused', listener: (event: Event) => void): this;
@@ -7535,15 +8187,24 @@ declare namespace Electron {
     canGoForward(): boolean;
     canGoToOffset(offset: number): boolean;
     /**
-     * Captures a snapshot of the webview's page. Same as
-     * webContents.capturePage([rect, ]callback).
+     * Captures a snapshot of the page within rect. Upon completion callback will be
+     * called with callback(image). The image is an instance of NativeImage that stores
+     * data of the snapshot. Omitting rect will capture the whole visible page.
+     * Deprecated Soon
+     */
+    capturePage(callback: (image: NativeImage) => void): void;
+    /**
+     * Captures a snapshot of the page within rect. Upon completion callback will be
+     * called with callback(image). The image is an instance of NativeImage that stores
+     * data of the snapshot. Omitting rect will capture the whole visible page.
+     * Deprecated Soon
      */
     capturePage(rect: Rectangle, callback: (image: NativeImage) => void): void;
     /**
-     * Captures a snapshot of the webview's page. Same as
-     * webContents.capturePage([rect, ]callback).
+     * Captures a snapshot of the page within rect. Omitting rect will capture the
+     * whole visible page.
      */
-    capturePage(callback: (image: NativeImage) => void): void;
+    capturePage(rect?: Rectangle): Promise<Electron.NativeImage>;
     /**
      * Clears the navigation history.
      */
@@ -7571,9 +8232,15 @@ declare namespace Electron {
     /**
      * Evaluates code in page. If userGesture is set, it will create the user gesture
      * context in the page. HTML APIs like requestFullScreen, which require user
+     * action, can take advantage of this option for automation. Deprecated Soon
+     */
+    executeJavaScript(code: string, userGesture?: boolean, callback?: (result: any) => void): Promise<any>;
+    /**
+     * Evaluates code in page. If userGesture is set, it will create the user gesture
+     * context in the page. HTML APIs like requestFullScreen, which require user
      * action, can take advantage of this option for automation.
      */
-    executeJavaScript(code: string, userGesture?: boolean, callback?: (result: any) => void): void;
+    executeJavaScript(code: string, userGesture?: boolean): Promise<any>;
     /**
      * Starts a request to find all matches for the text in the web page. The result of
      * the request can be obtained by subscribing to found-in-page event.
@@ -7587,16 +8254,9 @@ declare namespace Electron {
      * is disabled.
      */
     getWebContents(): WebContents;
-    /**
-     * Sends a request to get current zoom factor, the callback will be called with
-     * callback(zoomFactor).
-     */
-    getZoomFactor(callback: (zoomFactor: number) => void): void;
-    /**
-     * Sends a request to get current zoom level, the callback will be called with
-     * callback(zoomLevel).
-     */
-    getZoomLevel(callback: (zoomLevel: number) => void): void;
+    getWebContentsId(): number;
+    getZoomFactor(): number;
+    getZoomLevel(): number;
     /**
      * Makes the guest page go back.
      */
@@ -7629,6 +8289,10 @@ declare namespace Electron {
      * Opens the DevTools for the service worker context present in the guest page.
      */
     inspectServiceWorker(): void;
+    /**
+     * Opens the DevTools for the shared worker context present in the guest page.
+     */
+    inspectSharedWorker(): void;
     isAudioMuted(): boolean;
     isCrashed(): boolean;
     isCurrentlyAudible(): boolean;
@@ -7641,7 +8305,7 @@ declare namespace Electron {
      * Loads the url in the webview, the url must contain the protocol prefix, e.g. the
      * http:// or file://.
      */
-    loadURL(url: string, options?: LoadURLOptions): void;
+    loadURL(url: string, options?: LoadURLOptions): Promise<void>;
     /**
      * Opens a DevTools window for guest page.
      */
@@ -7660,9 +8324,13 @@ declare namespace Electron {
     print(options?: PrintOptions): void;
     /**
      * Prints webview's web page as PDF, Same as webContents.printToPDF(options,
-     * callback).
+     * callback). Deprecated Soon
      */
     printToPDF(options: PrintToPDFOptions, callback: (error: Error, data: Buffer) => void): void;
+    /**
+     * Prints webview's web page as PDF, Same as webContents.printToPDF(options).
+     */
+    printToPDF(options: PrintToPDFOptions): Promise<Buffer>;
     /**
      * Executes editing command redo in page.
      */
@@ -7753,14 +8421,6 @@ declare namespace Electron {
      */
     allowpopups?: string;
     /**
-     * When this attribute is present the webview container will automatically resize
-     * within the bounds specified by the attributes minwidth, minheight, maxwidth, and
-     * maxheight. These constraints do not impact the webview unless autosize is
-     * enabled. When autosize is enabled, the webview container size cannot be less
-     * than the minimum values or greater than the maximum.
-     */
-    autosize?: string;
-    /**
      * A list of strings which specifies the blink features to be disabled separated by
      * ,. The full list of supported feature strings can be found in the
      * RuntimeEnabledFeatures.json5 file.
@@ -7779,7 +8439,7 @@ declare namespace Electron {
     enableblinkfeatures?: string;
     /**
      * When this attribute is false the guest page in webview will not have access to
-     * the remote module. The remote module is avaiable by default.
+     * the remote module. The remote module is available by default.
      */
     enableremotemodule?: string;
     /**
@@ -7792,6 +8452,13 @@ declare namespace Electron {
      * system resources. Node integration is disabled by default in the guest page.
      */
     nodeintegration?: string;
+    /**
+     * Experimental option for enabling NodeJS support in sub-frames such as iframes
+     * inside the webview. All your preloads will load for every iframe, you can use
+     * process.isMainFrame to determine if you are in the main frame or not. This
+     * option is disabled by default in the guest page.
+     */
+    nodeintegrationinsubframes?: string;
     /**
      * Sets the session used by the page. If partition starts with persist:, the page
      * will use a persistent session available to all pages in the app with the same
@@ -7840,6 +8507,38 @@ declare namespace Electron {
     webpreferences?: string;
   }
 
+  class WindowTransaction extends EventEmitter {
+
+    // Docs: http://electronjs.org/docs/api/window-transaction
+
+    /**
+     * Emitted when setWindowPos is called on a hidden or minimized window.
+     */
+    on(event: 'deferred-set-window-pos', listener: (event: Event,
+                                                    bounds: DeferredSetWindowPosBounds) => void): this;
+    once(event: 'deferred-set-window-pos', listener: (event: Event,
+                                                    bounds: DeferredSetWindowPosBounds) => void): this;
+    addListener(event: 'deferred-set-window-pos', listener: (event: Event,
+                                                    bounds: DeferredSetWindowPosBounds) => void): this;
+    removeListener(event: 'deferred-set-window-pos', listener: (event: Event,
+                                                    bounds: DeferredSetWindowPosBounds) => void): this;
+    constructor(count: number);
+    /**
+     * Commits a batch of setWindowPos() calls and updates the windows.
+     */
+    commit(): void;
+    /**
+     * Sets the window position, size, and z order for a window. hwnd is the integer
+     * Windows HWND handle of the window you want to update. hwndafter  Can be a window
+     * handle or one of the following: hwndBottom - send to bottom of z order hwndTop -
+     * bring to top of z order hwndTopMost - enable topmost property hwndNoTopMost -
+     * disable topmost property flags - Can be one of the following: noMove - x, y not
+     * required noSize - w,h not required noZorder - hwndafter not required noActivate
+     * - don't activate window show - show the window hide - hide the window
+     */
+    setWindowPos(hwnd: number, options: WindowPosOptions): void;
+  }
+
   class WinEventHookEmitter extends EventEmitter {
 
     // Docs: http://electronjs.org/docs/api/win-event-hook-emitter
@@ -7863,10 +8562,7 @@ declare namespace Electron {
                                            */
                                           nativeWindowInfo: NativeWindowInfo,
                                           /**
-                                           * Specifies the time, in milliseconds, that the event was generated. The range of
-                                           * WinEvent constant values specified by the Accessibility Interoperability
-                                           * Alliance (AIA) for use across the industry. For more information, see Allocation
-                                           * of WinEvent IDs.
+                                           * Specifies the time, in milliseconds, that the event was generated.
                                            */
                                           eventTime: number) => void): this;
     once(event: 'EVENT_AIA_END', listener: (event: Event,
@@ -7876,10 +8572,7 @@ declare namespace Electron {
                                            */
                                           nativeWindowInfo: NativeWindowInfo,
                                           /**
-                                           * Specifies the time, in milliseconds, that the event was generated. The range of
-                                           * WinEvent constant values specified by the Accessibility Interoperability
-                                           * Alliance (AIA) for use across the industry. For more information, see Allocation
-                                           * of WinEvent IDs.
+                                           * Specifies the time, in milliseconds, that the event was generated.
                                            */
                                           eventTime: number) => void): this;
     addListener(event: 'EVENT_AIA_END', listener: (event: Event,
@@ -7889,10 +8582,7 @@ declare namespace Electron {
                                            */
                                           nativeWindowInfo: NativeWindowInfo,
                                           /**
-                                           * Specifies the time, in milliseconds, that the event was generated. The range of
-                                           * WinEvent constant values specified by the Accessibility Interoperability
-                                           * Alliance (AIA) for use across the industry. For more information, see Allocation
-                                           * of WinEvent IDs.
+                                           * Specifies the time, in milliseconds, that the event was generated.
                                            */
                                           eventTime: number) => void): this;
     removeListener(event: 'EVENT_AIA_END', listener: (event: Event,
@@ -7902,10 +8592,7 @@ declare namespace Electron {
                                            */
                                           nativeWindowInfo: NativeWindowInfo,
                                           /**
-                                           * Specifies the time, in milliseconds, that the event was generated. The range of
-                                           * WinEvent constant values specified by the Accessibility Interoperability
-                                           * Alliance (AIA) for use across the industry. For more information, see Allocation
-                                           * of WinEvent IDs.
+                                           * Specifies the time, in milliseconds, that the event was generated.
                                            */
                                           eventTime: number) => void): this;
     on(event: 'EVENT_AIA_START', listener: (event: Event,
@@ -7915,10 +8602,7 @@ declare namespace Electron {
                                              */
                                             nativeWindowInfo: NativeWindowInfo,
                                             /**
-                                             * Specifies the time, in milliseconds, that the event was generated. The range of
-                                             * WinEvent constant values specified by the Accessibility Interoperability
-                                             * Alliance (AIA) for use across the industry. For more information, see Allocation
-                                             * of WinEvent
+                                             * Specifies the time, in milliseconds, that the event was generated.
                                              */
                                             eventTime: number) => void): this;
     once(event: 'EVENT_AIA_START', listener: (event: Event,
@@ -7928,10 +8612,7 @@ declare namespace Electron {
                                              */
                                             nativeWindowInfo: NativeWindowInfo,
                                             /**
-                                             * Specifies the time, in milliseconds, that the event was generated. The range of
-                                             * WinEvent constant values specified by the Accessibility Interoperability
-                                             * Alliance (AIA) for use across the industry. For more information, see Allocation
-                                             * of WinEvent
+                                             * Specifies the time, in milliseconds, that the event was generated.
                                              */
                                             eventTime: number) => void): this;
     addListener(event: 'EVENT_AIA_START', listener: (event: Event,
@@ -7941,10 +8622,7 @@ declare namespace Electron {
                                              */
                                             nativeWindowInfo: NativeWindowInfo,
                                             /**
-                                             * Specifies the time, in milliseconds, that the event was generated. The range of
-                                             * WinEvent constant values specified by the Accessibility Interoperability
-                                             * Alliance (AIA) for use across the industry. For more information, see Allocation
-                                             * of WinEvent
+                                             * Specifies the time, in milliseconds, that the event was generated.
                                              */
                                             eventTime: number) => void): this;
     removeListener(event: 'EVENT_AIA_START', listener: (event: Event,
@@ -7954,10 +8632,7 @@ declare namespace Electron {
                                              */
                                             nativeWindowInfo: NativeWindowInfo,
                                             /**
-                                             * Specifies the time, in milliseconds, that the event was generated. The range of
-                                             * WinEvent constant values specified by the Accessibility Interoperability
-                                             * Alliance (AIA) for use across the industry. For more information, see Allocation
-                                             * of WinEvent
+                                             * Specifies the time, in milliseconds, that the event was generated.
                                              */
                                             eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
@@ -7967,9 +8642,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                            * KeyboardShortcut property has changed. Server applications send this event for
-                                                            * their accessible objects.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
@@ -7979,9 +8652,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                            * KeyboardShortcut property has changed. Server applications send this event for
-                                                            * their accessible objects.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
@@ -7991,9 +8662,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                            * KeyboardShortcut property has changed. Server applications send this event for
-                                                            * their accessible objects.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
@@ -8003,9 +8672,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                            * KeyboardShortcut property has changed. Server applications send this event for
-                                                            * their accessible objects.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
@@ -8015,8 +8682,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. Sent when a
-                                                  * window is cloaked. A cloaked window still exists, but is invisible to the user.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
@@ -8026,8 +8692,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. Sent when a
-                                                  * window is cloaked. A cloaked window still exists, but is invisible to the user.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
@@ -8037,8 +8702,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. Sent when a
-                                                  * window is cloaked. A cloaked window still exists, but is invisible to the user.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
@@ -8048,8 +8712,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. Sent when a
-                                                  * window is cloaked. A cloaked window still exists, but is invisible to the user.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
@@ -8059,13 +8722,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. A window
-                                                          * object's scrolling has ended. Unlike EVENT_SYSTEM_SCROLLEND, this event is
-                                                          * associated with the scrolling window. Whether the scrolling is horizontal or
-                                                          * vertical scrolling, this event should be sent whenever the scroll action is
-                                                          * completed. The hwnd parameter of the WinEventProc callback function describes
-                                                          * the scrolling window; the idObject parameter is OBJID_CLIENT, and the idChild
-                                                          * parameter is CHILDID_SELF.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
@@ -8075,13 +8732,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. A window
-                                                          * object's scrolling has ended. Unlike EVENT_SYSTEM_SCROLLEND, this event is
-                                                          * associated with the scrolling window. Whether the scrolling is horizontal or
-                                                          * vertical scrolling, this event should be sent whenever the scroll action is
-                                                          * completed. The hwnd parameter of the WinEventProc callback function describes
-                                                          * the scrolling window; the idObject parameter is OBJID_CLIENT, and the idChild
-                                                          * parameter is CHILDID_SELF.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
@@ -8091,13 +8742,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. A window
-                                                          * object's scrolling has ended. Unlike EVENT_SYSTEM_SCROLLEND, this event is
-                                                          * associated with the scrolling window. Whether the scrolling is horizontal or
-                                                          * vertical scrolling, this event should be sent whenever the scroll action is
-                                                          * completed. The hwnd parameter of the WinEventProc callback function describes
-                                                          * the scrolling window; the idObject parameter is OBJID_CLIENT, and the idChild
-                                                          * parameter is CHILDID_SELF.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
@@ -8107,13 +8752,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. A window
-                                                          * object's scrolling has ended. Unlike EVENT_SYSTEM_SCROLLEND, this event is
-                                                          * associated with the scrolling window. Whether the scrolling is horizontal or
-                                                          * vertical scrolling, this event should be sent whenever the scroll action is
-                                                          * completed. The hwnd parameter of the WinEventProc callback function describes
-                                                          * the scrolling window; the idObject parameter is OBJID_CLIENT, and the idChild
-                                                          * parameter is CHILDID_SELF.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
@@ -8123,17 +8762,7 @@ declare namespace Electron {
                                                  */
                                                 nativeWindowInfo: NativeWindowInfo,
                                                 /**
-                                                 * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                 * been created. The system sends this event for the following user interface
-                                                 * elements: caret, header control, list-view control, tab control, toolbar
-                                                 * control, tree view control, and window object. Server applications send this
-                                                 * event for their accessible objects. Before sending the event for the parent
-                                                 * object, servers must send it for all of an object's child objects. Servers must
-                                                 * ensure that all child objects are fully created and ready to accept IAccessible
-                                                 * calls from clients before the parent object sends this event. Because a parent
-                                                 * object is created after its child objects, clients must make sure that an
-                                                 * object's parent has been created before calling IAccessible::get_accParent,
-                                                 * particularly if in-context hook functions are used.
+                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                  */
                                                 eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
@@ -8143,17 +8772,7 @@ declare namespace Electron {
                                                  */
                                                 nativeWindowInfo: NativeWindowInfo,
                                                 /**
-                                                 * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                 * been created. The system sends this event for the following user interface
-                                                 * elements: caret, header control, list-view control, tab control, toolbar
-                                                 * control, tree view control, and window object. Server applications send this
-                                                 * event for their accessible objects. Before sending the event for the parent
-                                                 * object, servers must send it for all of an object's child objects. Servers must
-                                                 * ensure that all child objects are fully created and ready to accept IAccessible
-                                                 * calls from clients before the parent object sends this event. Because a parent
-                                                 * object is created after its child objects, clients must make sure that an
-                                                 * object's parent has been created before calling IAccessible::get_accParent,
-                                                 * particularly if in-context hook functions are used.
+                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                  */
                                                 eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
@@ -8163,17 +8782,7 @@ declare namespace Electron {
                                                  */
                                                 nativeWindowInfo: NativeWindowInfo,
                                                 /**
-                                                 * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                 * been created. The system sends this event for the following user interface
-                                                 * elements: caret, header control, list-view control, tab control, toolbar
-                                                 * control, tree view control, and window object. Server applications send this
-                                                 * event for their accessible objects. Before sending the event for the parent
-                                                 * object, servers must send it for all of an object's child objects. Servers must
-                                                 * ensure that all child objects are fully created and ready to accept IAccessible
-                                                 * calls from clients before the parent object sends this event. Because a parent
-                                                 * object is created after its child objects, clients must make sure that an
-                                                 * object's parent has been created before calling IAccessible::get_accParent,
-                                                 * particularly if in-context hook functions are used.
+                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                  */
                                                 eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
@@ -8183,17 +8792,7 @@ declare namespace Electron {
                                                  */
                                                 nativeWindowInfo: NativeWindowInfo,
                                                 /**
-                                                 * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                 * been created. The system sends this event for the following user interface
-                                                 * elements: caret, header control, list-view control, tab control, toolbar
-                                                 * control, tree view control, and window object. Server applications send this
-                                                 * event for their accessible objects. Before sending the event for the parent
-                                                 * object, servers must send it for all of an object's child objects. Servers must
-                                                 * ensure that all child objects are fully created and ready to accept IAccessible
-                                                 * calls from clients before the parent object sends this event. Because a parent
-                                                 * object is created after its child objects, clients must make sure that an
-                                                 * object's parent has been created before calling IAccessible::get_accParent,
-                                                 * particularly if in-context hook functions are used.
+                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                  */
                                                 eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
@@ -8203,9 +8802,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                          * DefaultAction property has changed. The system sends this event for dialog
-                                                          * boxes. Server applications send this event for their accessible objects.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
@@ -8215,9 +8812,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                          * DefaultAction property has changed. The system sends this event for dialog
-                                                          * boxes. Server applications send this event for their accessible objects.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
@@ -8227,9 +8822,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                          * DefaultAction property has changed. The system sends this event for dialog
-                                                          * boxes. Server applications send this event for their accessible objects.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
@@ -8239,9 +8832,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                          * DefaultAction property has changed. The system sends this event for dialog
-                                                          * boxes. Server applications send this event for their accessible objects.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
@@ -8251,9 +8842,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                            * Description property has changed. Server applications send this event for their
-                                                            * accessible objects.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
@@ -8263,9 +8852,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                            * Description property has changed. Server applications send this event for their
-                                                            * accessible objects.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
@@ -8275,9 +8862,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                            * Description property has changed. Server applications send this event for their
-                                                            * accessible objects.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
@@ -8287,9 +8872,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                            * Description property has changed. Server applications send this event for their
-                                                            * accessible objects.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
@@ -8299,17 +8882,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                  * been destroyed. The system sends this event for the following user interface
-                                                  * elements: caret, header control, list-view control, tab control, toolbar
-                                                  * control, tree view control, and window object. Server applications send this
-                                                  * event for their accessible objects. Clients assume that all of an object's
-                                                  * children are destroyed when the parent object sends this event. After receiving
-                                                  * this event, clients do not call an object's IAccessible properties or methods.
-                                                  * However, the interface pointer must remain valid as long as there is a reference
-                                                  * count on it (due to COM rules), but the UI element may no longer be present.
-                                                  * Further calls on the interface pointer may return failure errors; to prevent
-                                                  * this, servers create proxy objects and monitor their life spans.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
@@ -8319,17 +8892,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                  * been destroyed. The system sends this event for the following user interface
-                                                  * elements: caret, header control, list-view control, tab control, toolbar
-                                                  * control, tree view control, and window object. Server applications send this
-                                                  * event for their accessible objects. Clients assume that all of an object's
-                                                  * children are destroyed when the parent object sends this event. After receiving
-                                                  * this event, clients do not call an object's IAccessible properties or methods.
-                                                  * However, the interface pointer must remain valid as long as there is a reference
-                                                  * count on it (due to COM rules), but the UI element may no longer be present.
-                                                  * Further calls on the interface pointer may return failure errors; to prevent
-                                                  * this, servers create proxy objects and monitor their life spans.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
@@ -8339,17 +8902,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                  * been destroyed. The system sends this event for the following user interface
-                                                  * elements: caret, header control, list-view control, tab control, toolbar
-                                                  * control, tree view control, and window object. Server applications send this
-                                                  * event for their accessible objects. Clients assume that all of an object's
-                                                  * children are destroyed when the parent object sends this event. After receiving
-                                                  * this event, clients do not call an object's IAccessible properties or methods.
-                                                  * However, the interface pointer must remain valid as long as there is a reference
-                                                  * count on it (due to COM rules), but the UI element may no longer be present.
-                                                  * Further calls on the interface pointer may return failure errors; to prevent
-                                                  * this, servers create proxy objects and monitor their life spans.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
@@ -8359,17 +8912,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                  * been destroyed. The system sends this event for the following user interface
-                                                  * elements: caret, header control, list-view control, tab control, toolbar
-                                                  * control, tree view control, and window object. Server applications send this
-                                                  * event for their accessible objects. Clients assume that all of an object's
-                                                  * children are destroyed when the parent object sends this event. After receiving
-                                                  * this event, clients do not call an object's IAccessible properties or methods.
-                                                  * However, the interface pointer must remain valid as long as there is a reference
-                                                  * count on it (due to COM rules), but the UI element may no longer be present.
-                                                  * Further calls on the interface pointer may return failure errors; to prevent
-                                                  * this, servers create proxy objects and monitor their life spans.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
@@ -8379,10 +8922,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                     * ended a drag operation before dropping the dragged element on a drop target. The
-                                                     * hwnd, idObject, and idChild parameters of the WinEventProc callback function
-                                                     * identify the object being dragged.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
@@ -8392,10 +8932,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                     * ended a drag operation before dropping the dragged element on a drop target. The
-                                                     * hwnd, idObject, and idChild parameters of the WinEventProc callback function
-                                                     * identify the object being dragged.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
@@ -8405,10 +8942,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                     * ended a drag operation before dropping the dragged element on a drop target. The
-                                                     * hwnd, idObject, and idChild parameters of the WinEventProc callback function
-                                                     * identify the object being dragged.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
@@ -8418,10 +8952,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                     * ended a drag operation before dropping the dragged element on a drop target. The
-                                                     * hwnd, idObject, and idChild parameters of the WinEventProc callback function
-                                                     * identify the object being dragged.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
@@ -8431,9 +8962,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. The user
-                                                       * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
-                                                       * of the WinEventProc callback function identify the object being dragged.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
@@ -8443,9 +8972,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. The user
-                                                       * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
-                                                       * of the WinEventProc callback function identify the object being dragged.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
@@ -8455,9 +8982,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. The user
-                                                       * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
-                                                       * of the WinEventProc callback function identify the object being dragged.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
@@ -8467,9 +8992,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. The user
-                                                       * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
-                                                       * of the WinEventProc callback function identify the object being dragged.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
@@ -8479,9 +9002,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The user
-                                                      * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
-                                                      * of the WinEventProc callback function identify the drop target.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
@@ -8491,9 +9012,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The user
-                                                      * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
-                                                      * of the WinEventProc callback function identify the drop target.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
@@ -8503,9 +9022,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The user
-                                                      * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
-                                                      * of the WinEventProc callback function identify the drop target.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
@@ -8515,9 +9032,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The user
-                                                      * dropped an element on a drop target. The hwnd, idObject, and idChild parameters
-                                                      * of the WinEventProc callback function identify the drop target.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
@@ -8527,10 +9042,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * dragged an element into a drop target's boundary. The hwnd, idObject, and
-                                                    * idChild parameters of the WinEventProc callback function identify the drop
-                                                    * target.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
@@ -8540,10 +9052,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * dragged an element into a drop target's boundary. The hwnd, idObject, and
-                                                    * idChild parameters of the WinEventProc callback function identify the drop
-                                                    * target.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
@@ -8553,10 +9062,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * dragged an element into a drop target's boundary. The hwnd, idObject, and
-                                                    * idChild parameters of the WinEventProc callback function identify the drop
-                                                    * target.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
@@ -8566,10 +9072,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * dragged an element into a drop target's boundary. The hwnd, idObject, and
-                                                    * idChild parameters of the WinEventProc callback function identify the drop
-                                                    * target.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
@@ -8579,10 +9082,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * dragged an element out of a drop target's boundary. The hwnd, idObject, and
-                                                    * idChild parameters of the WinEventProc callback function identify the drop
-                                                    * target.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
@@ -8592,10 +9092,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * dragged an element out of a drop target's boundary. The hwnd, idObject, and
-                                                    * idChild parameters of the WinEventProc callback function identify the drop
-                                                    * target.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
@@ -8605,10 +9102,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * dragged an element out of a drop target's boundary. The hwnd, idObject, and
-                                                    * idChild parameters of the WinEventProc callback function identify the drop
-                                                    * target.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
@@ -8618,10 +9112,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * dragged an element out of a drop target's boundary. The hwnd, idObject, and
-                                                    * idChild parameters of the WinEventProc callback function identify the drop
-                                                    * target.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
@@ -8631,9 +9122,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * started to drag an element. The hwnd, idObject, and idChild parameters of the
-                                                    * WinEventProc callback function identify the object being dragged.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
@@ -8643,9 +9132,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * started to drag an element. The hwnd, idObject, and idChild parameters of the
-                                                    * WinEventProc callback function identify the object being dragged.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
@@ -8655,9 +9142,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * started to drag an element. The hwnd, idObject, and idChild parameters of the
-                                                    * WinEventProc callback function identify the object being dragged.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
@@ -8667,9 +9152,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user
-                                                    * started to drag an element. The hwnd, idObject, and idChild parameters of the
-                                                    * WinEventProc callback function identify the object being dragged.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_END', listener: (event: Event,
@@ -8679,8 +9162,7 @@ declare namespace Electron {
                                               */
                                              nativeWindowInfo: NativeWindowInfo,
                                              /**
-                                              * Specifies the time, in milliseconds, that the event was generated. The highest
-                                              * object event value.
+                                              * Specifies the time, in milliseconds, that the event was generated.
                                               */
                                              eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_END', listener: (event: Event,
@@ -8690,8 +9172,7 @@ declare namespace Electron {
                                               */
                                              nativeWindowInfo: NativeWindowInfo,
                                              /**
-                                              * Specifies the time, in milliseconds, that the event was generated. The highest
-                                              * object event value.
+                                              * Specifies the time, in milliseconds, that the event was generated.
                                               */
                                              eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_END', listener: (event: Event,
@@ -8701,8 +9182,7 @@ declare namespace Electron {
                                               */
                                              nativeWindowInfo: NativeWindowInfo,
                                              /**
-                                              * Specifies the time, in milliseconds, that the event was generated. The highest
-                                              * object event value.
+                                              * Specifies the time, in milliseconds, that the event was generated.
                                               */
                                              eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_END', listener: (event: Event,
@@ -8712,8 +9192,7 @@ declare namespace Electron {
                                               */
                                              nativeWindowInfo: NativeWindowInfo,
                                              /**
-                                              * Specifies the time, in milliseconds, that the event was generated. The highest
-                                              * object event value.
+                                              * Specifies the time, in milliseconds, that the event was generated.
                                               */
                                              eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
@@ -8723,12 +9202,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                * received the keyboard focus. The system sends this event for the following user
-                                                * interface elements: list-view control, menu bar, pop-up menu, switch window, tab
-                                                * control, tree view control, and window object. Server applications send this
-                                                * event for their accessible objects. The hwnd parameter of the WinEventProc
-                                                * callback function identifies the window that receives the keyboard focus.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
@@ -8738,12 +9212,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                * received the keyboard focus. The system sends this event for the following user
-                                                * interface elements: list-view control, menu bar, pop-up menu, switch window, tab
-                                                * control, tree view control, and window object. Server applications send this
-                                                * event for their accessible objects. The hwnd parameter of the WinEventProc
-                                                * callback function identifies the window that receives the keyboard focus.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
@@ -8753,12 +9222,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                * received the keyboard focus. The system sends this event for the following user
-                                                * interface elements: list-view control, menu bar, pop-up menu, switch window, tab
-                                                * control, tree view control, and window object. Server applications send this
-                                                * event for their accessible objects. The hwnd parameter of the WinEventProc
-                                                * callback function identifies the window that receives the keyboard focus.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
@@ -8768,12 +9232,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                * received the keyboard focus. The system sends this event for the following user
-                                                * interface elements: list-view control, menu bar, pop-up menu, switch window, tab
-                                                * control, tree view control, and window object. Server applications send this
-                                                * event for their accessible objects. The hwnd parameter of the WinEventProc
-                                                * callback function identifies the window that receives the keyboard focus.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
@@ -8783,9 +9242,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                     * Help property has changed. Server applications send this event for their
-                                                     * accessible objects.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
@@ -8795,9 +9252,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                     * Help property has changed. Server applications send this event for their
-                                                     * accessible objects.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
@@ -8807,9 +9262,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                     * Help property has changed. Server applications send this event for their
-                                                     * accessible objects.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
@@ -8819,9 +9272,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                     * Help property has changed. Server applications send this event for their
-                                                     * accessible objects.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
@@ -8831,15 +9282,7 @@ declare namespace Electron {
                                                */
                                               nativeWindowInfo: NativeWindowInfo,
                                               /**
-                                               * Specifies the time, in milliseconds, that the event was generated. An object is
-                                               * hidden. The system sends this event for the following user interface elements:
-                                               * caret and cursor. Server applications send this event for their accessible
-                                               * objects. When this event is generated for a parent object, all child objects are
-                                               * already hidden. Server applications do not send this event for the child
-                                               * objects. Hidden objects include the STATE_SYSTEM_INVISIBLE flag; shown objects
-                                               * do not include this flag. The EVENT_OBJECT_HIDE event also indicates that the
-                                               * STATE_SYSTEM_INVISIBLE flag is set. Therefore, servers do not send the
-                                               * EVENT_STATE_CHANGE event in this case.
+                                               * Specifies the time, in milliseconds, that the event was generated.
                                                */
                                               eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
@@ -8849,15 +9292,7 @@ declare namespace Electron {
                                                */
                                               nativeWindowInfo: NativeWindowInfo,
                                               /**
-                                               * Specifies the time, in milliseconds, that the event was generated. An object is
-                                               * hidden. The system sends this event for the following user interface elements:
-                                               * caret and cursor. Server applications send this event for their accessible
-                                               * objects. When this event is generated for a parent object, all child objects are
-                                               * already hidden. Server applications do not send this event for the child
-                                               * objects. Hidden objects include the STATE_SYSTEM_INVISIBLE flag; shown objects
-                                               * do not include this flag. The EVENT_OBJECT_HIDE event also indicates that the
-                                               * STATE_SYSTEM_INVISIBLE flag is set. Therefore, servers do not send the
-                                               * EVENT_STATE_CHANGE event in this case.
+                                               * Specifies the time, in milliseconds, that the event was generated.
                                                */
                                               eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
@@ -8867,15 +9302,7 @@ declare namespace Electron {
                                                */
                                               nativeWindowInfo: NativeWindowInfo,
                                               /**
-                                               * Specifies the time, in milliseconds, that the event was generated. An object is
-                                               * hidden. The system sends this event for the following user interface elements:
-                                               * caret and cursor. Server applications send this event for their accessible
-                                               * objects. When this event is generated for a parent object, all child objects are
-                                               * already hidden. Server applications do not send this event for the child
-                                               * objects. Hidden objects include the STATE_SYSTEM_INVISIBLE flag; shown objects
-                                               * do not include this flag. The EVENT_OBJECT_HIDE event also indicates that the
-                                               * STATE_SYSTEM_INVISIBLE flag is set. Therefore, servers do not send the
-                                               * EVENT_STATE_CHANGE event in this case.
+                                               * Specifies the time, in milliseconds, that the event was generated.
                                                */
                                               eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
@@ -8885,15 +9312,7 @@ declare namespace Electron {
                                                */
                                               nativeWindowInfo: NativeWindowInfo,
                                               /**
-                                               * Specifies the time, in milliseconds, that the event was generated. An object is
-                                               * hidden. The system sends this event for the following user interface elements:
-                                               * caret and cursor. Server applications send this event for their accessible
-                                               * objects. When this event is generated for a parent object, all child objects are
-                                               * already hidden. Server applications do not send this event for the child
-                                               * objects. Hidden objects include the STATE_SYSTEM_INVISIBLE flag; shown objects
-                                               * do not include this flag. The EVENT_OBJECT_HIDE event also indicates that the
-                                               * STATE_SYSTEM_INVISIBLE flag is set. Therefore, servers do not send the
-                                               * EVENT_STATE_CHANGE event in this case.
+                                               * Specifies the time, in milliseconds, that the event was generated.
                                                */
                                               eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
@@ -8903,14 +9322,7 @@ declare namespace Electron {
                                                                    */
                                                                   nativeWindowInfo: NativeWindowInfo,
                                                                   /**
-                                                                   * Specifies the time, in milliseconds, that the event was generated. A window that
-                                                                   * hosts other accessible objects has changed the hosted objects. A client might
-                                                                   * need to query the host window to discover the new hosted objects, especially if
-                                                                   * the client has been monitoring events from the window. A hosted object is an
-                                                                   * object from an accessibility framework (MSAA or UI Automation) that is different
-                                                                   * from that of the host. Changes in hosted objects that are from the same
-                                                                   * framework as the host should be handed with the structural change events, such
-                                                                   * as EVENT_OBJECT_CREATE for MSAA. For more info see comments within winuser.h.
+                                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                                    */
                                                                   eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
@@ -8920,14 +9332,7 @@ declare namespace Electron {
                                                                    */
                                                                   nativeWindowInfo: NativeWindowInfo,
                                                                   /**
-                                                                   * Specifies the time, in milliseconds, that the event was generated. A window that
-                                                                   * hosts other accessible objects has changed the hosted objects. A client might
-                                                                   * need to query the host window to discover the new hosted objects, especially if
-                                                                   * the client has been monitoring events from the window. A hosted object is an
-                                                                   * object from an accessibility framework (MSAA or UI Automation) that is different
-                                                                   * from that of the host. Changes in hosted objects that are from the same
-                                                                   * framework as the host should be handed with the structural change events, such
-                                                                   * as EVENT_OBJECT_CREATE for MSAA. For more info see comments within winuser.h.
+                                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                                    */
                                                                   eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
@@ -8937,14 +9342,7 @@ declare namespace Electron {
                                                                    */
                                                                   nativeWindowInfo: NativeWindowInfo,
                                                                   /**
-                                                                   * Specifies the time, in milliseconds, that the event was generated. A window that
-                                                                   * hosts other accessible objects has changed the hosted objects. A client might
-                                                                   * need to query the host window to discover the new hosted objects, especially if
-                                                                   * the client has been monitoring events from the window. A hosted object is an
-                                                                   * object from an accessibility framework (MSAA or UI Automation) that is different
-                                                                   * from that of the host. Changes in hosted objects that are from the same
-                                                                   * framework as the host should be handed with the structural change events, such
-                                                                   * as EVENT_OBJECT_CREATE for MSAA. For more info see comments within winuser.h.
+                                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                                    */
                                                                   eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
@@ -8954,14 +9352,7 @@ declare namespace Electron {
                                                                    */
                                                                   nativeWindowInfo: NativeWindowInfo,
                                                                   /**
-                                                                   * Specifies the time, in milliseconds, that the event was generated. A window that
-                                                                   * hosts other accessible objects has changed the hosted objects. A client might
-                                                                   * need to query the host window to discover the new hosted objects, especially if
-                                                                   * the client has been monitoring events from the window. A hosted object is an
-                                                                   * object from an accessibility framework (MSAA or UI Automation) that is different
-                                                                   * from that of the host. Changes in hosted objects that are from the same
-                                                                   * framework as the host should be handed with the structural change events, such
-                                                                   * as EVENT_OBJECT_CREATE for MSAA. For more info see comments within winuser.h.
+                                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                                    */
                                                                   eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
@@ -8971,8 +9362,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The size or
-                                                     * position of an IME window has changed.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
@@ -8982,8 +9372,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The size or
-                                                     * position of an IME window has changed.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
@@ -8993,8 +9382,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The size or
-                                                     * position of an IME window has changed.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
@@ -9004,8 +9392,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The size or
-                                                     * position of an IME window has changed.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
@@ -9015,8 +9402,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
-                                                   * has become hidden.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
@@ -9026,8 +9412,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
-                                                   * has become hidden.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
@@ -9037,8 +9422,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
-                                                   * has become hidden.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
@@ -9048,8 +9432,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
-                                                   * has become hidden.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
@@ -9059,8 +9442,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
-                                                   * has become visible.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
@@ -9070,8 +9452,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
-                                                   * has become visible.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
@@ -9081,8 +9462,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
-                                                   * has become visible.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
@@ -9092,8 +9472,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. An IME window
-                                                   * has become visible.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
@@ -9103,11 +9482,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                  * been invoked; for example, the user has clicked a button. This event is
-                                                  * supported by common controls and is used by UI Automation. For this event, the
-                                                  * hwnd, ID, and idChild parameters of the WinEventProc callback function identify
-                                                  * the item that is invoked.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
@@ -9117,11 +9492,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                  * been invoked; for example, the user has clicked a button. This event is
-                                                  * supported by common controls and is used by UI Automation. For this event, the
-                                                  * hwnd, ID, and idChild parameters of the WinEventProc callback function identify
-                                                  * the item that is invoked.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
@@ -9131,11 +9502,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                  * been invoked; for example, the user has clicked a button. This event is
-                                                  * supported by common controls and is used by UI Automation. For this event, the
-                                                  * hwnd, ID, and idChild parameters of the WinEventProc callback function identify
-                                                  * the item that is invoked.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
@@ -9145,11 +9512,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                  * been invoked; for example, the user has clicked a button. This event is
-                                                  * supported by common controls and is used by UI Automation. For this event, the
-                                                  * hwnd, ID, and idChild parameters of the WinEventProc callback function identify
-                                                  * the item that is invoked.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
@@ -9159,9 +9522,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object
-                                                            * that is part of a live region has changed. A live region is an area of an
-                                                            * application that changes frequently and/or asynchronously.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
@@ -9171,9 +9532,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object
-                                                            * that is part of a live region has changed. A live region is an area of an
-                                                            * application that changes frequently and/or asynchronously.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
@@ -9183,9 +9542,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object
-                                                            * that is part of a live region has changed. A live region is an area of an
-                                                            * application that changes frequently and/or asynchronously.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
@@ -9195,9 +9552,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. An object
-                                                            * that is part of a live region has changed. A live region is an area of an
-                                                            * application that changes frequently and/or asynchronously.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
@@ -9207,23 +9562,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                         * changed location, shape, or size. The system sends this event for the following
-                                                         * user interface elements: caret and window objects. Server applications send this
-                                                         * event for their accessible objects. This event is generated in response to a
-                                                         * change in the top-level object within the object hierarchy; it is not generated
-                                                         * for any children that the object might have. For example, if the user resizes a
-                                                         * window, the system sends this notification for the window, but not for the menu
-                                                         * bar, title bar, scroll bar, or other objects that have also changed. The system
-                                                         * does not send this event for every non-floating child window when the parent
-                                                         * moves. However, if an application explicitly resizes child windows as a result
-                                                         * of resizing the parent window, the system sends multiple events for the resized
-                                                         * children. If an object's State property is set to STATE_SYSTEM_FLOATING, the
-                                                         * server sends EVENT_OBJECT_LOCATIONCHANGE whenever the object changes location.
-                                                         * If an object does not have this state, servers only trigger this event when the
-                                                         * object moves in relation to its parent. For this event notification, the idChild
-                                                         * parameter of the WinEventProc callback function identifies the child object that
-                                                         * has changed.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
@@ -9233,23 +9572,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                         * changed location, shape, or size. The system sends this event for the following
-                                                         * user interface elements: caret and window objects. Server applications send this
-                                                         * event for their accessible objects. This event is generated in response to a
-                                                         * change in the top-level object within the object hierarchy; it is not generated
-                                                         * for any children that the object might have. For example, if the user resizes a
-                                                         * window, the system sends this notification for the window, but not for the menu
-                                                         * bar, title bar, scroll bar, or other objects that have also changed. The system
-                                                         * does not send this event for every non-floating child window when the parent
-                                                         * moves. However, if an application explicitly resizes child windows as a result
-                                                         * of resizing the parent window, the system sends multiple events for the resized
-                                                         * children. If an object's State property is set to STATE_SYSTEM_FLOATING, the
-                                                         * server sends EVENT_OBJECT_LOCATIONCHANGE whenever the object changes location.
-                                                         * If an object does not have this state, servers only trigger this event when the
-                                                         * object moves in relation to its parent. For this event notification, the idChild
-                                                         * parameter of the WinEventProc callback function identifies the child object that
-                                                         * has changed.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
@@ -9259,23 +9582,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                         * changed location, shape, or size. The system sends this event for the following
-                                                         * user interface elements: caret and window objects. Server applications send this
-                                                         * event for their accessible objects. This event is generated in response to a
-                                                         * change in the top-level object within the object hierarchy; it is not generated
-                                                         * for any children that the object might have. For example, if the user resizes a
-                                                         * window, the system sends this notification for the window, but not for the menu
-                                                         * bar, title bar, scroll bar, or other objects that have also changed. The system
-                                                         * does not send this event for every non-floating child window when the parent
-                                                         * moves. However, if an application explicitly resizes child windows as a result
-                                                         * of resizing the parent window, the system sends multiple events for the resized
-                                                         * children. If an object's State property is set to STATE_SYSTEM_FLOATING, the
-                                                         * server sends EVENT_OBJECT_LOCATIONCHANGE whenever the object changes location.
-                                                         * If an object does not have this state, servers only trigger this event when the
-                                                         * object moves in relation to its parent. For this event notification, the idChild
-                                                         * parameter of the WinEventProc callback function identifies the child object that
-                                                         * has changed.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
@@ -9285,23 +9592,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                         * changed location, shape, or size. The system sends this event for the following
-                                                         * user interface elements: caret and window objects. Server applications send this
-                                                         * event for their accessible objects. This event is generated in response to a
-                                                         * change in the top-level object within the object hierarchy; it is not generated
-                                                         * for any children that the object might have. For example, if the user resizes a
-                                                         * window, the system sends this notification for the window, but not for the menu
-                                                         * bar, title bar, scroll bar, or other objects that have also changed. The system
-                                                         * does not send this event for every non-floating child window when the parent
-                                                         * moves. However, if an application explicitly resizes child windows as a result
-                                                         * of resizing the parent window, the system sends multiple events for the resized
-                                                         * children. If an object's State property is set to STATE_SYSTEM_FLOATING, the
-                                                         * server sends EVENT_OBJECT_LOCATIONCHANGE whenever the object changes location.
-                                                         * If an object does not have this state, servers only trigger this event when the
-                                                         * object moves in relation to its parent. For this event notification, the idChild
-                                                         * parameter of the WinEventProc callback function identifies the child object that
-                                                         * has changed.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
@@ -9311,11 +9602,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                     * Name property has changed. The system sends this event for the following user
-                                                     * interface elements: check box, cursor, list-view control, push button, radio
-                                                     * button, status bar control, tree view control, and window object. Server
-                                                     * applications send this event for their accessible objects.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
@@ -9325,11 +9612,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                     * Name property has changed. The system sends this event for the following user
-                                                     * interface elements: check box, cursor, list-view control, push button, radio
-                                                     * button, status bar control, tree view control, and window object. Server
-                                                     * applications send this event for their accessible objects.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
@@ -9339,11 +9622,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                     * Name property has changed. The system sends this event for the following user
-                                                     * interface elements: check box, cursor, list-view control, push button, radio
-                                                     * button, status bar control, tree view control, and window object. Server
-                                                     * applications send this event for their accessible objects.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
@@ -9353,11 +9632,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                     * Name property has changed. The system sends this event for the following user
-                                                     * interface elements: check box, cursor, list-view control, push button, radio
-                                                     * button, status bar control, tree view control, and window object. Server
-                                                     * applications send this event for their accessible objects.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
@@ -9367,9 +9642,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                       * a new parent object. Server applications send this event for their accessible
-                                                       * objects.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
@@ -9379,9 +9652,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                       * a new parent object. Server applications send this event for their accessible
-                                                       * objects.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
@@ -9391,9 +9662,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                       * a new parent object. Server applications send this event for their accessible
-                                                       * objects.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
@@ -9403,9 +9672,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. An object has
-                                                       * a new parent object. Server applications send this event for their accessible
-                                                       * objects.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
@@ -9415,14 +9682,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. A container
-                                                  * object has added, removed, or reordered its children. The system sends this
-                                                  * event for the following user interface elements: header control, list-view
-                                                  * control, toolbar control, and window object. Server applications send this event
-                                                  * as appropriate for their accessible objects. For example, this event is
-                                                  * generated by a list-view object when the number of child elements or the order
-                                                  * of the elements changes. This event is also sent by a parent window when the
-                                                  * Z-order for the child windows changes.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
@@ -9432,14 +9692,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. A container
-                                                  * object has added, removed, or reordered its children. The system sends this
-                                                  * event for the following user interface elements: header control, list-view
-                                                  * control, toolbar control, and window object. Server applications send this event
-                                                  * as appropriate for their accessible objects. For example, this event is
-                                                  * generated by a list-view object when the number of child elements or the order
-                                                  * of the elements changes. This event is also sent by a parent window when the
-                                                  * Z-order for the child windows changes.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
@@ -9449,14 +9702,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. A container
-                                                  * object has added, removed, or reordered its children. The system sends this
-                                                  * event for the following user interface elements: header control, list-view
-                                                  * control, toolbar control, and window object. Server applications send this event
-                                                  * as appropriate for their accessible objects. For example, this event is
-                                                  * generated by a list-view object when the number of child elements or the order
-                                                  * of the elements changes. This event is also sent by a parent window when the
-                                                  * Z-order for the child windows changes.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
@@ -9466,14 +9712,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. A container
-                                                  * object has added, removed, or reordered its children. The system sends this
-                                                  * event for the following user interface elements: header control, list-view
-                                                  * control, toolbar control, and window object. Server applications send this event
-                                                  * as appropriate for their accessible objects. For example, this event is
-                                                  * generated by a list-view object when the number of child elements or the order
-                                                  * of the elements changes. This event is also sent by a parent window when the
-                                                  * Z-order for the child windows changes.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
@@ -9483,16 +9722,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The selection
-                                                    * within a container object has changed. The system sends this event for the
-                                                    * following user interface elements: list-view control, tab control, tree view
-                                                    * control, and window object. Server applications send this event for their
-                                                    * accessible objects. This event signals a single selection: either a child is
-                                                    * selected in a container that previously did not contain any selected children,
-                                                    * or the selection has changed from one child to another. The hwnd and idObject
-                                                    * parameters of the WinEventProc callback function describe the container; the
-                                                    * idChild parameter identifies the object that is selected. If the selected child
-                                                    * is a window that also contains objects, the idChild parameter is OBJID_WINDOW.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
@@ -9502,16 +9732,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The selection
-                                                    * within a container object has changed. The system sends this event for the
-                                                    * following user interface elements: list-view control, tab control, tree view
-                                                    * control, and window object. Server applications send this event for their
-                                                    * accessible objects. This event signals a single selection: either a child is
-                                                    * selected in a container that previously did not contain any selected children,
-                                                    * or the selection has changed from one child to another. The hwnd and idObject
-                                                    * parameters of the WinEventProc callback function describe the container; the
-                                                    * idChild parameter identifies the object that is selected. If the selected child
-                                                    * is a window that also contains objects, the idChild parameter is OBJID_WINDOW.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
@@ -9521,16 +9742,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The selection
-                                                    * within a container object has changed. The system sends this event for the
-                                                    * following user interface elements: list-view control, tab control, tree view
-                                                    * control, and window object. Server applications send this event for their
-                                                    * accessible objects. This event signals a single selection: either a child is
-                                                    * selected in a container that previously did not contain any selected children,
-                                                    * or the selection has changed from one child to another. The hwnd and idObject
-                                                    * parameters of the WinEventProc callback function describe the container; the
-                                                    * idChild parameter identifies the object that is selected. If the selected child
-                                                    * is a window that also contains objects, the idChild parameter is OBJID_WINDOW.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
@@ -9540,16 +9752,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The selection
-                                                    * within a container object has changed. The system sends this event for the
-                                                    * following user interface elements: list-view control, tab control, tree view
-                                                    * control, and window object. Server applications send this event for their
-                                                    * accessible objects. This event signals a single selection: either a child is
-                                                    * selected in a container that previously did not contain any selected children,
-                                                    * or the selection has changed from one child to another. The hwnd and idObject
-                                                    * parameters of the WinEventProc callback function describe the container; the
-                                                    * idChild parameter identifies the object that is selected. If the selected child
-                                                    * is a window that also contains objects, the idChild parameter is OBJID_WINDOW.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
@@ -9559,13 +9762,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A child
-                                                       * within a container object has been added to an existing selection. The system
-                                                       * sends this event for the following user interface elements: list box, list-view
-                                                       * control, and tree view control. Server applications send this event for their
-                                                       * accessible objects. The hwnd and idObject parameters of the WinEventProc
-                                                       * callback function describe the container. The idChild parameter is the child
-                                                       * that is added to the selection.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
@@ -9575,13 +9772,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A child
-                                                       * within a container object has been added to an existing selection. The system
-                                                       * sends this event for the following user interface elements: list box, list-view
-                                                       * control, and tree view control. Server applications send this event for their
-                                                       * accessible objects. The hwnd and idObject parameters of the WinEventProc
-                                                       * callback function describe the container. The idChild parameter is the child
-                                                       * that is added to the selection.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
@@ -9591,13 +9782,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A child
-                                                       * within a container object has been added to an existing selection. The system
-                                                       * sends this event for the following user interface elements: list box, list-view
-                                                       * control, and tree view control. Server applications send this event for their
-                                                       * accessible objects. The hwnd and idObject parameters of the WinEventProc
-                                                       * callback function describe the container. The idChild parameter is the child
-                                                       * that is added to the selection.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
@@ -9607,13 +9792,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A child
-                                                       * within a container object has been added to an existing selection. The system
-                                                       * sends this event for the following user interface elements: list box, list-view
-                                                       * control, and tree view control. Server applications send this event for their
-                                                       * accessible objects. The hwnd and idObject parameters of the WinEventProc
-                                                       * callback function describe the container. The idChild parameter is the child
-                                                       * that is added to the selection.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
@@ -9623,14 +9802,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. An item
-                                                          * within a container object has been removed from the selection. The system sends
-                                                          * this event for the following user interface elements: list box, list-view
-                                                          * control, and tree view control. Server applications send this event for their
-                                                          * accessible objects. This event signals that a child is removed from an existing
-                                                          * selection. The hwnd and idObject parameters of the WinEventProc callback
-                                                          * function describe the container; the idChild parameter identifies the child that
-                                                          * has been removed from the selection.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
@@ -9640,14 +9812,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. An item
-                                                          * within a container object has been removed from the selection. The system sends
-                                                          * this event for the following user interface elements: list box, list-view
-                                                          * control, and tree view control. Server applications send this event for their
-                                                          * accessible objects. This event signals that a child is removed from an existing
-                                                          * selection. The hwnd and idObject parameters of the WinEventProc callback
-                                                          * function describe the container; the idChild parameter identifies the child that
-                                                          * has been removed from the selection.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
@@ -9657,14 +9822,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. An item
-                                                          * within a container object has been removed from the selection. The system sends
-                                                          * this event for the following user interface elements: list box, list-view
-                                                          * control, and tree view control. Server applications send this event for their
-                                                          * accessible objects. This event signals that a child is removed from an existing
-                                                          * selection. The hwnd and idObject parameters of the WinEventProc callback
-                                                          * function describe the container; the idChild parameter identifies the child that
-                                                          * has been removed from the selection.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
@@ -9674,14 +9832,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. An item
-                                                          * within a container object has been removed from the selection. The system sends
-                                                          * this event for the following user interface elements: list box, list-view
-                                                          * control, and tree view control. Server applications send this event for their
-                                                          * accessible objects. This event signals that a child is removed from an existing
-                                                          * selection. The hwnd and idObject parameters of the WinEventProc callback
-                                                          * function describe the container; the idChild parameter identifies the child that
-                                                          * has been removed from the selection.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
@@ -9691,17 +9842,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. Numerous
-                                                          * selection changes have occurred within a container object. The system sends this
-                                                          * event for list boxes; server applications send it for their accessible objects.
-                                                          * This event is sent when the selected items within a control have changed
-                                                          * substantially. The event informs the client that many selection changes have
-                                                          * occurred, and it is sent instead of several EVENT_OBJECT_SELECTIONADD or
-                                                          * EVENT_OBJECT_SELECTIONREMOVE events. The client queries for the selected items
-                                                          * by calling the container object's IAccessible::get_accSelection method and
-                                                          * enumerating the selected items. For this event notification, the hwnd and
-                                                          * idObject parameters of the WinEventProc callback function describe the container
-                                                          * in which the changes occurred.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
@@ -9711,17 +9852,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. Numerous
-                                                          * selection changes have occurred within a container object. The system sends this
-                                                          * event for list boxes; server applications send it for their accessible objects.
-                                                          * This event is sent when the selected items within a control have changed
-                                                          * substantially. The event informs the client that many selection changes have
-                                                          * occurred, and it is sent instead of several EVENT_OBJECT_SELECTIONADD or
-                                                          * EVENT_OBJECT_SELECTIONREMOVE events. The client queries for the selected items
-                                                          * by calling the container object's IAccessible::get_accSelection method and
-                                                          * enumerating the selected items. For this event notification, the hwnd and
-                                                          * idObject parameters of the WinEventProc callback function describe the container
-                                                          * in which the changes occurred.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
@@ -9731,17 +9862,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. Numerous
-                                                          * selection changes have occurred within a container object. The system sends this
-                                                          * event for list boxes; server applications send it for their accessible objects.
-                                                          * This event is sent when the selected items within a control have changed
-                                                          * substantially. The event informs the client that many selection changes have
-                                                          * occurred, and it is sent instead of several EVENT_OBJECT_SELECTIONADD or
-                                                          * EVENT_OBJECT_SELECTIONREMOVE events. The client queries for the selected items
-                                                          * by calling the container object's IAccessible::get_accSelection method and
-                                                          * enumerating the selected items. For this event notification, the hwnd and
-                                                          * idObject parameters of the WinEventProc callback function describe the container
-                                                          * in which the changes occurred.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
@@ -9751,17 +9872,7 @@ declare namespace Electron {
                                                           */
                                                          nativeWindowInfo: NativeWindowInfo,
                                                          /**
-                                                          * Specifies the time, in milliseconds, that the event was generated. Numerous
-                                                          * selection changes have occurred within a container object. The system sends this
-                                                          * event for list boxes; server applications send it for their accessible objects.
-                                                          * This event is sent when the selected items within a control have changed
-                                                          * substantially. The event informs the client that many selection changes have
-                                                          * occurred, and it is sent instead of several EVENT_OBJECT_SELECTIONADD or
-                                                          * EVENT_OBJECT_SELECTIONREMOVE events. The client queries for the selected items
-                                                          * by calling the container object's IAccessible::get_accSelection method and
-                                                          * enumerating the selected items. For this event notification, the hwnd and
-                                                          * idObject parameters of the WinEventProc callback function describe the container
-                                                          * in which the changes occurred.
+                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                           */
                                                          eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
@@ -9771,16 +9882,7 @@ declare namespace Electron {
                                                */
                                               nativeWindowInfo: NativeWindowInfo,
                                               /**
-                                               * Specifies the time, in milliseconds, that the event was generated. A hidden
-                                               * object is shown. The system sends this event for the following user interface
-                                               * elements: caret, cursor, and window object. Server applications send this event
-                                               * for their accessible objects. Clients assume that when this event is sent by a
-                                               * parent object, all child objects are already displayed. Therefore, server
-                                               * applications do not send this event for the child objects. Hidden objects
-                                               * include the STATE_SYSTEM_INVISIBLE flag; shown objects do not include this flag.
-                                               * The EVENT_OBJECT_SHOW event also indicates that the STATE_SYSTEM_INVISIBLE flag
-                                               * is cleared. Therefore, servers do not send the EVENT_STATE_CHANGE event in this
-                                               * case.
+                                               * Specifies the time, in milliseconds, that the event was generated.
                                                */
                                               eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
@@ -9790,16 +9892,7 @@ declare namespace Electron {
                                                */
                                               nativeWindowInfo: NativeWindowInfo,
                                               /**
-                                               * Specifies the time, in milliseconds, that the event was generated. A hidden
-                                               * object is shown. The system sends this event for the following user interface
-                                               * elements: caret, cursor, and window object. Server applications send this event
-                                               * for their accessible objects. Clients assume that when this event is sent by a
-                                               * parent object, all child objects are already displayed. Therefore, server
-                                               * applications do not send this event for the child objects. Hidden objects
-                                               * include the STATE_SYSTEM_INVISIBLE flag; shown objects do not include this flag.
-                                               * The EVENT_OBJECT_SHOW event also indicates that the STATE_SYSTEM_INVISIBLE flag
-                                               * is cleared. Therefore, servers do not send the EVENT_STATE_CHANGE event in this
-                                               * case.
+                                               * Specifies the time, in milliseconds, that the event was generated.
                                                */
                                               eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
@@ -9809,16 +9902,7 @@ declare namespace Electron {
                                                */
                                               nativeWindowInfo: NativeWindowInfo,
                                               /**
-                                               * Specifies the time, in milliseconds, that the event was generated. A hidden
-                                               * object is shown. The system sends this event for the following user interface
-                                               * elements: caret, cursor, and window object. Server applications send this event
-                                               * for their accessible objects. Clients assume that when this event is sent by a
-                                               * parent object, all child objects are already displayed. Therefore, server
-                                               * applications do not send this event for the child objects. Hidden objects
-                                               * include the STATE_SYSTEM_INVISIBLE flag; shown objects do not include this flag.
-                                               * The EVENT_OBJECT_SHOW event also indicates that the STATE_SYSTEM_INVISIBLE flag
-                                               * is cleared. Therefore, servers do not send the EVENT_STATE_CHANGE event in this
-                                               * case.
+                                               * Specifies the time, in milliseconds, that the event was generated.
                                                */
                                               eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
@@ -9828,16 +9912,7 @@ declare namespace Electron {
                                                */
                                               nativeWindowInfo: NativeWindowInfo,
                                               /**
-                                               * Specifies the time, in milliseconds, that the event was generated. A hidden
-                                               * object is shown. The system sends this event for the following user interface
-                                               * elements: caret, cursor, and window object. Server applications send this event
-                                               * for their accessible objects. Clients assume that when this event is sent by a
-                                               * parent object, all child objects are already displayed. Therefore, server
-                                               * applications do not send this event for the child objects. Hidden objects
-                                               * include the STATE_SYSTEM_INVISIBLE flag; shown objects do not include this flag.
-                                               * The EVENT_OBJECT_SHOW event also indicates that the STATE_SYSTEM_INVISIBLE flag
-                                               * is cleared. Therefore, servers do not send the EVENT_STATE_CHANGE event in this
-                                               * case.
+                                               * Specifies the time, in milliseconds, that the event was generated.
                                                */
                                               eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
@@ -9847,15 +9922,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                      * state has changed. The system sends this event for the following user interface
-                                                      * elements: check box, combo box, header control, push button, radio button,
-                                                      * scroll bar, toolbar control, tree view control, up-down control, and window
-                                                      * object. Server applications send this event for their accessible objects. For
-                                                      * example, a state change occurs when a button object is clicked or released, or
-                                                      * when an object is enabled or disabled. For this event notification, the idChild
-                                                      * parameter of the WinEventProc callback function identifies the child object
-                                                      * whose state has changed.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
@@ -9865,15 +9932,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                      * state has changed. The system sends this event for the following user interface
-                                                      * elements: check box, combo box, header control, push button, radio button,
-                                                      * scroll bar, toolbar control, tree view control, up-down control, and window
-                                                      * object. Server applications send this event for their accessible objects. For
-                                                      * example, a state change occurs when a button object is clicked or released, or
-                                                      * when an object is enabled or disabled. For this event notification, the idChild
-                                                      * parameter of the WinEventProc callback function identifies the child object
-                                                      * whose state has changed.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
@@ -9883,15 +9942,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                      * state has changed. The system sends this event for the following user interface
-                                                      * elements: check box, combo box, header control, push button, radio button,
-                                                      * scroll bar, toolbar control, tree view control, up-down control, and window
-                                                      * object. Server applications send this event for their accessible objects. For
-                                                      * example, a state change occurs when a button object is clicked or released, or
-                                                      * when an object is enabled or disabled. For this event notification, the idChild
-                                                      * parameter of the WinEventProc callback function identifies the child object
-                                                      * whose state has changed.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
@@ -9901,15 +9952,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                      * state has changed. The system sends this event for the following user interface
-                                                      * elements: check box, combo box, header control, push button, radio button,
-                                                      * scroll bar, toolbar control, tree view control, up-down control, and window
-                                                      * object. Server applications send this event for their accessible objects. For
-                                                      * example, a state change occurs when a button object is clicked or released, or
-                                                      * when an object is enabled or disabled. For this event notification, the idChild
-                                                      * parameter of the WinEventProc callback function identifies the child object
-                                                      * whose state has changed.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
@@ -9919,10 +9962,7 @@ declare namespace Electron {
                                                                            */
                                                                           nativeWindowInfo: NativeWindowInfo,
                                                                           /**
-                                                                           * Specifies the time, in milliseconds, that the event was generated. The
-                                                                           * conversion target within an IME composition has changed. The conversion target
-                                                                           * is the subset of the IME composition which is actively selected as the target
-                                                                           * for user-initiated conversions.
+                                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                                            */
                                                                           eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
@@ -9932,10 +9972,7 @@ declare namespace Electron {
                                                                            */
                                                                           nativeWindowInfo: NativeWindowInfo,
                                                                           /**
-                                                                           * Specifies the time, in milliseconds, that the event was generated. The
-                                                                           * conversion target within an IME composition has changed. The conversion target
-                                                                           * is the subset of the IME composition which is actively selected as the target
-                                                                           * for user-initiated conversions.
+                                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                                            */
                                                                           eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
@@ -9945,10 +9982,7 @@ declare namespace Electron {
                                                                            */
                                                                           nativeWindowInfo: NativeWindowInfo,
                                                                           /**
-                                                                           * Specifies the time, in milliseconds, that the event was generated. The
-                                                                           * conversion target within an IME composition has changed. The conversion target
-                                                                           * is the subset of the IME composition which is actively selected as the target
-                                                                           * for user-initiated conversions.
+                                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                                            */
                                                                           eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
@@ -9958,10 +9992,7 @@ declare namespace Electron {
                                                                            */
                                                                           nativeWindowInfo: NativeWindowInfo,
                                                                           /**
-                                                                           * Specifies the time, in milliseconds, that the event was generated. The
-                                                                           * conversion target within an IME composition has changed. The conversion target
-                                                                           * is the subset of the IME composition which is actively selected as the target
-                                                                           * for user-initiated conversions.
+                                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                                            */
                                                                           eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
@@ -9971,11 +10002,7 @@ declare namespace Electron {
                                                                */
                                                               nativeWindowInfo: NativeWindowInfo,
                                                               /**
-                                                               * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                               * text selection has changed. This event is supported by common controls and is
-                                                               * used by UI Automation. The hwnd, ID, and idChild parameters of the WinEventProc
-                                                               * callback function describe the item that is contained in the updated text
-                                                               * selection.
+                                                               * Specifies the time, in milliseconds, that the event was generated.
                                                                */
                                                               eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
@@ -9985,11 +10012,7 @@ declare namespace Electron {
                                                                */
                                                               nativeWindowInfo: NativeWindowInfo,
                                                               /**
-                                                               * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                               * text selection has changed. This event is supported by common controls and is
-                                                               * used by UI Automation. The hwnd, ID, and idChild parameters of the WinEventProc
-                                                               * callback function describe the item that is contained in the updated text
-                                                               * selection.
+                                                               * Specifies the time, in milliseconds, that the event was generated.
                                                                */
                                                               eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
@@ -9999,11 +10022,7 @@ declare namespace Electron {
                                                                */
                                                               nativeWindowInfo: NativeWindowInfo,
                                                               /**
-                                                               * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                               * text selection has changed. This event is supported by common controls and is
-                                                               * used by UI Automation. The hwnd, ID, and idChild parameters of the WinEventProc
-                                                               * callback function describe the item that is contained in the updated text
-                                                               * selection.
+                                                               * Specifies the time, in milliseconds, that the event was generated.
                                                                */
                                                               eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
@@ -10013,11 +10032,7 @@ declare namespace Electron {
                                                                */
                                                               nativeWindowInfo: NativeWindowInfo,
                                                               /**
-                                                               * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                               * text selection has changed. This event is supported by common controls and is
-                                                               * used by UI Automation. The hwnd, ID, and idChild parameters of the WinEventProc
-                                                               * callback function describe the item that is contained in the updated text
-                                                               * selection.
+                                                               * Specifies the time, in milliseconds, that the event was generated.
                                                                */
                                                               eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
@@ -10027,9 +10042,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. Sent when a
-                                                    * window is uncloaked. A cloaked window still exists, but is invisible to the
-                                                    * user.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
@@ -10039,9 +10052,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. Sent when a
-                                                    * window is uncloaked. A cloaked window still exists, but is invisible to the
-                                                    * user.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
@@ -10051,9 +10062,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. Sent when a
-                                                    * window is uncloaked. A cloaked window still exists, but is invisible to the
-                                                    * user.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
@@ -10063,9 +10072,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. Sent when a
-                                                    * window is uncloaked. A cloaked window still exists, but is invisible to the
-                                                    * user.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     on(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
@@ -10075,11 +10082,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                      * Value property has changed. The system sends this event for the user interface
-                                                      * elements that include the scroll bar and the following controls: edit, header,
-                                                      * hot key, progress bar, slider, and up-down. Server applications send this event
-                                                      * for their accessible objects.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     once(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
@@ -10089,11 +10092,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                      * Value property has changed. The system sends this event for the user interface
-                                                      * elements that include the scroll bar and the following controls: edit, header,
-                                                      * hot key, progress bar, slider, and up-down. Server applications send this event
-                                                      * for their accessible objects.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     addListener(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
@@ -10103,11 +10102,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                      * Value property has changed. The system sends this event for the user interface
-                                                      * elements that include the scroll bar and the following controls: edit, header,
-                                                      * hot key, progress bar, slider, and up-down. Server applications send this event
-                                                      * for their accessible objects.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
@@ -10117,11 +10112,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An object's
-                                                      * Value property has changed. The system sends this event for the user interface
-                                                      * elements that include the scroll bar and the following controls: edit, header,
-                                                      * hot key, progress bar, slider, and up-down. Server applications send this event
-                                                      * for their accessible objects.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     on(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
@@ -10131,9 +10122,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                   * event constant values reserved for OEMs. For more information, see Allocation of
-                                                   * WinEvent IDs.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     once(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
@@ -10143,9 +10132,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                   * event constant values reserved for OEMs. For more information, see Allocation of
-                                                   * WinEvent IDs.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     addListener(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
@@ -10155,9 +10142,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                   * event constant values reserved for OEMs. For more information, see Allocation of
-                                                   * WinEvent IDs.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     removeListener(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
@@ -10167,9 +10152,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                   * event constant values reserved for OEMs. For more information, see Allocation of
-                                                   * WinEvent IDs.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     on(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
@@ -10179,9 +10162,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                     * event constant values reserved for OEMs. For more information, see Allocation of
-                                                     * WinEvent IDs.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     once(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
@@ -10191,9 +10172,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                     * event constant values reserved for OEMs. For more information, see Allocation of
-                                                     * WinEvent IDs.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     addListener(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
@@ -10203,9 +10182,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                     * event constant values reserved for OEMs. For more information, see Allocation of
-                                                     * WinEvent IDs.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     removeListener(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
@@ -10215,9 +10192,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                     * event constant values reserved for OEMs. For more information, see Allocation of
-                                                     * WinEvent IDs.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
@@ -10227,8 +10202,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. An alert has
-                                                * been generated. Server applications should not send this event.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
@@ -10238,8 +10212,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. An alert has
-                                                * been generated. Server applications should not send this event.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
@@ -10249,8 +10222,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. An alert has
-                                                * been generated. Server applications should not send this event.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
@@ -10260,8 +10232,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. An alert has
-                                                * been generated. Server applications should not send this event.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
@@ -10271,8 +10242,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. A preview
-                                                            * rectangle is being displayed.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
@@ -10282,8 +10252,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. A preview
-                                                            * rectangle is being displayed.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
@@ -10293,8 +10262,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. A preview
-                                                            * rectangle is being displayed.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
@@ -10304,8 +10272,7 @@ declare namespace Electron {
                                                             */
                                                            nativeWindowInfo: NativeWindowInfo,
                                                            /**
-                                                            * Specifies the time, in milliseconds, that the event was generated. A preview
-                                                            * rectangle is being displayed.
+                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                             */
                                                            eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
@@ -10315,8 +10282,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                     * lost mouse capture. This event is sent by the system, never by servers.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
@@ -10326,8 +10292,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                     * lost mouse capture. This event is sent by the system, never by servers.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
@@ -10337,8 +10302,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                     * lost mouse capture. This event is sent by the system, never by servers.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
@@ -10348,8 +10312,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                     * lost mouse capture. This event is sent by the system, never by servers.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
@@ -10359,8 +10322,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                       * received mouse capture. This event is sent by the system, never by servers.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
@@ -10370,8 +10332,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                       * received mouse capture. This event is sent by the system, never by servers.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
@@ -10381,8 +10342,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                       * received mouse capture. This event is sent by the system, never by servers.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
@@ -10392,8 +10352,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                       * received mouse capture. This event is sent by the system, never by servers.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
@@ -10403,9 +10362,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                         * exited context-sensitive Help mode. This event is not sent consistently by the
-                                                         * system.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
@@ -10415,9 +10372,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                         * exited context-sensitive Help mode. This event is not sent consistently by the
-                                                         * system.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
@@ -10427,9 +10382,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                         * exited context-sensitive Help mode. This event is not sent consistently by the
-                                                         * system.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
@@ -10439,9 +10392,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                         * exited context-sensitive Help mode. This event is not sent consistently by the
-                                                         * system.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
@@ -10451,9 +10402,7 @@ declare namespace Electron {
                                                            */
                                                           nativeWindowInfo: NativeWindowInfo,
                                                           /**
-                                                           * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                           * entered context-sensitive Help mode. This event is not sent consistently by the
-                                                           * system.
+                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                            */
                                                           eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
@@ -10463,9 +10412,7 @@ declare namespace Electron {
                                                            */
                                                           nativeWindowInfo: NativeWindowInfo,
                                                           /**
-                                                           * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                           * entered context-sensitive Help mode. This event is not sent consistently by the
-                                                           * system.
+                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                            */
                                                           eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
@@ -10475,9 +10422,7 @@ declare namespace Electron {
                                                            */
                                                           nativeWindowInfo: NativeWindowInfo,
                                                           /**
-                                                           * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                           * entered context-sensitive Help mode. This event is not sent consistently by the
-                                                           * system.
+                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                            */
                                                           eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
@@ -10487,9 +10432,7 @@ declare namespace Electron {
                                                            */
                                                           nativeWindowInfo: NativeWindowInfo,
                                                           /**
-                                                           * Specifies the time, in milliseconds, that the event was generated. A window has
-                                                           * entered context-sensitive Help mode. This event is not sent consistently by the
-                                                           * system.
+                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                            */
                                                           eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
@@ -10499,8 +10442,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. The active
-                                                        * desktop has been switched.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
@@ -10510,8 +10452,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. The active
-                                                        * desktop has been switched.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
@@ -10521,8 +10462,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. The active
-                                                        * desktop has been switched.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
@@ -10532,8 +10472,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. The active
-                                                        * desktop has been switched.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
@@ -10543,10 +10482,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. A dialog box
-                                                    * has been closed. The system sends this event for standard dialog boxes; servers
-                                                    * send it for custom dialog boxes. This event is not sent consistently by the
-                                                    * system.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
@@ -10556,10 +10492,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. A dialog box
-                                                    * has been closed. The system sends this event for standard dialog boxes; servers
-                                                    * send it for custom dialog boxes. This event is not sent consistently by the
-                                                    * system.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
@@ -10569,10 +10502,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. A dialog box
-                                                    * has been closed. The system sends this event for standard dialog boxes; servers
-                                                    * send it for custom dialog boxes. This event is not sent consistently by the
-                                                    * system.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
@@ -10582,10 +10512,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. A dialog box
-                                                    * has been closed. The system sends this event for standard dialog boxes; servers
-                                                    * send it for custom dialog boxes. This event is not sent consistently by the
-                                                    * system.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
@@ -10595,12 +10522,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. A dialog box
-                                                      * has been displayed. The system sends this event for standard dialog boxes, which
-                                                      * are created using resource templates or Win32 dialog box functions. Servers send
-                                                      * this event for custom dialog boxes, which are windows that function as dialog
-                                                      * boxes but are not created in the standard way. This event is not sent
-                                                      * consistently by the system.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
@@ -10610,12 +10532,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. A dialog box
-                                                      * has been displayed. The system sends this event for standard dialog boxes, which
-                                                      * are created using resource templates or Win32 dialog box functions. Servers send
-                                                      * this event for custom dialog boxes, which are windows that function as dialog
-                                                      * boxes but are not created in the standard way. This event is not sent
-                                                      * consistently by the system.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
@@ -10625,12 +10542,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. A dialog box
-                                                      * has been displayed. The system sends this event for standard dialog boxes, which
-                                                      * are created using resource templates or Win32 dialog box functions. Servers send
-                                                      * this event for custom dialog boxes, which are windows that function as dialog
-                                                      * boxes but are not created in the standard way. This event is not sent
-                                                      * consistently by the system.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
@@ -10640,12 +10552,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. A dialog box
-                                                      * has been displayed. The system sends this event for standard dialog boxes, which
-                                                      * are created using resource templates or Win32 dialog box functions. Servers send
-                                                      * this event for custom dialog boxes, which are windows that function as dialog
-                                                      * boxes but are not created in the standard way. This event is not sent
-                                                      * consistently by the system.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
@@ -10655,10 +10562,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An
-                                                      * application is about to exit drag-and-drop mode. Applications that support
-                                                      * drag-and-drop operations must send this event; the system does not send this
-                                                      * event.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
@@ -10668,10 +10572,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An
-                                                      * application is about to exit drag-and-drop mode. Applications that support
-                                                      * drag-and-drop operations must send this event; the system does not send this
-                                                      * event.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
@@ -10681,10 +10582,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An
-                                                      * application is about to exit drag-and-drop mode. Applications that support
-                                                      * drag-and-drop operations must send this event; the system does not send this
-                                                      * event.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
@@ -10694,10 +10592,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. An
-                                                      * application is about to exit drag-and-drop mode. Applications that support
-                                                      * drag-and-drop operations must send this event; the system does not send this
-                                                      * event.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
@@ -10707,10 +10602,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. An
-                                                        * application is about to enter drag-and-drop mode. Applications that support
-                                                        * drag-and-drop operations must send this event because the system does not send
-                                                        * it.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
@@ -10720,10 +10612,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. An
-                                                        * application is about to enter drag-and-drop mode. Applications that support
-                                                        * drag-and-drop operations must send this event because the system does not send
-                                                        * it.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
@@ -10733,10 +10622,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. An
-                                                        * application is about to enter drag-and-drop mode. Applications that support
-                                                        * drag-and-drop operations must send this event because the system does not send
-                                                        * it.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
@@ -10746,10 +10632,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. An
-                                                        * application is about to enter drag-and-drop mode. Applications that support
-                                                        * drag-and-drop operations must send this event because the system does not send
-                                                        * it.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_END', listener: (event: Event,
@@ -10759,8 +10642,7 @@ declare namespace Electron {
                                               */
                                              nativeWindowInfo: NativeWindowInfo,
                                              /**
-                                              * Specifies the time, in milliseconds, that the event was generated. The highest
-                                              * system event value.
+                                              * Specifies the time, in milliseconds, that the event was generated.
                                               */
                                              eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_END', listener: (event: Event,
@@ -10770,8 +10652,7 @@ declare namespace Electron {
                                               */
                                              nativeWindowInfo: NativeWindowInfo,
                                              /**
-                                              * Specifies the time, in milliseconds, that the event was generated. The highest
-                                              * system event value.
+                                              * Specifies the time, in milliseconds, that the event was generated.
                                               */
                                              eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_END', listener: (event: Event,
@@ -10781,8 +10662,7 @@ declare namespace Electron {
                                               */
                                              nativeWindowInfo: NativeWindowInfo,
                                              /**
-                                              * Specifies the time, in milliseconds, that the event was generated. The highest
-                                              * system event value.
+                                              * Specifies the time, in milliseconds, that the event was generated.
                                               */
                                              eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_END', listener: (event: Event,
@@ -10792,8 +10672,7 @@ declare namespace Electron {
                                               */
                                              nativeWindowInfo: NativeWindowInfo,
                                              /**
-                                              * Specifies the time, in milliseconds, that the event was generated. The highest
-                                              * system event value.
+                                              * Specifies the time, in milliseconds, that the event was generated.
                                               */
                                              eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
@@ -10803,13 +10682,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The
-                                                     * foreground window has changed. The system sends this event even if the
-                                                     * foreground window has changed to another window in the same thread. Server
-                                                     * applications never send this event. For this event, the WinEventProc callback
-                                                     * function's hwnd parameter is the handle to the window that is in the foreground,
-                                                     * the idObject parameter is OBJID_WINDOW, and the idChild parameter is
-                                                     * CHILDID_SELF.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
@@ -10819,13 +10692,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The
-                                                     * foreground window has changed. The system sends this event even if the
-                                                     * foreground window has changed to another window in the same thread. Server
-                                                     * applications never send this event. For this event, the WinEventProc callback
-                                                     * function's hwnd parameter is the handle to the window that is in the foreground,
-                                                     * the idObject parameter is OBJID_WINDOW, and the idChild parameter is
-                                                     * CHILDID_SELF.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
@@ -10835,13 +10702,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The
-                                                     * foreground window has changed. The system sends this event even if the
-                                                     * foreground window has changed to another window in the same thread. Server
-                                                     * applications never send this event. For this event, the WinEventProc callback
-                                                     * function's hwnd parameter is the handle to the window that is in the foreground,
-                                                     * the idObject parameter is OBJID_WINDOW, and the idChild parameter is
-                                                     * CHILDID_SELF.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
@@ -10851,13 +10712,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The
-                                                     * foreground window has changed. The system sends this event even if the
-                                                     * foreground window has changed to another window in the same thread. Server
-                                                     * applications never send this event. For this event, the WinEventProc callback
-                                                     * function's hwnd parameter is the handle to the window that is in the foreground,
-                                                     * the idObject parameter is OBJID_WINDOW, and the idChild parameter is
-                                                     * CHILDID_SELF.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
@@ -10867,14 +10722,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. A menu from
-                                                  * the menu bar has been closed. The system sends this event for standard menus;
-                                                  * servers send it for custom menus. For this event, the WinEventProc callback
-                                                  * function's hwnd, idObject, and idChild parameters refer to the control that
-                                                  * contains the menu bar or the control that activates the context menu. The hwnd
-                                                  * parameter is the handle to the window that is related to the event. The idObject
-                                                  * parameter is OBJID_MENU or OBJID_SYSMENU for a menu, or OBJID_WINDOW for a
-                                                  * pop-up menu. The idChild parameter is CHILDID_SELF.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
@@ -10884,14 +10732,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. A menu from
-                                                  * the menu bar has been closed. The system sends this event for standard menus;
-                                                  * servers send it for custom menus. For this event, the WinEventProc callback
-                                                  * function's hwnd, idObject, and idChild parameters refer to the control that
-                                                  * contains the menu bar or the control that activates the context menu. The hwnd
-                                                  * parameter is the handle to the window that is related to the event. The idObject
-                                                  * parameter is OBJID_MENU or OBJID_SYSMENU for a menu, or OBJID_WINDOW for a
-                                                  * pop-up menu. The idChild parameter is CHILDID_SELF.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
@@ -10901,14 +10742,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. A menu from
-                                                  * the menu bar has been closed. The system sends this event for standard menus;
-                                                  * servers send it for custom menus. For this event, the WinEventProc callback
-                                                  * function's hwnd, idObject, and idChild parameters refer to the control that
-                                                  * contains the menu bar or the control that activates the context menu. The hwnd
-                                                  * parameter is the handle to the window that is related to the event. The idObject
-                                                  * parameter is OBJID_MENU or OBJID_SYSMENU for a menu, or OBJID_WINDOW for a
-                                                  * pop-up menu. The idChild parameter is CHILDID_SELF.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
@@ -10918,14 +10752,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. A menu from
-                                                  * the menu bar has been closed. The system sends this event for standard menus;
-                                                  * servers send it for custom menus. For this event, the WinEventProc callback
-                                                  * function's hwnd, idObject, and idChild parameters refer to the control that
-                                                  * contains the menu bar or the control that activates the context menu. The hwnd
-                                                  * parameter is the handle to the window that is related to the event. The idObject
-                                                  * parameter is OBJID_MENU or OBJID_SYSMENU for a menu, or OBJID_WINDOW for a
-                                                  * pop-up menu. The idChild parameter is CHILDID_SELF.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
@@ -10935,11 +10762,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
-                                                       * has been closed. The system sends this event for standard menus; servers send it
-                                                       * for custom menus. When a pop-up menu is closed, the client receives this
-                                                       * message, and then the EVENT_SYSTEM_MENUEND event. This event is not sent
-                                                       * consistently by the system.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
@@ -10949,11 +10772,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
-                                                       * has been closed. The system sends this event for standard menus; servers send it
-                                                       * for custom menus. When a pop-up menu is closed, the client receives this
-                                                       * message, and then the EVENT_SYSTEM_MENUEND event. This event is not sent
-                                                       * consistently by the system.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
@@ -10963,11 +10782,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
-                                                       * has been closed. The system sends this event for standard menus; servers send it
-                                                       * for custom menus. When a pop-up menu is closed, the client receives this
-                                                       * message, and then the EVENT_SYSTEM_MENUEND event. This event is not sent
-                                                       * consistently by the system.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
@@ -10977,11 +10792,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
-                                                       * has been closed. The system sends this event for standard menus; servers send it
-                                                       * for custom menus. When a pop-up menu is closed, the client receives this
-                                                       * message, and then the EVENT_SYSTEM_MENUEND event. This event is not sent
-                                                       * consistently by the system.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
@@ -10991,12 +10802,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
-                                                         * has been displayed. The system sends this event for standard menus, which are
-                                                         * identified by HMENU, and are created using menu-template resources or Win32 menu
-                                                         * functions. Servers send this event for custom menus, which are user interface
-                                                         * elements that function as menus but are not created in the standard way. This
-                                                         * event is not sent consistently by the system.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
@@ -11006,12 +10812,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
-                                                         * has been displayed. The system sends this event for standard menus, which are
-                                                         * identified by HMENU, and are created using menu-template resources or Win32 menu
-                                                         * functions. Servers send this event for custom menus, which are user interface
-                                                         * elements that function as menus but are not created in the standard way. This
-                                                         * event is not sent consistently by the system.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
@@ -11021,12 +10822,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
-                                                         * has been displayed. The system sends this event for standard menus, which are
-                                                         * identified by HMENU, and are created using menu-template resources or Win32 menu
-                                                         * functions. Servers send this event for custom menus, which are user interface
-                                                         * elements that function as menus but are not created in the standard way. This
-                                                         * event is not sent consistently by the system.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
@@ -11036,12 +10832,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. A pop-up menu
-                                                         * has been displayed. The system sends this event for standard menus, which are
-                                                         * identified by HMENU, and are created using menu-template resources or Win32 menu
-                                                         * functions. Servers send this event for custom menus, which are user interface
-                                                         * elements that function as menus but are not created in the standard way. This
-                                                         * event is not sent consistently by the system.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
@@ -11051,19 +10842,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. A menu item
-                                                    * on the menu bar has been selected. The system sends this event for standard
-                                                    * menus, which are identified by HMENU, created using menu-template resources or
-                                                    * Win32 menu API elements. Servers send this event for custom menus, which are
-                                                    * user interface elements that function as menus but are not created in the
-                                                    * standard way. For this event, the WinEventProc callback function's hwnd,
-                                                    * idObject, and idChild parameters refer to the control that contains the menu bar
-                                                    * or the control that activates the context menu. The hwnd parameter is the handle
-                                                    * to the window related to the event. The idObject parameter is OBJID_MENU or
-                                                    * OBJID_SYSMENU for a menu, or OBJID_WINDOW for a pop-up menu. The idChild
-                                                    * parameter is CHILDID_SELF. The system triggers more than one
-                                                    * EVENT_SYSTEM_MENUSTART event that does not always correspond with the
-                                                    * EVENT_SYSTEM_MENUEND event.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
@@ -11073,19 +10852,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. A menu item
-                                                    * on the menu bar has been selected. The system sends this event for standard
-                                                    * menus, which are identified by HMENU, created using menu-template resources or
-                                                    * Win32 menu API elements. Servers send this event for custom menus, which are
-                                                    * user interface elements that function as menus but are not created in the
-                                                    * standard way. For this event, the WinEventProc callback function's hwnd,
-                                                    * idObject, and idChild parameters refer to the control that contains the menu bar
-                                                    * or the control that activates the context menu. The hwnd parameter is the handle
-                                                    * to the window related to the event. The idObject parameter is OBJID_MENU or
-                                                    * OBJID_SYSMENU for a menu, or OBJID_WINDOW for a pop-up menu. The idChild
-                                                    * parameter is CHILDID_SELF. The system triggers more than one
-                                                    * EVENT_SYSTEM_MENUSTART event that does not always correspond with the
-                                                    * EVENT_SYSTEM_MENUEND event.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
@@ -11095,19 +10862,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. A menu item
-                                                    * on the menu bar has been selected. The system sends this event for standard
-                                                    * menus, which are identified by HMENU, created using menu-template resources or
-                                                    * Win32 menu API elements. Servers send this event for custom menus, which are
-                                                    * user interface elements that function as menus but are not created in the
-                                                    * standard way. For this event, the WinEventProc callback function's hwnd,
-                                                    * idObject, and idChild parameters refer to the control that contains the menu bar
-                                                    * or the control that activates the context menu. The hwnd parameter is the handle
-                                                    * to the window related to the event. The idObject parameter is OBJID_MENU or
-                                                    * OBJID_SYSMENU for a menu, or OBJID_WINDOW for a pop-up menu. The idChild
-                                                    * parameter is CHILDID_SELF. The system triggers more than one
-                                                    * EVENT_SYSTEM_MENUSTART event that does not always correspond with the
-                                                    * EVENT_SYSTEM_MENUEND event.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
@@ -11117,19 +10872,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. A menu item
-                                                    * on the menu bar has been selected. The system sends this event for standard
-                                                    * menus, which are identified by HMENU, created using menu-template resources or
-                                                    * Win32 menu API elements. Servers send this event for custom menus, which are
-                                                    * user interface elements that function as menus but are not created in the
-                                                    * standard way. For this event, the WinEventProc callback function's hwnd,
-                                                    * idObject, and idChild parameters refer to the control that contains the menu bar
-                                                    * or the control that activates the context menu. The hwnd parameter is the handle
-                                                    * to the window related to the event. The idObject parameter is OBJID_MENU or
-                                                    * OBJID_SYSMENU for a menu, or OBJID_WINDOW for a pop-up menu. The idChild
-                                                    * parameter is CHILDID_SELF. The system triggers more than one
-                                                    * EVENT_SYSTEM_MENUSTART event that does not always correspond with the
-                                                    * EVENT_SYSTEM_MENUEND event.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
@@ -11139,9 +10882,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. A window
-                                                      * object is about to be restored. This event is sent by the system, never by
-                                                      * servers.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
@@ -11151,9 +10892,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. A window
-                                                      * object is about to be restored. This event is sent by the system, never by
-                                                      * servers.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
@@ -11163,9 +10902,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. A window
-                                                      * object is about to be restored. This event is sent by the system, never by
-                                                      * servers.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
@@ -11175,9 +10912,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. A window
-                                                      * object is about to be restored. This event is sent by the system, never by
-                                                      * servers.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
@@ -11187,9 +10922,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. A window
-                                                        * object is about to be minimized. This event is sent by the system, never by
-                                                        * servers.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
@@ -11199,9 +10932,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. A window
-                                                        * object is about to be minimized. This event is sent by the system, never by
-                                                        * servers.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
@@ -11211,9 +10942,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. A window
-                                                        * object is about to be minimized. This event is sent by the system, never by
-                                                        * servers.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
@@ -11223,9 +10952,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. A window
-                                                        * object is about to be minimized. This event is sent by the system, never by
-                                                        * servers.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
@@ -11235,9 +10962,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The movement
-                                                      * or resizing of a window has finished. This event is sent by the system, never by
-                                                      * servers.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
@@ -11247,9 +10972,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The movement
-                                                      * or resizing of a window has finished. This event is sent by the system, never by
-                                                      * servers.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
@@ -11259,9 +10982,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The movement
-                                                      * or resizing of a window has finished. This event is sent by the system, never by
-                                                      * servers.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
@@ -11271,9 +10992,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The movement
-                                                      * or resizing of a window has finished. This event is sent by the system, never by
-                                                      * servers.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
@@ -11283,8 +11002,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. A window is
-                                                        * being moved or resized. This event is sent by the system, never by servers.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
@@ -11294,8 +11012,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. A window is
-                                                        * being moved or resized. This event is sent by the system, never by servers.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
@@ -11305,8 +11022,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. A window is
-                                                        * being moved or resized. This event is sent by the system, never by servers.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
@@ -11316,8 +11032,7 @@ declare namespace Electron {
                                                         */
                                                        nativeWindowInfo: NativeWindowInfo,
                                                        /**
-                                                        * Specifies the time, in milliseconds, that the event was generated. A window is
-                                                        * being moved or resized. This event is sent by the system, never by servers.
+                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                         */
                                                        eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
@@ -11327,13 +11042,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. Scrolling has
-                                                       * ended on a scroll bar. This event is sent by the system for standard scroll bar
-                                                       * controls and for scroll bars that are attached to a window. Servers send this
-                                                       * event for custom scroll bars, which are user interface elements that function as
-                                                       * scroll bars but are not created in the standard way. The idObject parameter that
-                                                       * is sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
-                                                       * scroll bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
@@ -11343,13 +11052,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. Scrolling has
-                                                       * ended on a scroll bar. This event is sent by the system for standard scroll bar
-                                                       * controls and for scroll bars that are attached to a window. Servers send this
-                                                       * event for custom scroll bars, which are user interface elements that function as
-                                                       * scroll bars but are not created in the standard way. The idObject parameter that
-                                                       * is sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
-                                                       * scroll bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
@@ -11359,13 +11062,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. Scrolling has
-                                                       * ended on a scroll bar. This event is sent by the system for standard scroll bar
-                                                       * controls and for scroll bars that are attached to a window. Servers send this
-                                                       * event for custom scroll bars, which are user interface elements that function as
-                                                       * scroll bars but are not created in the standard way. The idObject parameter that
-                                                       * is sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
-                                                       * scroll bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
@@ -11375,13 +11072,7 @@ declare namespace Electron {
                                                        */
                                                       nativeWindowInfo: NativeWindowInfo,
                                                       /**
-                                                       * Specifies the time, in milliseconds, that the event was generated. Scrolling has
-                                                       * ended on a scroll bar. This event is sent by the system for standard scroll bar
-                                                       * controls and for scroll bars that are attached to a window. Servers send this
-                                                       * event for custom scroll bars, which are user interface elements that function as
-                                                       * scroll bars but are not created in the standard way. The idObject parameter that
-                                                       * is sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
-                                                       * scroll bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                        */
                                                       eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
@@ -11391,13 +11082,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. Scrolling has
-                                                         * started on a scroll bar. The system sends this event for standard scroll bar
-                                                         * controls and for scroll bars attached to a window. Servers send this event for
-                                                         * custom scroll bars, which are user interface elements that function as scroll
-                                                         * bars but are not created in the standard way. The idObject parameter that is
-                                                         * sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
-                                                         * scrolls bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
@@ -11407,13 +11092,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. Scrolling has
-                                                         * started on a scroll bar. The system sends this event for standard scroll bar
-                                                         * controls and for scroll bars attached to a window. Servers send this event for
-                                                         * custom scroll bars, which are user interface elements that function as scroll
-                                                         * bars but are not created in the standard way. The idObject parameter that is
-                                                         * sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
-                                                         * scrolls bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
@@ -11423,13 +11102,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. Scrolling has
-                                                         * started on a scroll bar. The system sends this event for standard scroll bar
-                                                         * controls and for scroll bars attached to a window. Servers send this event for
-                                                         * custom scroll bars, which are user interface elements that function as scroll
-                                                         * bars but are not created in the standard way. The idObject parameter that is
-                                                         * sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
-                                                         * scrolls bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
@@ -11439,13 +11112,7 @@ declare namespace Electron {
                                                          */
                                                         nativeWindowInfo: NativeWindowInfo,
                                                         /**
-                                                         * Specifies the time, in milliseconds, that the event was generated. Scrolling has
-                                                         * started on a scroll bar. The system sends this event for standard scroll bar
-                                                         * controls and for scroll bars attached to a window. Servers send this event for
-                                                         * custom scroll bars, which are user interface elements that function as scroll
-                                                         * bars but are not created in the standard way. The idObject parameter that is
-                                                         * sent to the WinEventProc callback function is OBJID_HSCROLL for horizontal
-                                                         * scrolls bars, and OBJID_VSCROLL for vertical scroll bars.
+                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                          */
                                                         eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
@@ -11455,12 +11122,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. A sound has
-                                                * been played. The system sends this event when a system sound, such as one for a
-                                                * menu, is played even if no sound is audible (for example, due to the lack of a
-                                                * sound file or a sound card). Servers send this event whenever a custom UI
-                                                * element generates a sound. For this event, the WinEventProc callback function
-                                                * receives the OBJID_SOUND value as the idObject parameter.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
@@ -11470,12 +11132,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. A sound has
-                                                * been played. The system sends this event when a system sound, such as one for a
-                                                * menu, is played even if no sound is audible (for example, due to the lack of a
-                                                * sound file or a sound card). Servers send this event whenever a custom UI
-                                                * element generates a sound. For this event, the WinEventProc callback function
-                                                * receives the OBJID_SOUND value as the idObject parameter.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
@@ -11485,12 +11142,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. A sound has
-                                                * been played. The system sends this event when a system sound, such as one for a
-                                                * menu, is played even if no sound is audible (for example, due to the lack of a
-                                                * sound file or a sound card). Servers send this event whenever a custom UI
-                                                * element generates a sound. For this event, the WinEventProc callback function
-                                                * receives the OBJID_SOUND value as the idObject parameter.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
@@ -11500,12 +11152,7 @@ declare namespace Electron {
                                                 */
                                                nativeWindowInfo: NativeWindowInfo,
                                                /**
-                                                * Specifies the time, in milliseconds, that the event was generated. A sound has
-                                                * been played. The system sends this event when a system sound, such as one for a
-                                                * menu, is played even if no sound is audible (for example, due to the lack of a
-                                                * sound file or a sound card). Servers send this event whenever a custom UI
-                                                * element generates a sound. For this event, the WinEventProc callback function
-                                                * receives the OBJID_SOUND value as the idObject parameter.
+                                                * Specifies the time, in milliseconds, that the event was generated.
                                                 */
                                                eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
@@ -11515,12 +11162,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                    * released ALT+TAB. This event is sent by the system, never by servers. The hwnd
-                                                    * parameter of the WinEventProc callback function identifies the window to which
-                                                    * the user has switched.\ If only one application is running when the user presses
-                                                    * ALT+TAB, the system sends this event without a corresponding
-                                                    * EVENT_SYSTEM_SWITCHSTART event.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
@@ -11530,12 +11172,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                    * released ALT+TAB. This event is sent by the system, never by servers. The hwnd
-                                                    * parameter of the WinEventProc callback function identifies the window to which
-                                                    * the user has switched.\ If only one application is running when the user presses
-                                                    * ALT+TAB, the system sends this event without a corresponding
-                                                    * EVENT_SYSTEM_SWITCHSTART event.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
@@ -11545,12 +11182,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                    * released ALT+TAB. This event is sent by the system, never by servers. The hwnd
-                                                    * parameter of the WinEventProc callback function identifies the window to which
-                                                    * the user has switched.\ If only one application is running when the user presses
-                                                    * ALT+TAB, the system sends this event without a corresponding
-                                                    * EVENT_SYSTEM_SWITCHSTART event.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
@@ -11560,12 +11192,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                    * released ALT+TAB. This event is sent by the system, never by servers. The hwnd
-                                                    * parameter of the WinEventProc callback function identifies the window to which
-                                                    * the user has switched.\ If only one application is running when the user presses
-                                                    * ALT+TAB, the system sends this event without a corresponding
-                                                    * EVENT_SYSTEM_SWITCHSTART event.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     on(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
@@ -11575,13 +11202,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                      * pressed ALT+TAB, which activates the switch window. This event is sent by the
-                                                      * system, never by servers. The hwnd parameter of the WinEventProc callback
-                                                      * function identifies the window to which the user is switching. If only one
-                                                      * application is running when the user presses ALT+TAB, the system sends an
-                                                      * EVENT_SYSTEM_SWITCHEND event without a corresponding EVENT_SYSTEM_SWITCHSTART
-                                                      * event.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     once(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
@@ -11591,13 +11212,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                      * pressed ALT+TAB, which activates the switch window. This event is sent by the
-                                                      * system, never by servers. The hwnd parameter of the WinEventProc callback
-                                                      * function identifies the window to which the user is switching. If only one
-                                                      * application is running when the user presses ALT+TAB, the system sends an
-                                                      * EVENT_SYSTEM_SWITCHEND event without a corresponding EVENT_SYSTEM_SWITCHSTART
-                                                      * event.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
@@ -11607,13 +11222,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                      * pressed ALT+TAB, which activates the switch window. This event is sent by the
-                                                      * system, never by servers. The hwnd parameter of the WinEventProc callback
-                                                      * function identifies the window to which the user is switching. If only one
-                                                      * application is running when the user presses ALT+TAB, the system sends an
-                                                      * EVENT_SYSTEM_SWITCHEND event without a corresponding EVENT_SYSTEM_SWITCHSTART
-                                                      * event.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
@@ -11623,13 +11232,7 @@ declare namespace Electron {
                                                       */
                                                      nativeWindowInfo: NativeWindowInfo,
                                                      /**
-                                                      * Specifies the time, in milliseconds, that the event was generated. The user has
-                                                      * pressed ALT+TAB, which activates the switch window. This event is sent by the
-                                                      * system, never by servers. The hwnd parameter of the WinEventProc callback
-                                                      * function identifies the window to which the user is switching. If only one
-                                                      * application is running when the user presses ALT+TAB, the system sends an
-                                                      * EVENT_SYSTEM_SWITCHEND event without a corresponding EVENT_SYSTEM_SWITCHSTART
-                                                      * event.
+                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                       */
                                                      eventTime: number) => void): this;
     on(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
@@ -11639,9 +11242,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                   * event constant values reserved for UI Automation event identifiers. For more
-                                                   * information, see Allocation of WinEvent IDs.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     once(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
@@ -11651,9 +11252,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                   * event constant values reserved for UI Automation event identifiers. For more
-                                                   * information, see Allocation of WinEvent IDs.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     addListener(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
@@ -11663,9 +11262,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                   * event constant values reserved for UI Automation event identifiers. For more
-                                                   * information, see Allocation of WinEvent IDs.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     removeListener(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
@@ -11675,9 +11272,7 @@ declare namespace Electron {
                                                    */
                                                   nativeWindowInfo: NativeWindowInfo,
                                                   /**
-                                                   * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                   * event constant values reserved for UI Automation event identifiers. For more
-                                                   * information, see Allocation of WinEvent IDs.
+                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                    */
                                                   eventTime: number) => void): this;
     on(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
@@ -11687,9 +11282,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                     * event constant values reserved for UI Automation event identifiers. For more
-                                                     * information, see Allocation of WinEvent IDs.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     once(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
@@ -11699,9 +11292,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                     * event constant values reserved for UI Automation event identifiers. For more
-                                                     * information, see Allocation of WinEvent IDs.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     addListener(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
@@ -11711,9 +11302,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                     * event constant values reserved for UI Automation event identifiers. For more
-                                                     * information, see Allocation of WinEvent IDs.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     removeListener(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
@@ -11723,9 +11312,7 @@ declare namespace Electron {
                                                      */
                                                     nativeWindowInfo: NativeWindowInfo,
                                                     /**
-                                                     * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                     * event constant values reserved for UI Automation event identifiers. For more
-                                                     * information, see Allocation of WinEvent IDs.
+                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                      */
                                                     eventTime: number) => void): this;
     on(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
@@ -11735,9 +11322,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                  * event constant values reserved for UI Automation property-changed event
-                                                  * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     once(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
@@ -11747,9 +11332,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                  * event constant values reserved for UI Automation property-changed event
-                                                  * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     addListener(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
@@ -11759,9 +11342,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                  * event constant values reserved for UI Automation property-changed event
-                                                  * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     removeListener(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
@@ -11771,9 +11352,7 @@ declare namespace Electron {
                                                   */
                                                  nativeWindowInfo: NativeWindowInfo,
                                                  /**
-                                                  * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                  * event constant values reserved for UI Automation property-changed event
-                                                  * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                   */
                                                  eventTime: number) => void): this;
     on(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
@@ -11783,9 +11362,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                    * event constant values reserved for UI Automation property-changed event
-                                                    * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     once(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
@@ -11795,9 +11372,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                    * event constant values reserved for UI Automation property-changed event
-                                                    * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     addListener(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
@@ -11807,9 +11382,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                    * event constant values reserved for UI Automation property-changed event
-                                                    * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     removeListener(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
@@ -11819,9 +11392,7 @@ declare namespace Electron {
                                                     */
                                                    nativeWindowInfo: NativeWindowInfo,
                                                    /**
-                                                    * Specifies the time, in milliseconds, that the event was generated. The range of
-                                                    * event constant values reserved for UI Automation property-changed event
-                                                    * identifiers. For more information, see Allocation of WinEvent IDs.
+                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                     */
                                                    eventTime: number) => void): this;
     constructor(options?: WinEventHookEmitterConstructorOptions);
@@ -11841,13 +11412,21 @@ declare namespace Electron {
      */
     copyright?: string;
     /**
+     * The app's build version number.
+     */
+    version?: string;
+    /**
      * Credit information.
      */
     credits?: string;
     /**
-     * The app's build version number.
+     * The app's website.
      */
-    version?: string;
+    website?: string;
+    /**
+     * Path to the app's icon.
+     */
+    iconPath?: string;
   }
 
   interface AddRepresentationOptions {
@@ -11871,6 +11450,24 @@ declare namespace Electron {
      * The data URL containing either a base 64 encoded PNG or JPEG image.
      */
     dataURL?: string;
+  }
+
+  interface AnimationSettings {
+    /**
+     * Returns true if rich animations should be rendered. Looks at session type (e.g.
+     * remote desktop) and accessibility settings to give guidance for heavy
+     * animations.
+     */
+    shouldRenderRichAnimation: boolean;
+    /**
+     * Determines on a per-platform basis whether scroll animations (e.g. produced by
+     * home/end key) should be enabled.
+     */
+    scrollAnimationsEnabledBySystem: boolean;
+    /**
+     * Determines whether the user desires reduced motion based on platform APIs.
+     */
+    prefersReducedMotion: boolean;
   }
 
   interface AppDetailsOptions {
@@ -11916,6 +11513,16 @@ declare namespace Electron {
      * by default.
      */
     height: boolean;
+    /**
+     * If true, the view's x position and width will grow and shrink proportionly with
+     * the window. false by default.
+     */
+    horizontal: boolean;
+    /**
+     * If true, the view's y position and height will grow and shrink proportinaly with
+     * the window. false by default.
+     */
+    vertical: boolean;
   }
 
   interface BitmapOptions {
@@ -12041,7 +11648,9 @@ declare namespace Electron {
      */
     kiosk?: boolean;
     /**
-     * Default window title. Default is "Electron".
+     * Default window title. Default is "Electron". If the HTML tag </code> is defined
+     * in the HTML file loaded by <code>loadURL()</code>, this property will be
+     * ignored.</foo>
      */
     title?: string;
     /**
@@ -12086,8 +11695,8 @@ declare namespace Electron {
     enableLargerThanScreen?: boolean;
     /**
      * Window's background color as a hexadecimal value, like #66CD00 or #FFF or
-     * #80FFFFFF (alpha is supported if transparent is set to true). Default is #FFF
-     * (white).
+     * #80FFFFFF (alpha in #AARRGGBB format is supported if transparent is set to
+     * true). Default is #FFF (white).
      */
     backgroundColor?: string;
     /**
@@ -12162,6 +11771,10 @@ declare namespace Electron {
      * Settings of web page's features.
      */
     webPreferences?: WebPreferences;
+    /**
+     * OpenFin additional param.
+     */
+    hwnd?: string;
   }
 
   interface CertificateTrustDialogOptions {
@@ -12207,15 +11820,24 @@ declare namespace Electron {
   interface CommandLine {
     /**
      * Append a switch (with optional value) to Chromium's command line. Note: This
-     * will not affect process.argv, and is mainly used by developers to control some
-     * low-level Chromium behaviors.
+     * will not affect process.argv. The intended usage of this function is to control
+     * Chromium's behavior.
      */
     appendSwitch: (the_switch: string, value?: string) => void;
     /**
      * Append an argument to Chromium's command line. The argument will be quoted
-     * correctly. Note: This will not affect process.argv.
+     * correctly. Switches will precede arguments regardless of appending order. If
+     * you're appending an argument like --switch=value, consider using
+     * appendSwitch('switch', 'value') instead. Note: This will not affect
+     * process.argv. The intended usage of this function is to control Chromium's
+     * behavior.
      */
     appendArgument: (value: string) => void;
+    hasSwitch: (the_switch: string) => boolean;
+    /**
+     * Note: When the switch is not present or has no value, it returns empty string.
+     */
+    getSwitchValue: (the_switch: string) => string;
   }
 
   interface Config {
@@ -12352,6 +11974,15 @@ declare namespace Electron {
     crashesDirectory?: string;
   }
 
+  interface CreateFromBitmapOptions {
+    width: number;
+    height: number;
+    /**
+     * Defaults to 1.0.
+     */
+    scaleFactor?: number;
+  }
+
   interface CreateFromBufferOptions {
     /**
      * Required for bitmap buffers.
@@ -12410,6 +12041,25 @@ declare namespace Electron {
     bookmark?: string;
   }
 
+  interface DataData {
+    /**
+     * window id of the window that sent the WM_COPYDATA message.
+     */
+    sender: number;
+    /**
+     * Message that was sent.
+     */
+    message: string;
+  }
+
+  interface DeferredSetWindowPosBounds {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    hwnd: number;
+  }
+
   interface Details {
     /**
      * The url to associate the cookie with.
@@ -12424,8 +12074,7 @@ declare namespace Electron {
      */
     value?: string;
     /**
-     * The domain of the cookie; this will be normalized with a preceding dot so that
-     * it's also valid for subdomains. Empty by default if omitted.
+     * The domain of the cookie. Empty by default if omitted.
      */
     domain?: string;
     /**
@@ -12534,17 +12183,15 @@ declare namespace Electron {
      * Hides the dock icon.
      */
     hide: () => void;
-    /**
-     * Shows the dock icon.
-     */
-    show: () => void;
+    show: () => Promise<void>;
     isVisible: () => boolean;
     /**
      * Sets the application's dock menu.
      */
     setMenu: (menu: Menu) => void;
+    getMenu: () => (Menu) | (null);
     /**
-     * Sets the image associated with this dock icon. <!-- OpenFin Methods -->
+     * Sets the image associated with this dock icon.
      */
     setIcon: (image: (NativeImage) | (string)) => void;
   }
@@ -12585,6 +12232,10 @@ declare namespace Electron {
 
   interface FileIconOptions {
     size: ('small' | 'normal' | 'large');
+  }
+
+  interface FileSignature {
+    fileName: string;
   }
 
   interface Filter {
@@ -12702,6 +12353,21 @@ declare namespace Electron {
      * Passphrase for the certificate.
      */
     password: string;
+  }
+
+  interface Info {
+    /**
+     * Security origin for the isolated world.
+     */
+    securityOrigin?: string;
+    /**
+     * Content Security Policy for the isolated world.
+     */
+    csp?: string;
+    /**
+     * Name for isolated world. Useful in devtools.
+     */
+    name?: string;
   }
 
   interface Input {
@@ -12898,12 +12564,16 @@ declare namespace Electron {
      * Will be called with click(menuItem, browserWindow, event) when the menu item is
      * clicked.
      */
-    click?: (menuItem: MenuItem, browserWindow: BrowserWindow, event: Event) => void;
+    click?: (menuItem: MenuItem, browserWindow: BrowserWindow, event: KeyboardEvent) => void;
     /**
-     * Define the action of the menu item, when specified the click property will be
-     * ignored. See .
+     * Can be undo, redo, cut, copy, paste, pasteandmatchstyle, delete, selectall,
+     * reload, forcereload, toggledevtools, resetzoom, zoomin, zoomout,
+     * togglefullscreen, window, minimize, close, help, about, services, hide,
+     * hideothers, unhide, quit, startspeaking, stopspeaking, close, minimize, zoom,
+     * front, appMenu, fileMenu, editMenu, viewMenu or windowMenu Define the action of
+     * the menu item, when specified the click property will be ignored. See .
      */
-    role?: string;
+    role?: ('undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'pasteandmatchstyle' | 'delete' | 'selectall' | 'reload' | 'forcereload' | 'toggledevtools' | 'resetzoom' | 'zoomin' | 'zoomout' | 'togglefullscreen' | 'window' | 'minimize' | 'close' | 'help' | 'about' | 'services' | 'hide' | 'hideothers' | 'unhide' | 'quit' | 'startspeaking' | 'stopspeaking' | 'close' | 'minimize' | 'zoom' | 'front' | 'appMenu' | 'fileMenu' | 'editMenu' | 'viewMenu' | 'windowMenu');
     /**
      * Can be normal, separator, submenu, checkbox or radio.
      */
@@ -12916,6 +12586,11 @@ declare namespace Electron {
      * If false, the menu item will be greyed out and unclickable.
      */
     enabled?: boolean;
+    /**
+     * default is true, and when false will prevent the accelerator from triggering the
+     * item if the item is not visible`.
+     */
+    acceleratorWorksWhenHidden?: boolean;
     /**
      * If false, the menu item will be entirely hidden.
      */
@@ -12967,6 +12642,82 @@ declare namespace Electron {
   }
 
   interface MessageBoxOptions {
+    /**
+     * Can be "none", "info", "error", "question" or "warning". On Windows, "question"
+     * displays the same icon as "info", unless you set an icon using the "icon"
+     * option. On macOS, both "warning" and "error" display the same warning icon.
+     */
+    type?: string;
+    /**
+     * Array of texts for buttons. On Windows, an empty array will result in one button
+     * labeled "OK".
+     */
+    buttons?: string[];
+    /**
+     * Index of the button in the buttons array which will be selected by default when
+     * the message box opens.
+     */
+    defaultId?: number;
+    /**
+     * Title of the message box, some platforms will not show it.
+     */
+    title?: string;
+    /**
+     * Content of the message box.
+     */
+    message: string;
+    /**
+     * Extra information of the message.
+     */
+    detail?: string;
+    /**
+     * If provided, the message box will include a checkbox with the given label. The
+     * checkbox state can be inspected only when using callback.
+     */
+    checkboxLabel?: string;
+    /**
+     * Initial checked state of the checkbox. false by default.
+     */
+    checkboxChecked?: boolean;
+    icon?: NativeImage;
+    /**
+     * The index of the button to be used to cancel the dialog, via the Esc key. By
+     * default this is assigned to the first button with "cancel" or "no" as the label.
+     * If no such labeled buttons exist and this option is not set, 0 will be used as
+     * the return value or callback response.
+     */
+    cancelId?: number;
+    /**
+     * On Windows Electron will try to figure out which one of the buttons are common
+     * buttons (like "Cancel" or "Yes"), and show the others as command links in the
+     * dialog. This can make the dialog appear in the style of modern Windows apps. If
+     * you don't like this behavior, you can set noLink to true.
+     */
+    noLink?: boolean;
+    /**
+     * Normalize the keyboard access keys across platforms. Default is false. Enabling
+     * this assumes & is used in the button labels for the placement of the keyboard
+     * shortcut access key and labels will be converted so they work correctly on each
+     * platform, & characters are removed on macOS, converted to _ on Linux, and left
+     * untouched on Windows. For example, a button label of Vie&w will be converted to
+     * Vie_w on Linux and View on macOS and can be selected via Alt-W on Windows and
+     * Linux.
+     */
+    normalizeAccessKeys?: boolean;
+  }
+
+  interface MessageBoxReturnValue {
+    /**
+     * The index of the clicked button.
+     */
+    response: number;
+    /**
+     * The checked state of the checkbox if checkboxLabel was set. Otherwise false.
+     */
+    checkboxChecked: boolean;
+  }
+
+  interface MessageBoxSyncOptions {
     /**
      * Can be "none", "info", "error", "question" or "warning". On Windows, "question"
      * displays the same icon as "info", unless you set an icon using the "icon"
@@ -13098,6 +12849,7 @@ declare namespace Electron {
     method: string;
     webContentsId?: number;
     resourceType: string;
+    referrer: string;
     timestamp: number;
     redirectURL: string;
     statusCode: number;
@@ -13123,6 +12875,7 @@ declare namespace Electron {
     method: string;
     webContentsId?: number;
     resourceType: string;
+    referrer: string;
     timestamp: number;
     uploadData: UploadData[];
   }
@@ -13141,6 +12894,7 @@ declare namespace Electron {
     method: string;
     webContentsId?: number;
     resourceType: string;
+    referrer: string;
     timestamp: number;
     requestHeaders: RequestHeaders;
   }
@@ -13189,6 +12943,7 @@ declare namespace Electron {
     method: string;
     webContentsId?: number;
     resourceType: string;
+    referrer: string;
     timestamp: number;
     fromCache: boolean;
     /**
@@ -13211,6 +12966,7 @@ declare namespace Electron {
     method: string;
     webContentsId?: number;
     resourceType: string;
+    referrer: string;
     timestamp: number;
     statusLine: string;
     statusCode: number;
@@ -13244,6 +13000,7 @@ declare namespace Electron {
     method: string;
     webContentsId?: number;
     resourceType: string;
+    referrer: string;
     timestamp: number;
     responseHeaders: ResponseHeaders;
     /**
@@ -13268,6 +13025,7 @@ declare namespace Electron {
     method: string;
     webContentsId?: number;
     resourceType: string;
+    referrer: string;
     timestamp: number;
     requestHeaders: RequestHeaders;
   }
@@ -13287,6 +13045,11 @@ declare namespace Electron {
      * back. In detach mode it's not.
      */
     mode: ('right' | 'bottom' | 'undocked' | 'detach');
+    /**
+     * Whether to bring the opened devtools window to the foreground. The default is
+     * true.
+     */
+    activate?: boolean;
   }
 
   interface OpenDialogOptions {
@@ -13313,7 +13076,56 @@ declare namespace Electron {
     securityScopedBookmarks?: boolean;
   }
 
+  interface OpenDialogReturnValue {
+    /**
+     * An array of file paths chosen by the user. If the dialog is cancelled this will
+     * be an empty array.
+     */
+    filePaths?: string[];
+    /**
+     * An array matching the filePaths array of base64 encoded strings which contains
+     * security scoped bookmark data. securityScopedBookmarks must be enabled for this
+     * to be populated.
+     */
+    bookmarks?: string[];
+  }
+
+  interface OpenDialogSyncOptions {
+    title?: string;
+    defaultPath?: string;
+    /**
+     * Custom label for the confirmation button, when left empty the default label will
+     * be used.
+     */
+    buttonLabel?: string;
+    filters?: FileFilter[];
+    /**
+     * Contains which features the dialog should use. The following values are
+     * supported:
+     */
+    properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles' | 'createDirectory' | 'promptToCreate' | 'noResolveAliases' | 'treatPackageAsDirectory'>;
+    /**
+     * Message to display above input boxes.
+     */
+    message?: string;
+    /**
+     * Create when packaged for the Mac App Store.
+     */
+    securityScopedBookmarks?: boolean;
+  }
+
   interface OpenExternalOptions {
+    /**
+     * true to bring the opened application to the foreground. The default is true.
+     */
+    activate?: boolean;
+    /**
+     * The working directory.
+     */
+    workingDirectory?: string;
+  }
+
+  interface OpenExternalSyncOptions {
     /**
      * true to bring the opened application to the foreground. The default is true.
      */
@@ -13386,17 +13198,33 @@ declare namespace Electron {
      * The type of media access being requested, can be video, audio or unknown
      */
     mediaType: ('video' | 'audio' | 'unknown');
+    /**
+     * The last URL the requesting frame loaded
+     */
+    requestingUrl: string;
+    /**
+     * Whether the frame making the request is the main frame
+     */
+    isMainFrame: boolean;
   }
 
   interface PermissionRequestHandlerDetails {
     /**
      * The url of the openExternal request.
      */
-    externalURL: string;
+    externalURL?: string;
     /**
      * The types of media access being requested, elements can be video or audio
      */
-    mediaTypes: Array<'video' | 'audio'>;
+    mediaTypes?: Array<'video' | 'audio'>;
+    /**
+     * The last URL the requesting frame loaded
+     */
+    requestingUrl: string;
+    /**
+     * Whether the frame making the request is the main frame
+     */
+    isMainFrame: boolean;
   }
 
   interface PluginCrashedEvent extends Event {
@@ -13473,6 +13301,33 @@ declare namespace Electron {
     landscape?: boolean;
   }
 
+  interface Privileges {
+    /**
+     * Default false.
+     */
+    standard?: boolean;
+    /**
+     * Default false.
+     */
+    secure?: boolean;
+    /**
+     * Default false.
+     */
+    bypassCSP?: boolean;
+    /**
+     * Default false.
+     */
+    allowServiceWorkers?: boolean;
+    /**
+     * Default false.
+     */
+    supportFetchAPI?: boolean;
+    /**
+     * Default false.
+     */
+    corsEnabled?: boolean;
+  }
+
   interface Process {
     /**
      * The full path to the process' binary.
@@ -13489,23 +13344,6 @@ declare namespace Electron {
     pid: number;
   }
 
-  interface ProcessMemoryInfo {
-    /**
-     * and The amount of memory currently pinned to actual physical RAM in Kilobytes.
-     */
-    residentSet: number;
-    /**
-     * The amount of memory not shared by other processes, such as JS heap or HTML
-     * content in Kilobytes.
-     */
-    private: number;
-    /**
-     * The amount of memory shared between processes, typically memory consumed by the
-     * Electron code itself in Kilobytes.
-     */
-    shared: number;
-  }
-
   interface ProgressBarOptions {
     /**
      * Mode for the progress bar. Can be none, normal, indeterminate, error or paused.
@@ -13515,9 +13353,9 @@ declare namespace Electron {
 
   interface Provider {
     /**
-     * Returns Boolean.
+     * .
      */
-    spellCheck: (text: string) => void;
+    spellCheck: (words: string[], callback: (misspeltWords: string[]) => void) => void;
   }
 
   interface ProxySettings {
@@ -13546,15 +13384,15 @@ declare namespace Electron {
      */
     regValue: string;
     /**
-     * Same as the input.
+     * The registry root key.
      */
     rootKey: string;
     /**
-     * Same as the input.
+     * The registry key.
      */
     subkey: string;
     /**
-     * Same as the input.
+     * The registry value name.
      */
     value: string;
     /**
@@ -13606,13 +13444,6 @@ declare namespace Electron {
     uploadData: UploadData[];
   }
 
-  interface RegisterStandardSchemesOptions {
-    /**
-     * true to register the scheme as secure. Default false.
-     */
-    secure?: boolean;
-  }
-
   interface RegisterStreamProtocolRequest {
     url: string;
     headers: Headers;
@@ -13626,29 +13457,6 @@ declare namespace Electron {
     referrer: string;
     method: string;
     uploadData: UploadData[];
-  }
-
-  interface RegisterURLSchemeAsPrivilegedOptions {
-    /**
-     * Default true.
-     */
-    secure?: boolean;
-    /**
-     * Default true.
-     */
-    bypassCSP?: boolean;
-    /**
-     * Default true.
-     */
-    allowServiceWorkers?: boolean;
-    /**
-     * Default true.
-     */
-    supportFetchAPI?: boolean;
-    /**
-     * Default true.
-     */
-    corsEnabled?: boolean;
   }
 
   interface RelaunchOptions {
@@ -13747,6 +13555,53 @@ declare namespace Electron {
     securityScopedBookmarks?: boolean;
   }
 
+  interface SaveDialogReturnValue {
+    /**
+     * whether or not the dialog was canceled.
+     */
+    canceled: boolean;
+    /**
+     * If the dialog is canceled this will be undefined.
+     */
+    filePath?: string;
+    /**
+     * Base64 encoded string which contains the security scoped bookmark data for the
+     * saved file. securityScopedBookmarks must be enabled for this to be present.
+     */
+    bookmark?: string;
+  }
+
+  interface SaveDialogSyncOptions {
+    title?: string;
+    /**
+     * Absolute directory path, absolute file path, or file name to use by default.
+     */
+    defaultPath?: string;
+    /**
+     * Custom label for the confirmation button, when left empty the default label will
+     * be used.
+     */
+    buttonLabel?: string;
+    filters?: FileFilter[];
+    /**
+     * Message to display above text fields.
+     */
+    message?: string;
+    /**
+     * Custom label for the text displayed in front of the filename text field.
+     */
+    nameFieldLabel?: string;
+    /**
+     * Show the tags input box, defaults to true.
+     */
+    showsTagField?: boolean;
+    /**
+     * Create a when packaged for the Mac App Store. If this option is enabled and the
+     * file doesn't already exist a blank file will be created at the chosen path.
+     */
+    securityScopedBookmarks?: boolean;
+  }
+
   interface Settings {
     /**
      * true to open the app at login, false to remove the app as a login item. Defaults
@@ -13784,14 +13639,23 @@ declare namespace Electron {
     types: string[];
     /**
      * The size that the media source thumbnail should be scaled to. Default is 150 x
-     * 150.
+     * 150. Set width or height to 0 when you do not need the thumbnails. This will
+     * save the processing time required for capturing the content of each window and
+     * screen.
      */
     thumbnailSize?: Size;
+    /**
+     * Set to true to enable fetching window icons. The default value is false. When
+     * false the appIcon property of the sources return null. Same if a source has the
+     * type screen.
+     */
+    fetchWindowIcons?: boolean;
   }
 
-  interface StartMonitoringOptions {
-    categoryFilter: string;
-    traceOptions: string;
+  interface StartOFCrashReporter {
+    options: Options;
+    isRunning: boolean;
+    diagnosticMode: boolean;
   }
 
   interface SystemMemoryInfo {
@@ -14058,6 +13922,38 @@ declare namespace Electron {
     height: number;
   }
 
+  interface WindowPosOptions {
+    /**
+     * Window's width.
+     */
+    w?: number;
+    /**
+     * - Window's height.
+     */
+    h?: number;
+    /**
+     * - Window's left offset from screen.
+     */
+    x?: number;
+    /**
+     * - Window's top offset from screen.
+     */
+    y?: number;
+    /**
+     * Window handle for z order updates.
+     */
+    hwndafter?: number;
+    /**
+     * flags.
+     */
+    flags: number;
+    /**
+     * Whether to convert the bounds (w/h/x/y) from DIP to screen values. true by
+     * default.
+     */
+    scale?: boolean;
+  }
+
   interface WinEventHookEmitterConstructorOptions {
     /**
      * Specifies the ID of the process from which to receives events. Specify zero (0)
@@ -14189,7 +14085,7 @@ declare namespace Electron {
      */
     devTools?: boolean;
     /**
-     * Whether node integration is enabled. Default is true.
+     * Whether node integration is enabled. Default is false.
      */
     nodeIntegration?: boolean;
     /**
@@ -14197,6 +14093,12 @@ declare namespace Electron {
      * this can be found in .
      */
     nodeIntegrationInWorker?: boolean;
+    /**
+     * Experimental option for enabling Node.js support in sub-frames such as iframes
+     * and child windows. All your preloads will load for every iframe, you can use
+     * process.isMainFrame to determine if you are in the main frame or not.
+     */
+    nodeIntegrationInSubFrames?: boolean;
     /**
      * Specifies a script that will be loaded before other scripts run in the page.
      * This script will always have access to node APIs no matter whether node
@@ -14274,10 +14176,6 @@ declare namespace Electron {
      */
     webgl?: boolean;
     /**
-     * Enables WebAudio support. Default is true.
-     */
-    webaudio?: boolean;
-    /**
      * Whether plugins should be enabled. Default is false.
      */
     plugins?: boolean;
@@ -14344,19 +14242,17 @@ declare namespace Electron {
      */
     contextIsolation?: boolean;
     /**
-     * Whether to use native window.open(). If set to true, the webPreferences of child
-     * window will always be the same with parent window, regardless of the parameters
-     * passed to window.open(). Defaults to false. This option is currently
-     * experimental.
+     * Whether to use native window.open(). Defaults to false. Child windows will
+     * always have node integration disabled unless nodeIntegrationInSubFrames is true.
+     * This option is currently experimental.
      */
     nativeWindowOpen?: boolean;
     /**
-     * Whether to enable the . Defaults to the value of the nodeIntegration option. The
-     * preload script configured for the will have node integration enabled when it is
-     * executed so you should ensure remote/untrusted content is not able to create a
-     * tag with a possibly malicious preload script. You can use the
-     * will-attach-webview event on to strip away the preload script and to validate or
-     * alter the 's initial settings.
+     * Whether to enable the . Defaults to false. The preload script configured for the
+     * will have node integration enabled when it is executed so you should ensure
+     * remote/untrusted content is not able to create a tag with a possibly malicious
+     * preload script. You can use the will-attach-webview event on to strip away the
+     * preload script and to validate or alter the 's initial settings.
      */
     webviewTag?: boolean;
     /**
@@ -14380,6 +14276,17 @@ declare namespace Electron {
      * Default is false.
      */
     navigateOnDragDrop?: boolean;
+    /**
+     * Autoplay policy to apply to content in the window, can be
+     * no-user-gesture-required, user-gesture-required,
+     * document-user-activation-required. Defaults to no-user-gesture-required.
+     */
+    autoplayPolicy?: ('no-user-gesture-required' | 'user-gesture-required' | 'document-user-activation-required');
+    /**
+     * Whether to prevent the window from resizing when entering HTML Fullscreen.
+     * Default is false.
+     */
+    disableHtmlFullscreenWindowResize?: boolean;
   }
 
   interface DefaultFontFamily {
@@ -14476,12 +14383,17 @@ declare namespace NodeJS {
      * private memory is more representative of the actual pre-compression memory usage
      * of the process on macOS.
      */
-    getProcessMemoryInfo(): Electron.ProcessMemoryInfo;
+    getProcessMemoryInfo(): Promise<Electron.ProcessMemoryInfo>;
     /**
      * Returns an object giving memory usage statistics about the entire system. Note
      * that all statistics are reported in Kilobytes.
      */
     getSystemMemoryInfo(): Electron.SystemMemoryInfo;
+    /**
+     * Examples: Note: It returns the actual operating system version instead of kernel
+     * version on macOS unlike os.release().
+     */
+    getSystemVersion(): string;
     /**
      * Causes the main thread of the current process hang.
      */
@@ -14500,6 +14412,17 @@ declare namespace NodeJS {
      * this property is true in the main process, otherwise it is undefined.
      */
     defaultApp?: boolean;
+    /**
+     * A Boolean that controls whether or not deprecation warnings are printed to
+     * stderr when formerly callback-based APIs converted to Promises are invoked using
+     * callbacks. Setting this to true will enable deprecation warnings.
+     */
+    enablePromiseAPIs?: boolean;
+    /**
+     * A Boolean, true when the current renderer context is the "main" renderer frame.
+     * If you want the ID of the current frame you should use webFrame.routingId.
+     */
+    isMainFrame?: boolean;
     /**
      * A Boolean. For Mac App Store build, this property is true, for other builds it
      * is undefined.
@@ -14547,7 +14470,7 @@ declare namespace NodeJS {
     traceProcessWarnings?: boolean;
     /**
      * A String representing the current process's type, can be "browser" (i.e. main
-     * process) or "renderer".
+     * process), "renderer", or "worker" (i.e. web worker).
      */
     type?: string;
     /**
@@ -14559,5 +14482,8 @@ declare namespace NodeJS {
   interface ProcessVersions {
     electron: string;
     chrome: string;
+    combinedId: string;
+    mainFrameRoutingId: number;
+    cachePath: string;
   }
 }

@@ -20,7 +20,7 @@ export default class ExternalWindowEventAdapter {
     private _boundsChangedEvent: string;
     private _boundsChangedListener: () => void;
     private _boundsChangingEvent: string;
-    private _boundsChangingListener: (bounds: Shapes.Bounds) => void;
+    private _boundsChangingListener: (bounds: Rectangle) => void;
     private _closingEvent: string;
     private _closingListener: () => void;
     private _endUserBoundsChangeEvent: string;
@@ -30,7 +30,7 @@ export default class ExternalWindowEventAdapter {
     private _movingEvent: string;
     private _movingListener: () => void;
     private _sizingEvent: string;
-    private _sizingListener: (bounds: Shapes.Bounds) => void;
+    private _sizingListener: (bounds: Rectangle) => void;
     private _stateChangeEvent: string;
     private _stateChangeListener: () => void;
     private _visibilityChangedEvent: string;
