@@ -12,6 +12,10 @@ let coreState = require('../../core_state.js');
 import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
+import { lockUuid } from '../../uuid_availability';
+import duplicateUuidTransport from '../../duplicate_uuid_delegation';
+import { writeToLog } from '../../log';
+import { WINDOWS_MESSAGE_MAP } from '../../../common/windows_messages';
 
 const SetWindowPosition = {
     SWP_HIDEWINDOW: 0x0080,
@@ -22,19 +26,6 @@ const SysCommands = {
     SC_MAXIMIZE: 0xF030,
     SC_MINIMIZE: 0xF020,
     SC_RESTORE: 0xF120
-};
-
-const WindowsMessages = {
-    WM_DESTROY: 0x0002,
-    WM_SETFOCUS: 0x0007,
-    WM_KILLFOCUS: 0x0008,
-    WM_WINDOWPOSCHANGED: 0x0047,
-    WM_SYSCOMMAND: 0x0112,
-    WM_NCLBUTTONDBLCLK: 0x00A3,
-    WM_SIZING: 0x0214,
-    WM_MOVING: 0x0216,
-    WM_ENTERSIZEMOVE: 0x0231,
-    WM_EXITSIZEMOVE: 0x0232
 };
 
 let successAck = {
@@ -334,6 +325,10 @@ function runApplication(identity, message, ack, nack) {
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
     const { uuid } = appIdentity;
     let remoteSubscriptionUnSubscribe;
+    const logMsg = manifestUrl ?
+        `unsub called before duplicate uuid transport listener removed for ${uuid}` :
+        '';
+    let unsub = () => writeToLog('error', logMsg);
     const remoteSubscription = {
         uuid,
         name: uuid,
@@ -341,7 +336,6 @@ function runApplication(identity, message, ack, nack) {
         className: 'window',
         eventName: 'fire-constructor-callback'
     };
-
     if (coreState.getAppRunningState(uuid)) {
         Application.emitRunRequested(appIdentity);
         nack(`Application with specified UUID is already running: ${uuid}`);
@@ -358,7 +352,7 @@ function runApplication(identity, message, ack, nack) {
             theErr.networkErrorCode = loadInfo.data.networkErrorCode;
             nack(theErr);
         }
-
+        unsub();
         if (typeof remoteSubscriptionUnSubscribe === 'function') {
             remoteSubscriptionUnSubscribe();
         }
@@ -367,10 +361,25 @@ function runApplication(identity, message, ack, nack) {
     if (manifestUrl) {
         addRemoteSubscription(remoteSubscription).then((unSubscribe) => {
             remoteSubscriptionUnSubscribe = unSubscribe;
-            Application.runWithRVM(identity, manifestUrl).catch(nack);
+            unsub = duplicateUuidTransport.subscribeToUuid(uuid, (e) => {
+                nack(`Application with specified UUID is already running: ${uuid}`);
+                remoteSubscriptionUnSubscribe();
+                unsub();
+            });
+            Application.runWithRVM(manifestUrl, appIdentity).catch(e => {
+                nack(e);
+                remoteSubscriptionUnSubscribe();
+                unsub();
+            });
         });
     } else {
-        Application.run(appIdentity);
+        if (lockUuid(uuid)) {
+            Application.run(appIdentity);
+        } else {
+            Application.emitRunRequested(appIdentity);
+            nack(`Application with specified UUID is already running: ${uuid}`);
+            return;
+        }
     }
 }
 
@@ -401,16 +410,16 @@ function externalWindowAction(identity, message, ack) {
     const { payload, payload: { type, uuid, name } } = message;
 
     switch (type) {
-        case WindowsMessages.WM_DESTROY:
+        case WINDOWS_MESSAGE_MAP.WM_DESTROY:
             ofEvents.emit(route.externalWindow('close', uuid, name));
             break;
-        case WindowsMessages.WM_SETFOCUS:
+        case WINDOWS_MESSAGE_MAP.WM_SETFOCUS:
             ofEvents.emit(route.externalWindow('focus', uuid, name));
             break;
-        case WindowsMessages.WM_KILLFOCUS:
+        case WINDOWS_MESSAGE_MAP.WM_KILLFOCUS:
             ofEvents.emit(route.externalWindow('blur', uuid, name));
             break;
-        case WindowsMessages.WM_WINDOWPOSCHANGED:
+        case WINDOWS_MESSAGE_MAP.WM_WINDOWPOSCHANGED:
             let flags = payload.flags;
 
             ofEvents.emit(route.externalWindow('bounds-changed', uuid, name));
@@ -422,7 +431,7 @@ function externalWindowAction(identity, message, ack) {
                 ofEvents.emit(route.externalWindow('visibility-changed', uuid, name), false);
             }
             break;
-        case WindowsMessages.WM_SYSCOMMAND:
+        case WINDOWS_MESSAGE_MAP.WM_SYSCOMMAND:
             let commandType = payload.wParam;
             let stateChange = (
                 commandType === SysCommands.SC_MAXIMIZE ||
@@ -434,22 +443,22 @@ function externalWindowAction(identity, message, ack) {
                 break;
             }
             /* falls through */
-        case WindowsMessages.WM_NCLBUTTONDBLCLK:
+        case WINDOWS_MESSAGE_MAP.WM_NCLBUTTONDBLCLK:
             ofEvents.emit(route.externalWindow('state-change', uuid, name));
             break;
-        case WindowsMessages.WM_SIZING:
+        case WINDOWS_MESSAGE_MAP.WM_SIZING:
             ofEvents.emit(route.externalWindow('sizing', uuid, name));
             break;
-        case WindowsMessages.WM_MOVING:
+        case WINDOWS_MESSAGE_MAP.WM_MOVING:
             ofEvents.emit(route.externalWindow('moving', uuid, name));
             break;
-        case WindowsMessages.WM_ENTERSIZEMOVE:
+        case WINDOWS_MESSAGE_MAP.WM_ENTERSIZEMOVE:
             ofEvents.emit(route.externalWindow('begin-user-bounds-change', uuid, name), {
                 x: payload.mouseX,
                 y: payload.mouseY
             });
             break;
-        case WindowsMessages.WM_EXITSIZEMOVE:
+        case WINDOWS_MESSAGE_MAP.WM_EXITSIZEMOVE:
             ofEvents.emit(route.externalWindow('end-user-bounds-change', uuid, name));
             break;
         default:

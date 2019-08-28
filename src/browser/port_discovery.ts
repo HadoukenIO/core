@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Base, ChromiumIPC, UnixDomainSocket, WMCopyData } from './transport';
+import { Base, ChromiumIPC, UnixDomainSocket, WMCopyData, NamedOneToManyTransport } from './transport';
 import * as log from './log';
 import route from '../common/route';
 import { isMeshEnabled } from './connection_manager';
@@ -23,33 +23,29 @@ export interface PortInfo {
     multiRuntime: boolean;
 }
 
-export class PortDiscovery extends EventEmitter {
-    private _transport: Base;
+export class PortDiscovery extends NamedOneToManyTransport {
     private _namedPipe: ChromiumIPC;
 
     constructor() {
-        super();
+        super(process.platform === 'win32' ? WINDOW_CLASS_NAME : UNIX_FILENAME_PREFIX);
     }
 
     private constructTransport(): Base {
-        if (!this._transport) {
-            if (process.platform === 'win32') {
-                // Send and receive messages on the same Window's classname
-                log.writeToLog('info', 'Constructing the copyDataTransport window.');
-                this._transport = new WMCopyData(WINDOW_CLASS_NAME, WINDOW_CLASS_NAME);
-            } else {
-                log.writeToLog('info', 'Opening and binding to a unix domain socket for port discovery.');
-                this._transport = new UnixDomainSocket(UNIX_FILENAME_PREFIX);
-            }
-
-            if (this._transport) {
-                this._transport.on('message', (s: any, data: string) => {
-                    this.emit(route.runtime('launched'), JSON.parse(data));
-                });
-            }
+        if (process.platform === 'win32') {
+            // Send and receive messages on the same Window's classname
+            log.writeToLog('info', 'Constructing the copyDataTransport window.');
+        } else {
+            log.writeToLog('info', 'Opening and binding to a unix domain socket for port discovery.');
         }
 
-        return this._transport;
+        const transport = super.construct();
+
+        super.onMessage((s: any, data: string) => {
+            this.emit(route.runtime('launched'), JSON.parse(data));
+        });
+
+
+        return transport;
     }
 
     public getPortInfoByArgs(args: ArgMap, port: number): PortInfo {
@@ -95,7 +91,7 @@ export class PortDiscovery extends EventEmitter {
         } catch (e) {
             log.writeToLog('info', `Port Discovery broadcast failed: ${JSON.stringify(e)}`);
         }
-    }
+    };
 }
 
 export const portDiscovery = new PortDiscovery();

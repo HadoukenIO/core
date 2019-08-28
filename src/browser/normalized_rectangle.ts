@@ -1,5 +1,5 @@
 import { Rectangle, RectangleBase } from './rectangle';
-import { OpenFinWindow } from '../shapes';
+import { GroupWindow } from '../shapes';
 import { System } from './api/system';
 import { Move } from './disabled_frame_group_tracker';
 
@@ -20,8 +20,9 @@ const framedOffset: Readonly<RectangleBase> = {
     width: -14
 };
 export const zeroDelta: Readonly<RectangleBase> = {x: 0, y: 0, height: 0, width: 0 };
-export function moveFromOpenFinWindow(ofWin: OpenFinWindow): Move {
+export function moveFromOpenFinWindow(ofWin: GroupWindow): Move {
     const win = ofWin.browserWindow;
+    const bounds = win.getBounds();
     const delta = isWin10 && win._options.frame
         ? framedOffset
         : zeroDelta;
@@ -34,7 +35,16 @@ export function moveFromOpenFinWindow(ofWin: OpenFinWindow): Move {
     }
     if (win._options.frame) {
         normalizedOptions.minWidth = Math.max(win._options.minWidth, 150);
+    } if (win._options.resizable === false) {
+        normalizedOptions.maxHeight = bounds.height;
+        normalizedOptions.minHeight = bounds.height;
+        normalizedOptions.maxWidth = bounds.width;
+        normalizedOptions.minWidth = bounds.width;
     }
+    if (normalizedOptions.maxHeight) { normalizedOptions.maxHeight += delta.height; }
+    if (normalizedOptions.minHeight) { normalizedOptions.minHeight += delta.height; }
+    if (normalizedOptions.maxWidth) { normalizedOptions.maxWidth += delta.width; }
+    if (normalizedOptions.minWidth) { normalizedOptions.minWidth += delta.width; }
     return {
         ofWin,
         rect: Rectangle.CREATE_FROM_BOUNDS(win.getBounds(), normalizedOptions).shift(delta),

@@ -3,7 +3,6 @@
  */
 
 // built-in modules
-let fs = require('fs');
 let path = require('path');
 let queryString = require('querystring');
 
@@ -97,6 +96,7 @@ function five0BaseOptions() {
         'hideOnClose': false,
         'hideWhileChildrenVisible': false,
         'icon': '',
+        'isRawWindowOpen': false,
         'launchExternal': '',
         'loadErrorMessage': '',
         'maxHeight': -1,
@@ -187,7 +187,8 @@ module.exports = {
 
         if (isInContainer('openfin')) {
             newOptions.resizable = newOptions.resize && newOptions.resizable;
-            newOptions.show = newOptions.autoShow && !newOptions.waitForPageLoad;
+            //always rely on the core to show the window.
+            newOptions.show = false;
             newOptions.skipTaskbar = !newOptions.showTaskbarIcon;
             newOptions.title = newOptions.name;
 
@@ -307,7 +308,10 @@ module.exports = {
         // allow fetching from the local-startup-url config
         if (localConfigPath) {
             try {
-                let localConfig = JSON.parse(fs.readFileSync(localConfigPath));
+                // Use this version of the fs module because the decorated version checks if the file
+                // has a matching signature file
+                const originalFs = require('original-fs');
+                let localConfig = JSON.parse(originalFs.readFileSync(localConfigPath));
 
                 if (localConfig['offlineAccess']) {
                     offlineAccess = true;

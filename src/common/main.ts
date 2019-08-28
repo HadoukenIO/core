@@ -1,6 +1,7 @@
 
 import { parse as parseUrl } from 'url';
 import { Identity } from '../shapes';
+import { Rectangle } from 'electron';
 
 const chromePageWhiteList : string[] = [
     'chrome://about',
@@ -106,4 +107,46 @@ export function noop(): void {
 
 export function isFloat(n: any): boolean {
     return Number(n) === n && n % 1 !== 0;
+}
+
+export function isObject(item: any): boolean {
+    return (item && typeof item === 'object' && !Array.isArray(item));
+}
+
+// Deep merge https://stackoverflow.com/a/34749873
+export function mergeDeep(target: any, ...sources: any[]): any {
+    if (!sources.length) {
+        return target;
+    }
+
+    const source = sources.shift();
+
+    if (isObject(target) && isObject(source)) {
+        const keys = Object.keys(source);
+
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+
+            if (isObject(source[key])) {
+                if (!target[key]) {
+                    Object.assign(target, { [key]: {} });
+                }
+                mergeDeep(target[key], source[key]);
+            } else {
+                Object.assign(target, { [key]: source[key] });
+            }
+        }
+    }
+
+    return mergeDeep(target, ...sources);
+}
+
+// Adjust coordinates of payloads based on scaling. **Mutates** the object!
+export function adjustCoordsScaling(coords: any, runtimeDpi: number, sourceDpi: number): any {
+    const propsToAdjust = ['mouseX', 'mouseY', 'x', 'y', 'left', 'right', 'top', 'bottom'];
+    propsToAdjust.forEach(prop => {
+        if (typeof coords[prop] === 'number') {
+            coords[prop] = coords[prop] * runtimeDpi / sourceDpi;
+        }
+    });
 }

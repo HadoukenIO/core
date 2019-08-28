@@ -6,6 +6,7 @@
 let fs = require('fs');
 let path = require('path');
 let electron = require('electron');
+let os = require('os');
 let app = electron.app; // Module to control application life.
 let BrowserWindow = electron.BrowserWindow;
 let crashReporter = electron.crashReporter;
@@ -52,6 +53,9 @@ import {
 import route from './src/common/route';
 
 import { createWillDownloadEventListener } from './src/browser/api/file_download';
+import duplicateUuidTransport from './src/browser/duplicate_uuid_delegation';
+import { deleteApp, argv } from './src/browser/core_state';
+import { lockUuid } from './src/browser/uuid_availability';
 
 // locals
 let firstApp = null;
@@ -155,13 +159,18 @@ includeFlashPlugin();
 // Opt in to launch crash reporter
 initializeCrashReporter(coreState.argo);
 
+initializeDiagnosticReporter(coreState.argo);
+
 // Safe errors initialization
 errors.initSafeErrors(coreState.argo);
 
 // Has a local copy of an app config
 if (coreState.argo['local-startup-url']) {
     try {
-        let localConfig = JSON.parse(fs.readFileSync(coreState.argo['local-startup-url']));
+        // Use this version of the fs module because the decorated version checks if the file
+        // has a matching signature file
+        const originalFs = require('original-fs');
+        let localConfig = JSON.parse(originalFs.readFileSync(coreState.argo['local-startup-url']));
 
         if (typeof localConfig['devtools_port'] === 'number') {
             if (!coreState.argo['remote-debugging-port']) {
@@ -172,7 +181,7 @@ if (coreState.argo['local-startup-url']) {
             }
         }
     } catch (err) {
-        console.error(err);
+        log.writeToLog(1, err, true);
     }
 }
 
@@ -180,6 +189,8 @@ const handleDelegatedLaunch = function(commandLine) {
     let otherInstanceArgo = minimist(commandLine);
 
     initializeCrashReporter(otherInstanceArgo);
+    log.writeToLog('info', 'handling delegated launch with the following args');
+    log.writeToLog('info', JSON.stringify(otherInstanceArgo));
 
     // delegated args from a second instance
     launchApp(otherInstanceArgo, false);
@@ -272,6 +283,7 @@ app.on('ready', function() {
     //Once we determine we are the first instance running we setup the API's
     //Create the new Application.
     initServer();
+    duplicateUuidTransport.init(handleDelegatedLaunch);
     webRequestHandlers.initHandlers();
 
     launchApp(coreState.argo, true);
@@ -389,6 +401,7 @@ app.on('ready', function() {
         log.writeToLog('info', err);
     }
     handleDeferredLaunches();
+    logSystemMemoryInfo();
 }); // end app.ready
 
 function staggerPortBroadcast(myPortInfo) {
@@ -443,6 +456,20 @@ function initializeCrashReporter(argo) {
     }
 
     crashReporter.startOFCrashReporter({ diagnosticMode, configUrl });
+}
+
+function initializeDiagnosticReporter(argo) {
+    if (!argo['diagnostics']) {
+        return;
+    }
+
+    // This event may be fired more than once for an unresponsive window.
+    ofEvents.on(route.window('not-responding', '*'), (payload) => {
+        log.writeToLog('info', `Window is not responding. uuid: ${payload.data[0].uuid}, name: ${payload.data[0].name}`);
+    });
+    ofEvents.on(route.window('responding', '*'), (payload) => {
+        log.writeToLog('info', `Window responding again. uuid: ${payload.data[0].uuid}, name: ${payload.data[0].name}`);
+    });
 }
 
 function rotateLogs(argo) {
@@ -586,9 +613,10 @@ function launchApp(argo, startExternalAdapterServer) {
         const startupAppOptions = convertOptions.getStartupAppOptions(configObject);
         const uuid = startupAppOptions && startupAppOptions.uuid;
         const name = startupAppOptions && startupAppOptions.name;
+
         const ofApp = Application.wrap(uuid);
         const ofManifestUrl = ofApp && ofApp._configUrl;
-        const isRunning = Application.isRunning(ofApp);
+        let isRunning = Application.isRunning(ofApp);
 
         const { company, name: shortcutName } = shortcut;
         let appUserModelId;
@@ -606,13 +634,24 @@ function launchApp(argo, startExternalAdapterServer) {
 
         // this ensures that external connections that start the runtime can do so without a main window
         let successfulInitialLaunch = true;
-
+        let passedMutexCheck = false;
+        let failedMutexCheck = false;
+        if (uuid && !isRunning) {
+            if (!lockUuid(uuid)) {
+                deleteApp(uuid);
+                duplicateUuidTransport.broadcast({ argv, uuid });
+                failedMutexCheck = true;
+            } else {
+                passedMutexCheck = true;
+            }
+        }
         // comparing ofManifestUrl and configUrl shouldn't consider query strings. Otherwise, it will break deep linking
-        if (startupAppOptions && (!isRunning || ofManifestUrl.split('?')[0] !== configUrl.split('?')[0])) {
+        const shouldRun = passedMutexCheck && (!isRunning || ofManifestUrl.split('?')[0] !== configUrl.split('?')[0]);
+        if (startupAppOptions && shouldRun) {
             //making sure that if a window is present we set the window name === to the uuid as per 5.0
             startupAppOptions.name = uuid;
             successfulInitialLaunch = initFirstApp(configObject, configUrl, licenseKey);
-        } else if (uuid) {
+        } else if (uuid && !failedMutexCheck) {
             Application.run({
                     uuid,
                     name: uuid
@@ -828,4 +867,14 @@ function validatePreloadScripts(options) {
     }
 
     return true;
+}
+
+function logSystemMemoryInfo() {
+    const systemMemoryInfo = process.getSystemMemoryInfo();
+
+    log.writeToLog('info', `System memory info for: ${process.platform} ${os.release()} ${electron.app.getSystemArch()}`);
+
+    for (const i of Object.keys(systemMemoryInfo)) {
+        log.writeToLog('info', `${i}: ${systemMemoryInfo[i]} KB`);
+    }
 }

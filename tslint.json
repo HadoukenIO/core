@@ -277,6 +277,7 @@
             "check-separator",
             "check-type"
         ],
-        "no-useless-files": true
+        "no-useless-files": true,
+        "no-fs": true
     }
 }

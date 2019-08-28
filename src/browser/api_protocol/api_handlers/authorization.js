@@ -11,6 +11,7 @@ import socketServer from '../../transports/socket_server';
 let ProcessTracker = require('../../process_tracker.js');
 const rvmMessageBus = require('../../rvm/rvm_message_bus').rvmMessageBus;
 import route from '../../../common/route';
+import { lockUuid, releaseUuid } from '../../uuid_availability';
 const successAck = {
     success: true
 };
@@ -159,7 +160,7 @@ function addPendingAuthentication(uuid, token, file, sponsor, authReqPayload) {
 }
 
 function authenticateUuid(authObj, authRequest, cb) {
-    if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid) || coreState.getAppByUuid(authRequest.uuid)) {
+    if (ExternalApplication.getExternalConnectionByUuid(authRequest.uuid) || coreState.getAppByUuid(authRequest.uuid) || !(authRequest.runtimeClient || lockUuid(authRequest.uuid))) {
         cb(false, 'Application with specified UUID already exists: ' + authRequest.uuid);
     } else if (!authObj) {
         cb(false, 'Invalid UUID: ' + authRequest.uuid);
@@ -202,6 +203,7 @@ module.exports.init = function() {
         externalConnection = ExternalApplication.getExternalConnectionById(id);
         if (externalConnection) {
             ExternalApplication.removeExternalConnection(externalConnection);
+            releaseUuid(externalConnection.uuid);
             ofEvents.emit(route('externalconn', 'closed'), externalConnection);
         }
 
