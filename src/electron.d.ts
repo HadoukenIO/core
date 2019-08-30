@@ -1,4 +1,4 @@
-// Type definitions for Electron 6.0.0
+// Type definitions for Electron 6.0.2
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -835,11 +835,10 @@ declare namespace Electron {
     getCommandLineArgv(): string[];
     getCurrentActivityType(): string;
     /**
-     * Fetches a path's associated icon. On Windows, there are 2 kinds of icons: On
-     * Linux and macOS, icons depend on the application associated with file mime type.
-     * Deprecated Soon
+     * Fetches a path's associated icon. On Windows, there a 2 kinds of icons: On Linux
+     * and macOS, icons depend on the application associated with file mime type.
      */
-    getFileIcon(path: string, callback: (error: Error, icon: NativeImage) => void): void;
+    getFileIcon(path: string, options?: FileIconOptions): Promise<Electron.NativeImage>;
     /**
      * Fetches a path's associated icon. On Windows, there are 2 kinds of icons: On
      * Linux and macOS, icons depend on the application associated with file mime type.
@@ -847,10 +846,11 @@ declare namespace Electron {
      */
     getFileIcon(path: string, options: FileIconOptions, callback: (error: Error, icon: NativeImage) => void): void;
     /**
-     * Fetches a path's associated icon. On Windows, there a 2 kinds of icons: On Linux
-     * and macOS, icons depend on the application associated with file mime type.
+     * Fetches a path's associated icon. On Windows, there are 2 kinds of icons: On
+     * Linux and macOS, icons depend on the application associated with file mime type.
+     * Deprecated Soon
      */
-    getFileIcon(path: string, options?: FileIconOptions): Promise<Electron.NativeImage>;
+    getFileIcon(path: string, callback: (error: Error, icon: NativeImage) => void): void;
     getFileSignature(fileName: string): FileSignature;
     getFocusedNativeId(): string;
     getGPUFeatureStatus(): GPUFeatureStatus;
@@ -869,7 +869,6 @@ declare namespace Electron {
      * machine(host). The values will be different on different machines, and should be
      * considered globally unique.
      */
-    getHostToken(): string;
     getHostToken(): string;
     /**
      * Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
@@ -1060,9 +1059,10 @@ declare namespace Electron {
     setAccessibilitySupportEnabled(enabled: boolean): void;
     /**
      * Sets or creates a directory your app's logs which can then be manipulated with
-     * app.getPath() or app.setPath(pathName, newPath). On macOS, this directory will
-     * be set by deafault to /Library/Logs/YourAppName, and on Linux and Windows it
-     * will be placed inside your userData directory.
+     * app.getPath() or app.setPath(pathName, newPath). Calling app.setAppLogsPath()
+     * without a path parameter will result in this directory being set to
+     * /Library/Logs/YourAppName on macOS, and inside the userData directory on Linux
+     * and Windows.
      */
     setAppLogsPath(path?: string): void;
     /**
@@ -1935,9 +1935,6 @@ declare namespace Electron {
      * Return whether the windows has rounded corners enabled or not.
      */
     hasRoundedCorners(): void;
-    /**
-     * On Windows and Linux always returns true.
-     */
     hasShadow(): boolean;
     /**
      * Hides the window.
@@ -2161,7 +2158,7 @@ declare namespace Electron {
      */
     setFullScreenable(fullscreenable: boolean): void;
     /**
-     * Sets whether the window should have a shadow. On Windows and Linux does nothing.
+     * Sets whether the window should have a shadow.
      */
     setHasShadow(hasShadow: boolean): void;
     /**
@@ -4135,7 +4132,7 @@ declare namespace Electron {
     // Docs: http://electronjs.org/docs/api/message-window
 
     /**
-     * Emitted when the window receives a WM_COPYDATA message
+     * Emitted when the window receives a WM_COPYDATA message.
      */
     on(event: 'data', listener: (event: Event,
                                  data: DataData) => void): this;
@@ -4164,7 +4161,7 @@ declare namespace Electron {
      * Sets message timeout.
      */
     setmessagetimeout(timeout: number): void;
-    id: any;
+    id: number;
   }
 
   interface MimeTypedBuffer {
@@ -7910,13 +7907,13 @@ declare namespace Electron {
     /**
      * The listener will be called with listener(details, callback) when a request is
      * about to occur. The uploadData is an array of UploadData objects. The callback
-     * has to be called with an response object.
+     * has to be called with an response object. Some examples of valid urls:
      */
     onBeforeRequest(listener: ((details: OnBeforeRequestDetails, callback: (response: Response) => void) => void) | (null)): void;
     /**
      * The listener will be called with listener(details, callback) when a request is
      * about to occur. The uploadData is an array of UploadData objects. The callback
-     * has to be called with an response object.
+     * has to be called with an response object. Some examples of valid urls:
      */
     onBeforeRequest(filter: OnBeforeRequestFilter, listener: ((details: OnBeforeRequestDetails, callback: (response: Response) => void) => void) | (null)): void;
     /**
@@ -8564,7 +8561,23 @@ declare namespace Electron {
                                           /**
                                            * Specifies the time, in milliseconds, that the event was generated.
                                            */
-                                          eventTime: number) => void): this;
+                                          eventTime: number,
+                                          /**
+                                           * Identifies the object associated with the event. This is one of the or a custom
+                                           * object ID.
+                                           */
+                                          objectId: string,
+                                          /**
+                                           * Identifies whether the event was triggered by an object or a child element of
+                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                           * event.
+                                           */
+                                          childId: string,
+                                          /**
+                                           * Identifies the thread the event was generated from.
+                                           */
+                                          eventThreadId: number) => void): this;
     once(event: 'EVENT_AIA_END', listener: (event: Event,
                                           /**
                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8574,7 +8587,23 @@ declare namespace Electron {
                                           /**
                                            * Specifies the time, in milliseconds, that the event was generated.
                                            */
-                                          eventTime: number) => void): this;
+                                          eventTime: number,
+                                          /**
+                                           * Identifies the object associated with the event. This is one of the or a custom
+                                           * object ID.
+                                           */
+                                          objectId: string,
+                                          /**
+                                           * Identifies whether the event was triggered by an object or a child element of
+                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                           * event.
+                                           */
+                                          childId: string,
+                                          /**
+                                           * Identifies the thread the event was generated from.
+                                           */
+                                          eventThreadId: number) => void): this;
     addListener(event: 'EVENT_AIA_END', listener: (event: Event,
                                           /**
                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8584,7 +8613,23 @@ declare namespace Electron {
                                           /**
                                            * Specifies the time, in milliseconds, that the event was generated.
                                            */
-                                          eventTime: number) => void): this;
+                                          eventTime: number,
+                                          /**
+                                           * Identifies the object associated with the event. This is one of the or a custom
+                                           * object ID.
+                                           */
+                                          objectId: string,
+                                          /**
+                                           * Identifies whether the event was triggered by an object or a child element of
+                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                           * event.
+                                           */
+                                          childId: string,
+                                          /**
+                                           * Identifies the thread the event was generated from.
+                                           */
+                                          eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_AIA_END', listener: (event: Event,
                                           /**
                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8594,7 +8639,23 @@ declare namespace Electron {
                                           /**
                                            * Specifies the time, in milliseconds, that the event was generated.
                                            */
-                                          eventTime: number) => void): this;
+                                          eventTime: number,
+                                          /**
+                                           * Identifies the object associated with the event. This is one of the or a custom
+                                           * object ID.
+                                           */
+                                          objectId: string,
+                                          /**
+                                           * Identifies whether the event was triggered by an object or a child element of
+                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                           * event.
+                                           */
+                                          childId: string,
+                                          /**
+                                           * Identifies the thread the event was generated from.
+                                           */
+                                          eventThreadId: number) => void): this;
     on(event: 'EVENT_AIA_START', listener: (event: Event,
                                             /**
                                              * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8604,7 +8665,23 @@ declare namespace Electron {
                                             /**
                                              * Specifies the time, in milliseconds, that the event was generated.
                                              */
-                                            eventTime: number) => void): this;
+                                            eventTime: number,
+                                            /**
+                                             * Identifies the object associated with the event. This is one of the or a custom
+                                             * object ID.
+                                             */
+                                            objectId: string,
+                                            /**
+                                             * Identifies whether the event was triggered by an object or a child element of
+                                             * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                             * object; otherwise, this value is the child ID of the element that triggered the
+                                             * event.
+                                             */
+                                            childId: string,
+                                            /**
+                                             * Identifies the thread the event was generated from.
+                                             */
+                                            eventThreadId: number) => void): this;
     once(event: 'EVENT_AIA_START', listener: (event: Event,
                                             /**
                                              * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8614,7 +8691,23 @@ declare namespace Electron {
                                             /**
                                              * Specifies the time, in milliseconds, that the event was generated.
                                              */
-                                            eventTime: number) => void): this;
+                                            eventTime: number,
+                                            /**
+                                             * Identifies the object associated with the event. This is one of the or a custom
+                                             * object ID.
+                                             */
+                                            objectId: string,
+                                            /**
+                                             * Identifies whether the event was triggered by an object or a child element of
+                                             * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                             * object; otherwise, this value is the child ID of the element that triggered the
+                                             * event.
+                                             */
+                                            childId: string,
+                                            /**
+                                             * Identifies the thread the event was generated from.
+                                             */
+                                            eventThreadId: number) => void): this;
     addListener(event: 'EVENT_AIA_START', listener: (event: Event,
                                             /**
                                              * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8624,7 +8717,23 @@ declare namespace Electron {
                                             /**
                                              * Specifies the time, in milliseconds, that the event was generated.
                                              */
-                                            eventTime: number) => void): this;
+                                            eventTime: number,
+                                            /**
+                                             * Identifies the object associated with the event. This is one of the or a custom
+                                             * object ID.
+                                             */
+                                            objectId: string,
+                                            /**
+                                             * Identifies whether the event was triggered by an object or a child element of
+                                             * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                             * object; otherwise, this value is the child ID of the element that triggered the
+                                             * event.
+                                             */
+                                            childId: string,
+                                            /**
+                                             * Identifies the thread the event was generated from.
+                                             */
+                                            eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_AIA_START', listener: (event: Event,
                                             /**
                                              * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8634,7 +8743,23 @@ declare namespace Electron {
                                             /**
                                              * Specifies the time, in milliseconds, that the event was generated.
                                              */
-                                            eventTime: number) => void): this;
+                                            eventTime: number,
+                                            /**
+                                             * Identifies the object associated with the event. This is one of the or a custom
+                                             * object ID.
+                                             */
+                                            objectId: string,
+                                            /**
+                                             * Identifies whether the event was triggered by an object or a child element of
+                                             * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                             * object; otherwise, this value is the child ID of the element that triggered the
+                                             * event.
+                                             */
+                                            childId: string,
+                                            /**
+                                             * Identifies the thread the event was generated from.
+                                             */
+                                            eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8644,7 +8769,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8654,7 +8795,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8664,7 +8821,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_ACCELERATORCHANGE', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8674,7 +8847,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8684,7 +8873,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8694,7 +8899,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8704,7 +8925,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_CLOAKED', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8714,7 +8951,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8724,7 +8977,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8734,7 +9003,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8744,7 +9029,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_CONTENTSCROLLED', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8754,7 +9055,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
                                                 /**
                                                  * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8764,7 +9081,23 @@ declare namespace Electron {
                                                 /**
                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                  */
-                                                eventTime: number) => void): this;
+                                                eventTime: number,
+                                                /**
+                                                 * Identifies the object associated with the event. This is one of the or a custom
+                                                 * object ID.
+                                                 */
+                                                objectId: string,
+                                                /**
+                                                 * Identifies whether the event was triggered by an object or a child element of
+                                                 * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                 * object; otherwise, this value is the child ID of the element that triggered the
+                                                 * event.
+                                                 */
+                                                childId: string,
+                                                /**
+                                                 * Identifies the thread the event was generated from.
+                                                 */
+                                                eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
                                                 /**
                                                  * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8774,7 +9107,23 @@ declare namespace Electron {
                                                 /**
                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                  */
-                                                eventTime: number) => void): this;
+                                                eventTime: number,
+                                                /**
+                                                 * Identifies the object associated with the event. This is one of the or a custom
+                                                 * object ID.
+                                                 */
+                                                objectId: string,
+                                                /**
+                                                 * Identifies whether the event was triggered by an object or a child element of
+                                                 * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                 * object; otherwise, this value is the child ID of the element that triggered the
+                                                 * event.
+                                                 */
+                                                childId: string,
+                                                /**
+                                                 * Identifies the thread the event was generated from.
+                                                 */
+                                                eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
                                                 /**
                                                  * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8784,7 +9133,23 @@ declare namespace Electron {
                                                 /**
                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                  */
-                                                eventTime: number) => void): this;
+                                                eventTime: number,
+                                                /**
+                                                 * Identifies the object associated with the event. This is one of the or a custom
+                                                 * object ID.
+                                                 */
+                                                objectId: string,
+                                                /**
+                                                 * Identifies whether the event was triggered by an object or a child element of
+                                                 * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                 * object; otherwise, this value is the child ID of the element that triggered the
+                                                 * event.
+                                                 */
+                                                childId: string,
+                                                /**
+                                                 * Identifies the thread the event was generated from.
+                                                 */
+                                                eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_CREATE', listener: (event: Event,
                                                 /**
                                                  * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8794,7 +9159,23 @@ declare namespace Electron {
                                                 /**
                                                  * Specifies the time, in milliseconds, that the event was generated.
                                                  */
-                                                eventTime: number) => void): this;
+                                                eventTime: number,
+                                                /**
+                                                 * Identifies the object associated with the event. This is one of the or a custom
+                                                 * object ID.
+                                                 */
+                                                objectId: string,
+                                                /**
+                                                 * Identifies whether the event was triggered by an object or a child element of
+                                                 * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                 * object; otherwise, this value is the child ID of the element that triggered the
+                                                 * event.
+                                                 */
+                                                childId: string,
+                                                /**
+                                                 * Identifies the thread the event was generated from.
+                                                 */
+                                                eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8804,7 +9185,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8814,7 +9211,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8824,7 +9237,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DEFACTIONCHANGE', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8834,7 +9263,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8844,7 +9289,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8854,7 +9315,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8864,7 +9341,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DESCRIPTIONCHANGE', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8874,7 +9367,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8884,7 +9393,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8894,7 +9419,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8904,7 +9445,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DESTROY', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8914,7 +9471,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8924,7 +9497,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8934,7 +9523,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8944,7 +9549,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGCANCEL', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8954,7 +9575,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8964,7 +9601,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8974,7 +9627,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8984,7 +9653,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGCOMPLETE', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -8994,7 +9679,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9004,7 +9705,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9014,7 +9731,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9024,7 +9757,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGDROPPED', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9034,7 +9783,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9044,7 +9809,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9054,7 +9835,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9064,7 +9861,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGENTER', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9074,7 +9887,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9084,7 +9913,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9094,7 +9939,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9104,7 +9965,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGLEAVE', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9114,7 +9991,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9124,7 +10017,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9134,7 +10043,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9144,7 +10069,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_DRAGSTART', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9154,7 +10095,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_END', listener: (event: Event,
                                              /**
                                               * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9164,7 +10121,23 @@ declare namespace Electron {
                                              /**
                                               * Specifies the time, in milliseconds, that the event was generated.
                                               */
-                                             eventTime: number) => void): this;
+                                             eventTime: number,
+                                             /**
+                                              * Identifies the object associated with the event. This is one of the or a custom
+                                              * object ID.
+                                              */
+                                             objectId: string,
+                                             /**
+                                              * Identifies whether the event was triggered by an object or a child element of
+                                              * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                              * object; otherwise, this value is the child ID of the element that triggered the
+                                              * event.
+                                              */
+                                             childId: string,
+                                             /**
+                                              * Identifies the thread the event was generated from.
+                                              */
+                                             eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_END', listener: (event: Event,
                                              /**
                                               * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9174,7 +10147,23 @@ declare namespace Electron {
                                              /**
                                               * Specifies the time, in milliseconds, that the event was generated.
                                               */
-                                             eventTime: number) => void): this;
+                                             eventTime: number,
+                                             /**
+                                              * Identifies the object associated with the event. This is one of the or a custom
+                                              * object ID.
+                                              */
+                                             objectId: string,
+                                             /**
+                                              * Identifies whether the event was triggered by an object or a child element of
+                                              * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                              * object; otherwise, this value is the child ID of the element that triggered the
+                                              * event.
+                                              */
+                                             childId: string,
+                                             /**
+                                              * Identifies the thread the event was generated from.
+                                              */
+                                             eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_END', listener: (event: Event,
                                              /**
                                               * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9184,7 +10173,23 @@ declare namespace Electron {
                                              /**
                                               * Specifies the time, in milliseconds, that the event was generated.
                                               */
-                                             eventTime: number) => void): this;
+                                             eventTime: number,
+                                             /**
+                                              * Identifies the object associated with the event. This is one of the or a custom
+                                              * object ID.
+                                              */
+                                             objectId: string,
+                                             /**
+                                              * Identifies whether the event was triggered by an object or a child element of
+                                              * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                              * object; otherwise, this value is the child ID of the element that triggered the
+                                              * event.
+                                              */
+                                             childId: string,
+                                             /**
+                                              * Identifies the thread the event was generated from.
+                                              */
+                                             eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_END', listener: (event: Event,
                                              /**
                                               * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9194,7 +10199,23 @@ declare namespace Electron {
                                              /**
                                               * Specifies the time, in milliseconds, that the event was generated.
                                               */
-                                             eventTime: number) => void): this;
+                                             eventTime: number,
+                                             /**
+                                              * Identifies the object associated with the event. This is one of the or a custom
+                                              * object ID.
+                                              */
+                                             objectId: string,
+                                             /**
+                                              * Identifies whether the event was triggered by an object or a child element of
+                                              * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                              * object; otherwise, this value is the child ID of the element that triggered the
+                                              * event.
+                                              */
+                                             childId: string,
+                                             /**
+                                              * Identifies the thread the event was generated from.
+                                              */
+                                             eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9204,7 +10225,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9214,7 +10251,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9224,7 +10277,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_FOCUS', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9234,7 +10303,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9244,7 +10329,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9254,7 +10355,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9264,7 +10381,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_HELPCHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9274,7 +10407,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
                                               /**
                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9284,7 +10433,23 @@ declare namespace Electron {
                                               /**
                                                * Specifies the time, in milliseconds, that the event was generated.
                                                */
-                                              eventTime: number) => void): this;
+                                              eventTime: number,
+                                              /**
+                                               * Identifies the object associated with the event. This is one of the or a custom
+                                               * object ID.
+                                               */
+                                              objectId: string,
+                                              /**
+                                               * Identifies whether the event was triggered by an object or a child element of
+                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                               * event.
+                                               */
+                                              childId: string,
+                                              /**
+                                               * Identifies the thread the event was generated from.
+                                               */
+                                              eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
                                               /**
                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9294,7 +10459,23 @@ declare namespace Electron {
                                               /**
                                                * Specifies the time, in milliseconds, that the event was generated.
                                                */
-                                              eventTime: number) => void): this;
+                                              eventTime: number,
+                                              /**
+                                               * Identifies the object associated with the event. This is one of the or a custom
+                                               * object ID.
+                                               */
+                                              objectId: string,
+                                              /**
+                                               * Identifies whether the event was triggered by an object or a child element of
+                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                               * event.
+                                               */
+                                              childId: string,
+                                              /**
+                                               * Identifies the thread the event was generated from.
+                                               */
+                                              eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
                                               /**
                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9304,7 +10485,23 @@ declare namespace Electron {
                                               /**
                                                * Specifies the time, in milliseconds, that the event was generated.
                                                */
-                                              eventTime: number) => void): this;
+                                              eventTime: number,
+                                              /**
+                                               * Identifies the object associated with the event. This is one of the or a custom
+                                               * object ID.
+                                               */
+                                              objectId: string,
+                                              /**
+                                               * Identifies whether the event was triggered by an object or a child element of
+                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                               * event.
+                                               */
+                                              childId: string,
+                                              /**
+                                               * Identifies the thread the event was generated from.
+                                               */
+                                              eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_HIDE', listener: (event: Event,
                                               /**
                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9314,7 +10511,23 @@ declare namespace Electron {
                                               /**
                                                * Specifies the time, in milliseconds, that the event was generated.
                                                */
-                                              eventTime: number) => void): this;
+                                              eventTime: number,
+                                              /**
+                                               * Identifies the object associated with the event. This is one of the or a custom
+                                               * object ID.
+                                               */
+                                              objectId: string,
+                                              /**
+                                               * Identifies whether the event was triggered by an object or a child element of
+                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                               * event.
+                                               */
+                                              childId: string,
+                                              /**
+                                               * Identifies the thread the event was generated from.
+                                               */
+                                              eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
                                                                   /**
                                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9324,7 +10537,23 @@ declare namespace Electron {
                                                                   /**
                                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                                    */
-                                                                  eventTime: number) => void): this;
+                                                                  eventTime: number,
+                                                                  /**
+                                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                                   * object ID.
+                                                                   */
+                                                                  objectId: string,
+                                                                  /**
+                                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                                   * event.
+                                                                   */
+                                                                  childId: string,
+                                                                  /**
+                                                                   * Identifies the thread the event was generated from.
+                                                                   */
+                                                                  eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
                                                                   /**
                                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9334,7 +10563,23 @@ declare namespace Electron {
                                                                   /**
                                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                                    */
-                                                                  eventTime: number) => void): this;
+                                                                  eventTime: number,
+                                                                  /**
+                                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                                   * object ID.
+                                                                   */
+                                                                  objectId: string,
+                                                                  /**
+                                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                                   * event.
+                                                                   */
+                                                                  childId: string,
+                                                                  /**
+                                                                   * Identifies the thread the event was generated from.
+                                                                   */
+                                                                  eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
                                                                   /**
                                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9344,7 +10589,23 @@ declare namespace Electron {
                                                                   /**
                                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                                    */
-                                                                  eventTime: number) => void): this;
+                                                                  eventTime: number,
+                                                                  /**
+                                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                                   * object ID.
+                                                                   */
+                                                                  objectId: string,
+                                                                  /**
+                                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                                   * event.
+                                                                   */
+                                                                  childId: string,
+                                                                  /**
+                                                                   * Identifies the thread the event was generated from.
+                                                                   */
+                                                                  eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_HOSTEDOBJECTSINVALIDATED', listener: (event: Event,
                                                                   /**
                                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9354,7 +10615,23 @@ declare namespace Electron {
                                                                   /**
                                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                                    */
-                                                                  eventTime: number) => void): this;
+                                                                  eventTime: number,
+                                                                  /**
+                                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                                   * object ID.
+                                                                   */
+                                                                  objectId: string,
+                                                                  /**
+                                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                                   * event.
+                                                                   */
+                                                                  childId: string,
+                                                                  /**
+                                                                   * Identifies the thread the event was generated from.
+                                                                   */
+                                                                  eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9364,7 +10641,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9374,7 +10667,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9384,7 +10693,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_IME_CHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9394,7 +10719,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9404,7 +10745,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9414,7 +10771,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9424,7 +10797,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_IME_HIDE', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9434,7 +10823,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9444,7 +10849,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9454,7 +10875,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9464,7 +10901,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_IME_SHOW', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9474,7 +10927,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9484,7 +10953,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9494,7 +10979,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9504,7 +11005,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_INVOKED', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9514,7 +11031,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9524,7 +11057,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9534,7 +11083,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9544,7 +11109,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_LIVEREGIONCHANGED', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9554,7 +11135,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9564,7 +11161,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9574,7 +11187,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9584,7 +11213,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_LOCATIONCHANGE', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9594,7 +11239,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9604,7 +11265,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9614,7 +11291,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9624,7 +11317,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_NAMECHANGE', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9634,7 +11343,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9644,7 +11369,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9654,7 +11395,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9664,7 +11421,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_PARENTCHANGE', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9674,7 +11447,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9684,7 +11473,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9694,7 +11499,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9704,7 +11525,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_REORDER', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9714,7 +11551,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9724,7 +11577,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9734,7 +11603,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9744,7 +11629,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SELECTION', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9754,7 +11655,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9764,7 +11681,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9774,7 +11707,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9784,7 +11733,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SELECTIONADD', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9794,7 +11759,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9804,7 +11785,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9814,7 +11811,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9824,7 +11837,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SELECTIONREMOVE', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9834,7 +11863,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9844,7 +11889,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9854,7 +11915,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9864,7 +11941,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SELECTIONWITHIN', listener: (event: Event,
                                                          /**
                                                           * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9874,7 +11967,23 @@ declare namespace Electron {
                                                          /**
                                                           * Specifies the time, in milliseconds, that the event was generated.
                                                           */
-                                                         eventTime: number) => void): this;
+                                                         eventTime: number,
+                                                         /**
+                                                          * Identifies the object associated with the event. This is one of the or a custom
+                                                          * object ID.
+                                                          */
+                                                         objectId: string,
+                                                         /**
+                                                          * Identifies whether the event was triggered by an object or a child element of
+                                                          * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                          * object; otherwise, this value is the child ID of the element that triggered the
+                                                          * event.
+                                                          */
+                                                         childId: string,
+                                                         /**
+                                                          * Identifies the thread the event was generated from.
+                                                          */
+                                                         eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
                                               /**
                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9884,7 +11993,23 @@ declare namespace Electron {
                                               /**
                                                * Specifies the time, in milliseconds, that the event was generated.
                                                */
-                                              eventTime: number) => void): this;
+                                              eventTime: number,
+                                              /**
+                                               * Identifies the object associated with the event. This is one of the or a custom
+                                               * object ID.
+                                               */
+                                              objectId: string,
+                                              /**
+                                               * Identifies whether the event was triggered by an object or a child element of
+                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                               * event.
+                                               */
+                                              childId: string,
+                                              /**
+                                               * Identifies the thread the event was generated from.
+                                               */
+                                              eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
                                               /**
                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9894,7 +12019,23 @@ declare namespace Electron {
                                               /**
                                                * Specifies the time, in milliseconds, that the event was generated.
                                                */
-                                              eventTime: number) => void): this;
+                                              eventTime: number,
+                                              /**
+                                               * Identifies the object associated with the event. This is one of the or a custom
+                                               * object ID.
+                                               */
+                                              objectId: string,
+                                              /**
+                                               * Identifies whether the event was triggered by an object or a child element of
+                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                               * event.
+                                               */
+                                              childId: string,
+                                              /**
+                                               * Identifies the thread the event was generated from.
+                                               */
+                                              eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
                                               /**
                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9904,7 +12045,23 @@ declare namespace Electron {
                                               /**
                                                * Specifies the time, in milliseconds, that the event was generated.
                                                */
-                                              eventTime: number) => void): this;
+                                              eventTime: number,
+                                              /**
+                                               * Identifies the object associated with the event. This is one of the or a custom
+                                               * object ID.
+                                               */
+                                              objectId: string,
+                                              /**
+                                               * Identifies whether the event was triggered by an object or a child element of
+                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                               * event.
+                                               */
+                                              childId: string,
+                                              /**
+                                               * Identifies the thread the event was generated from.
+                                               */
+                                              eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_SHOW', listener: (event: Event,
                                               /**
                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9914,7 +12071,23 @@ declare namespace Electron {
                                               /**
                                                * Specifies the time, in milliseconds, that the event was generated.
                                                */
-                                              eventTime: number) => void): this;
+                                              eventTime: number,
+                                              /**
+                                               * Identifies the object associated with the event. This is one of the or a custom
+                                               * object ID.
+                                               */
+                                              objectId: string,
+                                              /**
+                                               * Identifies whether the event was triggered by an object or a child element of
+                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                               * event.
+                                               */
+                                              childId: string,
+                                              /**
+                                               * Identifies the thread the event was generated from.
+                                               */
+                                              eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9924,7 +12097,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9934,7 +12123,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9944,7 +12149,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_STATECHANGE', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9954,7 +12175,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
                                                                           /**
                                                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9964,7 +12201,23 @@ declare namespace Electron {
                                                                           /**
                                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                                            */
-                                                                          eventTime: number) => void): this;
+                                                                          eventTime: number,
+                                                                          /**
+                                                                           * Identifies the object associated with the event. This is one of the or a custom
+                                                                           * object ID.
+                                                                           */
+                                                                          objectId: string,
+                                                                          /**
+                                                                           * Identifies whether the event was triggered by an object or a child element of
+                                                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                                                           * event.
+                                                                           */
+                                                                          childId: string,
+                                                                          /**
+                                                                           * Identifies the thread the event was generated from.
+                                                                           */
+                                                                          eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
                                                                           /**
                                                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9974,7 +12227,23 @@ declare namespace Electron {
                                                                           /**
                                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                                            */
-                                                                          eventTime: number) => void): this;
+                                                                          eventTime: number,
+                                                                          /**
+                                                                           * Identifies the object associated with the event. This is one of the or a custom
+                                                                           * object ID.
+                                                                           */
+                                                                          objectId: string,
+                                                                          /**
+                                                                           * Identifies whether the event was triggered by an object or a child element of
+                                                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                                                           * event.
+                                                                           */
+                                                                          childId: string,
+                                                                          /**
+                                                                           * Identifies the thread the event was generated from.
+                                                                           */
+                                                                          eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
                                                                           /**
                                                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9984,7 +12253,23 @@ declare namespace Electron {
                                                                           /**
                                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                                            */
-                                                                          eventTime: number) => void): this;
+                                                                          eventTime: number,
+                                                                          /**
+                                                                           * Identifies the object associated with the event. This is one of the or a custom
+                                                                           * object ID.
+                                                                           */
+                                                                          objectId: string,
+                                                                          /**
+                                                                           * Identifies whether the event was triggered by an object or a child element of
+                                                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                                                           * event.
+                                                                           */
+                                                                          childId: string,
+                                                                          /**
+                                                                           * Identifies the thread the event was generated from.
+                                                                           */
+                                                                          eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_TEXTEDIT_CONVERSIONTARGETCHANGED', listener: (event: Event,
                                                                           /**
                                                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -9994,7 +12279,23 @@ declare namespace Electron {
                                                                           /**
                                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                                            */
-                                                                          eventTime: number) => void): this;
+                                                                          eventTime: number,
+                                                                          /**
+                                                                           * Identifies the object associated with the event. This is one of the or a custom
+                                                                           * object ID.
+                                                                           */
+                                                                          objectId: string,
+                                                                          /**
+                                                                           * Identifies whether the event was triggered by an object or a child element of
+                                                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                                                           * event.
+                                                                           */
+                                                                          childId: string,
+                                                                          /**
+                                                                           * Identifies the thread the event was generated from.
+                                                                           */
+                                                                          eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
                                                               /**
                                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10004,7 +12305,23 @@ declare namespace Electron {
                                                               /**
                                                                * Specifies the time, in milliseconds, that the event was generated.
                                                                */
-                                                              eventTime: number) => void): this;
+                                                              eventTime: number,
+                                                              /**
+                                                               * Identifies the object associated with the event. This is one of the or a custom
+                                                               * object ID.
+                                                               */
+                                                              objectId: string,
+                                                              /**
+                                                               * Identifies whether the event was triggered by an object or a child element of
+                                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                                               * event.
+                                                               */
+                                                              childId: string,
+                                                              /**
+                                                               * Identifies the thread the event was generated from.
+                                                               */
+                                                              eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
                                                               /**
                                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10014,7 +12331,23 @@ declare namespace Electron {
                                                               /**
                                                                * Specifies the time, in milliseconds, that the event was generated.
                                                                */
-                                                              eventTime: number) => void): this;
+                                                              eventTime: number,
+                                                              /**
+                                                               * Identifies the object associated with the event. This is one of the or a custom
+                                                               * object ID.
+                                                               */
+                                                              objectId: string,
+                                                              /**
+                                                               * Identifies whether the event was triggered by an object or a child element of
+                                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                                               * event.
+                                                               */
+                                                              childId: string,
+                                                              /**
+                                                               * Identifies the thread the event was generated from.
+                                                               */
+                                                              eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
                                                               /**
                                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10024,7 +12357,23 @@ declare namespace Electron {
                                                               /**
                                                                * Specifies the time, in milliseconds, that the event was generated.
                                                                */
-                                                              eventTime: number) => void): this;
+                                                              eventTime: number,
+                                                              /**
+                                                               * Identifies the object associated with the event. This is one of the or a custom
+                                                               * object ID.
+                                                               */
+                                                              objectId: string,
+                                                              /**
+                                                               * Identifies whether the event was triggered by an object or a child element of
+                                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                                               * event.
+                                                               */
+                                                              childId: string,
+                                                              /**
+                                                               * Identifies the thread the event was generated from.
+                                                               */
+                                                              eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_TEXTSELECTIONCHANGED', listener: (event: Event,
                                                               /**
                                                                * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10034,7 +12383,23 @@ declare namespace Electron {
                                                               /**
                                                                * Specifies the time, in milliseconds, that the event was generated.
                                                                */
-                                                              eventTime: number) => void): this;
+                                                              eventTime: number,
+                                                              /**
+                                                               * Identifies the object associated with the event. This is one of the or a custom
+                                                               * object ID.
+                                                               */
+                                                              objectId: string,
+                                                              /**
+                                                               * Identifies whether the event was triggered by an object or a child element of
+                                                               * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                               * object; otherwise, this value is the child ID of the element that triggered the
+                                                               * event.
+                                                               */
+                                                              childId: string,
+                                                              /**
+                                                               * Identifies the thread the event was generated from.
+                                                               */
+                                                              eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10044,7 +12409,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10054,7 +12435,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10064,7 +12461,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_UNCLOAKED', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10074,7 +12487,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     on(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10084,7 +12513,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     once(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10094,7 +12539,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10104,7 +12565,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OBJECT_VALUECHANGE', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10114,7 +12591,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     on(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10124,7 +12617,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     once(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10134,7 +12643,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10144,7 +12669,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OEM_DEFINED_END', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10154,7 +12695,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     on(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10164,7 +12721,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     once(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10174,7 +12747,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     addListener(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10184,7 +12773,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_OEM_DEFINED_START', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10194,7 +12799,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10204,7 +12825,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10214,7 +12851,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10224,7 +12877,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_ALERT', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10234,7 +12903,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10244,7 +12929,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10254,7 +12955,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10264,7 +12981,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_ARRANGMENTPREVIEW', listener: (event: Event,
                                                            /**
                                                             * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10274,7 +13007,23 @@ declare namespace Electron {
                                                            /**
                                                             * Specifies the time, in milliseconds, that the event was generated.
                                                             */
-                                                           eventTime: number) => void): this;
+                                                           eventTime: number,
+                                                           /**
+                                                            * Identifies the object associated with the event. This is one of the or a custom
+                                                            * object ID.
+                                                            */
+                                                           objectId: string,
+                                                           /**
+                                                            * Identifies whether the event was triggered by an object or a child element of
+                                                            * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                            * object; otherwise, this value is the child ID of the element that triggered the
+                                                            * event.
+                                                            */
+                                                           childId: string,
+                                                           /**
+                                                            * Identifies the thread the event was generated from.
+                                                            */
+                                                           eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10284,7 +13033,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10294,7 +13059,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10304,7 +13085,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_CAPTUREEND', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10314,7 +13111,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10324,7 +13137,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10334,7 +13163,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10344,7 +13189,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_CAPTURESTART', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10354,7 +13215,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10364,7 +13241,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10374,7 +13267,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10384,7 +13293,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_CONTEXTHELPEND', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10394,7 +13319,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
                                                           /**
                                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10404,7 +13345,23 @@ declare namespace Electron {
                                                           /**
                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                            */
-                                                          eventTime: number) => void): this;
+                                                          eventTime: number,
+                                                          /**
+                                                           * Identifies the object associated with the event. This is one of the or a custom
+                                                           * object ID.
+                                                           */
+                                                          objectId: string,
+                                                          /**
+                                                           * Identifies whether the event was triggered by an object or a child element of
+                                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                                           * event.
+                                                           */
+                                                          childId: string,
+                                                          /**
+                                                           * Identifies the thread the event was generated from.
+                                                           */
+                                                          eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
                                                           /**
                                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10414,7 +13371,23 @@ declare namespace Electron {
                                                           /**
                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                            */
-                                                          eventTime: number) => void): this;
+                                                          eventTime: number,
+                                                          /**
+                                                           * Identifies the object associated with the event. This is one of the or a custom
+                                                           * object ID.
+                                                           */
+                                                          objectId: string,
+                                                          /**
+                                                           * Identifies whether the event was triggered by an object or a child element of
+                                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                                           * event.
+                                                           */
+                                                          childId: string,
+                                                          /**
+                                                           * Identifies the thread the event was generated from.
+                                                           */
+                                                          eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
                                                           /**
                                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10424,7 +13397,23 @@ declare namespace Electron {
                                                           /**
                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                            */
-                                                          eventTime: number) => void): this;
+                                                          eventTime: number,
+                                                          /**
+                                                           * Identifies the object associated with the event. This is one of the or a custom
+                                                           * object ID.
+                                                           */
+                                                          objectId: string,
+                                                          /**
+                                                           * Identifies whether the event was triggered by an object or a child element of
+                                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                                           * event.
+                                                           */
+                                                          childId: string,
+                                                          /**
+                                                           * Identifies the thread the event was generated from.
+                                                           */
+                                                          eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_CONTEXTHELPSTART', listener: (event: Event,
                                                           /**
                                                            * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10434,7 +13423,23 @@ declare namespace Electron {
                                                           /**
                                                            * Specifies the time, in milliseconds, that the event was generated.
                                                            */
-                                                          eventTime: number) => void): this;
+                                                          eventTime: number,
+                                                          /**
+                                                           * Identifies the object associated with the event. This is one of the or a custom
+                                                           * object ID.
+                                                           */
+                                                          objectId: string,
+                                                          /**
+                                                           * Identifies whether the event was triggered by an object or a child element of
+                                                           * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                           * object; otherwise, this value is the child ID of the element that triggered the
+                                                           * event.
+                                                           */
+                                                          childId: string,
+                                                          /**
+                                                           * Identifies the thread the event was generated from.
+                                                           */
+                                                          eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10444,7 +13449,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10454,7 +13475,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10464,7 +13501,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DESKTOPSWITCH', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10474,7 +13527,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10484,7 +13553,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10494,7 +13579,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10504,7 +13605,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DIALOGEND', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10514,7 +13631,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10524,7 +13657,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10534,7 +13683,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10544,7 +13709,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DIALOGSTART', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10554,7 +13735,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10564,7 +13761,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10574,7 +13787,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10584,7 +13813,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DRAGDROPEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10594,7 +13839,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10604,7 +13865,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10614,7 +13891,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10624,7 +13917,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_DRAGDROPSTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10634,7 +13943,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_END', listener: (event: Event,
                                              /**
                                               * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10644,7 +13969,23 @@ declare namespace Electron {
                                              /**
                                               * Specifies the time, in milliseconds, that the event was generated.
                                               */
-                                             eventTime: number) => void): this;
+                                             eventTime: number,
+                                             /**
+                                              * Identifies the object associated with the event. This is one of the or a custom
+                                              * object ID.
+                                              */
+                                             objectId: string,
+                                             /**
+                                              * Identifies whether the event was triggered by an object or a child element of
+                                              * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                              * object; otherwise, this value is the child ID of the element that triggered the
+                                              * event.
+                                              */
+                                             childId: string,
+                                             /**
+                                              * Identifies the thread the event was generated from.
+                                              */
+                                             eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_END', listener: (event: Event,
                                              /**
                                               * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10654,7 +13995,23 @@ declare namespace Electron {
                                              /**
                                               * Specifies the time, in milliseconds, that the event was generated.
                                               */
-                                             eventTime: number) => void): this;
+                                             eventTime: number,
+                                             /**
+                                              * Identifies the object associated with the event. This is one of the or a custom
+                                              * object ID.
+                                              */
+                                             objectId: string,
+                                             /**
+                                              * Identifies whether the event was triggered by an object or a child element of
+                                              * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                              * object; otherwise, this value is the child ID of the element that triggered the
+                                              * event.
+                                              */
+                                             childId: string,
+                                             /**
+                                              * Identifies the thread the event was generated from.
+                                              */
+                                             eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_END', listener: (event: Event,
                                              /**
                                               * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10664,7 +14021,23 @@ declare namespace Electron {
                                              /**
                                               * Specifies the time, in milliseconds, that the event was generated.
                                               */
-                                             eventTime: number) => void): this;
+                                             eventTime: number,
+                                             /**
+                                              * Identifies the object associated with the event. This is one of the or a custom
+                                              * object ID.
+                                              */
+                                             objectId: string,
+                                             /**
+                                              * Identifies whether the event was triggered by an object or a child element of
+                                              * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                              * object; otherwise, this value is the child ID of the element that triggered the
+                                              * event.
+                                              */
+                                             childId: string,
+                                             /**
+                                              * Identifies the thread the event was generated from.
+                                              */
+                                             eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_END', listener: (event: Event,
                                              /**
                                               * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10674,7 +14047,23 @@ declare namespace Electron {
                                              /**
                                               * Specifies the time, in milliseconds, that the event was generated.
                                               */
-                                             eventTime: number) => void): this;
+                                             eventTime: number,
+                                             /**
+                                              * Identifies the object associated with the event. This is one of the or a custom
+                                              * object ID.
+                                              */
+                                             objectId: string,
+                                             /**
+                                              * Identifies whether the event was triggered by an object or a child element of
+                                              * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                              * object; otherwise, this value is the child ID of the element that triggered the
+                                              * event.
+                                              */
+                                             childId: string,
+                                             /**
+                                              * Identifies the thread the event was generated from.
+                                              */
+                                             eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10684,7 +14073,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10694,7 +14099,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10704,7 +14125,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_FOREGROUND', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10714,7 +14151,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10724,7 +14177,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10734,7 +14203,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10744,7 +14229,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MENUEND', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10754,7 +14255,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10764,7 +14281,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10774,7 +14307,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10784,7 +14333,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MENUPOPUPEND', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10794,7 +14359,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10804,7 +14385,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10814,7 +14411,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10824,7 +14437,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MENUPOPUPSTART', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10834,7 +14463,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10844,7 +14489,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10854,7 +14515,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10864,7 +14541,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MENUSTART', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10874,7 +14567,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10884,7 +14593,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10894,7 +14619,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10904,7 +14645,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MINIMIZEEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10914,7 +14671,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10924,7 +14697,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10934,7 +14723,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10944,7 +14749,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MINIMIZESTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10954,7 +14775,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10964,7 +14801,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10974,7 +14827,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10984,7 +14853,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MOVESIZEEND', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -10994,7 +14879,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11004,7 +14905,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11014,7 +14931,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11024,7 +14957,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_MOVESIZESTART', listener: (event: Event,
                                                        /**
                                                         * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11034,7 +14983,23 @@ declare namespace Electron {
                                                        /**
                                                         * Specifies the time, in milliseconds, that the event was generated.
                                                         */
-                                                       eventTime: number) => void): this;
+                                                       eventTime: number,
+                                                       /**
+                                                        * Identifies the object associated with the event. This is one of the or a custom
+                                                        * object ID.
+                                                        */
+                                                       objectId: string,
+                                                       /**
+                                                        * Identifies whether the event was triggered by an object or a child element of
+                                                        * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                        * object; otherwise, this value is the child ID of the element that triggered the
+                                                        * event.
+                                                        */
+                                                       childId: string,
+                                                       /**
+                                                        * Identifies the thread the event was generated from.
+                                                        */
+                                                       eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11044,7 +15009,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11054,7 +15035,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11064,7 +15061,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SCROLLINGEND', listener: (event: Event,
                                                       /**
                                                        * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11074,7 +15087,23 @@ declare namespace Electron {
                                                       /**
                                                        * Specifies the time, in milliseconds, that the event was generated.
                                                        */
-                                                      eventTime: number) => void): this;
+                                                      eventTime: number,
+                                                      /**
+                                                       * Identifies the object associated with the event. This is one of the or a custom
+                                                       * object ID.
+                                                       */
+                                                      objectId: string,
+                                                      /**
+                                                       * Identifies whether the event was triggered by an object or a child element of
+                                                       * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                       * object; otherwise, this value is the child ID of the element that triggered the
+                                                       * event.
+                                                       */
+                                                      childId: string,
+                                                      /**
+                                                       * Identifies the thread the event was generated from.
+                                                       */
+                                                      eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11084,7 +15113,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11094,7 +15139,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11104,7 +15165,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SCROLLINGSTART', listener: (event: Event,
                                                         /**
                                                          * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11114,7 +15191,23 @@ declare namespace Electron {
                                                         /**
                                                          * Specifies the time, in milliseconds, that the event was generated.
                                                          */
-                                                        eventTime: number) => void): this;
+                                                        eventTime: number,
+                                                        /**
+                                                         * Identifies the object associated with the event. This is one of the or a custom
+                                                         * object ID.
+                                                         */
+                                                        objectId: string,
+                                                        /**
+                                                         * Identifies whether the event was triggered by an object or a child element of
+                                                         * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                         * object; otherwise, this value is the child ID of the element that triggered the
+                                                         * event.
+                                                         */
+                                                        childId: string,
+                                                        /**
+                                                         * Identifies the thread the event was generated from.
+                                                         */
+                                                        eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11124,7 +15217,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11134,7 +15243,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11144,7 +15269,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SOUND', listener: (event: Event,
                                                /**
                                                 * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11154,7 +15295,23 @@ declare namespace Electron {
                                                /**
                                                 * Specifies the time, in milliseconds, that the event was generated.
                                                 */
-                                               eventTime: number) => void): this;
+                                               eventTime: number,
+                                               /**
+                                                * Identifies the object associated with the event. This is one of the or a custom
+                                                * object ID.
+                                                */
+                                               objectId: string,
+                                               /**
+                                                * Identifies whether the event was triggered by an object or a child element of
+                                                * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                * object; otherwise, this value is the child ID of the element that triggered the
+                                                * event.
+                                                */
+                                               childId: string,
+                                               /**
+                                                * Identifies the thread the event was generated from.
+                                                */
+                                               eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11164,7 +15321,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11174,7 +15347,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11184,7 +15373,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SWITCHEND', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11194,7 +15399,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     on(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11204,7 +15425,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     once(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11214,7 +15451,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     addListener(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11224,7 +15477,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_SYSTEM_SWITCHSTART', listener: (event: Event,
                                                      /**
                                                       * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11234,7 +15503,23 @@ declare namespace Electron {
                                                      /**
                                                       * Specifies the time, in milliseconds, that the event was generated.
                                                       */
-                                                     eventTime: number) => void): this;
+                                                     eventTime: number,
+                                                     /**
+                                                      * Identifies the object associated with the event. This is one of the or a custom
+                                                      * object ID.
+                                                      */
+                                                     objectId: string,
+                                                     /**
+                                                      * Identifies whether the event was triggered by an object or a child element of
+                                                      * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                      * object; otherwise, this value is the child ID of the element that triggered the
+                                                      * event.
+                                                      */
+                                                     childId: string,
+                                                     /**
+                                                      * Identifies the thread the event was generated from.
+                                                      */
+                                                     eventThreadId: number) => void): this;
     on(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11244,7 +15529,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     once(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11254,7 +15555,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     addListener(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11264,7 +15581,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_UIA_EVENTID_END', listener: (event: Event,
                                                   /**
                                                    * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11274,7 +15607,23 @@ declare namespace Electron {
                                                   /**
                                                    * Specifies the time, in milliseconds, that the event was generated.
                                                    */
-                                                  eventTime: number) => void): this;
+                                                  eventTime: number,
+                                                  /**
+                                                   * Identifies the object associated with the event. This is one of the or a custom
+                                                   * object ID.
+                                                   */
+                                                  objectId: string,
+                                                  /**
+                                                   * Identifies whether the event was triggered by an object or a child element of
+                                                   * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                   * object; otherwise, this value is the child ID of the element that triggered the
+                                                   * event.
+                                                   */
+                                                  childId: string,
+                                                  /**
+                                                   * Identifies the thread the event was generated from.
+                                                   */
+                                                  eventThreadId: number) => void): this;
     on(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11284,7 +15633,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     once(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11294,7 +15659,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     addListener(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11304,7 +15685,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_UIA_EVENTID_START', listener: (event: Event,
                                                     /**
                                                      * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11314,7 +15711,23 @@ declare namespace Electron {
                                                     /**
                                                      * Specifies the time, in milliseconds, that the event was generated.
                                                      */
-                                                    eventTime: number) => void): this;
+                                                    eventTime: number,
+                                                    /**
+                                                     * Identifies the object associated with the event. This is one of the or a custom
+                                                     * object ID.
+                                                     */
+                                                    objectId: string,
+                                                    /**
+                                                     * Identifies whether the event was triggered by an object or a child element of
+                                                     * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                     * object; otherwise, this value is the child ID of the element that triggered the
+                                                     * event.
+                                                     */
+                                                    childId: string,
+                                                    /**
+                                                     * Identifies the thread the event was generated from.
+                                                     */
+                                                    eventThreadId: number) => void): this;
     on(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11324,7 +15737,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     once(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11334,7 +15763,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     addListener(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11344,7 +15789,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_UIA_PROPID_END', listener: (event: Event,
                                                  /**
                                                   * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11354,7 +15815,23 @@ declare namespace Electron {
                                                  /**
                                                   * Specifies the time, in milliseconds, that the event was generated.
                                                   */
-                                                 eventTime: number) => void): this;
+                                                 eventTime: number,
+                                                 /**
+                                                  * Identifies the object associated with the event. This is one of the or a custom
+                                                  * object ID.
+                                                  */
+                                                 objectId: string,
+                                                 /**
+                                                  * Identifies whether the event was triggered by an object or a child element of
+                                                  * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                  * object; otherwise, this value is the child ID of the element that triggered the
+                                                  * event.
+                                                  */
+                                                 childId: string,
+                                                 /**
+                                                  * Identifies the thread the event was generated from.
+                                                  */
+                                                 eventThreadId: number) => void): this;
     on(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11364,7 +15841,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     once(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11374,7 +15867,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     addListener(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11384,7 +15893,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     removeListener(event: 'EVENT_UIA_PROPID_START', listener: (event: Event,
                                                    /**
                                                     * A `NativeWindowInfo` object for the window or control that the was generated
@@ -11394,7 +15919,23 @@ declare namespace Electron {
                                                    /**
                                                     * Specifies the time, in milliseconds, that the event was generated.
                                                     */
-                                                   eventTime: number) => void): this;
+                                                   eventTime: number,
+                                                   /**
+                                                    * Identifies the object associated with the event. This is one of the or a custom
+                                                    * object ID.
+                                                    */
+                                                   objectId: string,
+                                                   /**
+                                                    * Identifies whether the event was triggered by an object or a child element of
+                                                    * the object. If this value is CHILDID_SELF (0), the event was triggered by the
+                                                    * object; otherwise, this value is the child ID of the element that triggered the
+                                                    * event.
+                                                    */
+                                                   childId: string,
+                                                   /**
+                                                    * Identifies the thread the event was generated from.
+                                                    */
+                                                   eventThreadId: number) => void): this;
     constructor(options?: WinEventHookEmitterConstructorOptions);
   }
 
@@ -11424,7 +15965,8 @@ declare namespace Electron {
      */
     website?: string;
     /**
-     * Path to the app's icon.
+     * Path to the app's icon. Will be shown as 64x64 pixels while retaining aspect
+     * ratio.
      */
     iconPath?: string;
   }
@@ -12566,14 +17108,16 @@ declare namespace Electron {
      */
     click?: (menuItem: MenuItem, browserWindow: BrowserWindow, event: KeyboardEvent) => void;
     /**
-     * Can be undo, redo, cut, copy, paste, pasteandmatchstyle, delete, selectall,
-     * reload, forcereload, toggledevtools, resetzoom, zoomin, zoomout,
+     * Can be undo, redo, cut, copy, paste, pasteAndMatchStyle, delete, selectAll,
+     * reload, forceReload, toggleDevTools, resetZoom, zoomIn, zoomOut,
      * togglefullscreen, window, minimize, close, help, about, services, hide,
-     * hideothers, unhide, quit, startspeaking, stopspeaking, close, minimize, zoom,
-     * front, appMenu, fileMenu, editMenu, viewMenu or windowMenu Define the action of
-     * the menu item, when specified the click property will be ignored. See .
+     * hideOthers, unhide, quit, startSpeaking, stopSpeaking, close, minimize, zoom,
+     * front, appMenu, fileMenu, editMenu, viewMenu, recentDocuments, toggleTabBar,
+     * selectNextTab, selectPreviousTab, mergeAllWindows, clearRecentDocuments,
+     * moveTabToNewWindow or windowMenu Define the action of the menu item, when
+     * specified the click property will be ignored. See .
      */
-    role?: ('undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'pasteandmatchstyle' | 'delete' | 'selectall' | 'reload' | 'forcereload' | 'toggledevtools' | 'resetzoom' | 'zoomin' | 'zoomout' | 'togglefullscreen' | 'window' | 'minimize' | 'close' | 'help' | 'about' | 'services' | 'hide' | 'hideothers' | 'unhide' | 'quit' | 'startspeaking' | 'stopspeaking' | 'close' | 'minimize' | 'zoom' | 'front' | 'appMenu' | 'fileMenu' | 'editMenu' | 'viewMenu' | 'windowMenu');
+    role?: ('undo' | 'redo' | 'cut' | 'copy' | 'paste' | 'pasteAndMatchStyle' | 'delete' | 'selectAll' | 'reload' | 'forceReload' | 'toggleDevTools' | 'resetZoom' | 'zoomIn' | 'zoomOut' | 'togglefullscreen' | 'window' | 'minimize' | 'close' | 'help' | 'about' | 'services' | 'hide' | 'hideOthers' | 'unhide' | 'quit' | 'startSpeaking' | 'stopSpeaking' | 'close' | 'minimize' | 'zoom' | 'front' | 'appMenu' | 'fileMenu' | 'editMenu' | 'viewMenu' | 'recentDocuments' | 'toggleTabBar' | 'selectNextTab' | 'selectPreviousTab' | 'mergeAllWindows' | 'clearRecentDocuments' | 'moveTabToNewWindow' | 'windowMenu');
     /**
      * Can be normal, separator, submenu, checkbox or radio.
      */

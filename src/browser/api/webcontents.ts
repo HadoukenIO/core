@@ -1,8 +1,62 @@
 import * as url from 'url';
 import { app } from 'electron';
+import { Identity } from '../../shapes';
 import ofEvents from '../of_events';
-import route from '../../common/route';
+import route, { WindowRoute } from '../../common/route';
 import { InjectableContext, EntityType } from '../../shapes';
+
+export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid, name }: Identity, topic: string, routeFunc: WindowRoute) {
+    webContents.on('did-get-response-details', (e,
+        status,
+        newUrl,
+        originalUrl,
+        httpResponseCode,
+        requestMethod,
+        referrer,
+        headers,
+        resourceType
+    ) => {
+        const type = 'resource-response-received';
+
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            status,
+            newUrl,
+            originalUrl,
+            httpResponseCode,
+            requestMethod,
+            referrer,
+            headers,
+            resourceType
+        };
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+    webContents.on('did-fail-load', (e,
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame
+    ) => {
+        const type = 'resource-load-failed';
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            errorCode,
+            errorDescription,
+            validatedURL,
+            isMainFrame
+        };
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+    webContents.once('destroyed', () => {
+        webContents.removeAllListeners();
+    });
+}
 
 export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {
     webContents.executeJavaScript(code, true, (result) => {
@@ -21,20 +75,20 @@ export function getInfo(webContents: Electron.WebContents) {
 
 export function getAbsolutePath(webContents: Electron.WebContents, path: string) {
     const windowURL = webContents.getURL();
-    return  url.resolve(windowURL, path);
+    return url.resolve(windowURL, path);
 }
 
 export function navigate (webContents: Electron.WebContents, url: string) {
     return webContents.loadURL(url);
 }
 
-export async function navigateBack (webContents: Electron.WebContents) {
+export async function navigateBack(webContents: Electron.WebContents) {
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goBack();
     return navigationEnd;
 }
 
-export async function navigateForward (webContents: Electron.WebContents) {
+export async function navigateForward(webContents: Electron.WebContents) {
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goForward();
     return navigationEnd;
@@ -103,7 +157,6 @@ export function setIframeHandlers (webContents: Electron.WebContents, contextObj
         const frameInfo = contextObj.frames.get(closedFrameName);
         const entityType = frameInfo ? 'iframe' : 'window';
         const payload = { uuid, name, frameName, entityType };
-
         contextObj.frames.delete(closedFrameName);
         ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
         ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);

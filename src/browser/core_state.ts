@@ -49,6 +49,7 @@ export const argv = app.getCommandLineArgv(); // arguments as an array
 export const argo = minimist(argv); // arguments as an object
 
 let apps: Shapes.App[] = [];
+let views: OfView[] = [];
 
 let startManifest = {};
 const manifests: Map <string, Shapes.Manifest> = new Map();
@@ -188,6 +189,10 @@ export function deregisterPendingWindowName(uuid: string, name: string): void {
 export function windowExists(uuid: string, name: string): boolean {
     const pendingWindowExists = !!pendingWindows.find(win => win.uuid === uuid && win.name === name);
     return !!getOfWindowByUuidName(uuid, name) || pendingWindowExists;
+}
+
+export function viewExists(uuid: string, name: string): boolean {
+    return !!getBrowserViewByIdentity({ uuid, name });
 }
 
 export function removeChildById(id: number): void {
@@ -417,7 +422,9 @@ export function addApp(id: number, uuid: string): Shapes.App[] {
         id: id,
         isRunning: false,
         uuid,
-        views: [],
+        get views () {
+            return views.filter(v => v.uuid === uuid);
+        },
         // hide-splashscreen is sent to RVM on 1st window show &
         // immediately on subsequent app launches if already sent once
         sentHideSplashScreen: false
@@ -829,29 +836,27 @@ function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
     return win && win.openfinWindow;
 }
-let views: OfView[] = [];
 export interface OfView extends Identity {
     name: string;
     view: BrowserView;
     frames: Map<string, Shapes.ChildFrameInfo>;
+    target: Identity;
     _options: Shapes.WebOptions;
 }
 export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
-    const {uuid, name} = opts;
-    const ofView = { frames: new Map(), uuid, _options: opts, name, view };
+    const {uuid, name, target} = opts;
+    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target };
     views.push(ofView);
-    const app = appByUuid(uuid);
-    if (app) {
-        app.views.push(ofView);
-    }
     return ofView;
 }
-export function removeBrowserView (view: OfView) {
-    const app = appByUuid(view.uuid);
-    if (app) {
-        app.views = app.views.filter(v => v.name !== view.name);
+export function updateViewTarget(id: Identity, newTarget: Identity) {
+    const view = getBrowserViewByIdentity(id);
+    if (view) {
+        view.target = newTarget;
     }
-    views = views.filter(v => v.uuid !== view.uuid && v.name !== view.name);
+}
+export function removeBrowserView (view: OfView) {
+    views = views.filter(v => !(v.uuid === view.uuid && v.name === view.name));
 }
 export function getBrowserViewByIdentity({uuid, name}: Identity) {
     return views.find(v => v.uuid === uuid && v.name === name);

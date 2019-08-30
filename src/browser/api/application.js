@@ -749,10 +749,9 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     const { preloadScripts } = mainWindowOpts;
     const loadUrl = () => {
         app.mainWindow.loadURL(app._options.url);
-        coreState.setAppRunningState(uuid, true);
         ofEvents.emit(route.application('started', uuid), { topic: 'application', type: 'started', uuid });
     };
-
+    coreState.setAppRunningState(uuid, true);
     if (isValidChromePageUrl(app._options.url) || appWasAlreadyRunning) {
         loadUrl();
         // no API injection for chrome pages, so call .show here
@@ -786,6 +785,20 @@ Application.runWithRVM = function(manifestUrl, appIdentity) {
             }
         });
     }
+};
+
+/**
+ * Run an application via RVM
+ */
+Application.batchRunWithRVM = function(identity, manifestUrls) {
+    return sendToRVM({
+        topic: 'application',
+        action: 'launch-apps',
+        sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
+        data: {
+            configUrlArray: manifestUrls
+        }
+    });
 };
 
 Application.send = function() {
