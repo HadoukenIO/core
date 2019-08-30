@@ -28,7 +28,7 @@ import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 import WindowGroups from '../window_groups';
 import { sendToRVM } from '../rvm/utils';
-import { validateNavigationRules } from '../navigation_validation';
+import { validateApplicationNavigation } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
@@ -151,7 +151,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     }
 
     const parentUuid = parentIdentity && parentIdentity.uuid;
-    if (!validateNavigationRules(uuid, appUrl, parentUuid, opts)) {
+    if (!validateApplicationNavigation(appUrl, uuid, opts, parentUuid)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
 
