@@ -306,7 +306,7 @@ module.exports = (grunt) => {
 
         electronRebuild.rebuild({
             buildPath: __dirname,
-            electronVersion: '6.0.0-beta.12'
+            electronVersion: '7.0.0-beta.3'
         }).then(() => {
             grunt.log.writeln('Rebuild successful!');
             done();
