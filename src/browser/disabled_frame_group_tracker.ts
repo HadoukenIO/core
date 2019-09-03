@@ -9,8 +9,10 @@ import { restore } from './api/native_window';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
 import { writeToLog } from './log';
+import {release} from 'os';
 
 const isWin32 = process.platform === 'win32';
+const isWin10 = isWin32 && release().split('.')[0] === '10';
     // Use disabled frame bounds changing events for mac os and for external native windows
 const usesDisabledFrameEvents = (win: GroupWindow) => win.isExternalWindow || !isWin32;
 enum ChangeType {
@@ -102,21 +104,21 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
 
 function handleBatchedMove(moves: Move[]) {
     if (isWin32) {
+        const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
+        const flags = noZorder + noActivate;
+        const wt = new WindowTransaction.Transaction(0);
         moves.forEach(({ ofWin, rect }) => {
-            (<any>ExternalWindow).setBoundsWithoutShadow(ofWin.browserWindow.nativeId, rect);
+            const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
+            let bounds: RectangleBase;
+            if (isWin10 && ofWin._options.frame) {
+                bounds = (<any>ExternalWindow).addShadow(ofWin.browserWindow.nativeId, rect);
+            } else {
+                bounds = rect;
+            }
+            // const bds =  (<any>ExternalWindow).addShadow(ofWin.browserWindow.nativeId, rect);
+            (<any>wt.setWindowPos)(hwnd, { ...getTransactionBounds(bounds), flags, scale: false });
         });
-
-        // Leave window transaction Logic here for later use
-
-        // const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
-        // const flags = noZorder + noActivate;
-        // const wt = new WindowTransaction.Transaction(0);
-        // moves.forEach(({ ofWin, rect }) => {
-        //     const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
-        //     wt.setWindowPos(hwnd, { ...getTransactionBounds(rect), flags });
-        //     if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
-        // });
-        // wt.commit();
+        wt.commit();
     } else {
         moves.forEach(({ ofWin, rect }) => {
             ofWin.browserWindow.setBounds(rect);
