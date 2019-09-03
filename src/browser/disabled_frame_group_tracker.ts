@@ -104,7 +104,7 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
 
 function handleBatchedMove(moves: Move[]) {
     if (isWin32) {
-        const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
+        const { flag: { noZorder, noActivate } } = WindowTransaction;
         const flags = noZorder + noActivate;
         const wt = new WindowTransaction.Transaction(0);
         moves.forEach(({ ofWin, rect }) => {
