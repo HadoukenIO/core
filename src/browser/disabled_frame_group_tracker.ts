@@ -115,7 +115,7 @@ function handleBatchedMove(moves: Move[]) {
             } else {
                 bounds = rect;
             }
-            // const bds =  (<any>ExternalWindow).addShadow(ofWin.browserWindow.nativeId, rect);
+
             (<any>wt.setWindowPos)(hwnd, { ...getTransactionBounds(bounds), flags, scale: false });
         });
         wt.commit();
