@@ -91,7 +91,6 @@ export function getNativeWindowInfoLite(rawNativeWindowInfo: NativeWindowInfo): 
       pid: rawNativeWindowInfo.process.pid
     },
     title: rawNativeWindowInfo.title,
-    uuid: rawNativeWindowInfo.id,
     visible: rawNativeWindowInfo.visible
   };
 }

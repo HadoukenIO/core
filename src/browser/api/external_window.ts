@@ -13,7 +13,7 @@ import route from '../../common/route';
 import WindowGroups, { GroupChangedEvent, GroupEvent } from '../window_groups';
 import ProcessTracker from '../process_tracker';
 import SubscriptionManager from '../subscription_manager';
-import { releaseUuid } from '../uuid_availability';
+import { releaseUuid, lockUuid } from '../uuid_availability';
 
 electronApp.on('ready', () => {
   subToGlobalWinEventHooks();
@@ -258,32 +258,28 @@ function findExistingNativeWindow(identity: Shapes.NativeWindowIdentity): Shapes
     ? allNativeWindows.find(win => win.process.pid === prelaunchedProcess.process.id)
     : allNativeWindows.find(win => {
       const liteInfo = getNativeWindowInfoLite(win);
-      return liteInfo.uuid === uuid || liteInfo.nativeId === nativeId;
+      return liteInfo.nativeId === nativeId;
     });
 
-  if (!win) {
-    return;
-  }
-
-  const liteInfo = getNativeWindowInfoLite(win);
-  if (prelaunchedProcess) {
-    // Respect original uuid if present
-    liteInfo.uuid = prelaunchedProcess.uuid;
-  }
-  return liteInfo;
+  return win && getNativeWindowInfoLite(win);
 }
 
 /*
   Returns a registered native window or creates a new one if not found.
 */
 export function getExternalWindow(identity: Shapes.NativeWindowIdentity): Shapes.ExternalWindow {
-  // TODO:
-  // 1. ensure no dupe instances: check for pre-existing win with same nativeid even when new uuid
-  // 2. ensure no dupe uuids
-  const { uuid } = identity;
+  const nativeId = identity.nativeId;
+  const uuid = identity.uuid || electronApp.generateGUID();
   let externalWindow = externalWindows.get(uuid);
 
+  if (externalWindow && nativeId && externalWindow.nativeId !== nativeId) {
+    throw new Error(`Requested uuid "${uuid}" is already in use for a different window.`);
+  }
+
   if (!externalWindow) {
+    if (!lockUuid(uuid)) {
+      throw new Error(`Failed to wrap, uuid "${uuid}" is already in use.`);
+    }
     const nativeWinObj = findExistingNativeWindow(identity);
 
     if (!nativeWinObj) {
@@ -291,12 +287,12 @@ export function getExternalWindow(identity: Shapes.NativeWindowIdentity): Shapes
     }
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: nativeWinObj.nativeId }));
 
-    setAdditionalProperties(externalWindow, identity);
+    setAdditionalProperties(externalWindow, { uuid, name: identity.name || nativeWinObj.name });
     subscribeToInjectionEvents(externalWindow);
     subscribeToWinEventHooks(externalWindow);
     subscribeToWindowGroupEvents(externalWindow);
 
-    externalWindows.set(uuid, externalWindow);
+    externalWindows.set(externalWindow.uuid, externalWindow);
   }
 
   return externalWindow;
@@ -532,10 +528,10 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
 
 // Window grouping stub (makes external windows work with our original disabled frame group tracker)
 // Also some of the _options' values are needed in OpenFin Layouts
-function setAdditionalProperties(externalWindow: Shapes.ExternalWindow, properIdentity: Shapes.NativeWindowIdentity): Shapes.GroupWindow {
+function setAdditionalProperties(externalWindow: Shapes.ExternalWindow, requestedId: Shapes.NativeWindowIdentity): Shapes.GroupWindow {
   const { nativeId } = externalWindow;
-  const uuid = properIdentity.uuid || nativeId;
-  const name = properIdentity.name || nativeId;
+  const uuid = externalWindow.uuid || requestedId.uuid || nativeId;
+  const name = requestedId.name || nativeId;
   const identity = { uuid, name, nativeId };
 
   externalWindow._userMovement = true;
@@ -670,7 +666,7 @@ export function isValidExternalWindow(rawNativeWindowInfo: NativeWindowInfo, ign
 */
 function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void {
   const key = getKey(externalWindow);
-  const { nativeId, uuid } = externalWindow;
+  const { uuid } = externalWindow;
   const winEventHooks = winEventHooksEmitters.get(key);
   const injectionBus = injectionBuses.get(key);
   const externalWindowEventAdapter = externalWindowEventAdapters.get(key);
@@ -693,7 +689,7 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
 
   externalWindow.emit('closed');
   externalWindow.removeAllListeners();
-  externalWindows.delete(nativeId);
+  externalWindows.delete(uuid);
   releaseUuid(uuid);
 }
 
