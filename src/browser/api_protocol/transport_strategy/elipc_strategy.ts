@@ -169,7 +169,8 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
                 throw new Error(`Unable to locate window information for endpoint with window id ${webContentsId}`);
             }
 
-            const data = JSON.parse(JSON.stringify(rawData));
+            const stringy = JSON.stringify(rawData);
+            const data = JSON.parse(stringy);
 
             const configuration: ElIPCConfiguration = new ElIPCConfiguration(new BreadcrumbConfiguration(opts),
                                                                              new RendererBatchConfiguration(opts, data));
@@ -208,7 +209,7 @@ export class ElipcStrategy extends ApiTransportBase<MessagePackage> {
             if (data.action === 'window-authenticate') { // not log password
                 replacer = this.passwordReplacer;
             }
-            system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, replacer)}`);
+            system.debugLog(1, `received in-runtime${data.isSync ? '-sync ' : ''}: ${e.frameRoutingId} [${identity.uuid}]-[${identity.name}] ${JSON.stringify(data, replacer)} | Size: ${stringy.length}`);
             /* tslint:enable: max-line-length */
 
             if (!identity.batch) {

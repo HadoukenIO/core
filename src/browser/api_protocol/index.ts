@@ -27,7 +27,8 @@ import {
     legacyWindowingEnabled
 } from './api_handlers/deprecated_external_windowing_middleware';
 import { init as initWebContentsHandler } from './api_handlers/webcontents';
-
+import { System } from '../api/system.js';
+import * as log from '../log';
 
 // Middleware registration. The order is important.
 registerEntityExistenceMiddleware(getDefaultRequestHandler());
@@ -62,3 +63,79 @@ export function initApiHandlers() {
 
     const apiPolicyProcessor = require('./api_handlers/api_policy_processor');
 }
+
+function getDateTime() {
+    return (new Date()).toISOString().replace(/[TZ]/g, ' ');
+}
+
+function delay(n: number) {
+    return new Promise((res, rej) => {
+        setTimeout(() => {
+            res();
+        }, n * 1000);
+    });
+}
+
+function getArrayWithLimitedLength(length: number) {
+    const array = new Array();
+
+    array.push = (...args) => {
+        if (array.length >= length) {
+            array.shift();
+        }
+        return Array.prototype.push.apply(array, args);
+    };
+
+    return array;
+}
+
+const resourceUsageInfo = getArrayWithLimitedLength(10);
+
+function getRelevantProcssStats(stats: any ) {
+    const { cpuUsage, uuid, workingSetSize, peakWorkingSetSize } = stats;
+    return { cpuUsage, uuid, workingSetSize, peakWorkingSetSize };
+}
+
+// would be nice to take the event time as an arg here and show in the procInfo list
+// in the place that it actually happened
+function buildRelevantUsageInfo(info: any[]): string {
+    let logMsg = '';
+    info.forEach(i => {
+        const {sysInfo, dateTime, procInfo} = i;
+        logMsg += `${dateTime}SysInfo: `;
+        Object.keys(sysInfo).forEach(j => logMsg += `${j} ${sysInfo[j]} `);
+        logMsg += '\n';
+        procInfo.forEach((j: any) => {
+            const { cpuUsage: cpu, uuid, workingSetSize: wss, peakWorkingSetSize: pws } = j;
+            logMsg += `${j.uuid}: cpuUsage ${cpu} working set ${wss} peak working set ${pws} \n`;
+        });
+    });
+    return logMsg;
+}
+
+setInterval(async () => {
+    const sysInfo = process.getSystemMemoryInfo();
+    const processList: any = await System.getProcessList();
+    const usageInfo = {
+        dateTime: getDateTime(),
+        procInfo: processList.map(getRelevantProcssStats),
+        sysInfo
+    };
+    resourceUsageInfo.push(usageInfo);
+}, 1000);
+
+System.addEventListener('window-shown', async (e: any) => {
+    const eventTime = getDateTime();
+    await delay(5);
+    const usageInfo = buildRelevantUsageInfo(resourceUsageInfo);
+    log.writeToLog('verbose', `Event: ${e.type} Name: ${e.name} UUID: ${e.uuid} ${eventTime}\n${usageInfo}`);
+});
+
+System.addEventListener('window-options-changed', async (e: any) => {
+    if (e.diff.opacity) { // this will not fire if value is same as current...
+        const eventTime = getDateTime();
+        await delay(5);
+        const usageInfo = buildRelevantUsageInfo(resourceUsageInfo);
+        log.writeToLog('verbose', `Event: ${e.type} Name: ${e.name} UUID: ${e.uuid} ${eventTime}\n${usageInfo}`);
+    }
+});
