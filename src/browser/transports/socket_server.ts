@@ -7,6 +7,8 @@ import * as log from '../log';
 import idPool from '../int_pool';
 import route from '../../common/route';
 
+import { System } from '../api/system.js';
+
 class Server extends EventEmitter {
     private hasStarted: boolean;
     private activeConnections: { [id: string]: WebSocket };
@@ -117,7 +119,20 @@ class Server extends EventEmitter {
                 });
 
                 ws.on('message', (data, flags) => {
-                    this.emit(route.connection('message'), id, JSON.parse(data), flags);
+
+                    const parsedData = JSON.parse(data);
+                    const payloadSize = data.length;
+
+                    if (parsedData.action === 'publish-message' || parsedData.action === 'send-message') {
+                        /* tslint:disable: max-line-length */
+                        System.debugLog(1, `received external-adapter <= ${id} action: ${parsedData.action}, payload: ***masked-payload***, messageId: ${parsedData.messageId}  | Size: ${payloadSize}`);
+                        /* tslint:enable: max-line-length */
+                    } else {
+                        System.debugLog(1, `received external-adapter <= ${id} ${data} | Size: ${payloadSize}`);
+                    }
+
+                     this.emit(route.connection('message'), id, parsedData, flags);
+
                 });
             });
 
