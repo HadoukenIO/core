@@ -445,7 +445,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
 
     // Since we are subscribing to a process, we are only interested in a
     // specific window.
-    if (nativeWindowInfo.uuid !== nativeId) {
+    if (nativeWindowInfo.nativeId !== nativeId) {
       return;
     }
 

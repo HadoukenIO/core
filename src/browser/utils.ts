@@ -98,7 +98,7 @@ export function getNativeWindowInfoLite(rawNativeWindowInfo: NativeWindowInfo): 
 /*
   Returns full version of external window info object
 */
-export function getNativeWindowInfo(rawNativeWindowInfo: NativeWindowInfo): Shapes.NativeWindowInfo {
+export function getNativeWindowInfo(rawNativeWindowInfo: NativeWindowInfo): Shapes.NativeWindowInfo & Shapes.NativeWindowInfoLite {
   const liteInfoObject = getNativeWindowInfoLite(rawNativeWindowInfo);
 
   return {
