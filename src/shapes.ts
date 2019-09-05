@@ -458,19 +458,30 @@ export interface ExternalWindow extends BrowserWindowElectron {
     name: string;
     uuid: string;
 }
+interface NativeWinIdUuidOptional {
+    nativeId: string;
+    uuid?: string;
+    name?: string;
+}
+
+interface NativeWinIdNativeIdOptional extends Identity {
+    nativeId?: string;
+}
+
+export type NativeWindowIdentity = NativeWinIdUuidOptional | NativeWinIdNativeIdOptional;
 
 export interface Process extends Omit<ProcessElectron, 'imageName'> {
     injected: boolean;
     pid: number;
 }
 
-export interface NativeWindowInfo extends Omit<NativeWindowInfoElectron, 'process'> {
+export interface NativeWindowInfo extends Omit<NativeWindowInfoElectron, 'process'|'id'> {
     process: Process;
     name: string;
     uuid: string;
 }
 
-export type NativeWindowInfoLite = Pick<NativeWindowInfo, 'name'|'process'|'title'|'uuid'|'visible'>;
+export type NativeWindowInfoLite = (Pick<NativeWindowInfo, 'name'|'process'|'title'|'uuid'|'visible'>) & { nativeId: string };
 
 export type GroupWindow = (ExternalWindow | OpenFinWindow) & {
     isExternalWindow?: boolean;
