@@ -8,7 +8,7 @@ import { getEntityIdentity } from '../core_state';
 import SubscriptionManager from '../subscription_manager';
 
 const subscriptionManager = new SubscriptionManager();
-export const channelMap: Map<string, ProviderIdentity> = new Map();
+const channelMap: Map<string, ProviderIdentity> = new Map();
 
 const CHANNEL_APP_ACTION = 'process-channel-message';
 const CHANNEL_ACK_ACTION = 'send-channel-result';
