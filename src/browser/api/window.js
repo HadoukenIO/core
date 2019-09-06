@@ -876,7 +876,7 @@ Window.create = function(id, opts) {
 
         // TODO this should be removed once it's safe in favor of the
         //      more descriptive browserWindow key
-        _window: browserWindow
+        _window: browserWindow,
     };
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
@@ -1842,6 +1842,14 @@ Window.onUnload = (identity) => {
 Window.registerWindowName = (identity) => {
     coreState.registerPendingWindowName(identity.uuid, identity.name);
 };
+
+Window.getViews = getViews;
+
+function getViews({ uuid, name }) {
+    return coreState.getAllViews()
+        .filter(v => v.target.uuid === uuid && v.target.name === name)
+        .map(({ uuid, name }) => ({ uuid, }));
+}
 
 function emitCloseEvents(identity) {
     const { uuid, name } = identity;

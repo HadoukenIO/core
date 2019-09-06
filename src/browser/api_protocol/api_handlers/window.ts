@@ -68,6 +68,7 @@ export const windowApiMap = {
     'window-authenticate': windowAuthenticate,
     'window-embedded': windowEmbedded,
     'window-exists': windowExists,
+    'window-get-views': getViews,
     'window-get-cached-bounds': getCachedBounds
 };
 
@@ -474,4 +475,10 @@ function centerWindow(identity: Identity, message: APIMessage, ack: Acker): void
 
     Window.center(windowIdentity);
     ack(successAck);
+}
+
+function getViews(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { payload } = message;
+    const windowIdentity = getTargetWindowIdentity(payload);
+    return Window.getViews(windowIdentity);
 }

@@ -869,6 +869,9 @@ export function getBrowserViewByIdentity({uuid, name}: Identity) {
 function getBrowserViewByWebContentsId(webContentsId: number) {
     return views.find(v => v.view.webContents.id === webContentsId);
 }
+export function getAllViews() {
+    return [...views];
+}
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
     const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
     return getOptionsFromOpenFinWindow(ofWin);

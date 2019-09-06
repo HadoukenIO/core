@@ -1021,6 +1021,12 @@ Application.emitRunRequested = function(identity, userAppConfigArgs) {
 Application.wait = function() {
     console.warn('Awaiting native implementation');
 };
+Application.getViews = getViews;
+
+function getViews(identity) {
+    const app = coreState.getAppByUuid(identity.uuid);
+    return app ? app.views.map(({ uuid, name }) => ({ uuid, name })) : [];
+}
 
 // support legacy notifyOnContentLoaded and notifyOnContentLoaded
 var appLoadedListeners = {}; // target window identity => array of window Ids for listener

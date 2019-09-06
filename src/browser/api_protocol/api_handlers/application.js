@@ -34,6 +34,7 @@ let successAck = {
 };
 
 export const applicationApiMap = {
+    'application-get-views': getViews,
     'close-application': closeApplication,
     'create-application': createApplication,
     'create-child-window': createChildWindow,
@@ -267,6 +268,12 @@ function getShortcuts(identity, message, ack, nack) {
         dataAck.data = response;
         ack(dataAck);
     }, nack);
+}
+
+function getViews(identity, message) {
+    const { payload } = message;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    return Application.getViews(appIdentity);
 }
 
 function setShortcuts(identity, message, ack, nack) {
