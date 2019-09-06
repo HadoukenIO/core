@@ -8,6 +8,7 @@ let path = require('path');
 let electron = require('electron');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
+const webContents = electron.webContents;
 let Menu = electron.Menu;
 let nativeImage = electron.nativeImage;
 let currentContextMenu = null;
@@ -22,7 +23,7 @@ import animations from '../animations';
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 let convertOptions = require('../convert_options.js');
-let coreState = require('../core_state.js');
+import * as coreState from '../core_state';
 import ExternalWindowEventAdapter from '../external_window_event_adapter';
 import { cachedFetch } from '../cached_resource_fetcher';
 let log = require('../log');
@@ -405,7 +406,7 @@ Window.create = function(id, opts) {
     };
     let baseOpts;
     let browserWindow;
-    let webContents;
+    let winWebContents;
     let _options;
     let _boundsChangedHandler;
     let groupUuid = null; // windows by default don't belong to any groups
@@ -437,9 +438,8 @@ Window.create = function(id, opts) {
     // grab the browser window instance because it may not exist, or
     // perhaps just try ...
     if (!opts._noregister) {
-
-        browserWindow = BrowserWindow.fromId(id);
-        webContents = browserWindow.webContents;
+        winWebContents = webContents.fromId(id);
+        browserWindow = BrowserWindow.fromWebContents(winWebContents);
 
         //Legacy 5.0 feature, if customWindowAlert flag is found all alerts will be suppresed,
         //instead we will raise application event : 'window-alert-requested'.
@@ -546,7 +546,7 @@ Window.create = function(id, opts) {
             }
         };
 
-        webContents.on('crashed', (event, killed, terminationStatus) => {
+        winWebContents.on('crashed', (event, killed, terminationStatus) => {
             emitToAppIfMainWin('crashed', {
                 reason: terminationStatus
             });
@@ -635,7 +635,7 @@ Window.create = function(id, opts) {
         };
 
         mapEvents(browserWindowEventMap, browserWindow);
-        WebContents.hookWebContentsEvents(webContents, { uuid, name }, 'window', route.window);
+        WebContents.hookWebContentsEvents(winWebContents, { uuid, name }, 'window', route.window);
         // hideOnClose is deprecated; treat it as if it's just another
         // listener on the 'close-requested' event
         if (getOptFromBrowserWin('hideOnClose', browserWindow, false)) {
@@ -681,7 +681,7 @@ Window.create = function(id, opts) {
 
         // will-navigate URL for white/black listing
         const navValidator = navigationValidator(uuid, name, id);
-        validateNavigation(webContents, identity, navValidator);
+        validateNavigation(winWebContents, identity, navValidator);
 
         let startLoadingSubscribe = (event, url) => {
             ofEvents.emit(route.application('window-start-load', uuid), {
@@ -691,9 +691,9 @@ Window.create = function(id, opts) {
             });
         };
         let startLoadingString = 'did-start-loading';
-        webContents.on(startLoadingString, startLoadingSubscribe);
+        winWebContents.on(startLoadingString, startLoadingSubscribe);
         let startLoadingUnsubscribe = () => {
-            webContents.removeListener(startLoadingString, startLoadingSubscribe);
+            winWebContents.removeListener(startLoadingString, startLoadingSubscribe);
         };
         subscriptionManager.registerSubscription(startLoadingUnsubscribe, identity, startLoadingString);
 
@@ -712,9 +712,9 @@ Window.create = function(id, opts) {
             });
         };
         let documentLoadedString = 'document-loaded';
-        webContents.on(documentLoadedString, documentLoadedSubscribe);
+        winWebContents.on(documentLoadedString, documentLoadedSubscribe);
         let documentLoadedUnsubscribe = () => {
-            webContents.removeListener(documentLoadedString, documentLoadedSubscribe);
+            winWebContents.removeListener(documentLoadedString, documentLoadedSubscribe);
         };
         subscriptionManager.registerSubscription(documentLoadedUnsubscribe, identity, documentLoadedString);
 
@@ -766,8 +766,8 @@ Window.create = function(id, opts) {
         //Legacy logic where we wait for the API to 'connect' before we invoke the callback method.
         const apiInjectionObserver = Rx.Observable.create((observer) => {
             if (opts.url === 'about:blank') {
-                webContents.once('did-finish-load', () => {
-                    webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
+                winWebContents.once('did-finish-load', () => {
+                    winWebContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
                     constructorCallbackMessage.data = {
                         httpResponseCode
                     };
@@ -778,7 +778,7 @@ Window.create = function(id, opts) {
                 ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
                 ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
                 ofEvents.once(route.window('connected', uuid, name), () => {
-                    webContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
+                    winWebContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
                     constructorCallbackMessage.data = {
                         httpResponseCode,
                         apiInjected: true
@@ -946,7 +946,7 @@ Window.create = function(id, opts) {
         }, 1);
     };
 
-    webContents.on('console-message', prepareConsoleMessageForRVM);
+    winWebContents.on('console-message', prepareConsoleMessageForRVM);
 
     // Set preload scripts' final loading states
     winObj.preloadScripts = (_options.preloadScripts || []);
@@ -1512,7 +1512,7 @@ Window.stopNavigation = function(identity) {
 
 Window.removeEventListener = function(identity, type, listener) {
     let browserWindow = getElectronBrowserWindow(identity, 'remove event listener for');
-    ofEvents.removeListener(route.window(type, browserWindow.id), listener);
+    ofEvents.removeListener(route.window(type, browserWindow.webContents.id), listener);
 };
 
 function areNewBoundsWithinConstraints(options, width, height) {
@@ -2273,7 +2273,7 @@ function setTaskbar(browserWindow, forceFetch = false) {
         setTaskbarIcon(browserWindow, _url, () => {
             if (!browserWindow.isDestroyed()) {
                 // if not, try using the main window's icon
-                setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
+                setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.webContents.id));
             }
         });
 
@@ -2296,7 +2296,7 @@ function setTaskbar(browserWindow, forceFetch = false) {
                 setTaskbarIcon(browserWindow, _url, () => {
                     if (!browserWindow.isDestroyed()) {
                         // if not, try using the main window's icon
-                        setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
+                        setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.webContents.id));
                     }
                 });
             }
@@ -2308,7 +2308,7 @@ function setTaskbar(browserWindow, forceFetch = false) {
         setTaskbarIcon(browserWindow, getWinOptsIconUrl(options), () => {
             if (!browserWindow.isDestroyed()) {
                 // if not, try using the main window's icon
-                setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.id));
+                setTaskbarIcon(browserWindow, getMainWinIconUrl(browserWindow.webContents.id));
             }
         });
     }
@@ -2352,7 +2352,8 @@ function getWinOptsIconUrl(options) {
 
 //This is a legacy 5.0 feature used from embedded.
 function handleCustomAlerts(id, opts) {
-    let browserWindow = BrowserWindow.fromId(id);
+    const wc = webContents.fromId(id);
+    let browserWindow = BrowserWindow.fromWebContents(wc);
     let subTopic = 'alert';
     let type = 'window-alert-requested';
     let topic = 'application';

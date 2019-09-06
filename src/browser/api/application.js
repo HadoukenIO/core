@@ -22,7 +22,7 @@ let _ = require('underscore');
 let System = require('./system.js').System;
 import { Window } from './window';
 let convertOpts = require('../convert_options.js');
-let coreState = require('../core_state.js');
+import * as coreState from '../core_state';
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
@@ -1177,7 +1177,7 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         appObj.mainWindow = new BrowserWindow(eOpts);
         appObj.mainWindow.setFrameConnectStrategy(eOpts.frameConnect || 'last');
-        appObj.id = appObj.mainWindow.id;
+        appObj.id = appObj.mainWindow.webContents.id;
 
         appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
             if (isMainFrame) {
