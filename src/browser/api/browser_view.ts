@@ -109,9 +109,6 @@ export async function setBounds(ofView: OfView, bounds: Rectangle) {
 export function getInfo (ofView: OfView) {
     return getWebContentsInfo(ofView.view.webContents);
 }
-
-export function addEventListener ({uuid, name}: Identity, type: string, listener: any) {
-    const eventString = route.view(type, uuid, name);
-    of_events.on(eventString, listener);
-    return () => of_events.removeListener(eventString, listener);
+export function getCurrentWindow(ofView: OfView) {
+    return ofView.target;
 }

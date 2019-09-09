@@ -114,10 +114,15 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
+    },
+    'will-move': {
+        topic: 'will-move',
+        decorator: willMoveOrResizeDecorator
+    },
+    'will-resize': {
+        topic: 'will-resize',
+        decorator: willMoveOrResizeDecorator
     }
-    // 'move': {
-    //     topic: 'bounds-changing'
-    // }
 };
 
 
@@ -871,7 +876,7 @@ Window.create = function(id, opts) {
 
         // TODO this should be removed once it's safe in favor of the
         //      more descriptive browserWindow key
-        _window: browserWindow
+        _window: browserWindow,
     };
 
     const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
@@ -1838,6 +1843,14 @@ Window.registerWindowName = (identity) => {
     coreState.registerPendingWindowName(identity.uuid, identity.name);
 };
 
+Window.getViews = getViews;
+
+function getViews({ uuid, name }) {
+    return coreState.getAllViews()
+        .filter(v => v.target.uuid === uuid && v.target.name === name)
+        .map(({ uuid, name }) => ({ uuid, }));
+}
+
 function emitCloseEvents(identity) {
     const { uuid, name } = identity;
 
@@ -2182,6 +2195,20 @@ function disabledFrameBoundsChangeDecorator(payload, args) {
     }
 
     return propogate;
+}
+
+function willMoveOrResizeDecorator(payload, args) {
+    const { x, y, height, width } = args[1];
+    const monitorInfo = System.getMonitorInfo();
+    const monitorScaleFactor = monitorInfo.deviceScaleFactor;
+    Object.assign(payload, {
+        monitorScaleFactor,
+        left: x,
+        top: y,
+        height,
+        width
+    });
+    return true;
 }
 
 function opacityChangedDecorator(payload, args) {
