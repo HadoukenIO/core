@@ -1,4 +1,4 @@
-const coreState = require('./core_state');
+import * as coreState from './core_state';
 const electronApp = require('electron').app;
 import SubscriptionManager from './subscription_manager';
 import ofEvents from './of_events';
@@ -52,8 +52,8 @@ export function navigationValidator(uuid: string, name: string, id: number) {
         const appObject = coreState.getAppObjByUuid(uuid);
         const appMetaInfo = coreState.appByUuid(uuid);
         const isMailTo = /^mailto:/i.test(url);
-        const allowed = isMailTo || validateNavigationRules(uuid, url, appMetaInfo.parentUuid, appObject._options) &&
-                                    isURLAllowed(url);
+        const allowed = isMailTo || (appObject && validateNavigationRules(uuid, url, appMetaInfo.parentUuid, appObject._options) &&
+                                    isURLAllowed(url));
         if (!allowed) {
             electronApp.vlog(1, 'Navigation is blocked ' + url);
             const self = coreState.getWinById(id);
