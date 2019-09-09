@@ -173,6 +173,7 @@ export interface Cleanup extends RvmMsgBase {
 // topic: system -----
 type systemTopic = 'system';
 type getRvmInfoAction = 'get-rvm-info';
+type sendCoreAnalyticsEvent = 'send-core-analytics-event';
 
 export interface System extends RvmMsgBase {
     topic: systemTopic;
@@ -180,6 +181,19 @@ export interface System extends RvmMsgBase {
     sourceUrl: string;
 }
 
+interface CoreAnalytics extends RvmMsgBase {
+    topic: systemTopic;
+    action: sendCoreAnalyticsEvent;
+    sourceUrl: string;
+    diagnosticsEvent: AnalyticsEvent;
+}
+
+interface AnalyticsEvent {
+    topic: string;
+    event: string;
+    createdAt: string;
+    payload?: any;
+}
 
 // topic: application-events -----
 type EventType = 'started'| 'closed' | 'ready' | 'run-requested' | 'crashed' | 'error' | 'not-responding';
@@ -414,6 +428,28 @@ export class RVMMessageBus extends EventEmitter  {
             timeToLive: 5
         };
         this.publish(rvmPayload, callback);
+    }
+
+    public sendCoreAnalyticsEvent(event: string, payload: any): Promise<boolean> {
+        return new Promise((resolve, reject) => {
+            try {
+                const rvmMsg: CoreAnalytics = {
+                    topic: 'system',
+                    action: 'send-core-analytics-event',
+                    sourceUrl: '',
+
+                    diagnosticsEvent: {
+                        event,
+                        topic: 'analytics.core.event',
+                        createdAt: new Date().toISOString(),
+                        payload
+                    }
+                };
+                this.publish(rvmMsg, resolve);
+            } catch (err) {
+                 reject(err);
+            }
+        });
     }
 }
 const rvmMessageBus = new RVMMessageBus();
