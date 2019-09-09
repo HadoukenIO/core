@@ -545,7 +545,7 @@ Window.create = function(id, opts) {
                 ofEvents.emit(route.application(type, uuid), Object.assign({ topic: 'application', type, uuid }, payload));
             }
         };
-
+        //TODO BrowserView
         winWebContents.on('crashed', (event, killed, terminationStatus) => {
             emitToAppIfMainWin('crashed', {
                 reason: terminationStatus
@@ -1355,6 +1355,7 @@ Window.setWindowPreloadState = function(identity, payload) {
     }
 
     if (frameInfo.entityType === 'window') {
+        //TODO BrowserView
         ofEvents.emit(route.window(updateTopic, uuid, name), {
             name,
             uuid,

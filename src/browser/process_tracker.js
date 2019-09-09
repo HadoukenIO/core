@@ -36,7 +36,7 @@ function ProcessTracker() {
             topic: 'external-application',
             type: 'exited'
         }));
-
+        //TODO BrowserView
         ofEvents.emit(route.window('external-process-exited', winUuid, winName), Object.assign(result, {
             uuid: winUuid,
             name: winName,
@@ -74,7 +74,7 @@ ProcessTracker.prototype.launch = function(identity, options, errDataCallback) {
             topic: 'external-application',
             type: 'started'
         });
-
+        //TODO BrowserView
         ofEvents.emit(route.window('external-process-started', windowUuid, windowName), {
             uuid: windowUuid,
             name: windowName,

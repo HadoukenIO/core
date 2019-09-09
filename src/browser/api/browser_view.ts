@@ -1,16 +1,14 @@
-import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions, webContents, BrowserWindow } from 'electron';
+import { BrowserView, Rectangle, AutoResizeOptions } from 'electron';
 import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
 import {
     addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView,
     updateViewTarget, getInfoByUuidFrame
 } from '../core_state';
-import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
-import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
+import { BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
 import { getInfo as getWebContentsInfo, setIframeHandlers, hookWebContentsEvents} from './webcontents';
 import of_events from '../of_events';
 import route from '../../common/route';
-import { browserViewActionMap } from '../api_protocol/api_handlers/browser_view';
 import { getElectronBrowserWindow } from './window';
 import { OpenFinWindow } from '../../shapes';
 

@@ -241,17 +241,17 @@
         const winIdentity = { uuid, name };
         const parentFrameName = parent.name || name;
         const eventMap = [];
-
-        eventMap.push([`window/initialized/${uuid}-${name}`, winIdentity]);
+        const eventSpace = entityType === 'view' ? 'view' : 'window';
+        eventMap.push([`${eventSpace}/initialized/${uuid}-${name}`, winIdentity]);
 
         // main window
         if (uuid === name) {
             eventMap.push([`application/initialized/${uuid}`, { uuid }]);
         }
 
-        eventMap.push([`window/dom-content-loaded/${uuid}-${name}`, winIdentity]);
-        eventMap.push([`window/connected/${uuid}-${name}`, winIdentity]);
-        eventMap.push([`window/frame-connected/${uuid}-${parentFrameName}`, {
+        eventMap.push([`${eventSpace}/dom-content-loaded/${uuid}-${name}`, winIdentity]);
+        eventMap.push([`${eventSpace}/connected/${uuid}-${name}`, winIdentity]);
+        eventMap.push([`${eventSpace}/frame-connected/${uuid}-${parentFrameName}`, {
             frameName: name,
             entityType
         }]);

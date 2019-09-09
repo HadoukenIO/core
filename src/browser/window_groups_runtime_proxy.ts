@@ -3,7 +3,7 @@
 // b) Keeping window group state cross runtimes
 
 import { BrowserWindow as BrowserWindowElectron } from 'electron';
-import { OpenFinWindow, Identity, BrowserWindow, ChildFrameInfo, PreloadScriptState } from '../shapes';
+import { OpenFinWindow, Identity, BrowserWindow, ChildFrameInfo, PreloadScriptState, EntityType } from '../shapes';
 import { default as connectionManager, PeerRuntime } from './connection_manager';
 import * as coreState from './core_state';
 import { _Window } from '../../js-adapter/src/api/window/window';
@@ -60,6 +60,7 @@ export class RuntimeProxyWindow {
         this.window = {
             _options : proxyWindowOptions,
             _window : <BrowserWindow>browserwindow,
+            entityType: EntityType.UNKNOWN,
             app_uuid: uuid,
             browserWindow: <BrowserWindow>browserwindow,
             children: new Array<OpenFinWindow>(),

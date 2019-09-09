@@ -312,6 +312,7 @@ app.on('ready', function() {
             name: ofWindow._options.name,
             uuid: ofWindow._options.uuid
         };
+        //TODO BrowserView
         const windowEvtName = route.window('auth-requested', identity.uuid, identity.name);
         const appEvtName = route.application('window-auth-requested', identity.uuid);
 
@@ -393,6 +394,7 @@ app.on('ready', function() {
     try {
         electron.session.defaultSession.on('will-download', (event, item, webContents) => {
             try {
+                //TODO BrowserView
                 const { uuid, name } = webContents.browserWindowOptions;
 
                 const downloadListener = createWillDownloadEventListener({ uuid, name });

@@ -33,7 +33,8 @@ export enum EntityType {
    WINDOW = 'window',
    IFRAME = 'iframe',
    EXTERNAL = 'external connection',
-   UNKNOWN = 'unknown'
+   UNKNOWN = 'unknown',
+   VIEW = 'view'
 }
 export type AuthCallback = (username: string, password: string) => void;
 export type Listener = (...args: any[]) => void;
@@ -103,6 +104,7 @@ export interface Window {
     parentId?: number;
 }
 export interface InjectableContext {
+    entityType: EntityType;
     uuid: string;
     name: string;
     _options: WebOptions;

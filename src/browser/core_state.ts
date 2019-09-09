@@ -702,7 +702,7 @@ export function getLicenseKey(identity: Shapes.Identity): string|null {
     }
 }
 
-export function getParentWindow(childIdentity: Shapes.Identity): Shapes.Window {
+function getParentWindow(childIdentity: Shapes.Identity): Shapes.Window {
     const { uuid, name } = childIdentity;
     const childWin = getOfWindowByUuidName(uuid, name);
 
@@ -714,7 +714,7 @@ export function getParentWindow(childIdentity: Shapes.Identity): Shapes.Window {
 
 }
 
-export function getParentOpenFinWindow(childIdentity: Shapes.Identity): Shapes.OpenFinWindow {
+function getParentOpenFinWindow(childIdentity: Shapes.Identity): Shapes.OpenFinWindow {
     const parentWin = getParentWindow(childIdentity);
 
     if (!parentWin) {
@@ -764,6 +764,16 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
             }
         } else {
             writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
+        }
+    } for (const view of app.views) {
+        const { name } = view;
+
+        if (name === frame) {
+            const parent = getParentIdentity({ uuid, name });
+
+            return {
+                uuid, name, entityType: Shapes.EntityType.VIEW, parent
+            };
         }
     }
 }
@@ -841,16 +851,16 @@ function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
     return win && win.openfinWindow;
 }
-export interface OfView extends Identity {
+export interface OfView extends Shapes.InjectableContext {
     name: string;
     view: BrowserView;
     frames: Map<string, Shapes.ChildFrameInfo>;
     target: Identity;
     _options: Shapes.WebOptions;
 }
-export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
+export function addBrowserView (opts: BrowserViewOpts, view: BrowserView): OfView {
     const {uuid, name, target} = opts;
-    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target };
+    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target, entityType: Shapes.EntityType.VIEW };
     views.push(ofView);
     return ofView;
 }

@@ -159,10 +159,11 @@ export function setIframeHandlers (webContents: Electron.WebContents, contextObj
         app.vlog(1, `unregisterIframe ${frameRoutingId} ${closedFrameName}`);
         const frameName = closedFrameName || name; // the parent name is considered a frame as well
         const frameInfo = contextObj.frames.get(closedFrameName);
-        const entityType = frameInfo ? 'iframe' : 'window';
+        const entityType = frameInfo ? EntityType.IFRAME : contextObj.entityType;
         const payload = { uuid, name, frameName, entityType };
         contextObj.frames.delete(closedFrameName);
+        const propagateTo = contextObj.entityType === EntityType.VIEW ? route.view : route.window;
         ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
-        ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
+        ofEvents.emit(propagateTo('frame-disconnected', uuid, name), payload);
     };
 }

@@ -67,6 +67,7 @@ export function navigationValidator(uuid: string, name: string, id: number) {
                     }
                 }
             }
+            //TODO BrowserView
             ofEvents.emit(route.window('navigation-rejected', uuid, name), {
                 name,
                 uuid,

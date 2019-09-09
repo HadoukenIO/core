@@ -54,8 +54,8 @@ export function hasAccess(identity: Identity, fileUuid: string): boolean {
     return false;
 }
 
-export function createWillDownloadEventListener(identity: Identity): (event: any, item: any, webContents: any) => void {
-    return (event: any, item: any, webContents: any): void => {
+export function createWillDownloadEventListener(identity: Identity): (event: any, item: any, webContents: Electron.WebContents) => void {
+    return (event: any, item: any, webContents: Electron.WebContents): void => {
         const { uuid, name } = identity;
 
         try {
