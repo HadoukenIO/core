@@ -7,6 +7,7 @@ let os = require('os');
 let path = require('path');
 let electron = require('electron');
 let queryString = require('querystring');
+let url = require('url');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let dialog = electron.dialog;
@@ -770,18 +771,23 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 /**
  * Run an application via RVM Call
  */
-Application.runWithRVM = function(manifestUrl, appIdentity) {
+Application.runWithRVM = function(manifestUrl, appIdentity, opts = {}) {
     const { uuid } = appIdentity;
     // on mac/linux, launch the app, else hand off to RVM
     if (os.platform() !== 'win32') {
         return launch({ manifestUrl: manifestUrl });
     } else {
+        if (opts.userAppConfigArgs) {
+            opts.userAppConfigArgsStr = new url.URLSearchParams(opts.userAppConfigArgs).toString();
+            delete opts.userAppConfigArgs;
+        }
         return sendToRVM({
             topic: 'application',
             action: 'launch-app',
             sourceUrl: coreState.getConfigUrlByUuid(uuid),
             data: {
-                configUrl: manifestUrl
+                configUrl: manifestUrl,
+                rvmLaunchOptions: opts
             }
         });
     }
