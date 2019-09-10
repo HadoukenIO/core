@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="styles.css">
+        <style>
+            body {
+                background: #E6E8E6;
+                min-height: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 0px;
+                overflow: hidden;
+            }
+
+            html {
+                height: 100%;
+                width: 100%;
+                padding: 0px;
+                margin: 0;
+                overflow: hidden;
+            }
+
+            #of-frame-main {
+                height: 100%;
+                width: 100%;
+                padding: 0px;
+                margin: 0;
+                position: absolute;
+                overflow: hidden;
+            }
+
+            #draggable-zone {
+                position: absolute;
+                height: calc(100% - 4px);
+                width: calc(100% - 4px);
+                top: 2px;
+                left: 2px;
+                user-select: none;
+                -webkit-app-region: drag;
+                -webkit-user-select: none;
+            }
+
+            #title-bar {
+                background: #4E4DFF;
+                width: 100%;
+                height: 30px;
+            }
+
+            #buttons-wrapper {
+                position: relative;
+                float: right;
+                -webkit-app-region: none;
+            }
+
+            .button {
+                height: 20px;
+                width: 20px;
+                display: inline-block; 
+                padding: 5px 10px;
+                -webkit-app-region: no-drag;
+            }
+
+            .button:hover {
+                background: rgb(56, 56, 189)
+            }
+
+            #close-button:hover {
+                background: #B33A3A
+            }
+
+            .button-image {
+                height: 20px;
+                height: 20px;
+                width: 20px;
+            }
+
+        </style>
+    </head>
+
+    <body>
+        <div id="of-frame-main">
+            <div id="draggable-zone"></div>
+            <div id="title-bar">
+                <div id="title"></div>
+                <div id="buttons-wrapper">
+                    <div class="button" id="maximize-button">
+                        <img class="button-image" src="https://img.icons8.com/ios-glyphs/50/000000/full-screen.png">
+                    </div>
+                    <div class="button" id="minimize-button">
+                        <img class="button-image" src="https://img.icons8.com/material-outlined/24/000000/horizontal-line.png">
+                    </div>
+                    <div class="button" id="close-button">
+                        <img class="button-image" src="https://img.icons8.com/windows/32/000000/multiply.png">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            (async () => {
+                const win = fin.Window.getCurrentSync();
+
+                const onClose = () => win.close();
+                const onMinimize = () => win.minimize();
+                const onMaximize = async () => win.getState().then(state => state === 'maximized'? win.restore() : win.maximize());
+                
+                const closeButton = document.getElementById('close-button');
+                const minimizeButton = document.getElementById('minimize-button');
+                const maximizeButton = document.getElementById('maximize-button');
+                
+                closeButton.addEventListener('click', onClose);
+                minimizeButton.addEventListener('click', onMinimize);
+                maximizeButton.addEventListener('click', onMaximize);
+            })()
+        </script>
+        
+    </body>
+</html>

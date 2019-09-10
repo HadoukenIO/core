@@ -1207,6 +1207,12 @@ function createAppObj(uuid, opts, configUrl = '') {
             }
         });
 
+        if (opts.customFrame) {
+            opts.layout = opts.url;
+            opts.url = `file:///${path.resolve(`${__dirname}/../../../assets/default-frame.html`)}`;
+            // TODO: initLayout(opts.layout)
+        }
+
         // the name must match the uuid for apps to match 5.0
         opts.name = opts.uuid;
 
