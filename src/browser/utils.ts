@@ -18,6 +18,7 @@ import { basename } from 'path';
 import { BrowserWindow as OFBrowserWindow } from '../shapes';
 import { BrowserWindow, Rectangle, screen, NativeWindowInfo } from 'electron';
 import * as Shapes from '../shapes';
+import { nativeIdToUuid } from './api/external_window';
 
 /*
   This function sets window's bounds to be in a visible area, in case
@@ -83,7 +84,7 @@ export function getNativeWindowInfoLite(rawNativeWindowInfo: NativeWindowInfo): 
     name = rawNativeWindowInfo.title;
   }
 
-  return {
+  const liteInfo: Shapes.NativeWindowInfoLite = {
     name,
     nativeId: rawNativeWindowInfo.id,
     process: {
@@ -93,6 +94,14 @@ export function getNativeWindowInfoLite(rawNativeWindowInfo: NativeWindowInfo): 
     title: rawNativeWindowInfo.title,
     visible: rawNativeWindowInfo.visible
   };
+
+  const uuid = nativeIdToUuid.get(liteInfo.nativeId);
+
+  if (uuid) {
+    liteInfo.uuid = uuid;
+  }
+
+  return liteInfo;
 }
 
 /*

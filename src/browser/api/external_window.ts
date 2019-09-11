@@ -14,6 +14,7 @@ import WindowGroups, { GroupChangedEvent, GroupEvent } from '../window_groups';
 import ProcessTracker from '../process_tracker';
 import SubscriptionManager from '../subscription_manager';
 import { releaseUuid, lockUuid } from '../uuid_availability';
+import { ExternalApplication } from './external_application';
 
 electronApp.on('ready', () => {
   subToGlobalWinEventHooks();
@@ -23,6 +24,7 @@ const subscriptionManager = new SubscriptionManager();
 
 // Maps
 export const externalWindows = new Map<string, Shapes.ExternalWindow>();
+export const nativeIdToUuid = new Map<string, string>();
 const disabledUserMovementRequestorCount = new Map<string, number>();
 const externalWindowEventAdapters = new Map<string, ExternalWindowEventAdapter>();
 const injectionBuses = new Map<string, InjectionBus>();
@@ -293,6 +295,7 @@ export function getExternalWindow(identity: Shapes.NativeWindowIdentity): Shapes
     subscribeToWindowGroupEvents(externalWindow);
 
     externalWindows.set(externalWindow.uuid, externalWindow);
+    nativeIdToUuid.set(externalWindow.nativeId, externalWindow.uuid);
   }
 
   return externalWindow;
@@ -666,7 +669,7 @@ export function isValidExternalWindow(rawNativeWindowInfo: NativeWindowInfo, ign
 */
 function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void {
   const key = getKey(externalWindow);
-  const { uuid } = externalWindow;
+  const { uuid, nativeId } = externalWindow;
   const winEventHooks = winEventHooksEmitters.get(key);
   const injectionBus = injectionBuses.get(key);
   const externalWindowEventAdapter = externalWindowEventAdapters.get(key);
@@ -690,6 +693,7 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
   externalWindow.emit('closed');
   externalWindow.removeAllListeners();
   externalWindows.delete(uuid);
+  nativeIdToUuid.delete(nativeId);
   releaseUuid(uuid);
 }
 
