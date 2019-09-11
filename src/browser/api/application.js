@@ -21,6 +21,7 @@ let _ = require('underscore');
 // local modules
 let System = require('./system.js').System;
 import { Window } from './window';
+import * as BrowserView from './browser_view';
 let convertOpts = require('../convert_options.js');
 import * as coreState from '../core_state';
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
@@ -634,6 +635,14 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     const win = Window.create(app.id, mainWindowOpts);
     coreState.setWindowObj(app.id, win);
 
+    if (mainWindowOpts.layout) {
+        const baseViewConfig = {
+            target: { uuid, name: mainWindowOpts.name },
+            autoResize: { width: true, height: true, horizontal: true, vertical: true }
+        };
+        BrowserView.create(Object.assign({}, baseViewConfig, mainWindowOpts.layout.content[0])); // todo: iterate through all views in layout.content
+    }
+
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {
         //edge case where the window might be destroyed by the time we get here.
@@ -1206,12 +1215,6 @@ function createAppObj(uuid, opts, configUrl = '') {
                 }
             }
         });
-
-        if (opts.customFrame) {
-            opts.layout = opts.url;
-            opts.url = `file:///${path.resolve(`${__dirname}/../../../assets/default-frame.html`)}`;
-            // TODO: initLayout(opts.layout)
-        }
 
         // the name must match the uuid for apps to match 5.0
         opts.name = opts.uuid;

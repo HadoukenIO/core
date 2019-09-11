@@ -69,6 +69,7 @@ function five0BaseOptions() {
             'height': 0,
             'width': 0
         },
+        'customFrame': '',
         'defaultCentered': false,
         'defaultHeight': 500,
         'defaultLeft': 10,
@@ -280,11 +281,27 @@ export const convertToElectron = function(options, returnAsString) {
         newOptions.backgroundColor = TRANSPARENT_WHITE;
     }
 
+    if (newOptions.customFrame) {
+        if (options.layout && atLeastOneLayoutExists(options.layout.content)) {
+            newOptions.layout = options.layout;
+        } else { // customFrame necessarily uses layouts, so if no layout config is given, we construct one ourselves. 
+            newOptions.layout = {
+                content: [{ uuid: newOptions.uuid, name: `${newOptions.name}-main-view`, url: newOptions.url }]
+            };
+        }
+        // for now we use default frame for any customFrame value
+        newOptions.url = `file:///${path.resolve(`${__dirname}/../../../assets/default-frame.html`)}`;
+    }
+
     if (returnAsString) {
         return JSON.stringify(newOptions);
     } else {
         return JSON.parse(JSON.stringify(newOptions));
     }
+};
+
+const atLeastOneLayoutExists = function(layouts) {
+    return Array.isArray(layouts) && layouts.length;
 };
 
 export const fetchOptions = function(argo, onComplete, onError) {
