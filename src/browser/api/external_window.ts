@@ -363,11 +363,14 @@ function subToGlobalWinEventHooks(): void {
     parser: (nativeWindowInfo: Shapes.NativeWindowInfoLite) => void,
     sender: Event,
     rawNativeWindowInfo: NativeWindowInfo,
-    timestamp: number
+    timestamp: number,
+    idObject: string,
+    idChild: string
   ): void => {
     const nativeWindowInfo = getNativeWindowInfoLite(rawNativeWindowInfo);
     const ignoreVisibility = true;
-    const isValid = isValidExternalWindow(rawNativeWindowInfo, ignoreVisibility);
+    // idChild === '0' indicates that event is from main window, not a subcomponent.
+    const isValid = isValidExternalWindow(rawNativeWindowInfo, ignoreVisibility) && idChild === '0';
 
     if (isValid) {
       parser(nativeWindowInfo);
@@ -442,16 +445,17 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
     parser: (nativeWindowInfo: Shapes.NativeWindowInfo) => void,
     sender: Event,
     rawNativeWindowInfo: NativeWindowInfo,
-    timestamp: number
+    timestamp: number,
+    idObject: string,
+    idChild: string
   ): void => {
     const nativeWindowInfo = getNativeWindowInfo(rawNativeWindowInfo);
 
-    // Since we are subscribing to a process, we are only interested in a
-    // specific window.
-    if (nativeWindowInfo.nativeId !== nativeId) {
+    // We are subscribing to a process, so we only care about a specific window.
+    // idChild === '0' indicates that event is from main window, not a subcomponent.
+    if (nativeWindowInfo.uuid !== nativeId || idChild !== '0') {
       return;
     }
-
     parser(nativeWindowInfo);
     previousNativeWindowInfo = nativeWindowInfo;
   };

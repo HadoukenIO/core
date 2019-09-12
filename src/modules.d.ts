@@ -38,7 +38,6 @@ declare namespace Electron {
     }
 
     export interface BrowserWindow {
-        id: number;
         nativeId: string;
 
         activate(): void;

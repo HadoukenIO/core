@@ -8,7 +8,7 @@ let _ = require('underscore');
 // local modules
 let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
-let coreState = require('../../core_state.js');
+import * as coreState from '../../core_state';
 import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
@@ -34,6 +34,7 @@ let successAck = {
 };
 
 export const applicationApiMap = {
+    'application-get-views': getViews,
     'close-application': closeApplication,
     'create-application': createApplication,
     'create-child-window': createChildWindow,
@@ -58,6 +59,7 @@ export const applicationApiMap = {
     'remove-tray-icon': removeTrayIcon,
     'restart-application': restartApplication,
     'run-application': runApplication,
+    'run-applications': runApplications,
     'send-application-log': sendApplicationLog,
     'set-app-log-username': setAppLogUsername,
     'set-shortcuts': { apiFunc: setShortcuts, apiPath: '.setShortcuts' },
@@ -268,6 +270,12 @@ function getShortcuts(identity, message, ack, nack) {
     }, nack);
 }
 
+function getViews(identity, message) {
+    const { payload } = message;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    return Application.getViews(appIdentity);
+}
+
 function setShortcuts(identity, message, ack, nack) {
     const payload = message.payload;
     const dataAck = _.clone(successAck);
@@ -381,6 +389,36 @@ function runApplication(identity, message, ack, nack) {
             nack(`Application with specified UUID is already running: ${uuid}`);
             return;
         }
+    }
+}
+
+// This function is currently configured to only run applications from manifest. It will not run any applications programmatically.
+function runApplications(identity, message, ack, nack) {
+    const { payload } = message;
+    const { applications } = payload;
+
+    const appsToRunWithRVM = [];
+
+    applications.forEach(application => {
+        const { uuid, manifestUrl } = application;
+
+        if (!manifestUrl) {
+            return;
+        }
+
+        if (coreState.getAppRunningState(uuid)) {
+            Application.emitRunRequested({ uuid });
+            writeToLog('error', `Application with specified UUID is already running: ${uuid}`);
+            return;
+        }
+
+        appsToRunWithRVM.push(manifestUrl);
+    });
+
+    if (appsToRunWithRVM.length > 0) {
+        Application.batchRunWithRVM(identity, appsToRunWithRVM)
+            .then(() => ack(successAck))
+            .catch(nack);
     }
 }
 

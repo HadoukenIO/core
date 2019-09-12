@@ -436,10 +436,8 @@
                 ipc.once(popResponseChannel, (sender, meta) => {
                     setTimeout(() => {
                         try {
-                            let returnMeta = JSON.parse(meta);
                             cb({
                                 nativeWindow,
-                                id: returnMeta.windowId
                             });
                         } catch (e) {}
                     }, 1);

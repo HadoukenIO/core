@@ -27,6 +27,12 @@ async function setBounds (identity: Identity, message: APIMessage) {
     browser_view.setBounds(view, bounds);
     return successAck;
 }
+function getCurrentWindow (identity: Identity, message: APIMessage) {
+    const { payload } = message;
+    const { uuid, name, bounds } = payload;
+    const view = getBrowserViewByIdentity({ uuid, name });
+    return browser_view.getCurrentWindow(view);
+}
 async function getInfo(identity: Identity, message: APIMessage) {
     const { payload } = message;
     const { uuid, name } = payload;
@@ -51,6 +57,7 @@ export const browserViewActionMap: ActionSpecMap = {
     'attach-browser-view': attach,
     'set-browser-view-bounds': setBounds,
     'get-browser-view-info': getInfo,
+    'get-view-window': getCurrentWindow,
     'hide-browser-view': hide,
     'show-browser-view': show
 };

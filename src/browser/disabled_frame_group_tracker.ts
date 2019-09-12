@@ -9,8 +9,10 @@ import { restore } from './api/native_window';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
 import { writeToLog } from './log';
+import {release} from 'os';
 
 const isWin32 = process.platform === 'win32';
+const isWin10 = isWin32 && release().split('.')[0] === '10';
     // Use disabled frame bounds changing events for mac os and for external native windows
 const usesDisabledFrameEvents = (win: GroupWindow) => win.isExternalWindow || !isWin32;
 enum ChangeType {
@@ -94,34 +96,32 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
         //Proposed move differs from requested move
         throw new Error('Attempted move violates group constraints');
     }
-    handleBatchedMove(moves, changeType);
+    handleBatchedMove(moves);
     emitChange('bounds-changed', leader, changeType, 'self');
     otherWindows.map(move => emitChange('bounds-changed', move, changeType, 'group'));
     return leader.rect;
 }
 
-function handleBatchedMove(moves: Move[], changeType: ChangeType, bringWinsToFront: boolean = false) {
+function handleBatchedMove(moves: Move[]) {
     if (isWin32) {
+        const { flag: { noZorder, noActivate } } = WindowTransaction;
+        const flags = noZorder + noActivate;
+        const wt = new WindowTransaction.Transaction(0);
         moves.forEach(({ ofWin, rect }) => {
-            (<any>ExternalWindow).setBoundsWithoutShadow(ofWin.browserWindow.nativeId, rect);
-            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
+            const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
+            let bounds: RectangleBase;
+            if (isWin10 && ofWin._options.frame) {
+                bounds = (<any>ExternalWindow).addShadow(ofWin.browserWindow.nativeId, rect);
+            } else {
+                bounds = rect;
+            }
+
+            (<any>wt.setWindowPos)(hwnd, { ...getTransactionBounds(bounds), flags, scale: false });
         });
-
-        // Leave window transaction Logic here for later use
-
-        // const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
-        // const flags = noZorder + noActivate;
-        // const wt = new WindowTransaction.Transaction(0);
-        // moves.forEach(({ ofWin, rect }) => {
-        //     const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
-        //     wt.setWindowPos(hwnd, { ...getTransactionBounds(rect), flags });
-        //     if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
-        // });
-        // wt.commit();
+        wt.commit();
     } else {
         moves.forEach(({ ofWin, rect }) => {
             ofWin.browserWindow.setBounds(rect);
-            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
         });
     }
 }
@@ -228,18 +228,19 @@ export function addWindowToGroup(win: GroupWindow) {
                 rawPayloadBounds = Rectangle.CREATE_FROM_BOUNDS(adjustedBounds);
             }
             const moves = generateWindowMoves(win, rawPayloadBounds, changeType);
-            handleBatchedMove(moves, changeType, true);
             // Keep track of which windows have moved in order to emit events
             moves.forEach(({ofWin}) => moved.add(ofWin));
             if (!boundsChanging) {
                 boundsChanging = true;
                 const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changed';
                 win.browserWindow.once(endingEvent, handleEndBoundsChanging);
+                WindowGroups.getGroup(win.groupUuid).forEach(win => win.browserWindow.bringToFront());
             } else if (moves.length) {
                 // bounds-changing is not emitted for the leader, but is for the other windows
                 const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
                 emitChange('bounds-changing', leaderMove, changeType, 'self');
             }
+            handleBatchedMove(moves);
         } catch (error) {
             writeToLog('error', error);
         }
