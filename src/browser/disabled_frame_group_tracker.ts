@@ -97,8 +97,12 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
         throw new Error('Attempted move violates group constraints');
     }
     handleBatchedMove(moves);
+    leader.rect = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
     emitChange('bounds-changed', leader, changeType, 'self');
-    otherWindows.map(move => emitChange('bounds-changed', move, changeType, 'group'));
+    otherWindows.map(move => {
+        move.rect = Rectangle.CREATE_FROM_BOUNDS(move.ofWin.browserWindow.getBounds());
+        emitChange('bounds-changed', move, changeType, 'group');
+    });
     return leader.rect;
 }
 
