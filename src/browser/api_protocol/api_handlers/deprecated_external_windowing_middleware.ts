@@ -4,7 +4,7 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { sendToIdentity } from './api_protocol_base';
 import { RemoteAck } from '../transport_strategy/ack';
 
-const coreState = require('../../core_state');
+import * as coreState from '../../core_state';
 
 const validExternalAPIActions: any = {
    'blur-window': true,

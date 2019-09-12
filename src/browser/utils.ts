@@ -85,6 +85,7 @@ export function getNativeWindowInfoLite(rawNativeWindowInfo: NativeWindowInfo): 
 
   return {
     name,
+    nativeId: rawNativeWindowInfo.id,
     process: {
       injected: rawNativeWindowInfo.process.injected,
       pid: rawNativeWindowInfo.process.pid
@@ -100,18 +101,18 @@ export function getNativeWindowInfoLite(rawNativeWindowInfo: NativeWindowInfo): 
 */
 export function getNativeWindowInfo(rawNativeWindowInfo: NativeWindowInfo): Shapes.NativeWindowInfo {
   const liteInfoObject = getNativeWindowInfoLite(rawNativeWindowInfo);
-  const fullInfoObject = <Shapes.NativeWindowInfo>liteInfoObject;
 
-  fullInfoObject.alwaysOnTop = rawNativeWindowInfo.alwaysOnTop;
-  fullInfoObject.bounds = rawNativeWindowInfo.bounds;
-  fullInfoObject.className = rawNativeWindowInfo.className;
-  fullInfoObject.dpi = rawNativeWindowInfo.dpi;
-  fullInfoObject.dpiAwareness = rawNativeWindowInfo.dpiAwareness;
-  fullInfoObject.focused = rawNativeWindowInfo.focused;
-  fullInfoObject.maximized = rawNativeWindowInfo.maximized;
-  fullInfoObject.minimized = rawNativeWindowInfo.minimized;
-
-  return fullInfoObject;
+  return {
+    ...liteInfoObject,
+    alwaysOnTop: rawNativeWindowInfo.alwaysOnTop,
+    bounds: rawNativeWindowInfo.bounds,
+    className: rawNativeWindowInfo.className,
+    dpi: rawNativeWindowInfo.dpi,
+    dpiAwareness: rawNativeWindowInfo.dpiAwareness,
+    focused: rawNativeWindowInfo.focused,
+    maximized: rawNativeWindowInfo.maximized,
+    minimized: rawNativeWindowInfo.minimized
+  };
 }
 
 /*

@@ -6,7 +6,7 @@
     v1: handler for onBeforeSendHeaders
  */
 
-const coreState = require('./core_state');
+import * as coreState from './core_state';
 const electronApp = require('electron').app;
 const { session, webContents } = require('electron');
 
@@ -56,9 +56,8 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
         const wc = webContents.fromProcessAndFrameIds(details.renderProcessId, details.renderFrameId);
         if (wc) {
             electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler got webcontents ${wc.id}`);
-            const bw = wc.getOwnerBrowserWindow();
-            if (bw && typeof bw.id === 'number') {
-                const opts: Shapes.WindowOptions = coreState.getWindowOptionsById(bw.id);
+            if (typeof wc.id === 'number') {
+                const opts = coreState.getWindowOptionsById(wc.id);
                 electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts ${JSON.stringify(opts)}`);
                 if (opts && opts.customRequestHeaders) {
                     for (const rhItem of opts.customRequestHeaders) {
