@@ -207,7 +207,10 @@ export function addWindowToGroup(win: GroupWindow) {
             const isLeader = movedWin === win;
             if (!isLeader || win.isExternalWindow) {
                 // bounds-changed is emitted for the leader, but not other windows
-                const endPosition = moveFromOpenFinWindow(movedWin);
+                const endPosition = {
+                    ofWin: movedWin,
+                    rect: Rectangle.CREATE_FROM_BOUNDS(movedWin.browserWindow.getBounds())
+                };
                 emitChange('bounds-changed', endPosition, changeType, 'group');
             }
         });
@@ -235,12 +238,18 @@ export function addWindowToGroup(win: GroupWindow) {
                 const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changed';
                 win.browserWindow.once(endingEvent, handleEndBoundsChanging);
                 WindowGroups.getGroup(win.groupUuid).forEach(win => win.browserWindow.bringToFront());
-            } else if (moves.length) {
+            }
+            if (moves.length) {
                 // bounds-changing is not emitted for the leader, but is for the other windows
                 const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
-                emitChange('bounds-changing', leaderMove, changeType, 'self');
+                if (leaderMove && typeof leaderMove === 'object') {
+                    // Execute the actual move
+                    handleBatchedMove(moves);
+                    // need to ensure we get bounds that are not scaled
+                    leaderMove.rect = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
+                    emitChange('bounds-changing', leaderMove, changeType, 'self');
+                }
             }
-            handleBatchedMove(moves);
         } catch (error) {
             writeToLog('error', error);
         }
