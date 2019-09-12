@@ -99,9 +99,7 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
     }
     handleBatchedMove(moves);
     emitChange('bounds-changed', win, changeType, 'self');
-    otherWindows.map(({ofWin}) => {
-        emitChange('bounds-changed', ofWin, changeType, 'group');
-    });
+    otherWindows.map(({ofWin}) => emitChange('bounds-changed', ofWin, changeType, 'group'));
     return leader.rect;
 }
 
