@@ -45,7 +45,8 @@ async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: Obje
     }
 }
 
-function emitChange(topic: string, { ofWin, rect }: Move, changeType: ChangeType, reason: string) {
+function emitChange(topic: string, ofWin: GroupWindow, changeType: ChangeType, reason: string) {
+    const rect = ofWin.browserWindow.getBounds();
     const eventBounds = getEventBounds(rect);
     const eventArgs = {
         ...eventBounds,
@@ -97,11 +98,9 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
         throw new Error('Attempted move violates group constraints');
     }
     handleBatchedMove(moves);
-    leader.rect = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
-    emitChange('bounds-changed', leader, changeType, 'self');
-    otherWindows.map(move => {
-        move.rect = Rectangle.CREATE_FROM_BOUNDS(move.ofWin.browserWindow.getBounds());
-        emitChange('bounds-changed', move, changeType, 'group');
+    emitChange('bounds-changed', win, changeType, 'self');
+    otherWindows.map(({ofWin}) => {
+        emitChange('bounds-changed', ofWin, changeType, 'group');
     });
     return leader.rect;
 }
@@ -211,11 +210,7 @@ export function addWindowToGroup(win: GroupWindow) {
             const isLeader = movedWin === win;
             if (!isLeader || win.isExternalWindow) {
                 // bounds-changed is emitted for the leader, but not other windows
-                const endPosition = {
-                    ofWin: movedWin,
-                    rect: Rectangle.CREATE_FROM_BOUNDS(movedWin.browserWindow.getBounds())
-                };
-                emitChange('bounds-changed', endPosition, changeType, 'group');
+                emitChange('bounds-changed', movedWin, changeType, 'group');
             }
         });
         // Reset map of moved windows and flags for native windows and mac OS
@@ -249,9 +244,7 @@ export function addWindowToGroup(win: GroupWindow) {
                 if (leaderMove && typeof leaderMove === 'object') {
                     // Execute the actual move
                     handleBatchedMove(moves);
-                    // need to ensure we get bounds that are not scaled
-                    leaderMove.rect = Rectangle.CREATE_FROM_BOUNDS(win.browserWindow.getBounds());
-                    emitChange('bounds-changing', leaderMove, changeType, 'self');
+                    emitChange('bounds-changing', win, changeType, 'self');
                 }
             }
         } catch (error) {
