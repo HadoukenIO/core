@@ -1,6 +1,6 @@
 
 import RequestHandler from '../transport_strategy/base_handler';
-import { appByUuid, windowExists, getBrowserViewByIdentity } from '../../core_state';
+import { appByUuid, windowExists, getBrowserViewByIdentity, viewExists } from '../../core_state';
 import { applicationApiMap } from './application.js';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
 import { windowApiMap } from './window.js';
@@ -61,8 +61,9 @@ function verifyEntityExistence(msg: MessagePackage, next: () => void): void {
          // Window API
 
         const wndExists = windowExists(uuid, name);
+        const browserViewExists = viewExists(uuid, name);
 
-        if (!wndExists) {
+        if (!wndExists && !browserViewExists) {
             return nack('Could not locate the requested contents');
         }
     } else if (windowApiMap.hasOwnProperty(action)) {

@@ -28,7 +28,7 @@ import socketServer from './src/browser/transports/socket_server';
 
 import { addPendingAuthRequests, createAuthUI } from './src/browser/authentication_delegate';
 let convertOptions = require('./src/browser/convert_options.js');
-let coreState = require('./src/browser/core_state.js');
+import * as coreState from './src/browser/core_state';
 let webRequestHandlers = require('./src/browser/web_request_handler.js');
 let errors = require('./src/common/errors.js');
 import ofEvents from './src/browser/of_events';
@@ -54,7 +54,7 @@ import route from './src/common/route';
 
 import { createWillDownloadEventListener } from './src/browser/api/file_download';
 import duplicateUuidTransport from './src/browser/duplicate_uuid_delegation';
-import { deleteApp, argv } from './src/browser/core_state';
+import { deleteApp } from './src/browser/core_state';
 import { lockUuid } from './src/browser/uuid_availability';
 
 // locals
@@ -68,8 +68,13 @@ const serverReadyPromise = new Promise((resolve) => {
     resolveServerReady = () => resolve();
 });
 
-app.on('child-window-created', function(parentId, childId, childOptions) {
-
+//Event either comes from the runtime or the core when registering an externalWindow.
+// Payload is a browserWindow id
+app.on('child-window-created', function(parentBwId, childBwId, childOptions) {
+    const parent = BrowserWindow.fromId(parentBwId);
+    const child = BrowserWindow.fromId(childBwId);
+    const parentId = parent.webContents.id;
+    const childId = child.webContents.id;
     if (!coreState.addChildToWin(parentId, childId)) {
         console.warn('failed to add');
     }
@@ -255,7 +260,8 @@ app.on('ready', function() {
     }
 
     app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
-    app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsById);
+    // Runtime will use BrowserWindow id
+    app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsByBrowserWindowId);
 
     if (process.platform === 'win32') {
         log.writeToLog('info', `group-policy build: ${process.buildFlags.groupPolicy}`);
@@ -300,7 +306,7 @@ app.on('ready', function() {
     //subscribe to auth requests:
     app.on('login', (event, webContents, request, authInfo, callback) => {
         let browserWindow = webContents.getOwnerBrowserWindow();
-        let ofWindow = coreState.getWinById(browserWindow.id).openfinWindow;
+        let ofWindow = coreState.getWinById(browserWindow.webContents.id).openfinWindow;
 
         let identity = {
             name: ofWindow._options.name,
@@ -639,8 +645,23 @@ function launchApp(argo, startExternalAdapterServer) {
         if (uuid && !isRunning) {
             if (!lockUuid(uuid)) {
                 deleteApp(uuid);
-                duplicateUuidTransport.broadcast({ argv, uuid });
+                // We need to rebuild a new argv to have correct app info in it.
+                let newArgv = Object.keys(argo).map(key => {
+                    if (key === '_') {
+                        return argo[key].length === 1 ? argo[key][0] : argo[key];
+                    } else {
+                        return '--' + key + '=' + argo[key];
+                    }
+                });
+                duplicateUuidTransport.broadcast({ argv: newArgv, uuid });
                 failedMutexCheck = true;
+
+                // close the runtime if it's only app.
+                if (coreState.shouldCloseRuntime()) {
+                    app.quit();
+                    return;
+                }
+
             } else {
                 passedMutexCheck = true;
             }
@@ -735,7 +756,7 @@ function initFirstApp(configObject, configUrl, licenseKey) {
 //Please add any hotkeys added here to the the reservedHotKeys list.
 function registerShortcuts() {
     app.on('browser-window-focus', (event, browserWindow) => {
-        const windowOptions = coreState.getWindowOptionsById(browserWindow.id);
+        const windowOptions = coreState.getWindowOptionsById(browserWindow.webContents.id);
         const accelerator = windowOptions && windowOptions.accelerator || {};
         const webContents = browserWindow.webContents;
 

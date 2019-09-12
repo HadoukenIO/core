@@ -10,7 +10,7 @@ let queryString = require('querystring');
 let _ = require('underscore');
 
 // local modules
-let coreState = require('./core_state.js');
+import * as coreState from './core_state';
 let log = require('./log');
 import { fetchReadFile, readFile } from './cached_resource_fetcher';
 

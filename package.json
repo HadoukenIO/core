@@ -41,7 +41,7 @@
     "grunt-babel": "^7.0.0",
     "grunt-cli": "^1.2.0",
     "grunt-contrib-copy": "^1.0.0",
-    "grunt-contrib-jshint": "^1.1.0",
+    "grunt-contrib-jshint": "^2.1.0",
     "grunt-contrib-watch": "^1.1.0",
     "grunt-jsbeautifier": "^0.2.13",
     "grunt-mocha-test": "^0.13.3",
