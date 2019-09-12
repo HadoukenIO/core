@@ -125,8 +125,8 @@ export function createWillDownloadEventListener(identity: Identity): (event: any
                     );
 
                     const fileDownloadBrowserWindow = BrowserWindow.fromWebContents(webContents);
-                    const browserWindowId = fileDownloadBrowserWindow.id;
-                    const { url: urlFromDownloadWindow } = <WindowOptions> coreState.getWindowOptionsById(browserWindowId);
+                    const webcontentsId = webContents.id;
+                    const { url: urlFromDownloadWindow } = <WindowOptions> coreState.getWindowOptionsById(webcontentsId);
 
                     // Windows that are created from a window.open that trigger a file download have their url set to
                     // "" here no matter what the requested url was. This is not true if the file download was triggered

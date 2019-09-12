@@ -153,6 +153,13 @@
         });
     }
 
+    function raiseEventAsync(eventName, eventArgs) {
+        return asyncApiCall('raise-event', {
+            eventName,
+            eventArgs
+        });
+    }
+
     ///THESE CALLS NEED TO BE DONE WITH REMOTE, AS THEY ARE DONE BEFORE THE CORE HAS ID's
     function getWindowId() {
         if (!windowId) {
@@ -328,7 +335,7 @@
                 name: initialOptions.name,
                 uuid: initialOptions.uuid
             };
-            raiseEventSync(`window/performance-report/${initialOptions.uuid}-${initialOptions.name}`, Object.assign(payload, performance.toJSON()));
+            raiseEventAsync(`window/performance-report/${initialOptions.uuid}-${initialOptions.name}`, Object.assign(payload, performance.toJSON()));
             asyncApiCall('write-to-log', {
                 level: 'info',
                 message: `[Performance] [${initialOptions.uuid} - ${initialOptions.name}]: ${JSON.stringify(performance)}`
@@ -429,10 +436,8 @@
                 ipc.once(popResponseChannel, (sender, meta) => {
                     setTimeout(() => {
                         try {
-                            let returnMeta = JSON.parse(meta);
                             cb({
                                 nativeWindow,
-                                id: returnMeta.windowId
                             });
                         } catch (e) {}
                     }, 1);

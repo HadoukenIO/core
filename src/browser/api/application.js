@@ -22,7 +22,7 @@ let _ = require('underscore');
 let System = require('./system.js').System;
 import { Window } from './window';
 let convertOpts = require('../convert_options.js');
-let coreState = require('../core_state.js');
+import * as coreState from '../core_state';
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
 import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
@@ -787,6 +787,20 @@ Application.runWithRVM = function(manifestUrl, appIdentity) {
     }
 };
 
+/**
+ * Run an application via RVM
+ */
+Application.batchRunWithRVM = function(identity, manifestUrls) {
+    return sendToRVM({
+        topic: 'application',
+        action: 'launch-apps',
+        sourceUrl: coreState.getConfigUrlByUuid(identity.uuid),
+        data: {
+            configUrlArray: manifestUrls
+        }
+    });
+};
+
 Application.send = function() {
     console.warn('Deprecated. Please use InterAppBus');
 };
@@ -1007,6 +1021,12 @@ Application.emitRunRequested = function(identity, userAppConfigArgs) {
 Application.wait = function() {
     console.warn('Awaiting native implementation');
 };
+Application.getViews = getViews;
+
+function getViews(identity) {
+    const app = coreState.getAppByUuid(identity.uuid);
+    return app ? app.views.map(({ uuid, name }) => ({ uuid, name })) : [];
+}
 
 // support legacy notifyOnContentLoaded and notifyOnContentLoaded
 var appLoadedListeners = {}; // target window identity => array of window Ids for listener
@@ -1163,7 +1183,7 @@ function createAppObj(uuid, opts, configUrl = '') {
 
         appObj.mainWindow = new BrowserWindow(eOpts);
         appObj.mainWindow.setFrameConnectStrategy(eOpts.frameConnect || 'last');
-        appObj.id = appObj.mainWindow.id;
+        appObj.id = appObj.mainWindow.webContents.id;
 
         appObj.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
             if (isMainFrame) {
