@@ -7,6 +7,7 @@ let os = require('os');
 let path = require('path');
 let electron = require('electron');
 let queryString = require('querystring');
+let url = require('url');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let dialog = electron.dialog;
@@ -14,6 +15,7 @@ let globalShortcut = electron.globalShortcut;
 let nativeImage = electron.nativeImage;
 let ProcessInfo = electron.processInfo;
 let Tray = electron.Tray;
+
 
 // npm modules
 let _ = require('underscore');
@@ -777,6 +779,10 @@ Application.runWithRVM = function(manifestUrl, appIdentity, opts) {
     if (os.platform() !== 'win32') {
         return launch({ manifestUrl: manifestUrl });
     } else {
+        if (opts.userAppConfigArgs) {
+            opts.userAppConfigArgsStr = new url.URLSearchParams(opts.userAppConfigArgs).toString();
+            delete opts.userAppConfigArgs;
+        }
         return sendToRVM({
             topic: 'application',
             action: 'launch-app',
