@@ -19,6 +19,7 @@ import { BrowserWindow as OFBrowserWindow } from '../shapes';
 import { BrowserWindow, Rectangle, screen, NativeWindowInfo } from 'electron';
 import * as Shapes from '../shapes';
 import { nativeIdToUuid } from './api/external_window';
+import ProcessTracker from './process_tracker';
 
 /*
   This function sets window's bounds to be in a visible area, in case
@@ -95,13 +96,29 @@ export function getNativeWindowInfoLite(rawNativeWindowInfo: NativeWindowInfo): 
     visible: rawNativeWindowInfo.visible
   };
 
-  const uuid = nativeIdToUuid.get(liteInfo.nativeId);
+  const uuid = getNativeWindowUuid(liteInfo);
 
   if (uuid) {
     liteInfo.uuid = uuid;
   }
 
   return liteInfo;
+}
+
+/*
+  Finds an appropriate uuid for a native window by first checking for its nativeId among
+  registered ExternalWindows, then checking for its pid among registered external processes
+*/
+function getNativeWindowUuid(nativeWindowInfo: Shapes.NativeWindowInfoLite): string | void {
+  let uuid = nativeIdToUuid.get(nativeWindowInfo.nativeId);
+  if (!uuid) {
+    const { process: { pid } } = nativeWindowInfo;
+    const launchedProcess = ProcessTracker.getProcessByPid(pid);
+    if (launchedProcess) {
+      uuid = launchedProcess.uuid;
+    }
+  }
+  return uuid;
 }
 
 /*
