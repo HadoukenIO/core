@@ -44,7 +44,8 @@
     "debug"         : false,     // true: Allow debugger statements e.g. browser breakpoints.
     "eqnull"        : false,     // true: Tolerate use of `== null`
     //"es5"           : true,      // true: Allow ES5 syntax (ex: getters and setters). Set by Default
-    "esnext"        : true,     // true: !! lets live in the future
+    // "esnext"        : true,     // true: !! lets live in the future
+    "esversion"     : 8,         // 8: !! lets live in the future
     "moz"           : false,     // true: Allow Mozilla specific syntax (extends and overrides esnext features)
                                  // (ex: `for each`, multiple try/catch, function expression…)
     "evil"          : false,     // true: Tolerate use of `eval` and `new Function()`
