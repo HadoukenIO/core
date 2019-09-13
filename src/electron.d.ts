@@ -1,4 +1,4 @@
-// Type definitions for Electron 7.0.0-beta.3
+// Type definitions for Electron 8.0.0-nightly.20190826
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -1071,6 +1071,10 @@ Values: Unknown = 0 Low = 1 Medium = 2 High = 3 System = 4
     /**
      * A path to a special directory or file associated with `name`. On failure, an
      * `Error` is thrown.
+     *
+     * If `app.getPath('logs')` is called without called `app.setAppLogsPath()` being
+     * called first, a default log directory will be created equivalent to calling
+     * `app.setAppLogsPath()` without a `path` parameter.
      */
     getPath(name: 'home' | 'appData' | 'userData' | 'cache' | 'temp' | 'exe' | 'module' | 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos' | 'logs' | 'pepperFlashSystemPlugin'): string;
     /**
@@ -1325,8 +1329,6 @@ The result message.
      * Set the about panel options. This will override the values defined in the app's
      * `.plist` file on MacOS. See the Apple docs for more details. On Linux, values
      * must be set in order to be shown; there are no defaults.
-     *
-     * @platform darwin,linux
      */
     setAboutPanelOptions(options: AboutPanelOptionsOptions): void;
     /**
@@ -1349,7 +1351,7 @@ The result message.
      * `app.getPath()` or `app.setPath(pathName, newPath)`.
      *
      * Calling `app.setAppLogsPath()` without a `path` parameter will result in this
-     * directory being set to `/Library/Logs/YourAppName` on _macOS_, and inside the
+     * directory being set to `~/Library/Logs/YourAppName` on _macOS_, and inside the
      * `userData` directory on _Linux_ and _Windows_.
      */
     setAppLogsPath(path?: string): void;
@@ -1497,8 +1499,6 @@ Here's a very simple example of creating a custom Jump List:
     /**
      * Show the app's about panel options. These options can be overridden with
      * `app.setAboutPanelOptions(options)`.
-     *
-     * @platform darwin,linux
      */
     showAboutPanel(): void;
     /**
@@ -2169,13 +2169,13 @@ __Note__: On macOS this event is an alias of `moved`.
     addListener(event: 'visibility-changed', listener: Function): this;
     removeListener(event: 'visibility-changed', listener: Function): this;
     /**
-     * Emitted before the window is moved. Calling `event.preventDefault()` will
-     * prevent the window from being moved.
+     * Emitted before the window is moved. On Windows, calling `event.preventDefault()`
+     * will prevent the window from being moved.
      *
      * Note that this is only emitted when the window is being resized manually.
      * Resizing the window with `setBounds`/`setSize` will not emit this event.
      *
-     * @platform win32
+     * @platform darwin,win32
      */
     on(event: 'will-move', listener: (event: Event,
                                       /**
@@ -2422,6 +2422,16 @@ __Note__: On macOS this event is an alias of `moved`.
      */
     getMaximumSize(): number[];
     /**
+     * Window id in the format of DesktopCapturerSource's id. For example
+     * "window:1234:0".
+     *
+     * More precisely the format is `window:id:other_id` where `id` is `HWND` on
+     * Windows, `CGWindowID` (`uint64_t`) on macOS and `Window` (`unsigned long`) on
+     * Linux. `other_id` is used to identify web contents (tabs) so within the same top
+     * level window.
+     */
+    getMediaSourceId(): string;
+    /**
      * Contains the window's minimum width and height.
      */
     getMinimumSize(): number[];
@@ -2442,14 +2452,14 @@ __Note__: On macOS this event is an alias of `moved`.
      */
     getNormalBounds(): Rectangle;
     /**
-     * Return the current opacity as a double between 0.0 and 1.0
-     */
-    getOpacity(): void;
-    /**
      * between 0.0 (fully transparent) and 1.0 (fully opaque). On Linux, always returns
      * 1.
      */
     getOpacity(): number;
+    /**
+     * Return the current opacity as a double between 0.0 and 1.0
+     */
+    getOpacity(): void;
     /**
      * The parent window.
      */
@@ -2682,6 +2692,12 @@ On Linux always returns `true`.
      * the Dock.
      */
     minimize(): void;
+    /**
+     * Moves window above the source window in the sense of z-order. If the
+     * `mediaSourceId` is not of type window or if the window does not exist then this
+     * method throws an error.
+     */
+    moveAbove(mediaSourceId: string): void;
     /**
      * Moves the current tab into a new window if native tabs are enabled and there is
      * more than one tab in the current window.
@@ -2930,14 +2946,14 @@ On macOS it does not remove the focus from the window.
      */
     setMovable(movable: boolean): void;
     /**
-     * Set the transparency of the window. 0 is transparent. 1 is opaque. 0.5 is half.
-     */
-    setOpacity(opacity: number): void;
-    /**
      * Sets the opacity of the window. On Linux, does nothing. Out of bound number
      * values are clamped to the [0, 1] range.
      *
      * @platform win32,darwin
+     */
+    setOpacity(opacity: number): void;
+    /**
+     * Set the transparency of the window. 0 is transparent. 1 is opaque. 0.5 is half.
      */
     setOpacity(opacity: number): void;
     /**
@@ -4233,6 +4249,9 @@ Send given command to the debugging target.
      */
     showOpenDialog(options: OpenDialogOptions): Promise<Electron.OpenDialogReturnValue>;
     /**
+     * the file paths chosen by the user; if the dialog is cancelled it returns
+     * `undefined`.
+     *
      * The `browserWindow` argument allows the dialog to attach itself to a parent
      * window, making it modal.
      *
@@ -4247,8 +4266,11 @@ Send given command to the debugging target.
      * and a directory selector, so if you set `properties` to `['openFile',
      * 'openDirectory']` on these platforms, a directory selector will be shown.
      */
-    showOpenDialogSync(options: OpenDialogSyncOptions): void;
+    showOpenDialogSync(options: OpenDialogSyncOptions): (string[]) | (undefined);
     /**
+     * the file paths chosen by the user; if the dialog is cancelled it returns
+     * `undefined`.
+     *
      * The `browserWindow` argument allows the dialog to attach itself to a parent
      * window, making it modal.
      *
@@ -4263,7 +4285,7 @@ Send given command to the debugging target.
      * and a directory selector, so if you set `properties` to `['openFile',
      * 'openDirectory']` on these platforms, a directory selector will be shown.
      */
-    showOpenDialogSync(browserWindow: BrowserWindow, options: OpenDialogSyncOptions): void;
+    showOpenDialogSync(browserWindow: BrowserWindow, options: OpenDialogSyncOptions): (string[]) | (undefined);
     /**
      * Resolve with an object containing the following:
      *
@@ -4384,14 +4406,17 @@ Send given command to the debugging target.
     // Docs: http://electronjs.org/docs\api\dock
 
     /**
+     * an ID representing the request.
+     *
      * When `critical` is passed, the dock icon will bounce until either the
      * application becomes active or the request is canceled.
      *
      * When `informational` is passed, the dock icon will bounce for one second.
      * However, the request remains active until either the application becomes active
      * or the request is canceled.
-
-an ID representing the request.
+     *
+     * **Nota Bene:** This method can only be used while the app is not focused; when
+     * the app is focused it will return -1.
      *
      * @platform darwin
      */
@@ -5588,7 +5613,7 @@ For example:
      * Creates a new `NativeImage` instance from the NSImage that maps to the given
      * image name. See `System Icons` for a list of possible values.
      *
-     * The `hslShift` is applied to the image with the following rules
+     * The `hslShift` is applied to the image with the following rules:
      *
      * * `hsl_shift[0]` (hue): The absolute hue value for the image - 0 and 1 map to 0
      * and 360 on the hue color wheel (red).
@@ -5648,9 +5673,9 @@ Please note that this property only has an effect on macOS.
     /**
      * A Buffer that contains the image's raw bitmap pixel data.
      *
-     * The difference between `getBitmap()` and `toBitmap()` is, `getBitmap()` does not
-     * copy the bitmap data, so you have to use the returned Buffer immediately in
-     * current event loop tick, otherwise the data might be changed or destroyed.
+     * The difference between `getBitmap()` and `toBitmap()` is that `getBitmap()` does
+     * not copy the bitmap data, so you have to use the returned Buffer immediately in
+     * current event loop tick; otherwise the data might be changed or destroyed.
      */
     getBitmap(options?: BitmapOptions): Buffer;
     /**
@@ -7165,11 +7190,11 @@ Returns the system's proxy configuration.
      */
     beep(): void;
     /**
-     * Whether the item was successfully moved to the trash.
+     * Whether the item was successfully moved to the trash or otherwise deleted.
      * 
 Move the given file to trash and returns a boolean status for the operation.
      */
-    moveItemToTrash(fullPath: string): boolean;
+    moveItemToTrash(fullPath: string, deleteOnFail?: boolean): boolean;
     /**
      * Open the given external protocol URL in the desktop's default manner. (For
      * example, mailto: URLs in the user's default mail agent).
@@ -7875,8 +7900,8 @@ This property is only available on macOS 10.14 Mojave or newer.
     continuous: boolean;
     items: ScrubberItem[];
     mode: ('fixed' | 'free');
-    overlayStyle: ('background' | 'outline' | 'null');
-    selectedStyle: ('background' | 'outline' | 'null');
+    overlayStyle: ('background' | 'outline' | 'none');
+    selectedStyle: ('background' | 'outline' | 'none');
     showArrowButtons: boolean;
   }
 
@@ -8334,6 +8359,15 @@ This property is only available on macOS 10.14 Mojave or newer.
      */
     displayBalloon(options: DisplayBalloonOptions): void;
     /**
+     * Returns focus to the taskbar notification area. Notification area icons should
+     * use this message when they have completed their UI operation. For example, if
+     * the icon displays a shortcut menu, but the user presses ESC to cancel it, use
+     * `tray.focus()` to return focus to the notification area.
+     *
+     * @platform win32
+     */
+    focus(): void;
+    /**
      * The `bounds` of this tray icon as `Object`.
      *
      * @platform darwin,win32
@@ -8374,6 +8408,12 @@ The `position` is only available on Windows, and it is (0, 0) by default.
      * @platform darwin,win32
      */
     popUpContextMenu(menu?: Menu, position?: Point): void;
+    /**
+     * Removes a tray balloon.
+     *
+     * @platform win32
+     */
+    removeBalloon(): void;
     /**
      * Sets the context menu for this icon.
      */
@@ -11382,7 +11422,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Credit information.
      *
-     * @platform darwin
+     * @platform darwin,win32
      */
     credits?: string;
     /**
@@ -11398,10 +11438,10 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     website?: string;
     /**
-     * Path to the app's icon. Will be shown as 64x64 pixels while retaining aspect
-     * ratio.
+     * Path to the app's icon. On Linux, will be shown as 64x64 pixels while retaining
+     * aspect ratio.
      *
-     * @platform linux
+     * @platform linux,win32
      */
     iconPath?: string;
   }
@@ -12167,9 +12207,30 @@ See webContents.sendInputEvent for detailed description of `event` object.
   }
 
   interface DisplayBalloonOptions {
+    /**
+     * Icon to use when `iconType` is `custom`.
+     */
     icon?: (NativeImage) | (string);
+    /**
+     * Can be `none`, `info`, `warning`, `error` or `custom`. Default is `custom`.
+     */
+    iconType?: ('none' | 'info' | 'warning' | 'error' | 'custom');
     title: string;
     content: string;
+    /**
+     * The large version of the icon should be used. Default is `true`. Maps to
+     * `NIIF_LARGE_ICON`.
+     */
+    largeIcon?: boolean;
+    /**
+     * Do not play the associated sound. Default is `false`. Maps to `NIIF_NOSOUND`.
+     */
+    noSound?: boolean;
+    /**
+     * Do not display the balloon notification if the current user is in "quiet time".
+     * Default is `false`. Maps to `NIIF_RESPECT_QUIET_TIME`.
+     */
+    respectQuietTime?: boolean;
   }
 
   interface EnableNetworkEmulationOptions {
@@ -12717,7 +12778,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Initial checked state of the checkbox. `false` by default.
      */
     checkboxChecked?: boolean;
-    icon?: NativeImage;
+    icon?: (NativeImage) | (string);
     /**
      * The index of the button to be used to cancel the dialog, via the `Esc` key. By
      * default this is assigned to the first button with "cancel" or "no" as the label.
@@ -13025,7 +13086,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Contains which features the dialog should use. The following values are
      * supported:
      */
-    properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles' | 'createDirectory' | 'promptToCreate' | 'noResolveAliases' | 'treatPackageAsDirectory'>;
+    properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles' | 'createDirectory' | 'promptToCreate' | 'noResolveAliases' | 'treatPackageAsDirectory' | 'dontAddToRecent'>;
     /**
      * Message to display above input boxes.
      *
@@ -13073,7 +13134,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Contains which features the dialog should use. The following values are
      * supported:
      */
-    properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles' | 'createDirectory' | 'promptToCreate' | 'noResolveAliases' | 'treatPackageAsDirectory'>;
+    properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles' | 'createDirectory' | 'promptToCreate' | 'noResolveAliases' | 'treatPackageAsDirectory' | 'dontAddToRecent'>;
     /**
      * Message to display above input boxes.
      *
@@ -13281,6 +13342,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     duplexMode?: ('simplex' | 'shortEdge' | 'longEdge');
     dpi?: Dpi;
+    /**
+     * String to be printed as page header.
+     */
+    header?: string;
+    /**
+     * String to be printed as page footer.
+     */
+    footer?: string;
   }
 
   interface PrintToPDFOptions {
@@ -13428,8 +13497,8 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     height?: number;
     /**
-     * The desired quality of the resize image. Possible values are `good`, `better` or
-     * `best`. The default is `best`. These values express a desired quality/speed
+     * The desired quality of the resize image. Possible values are `good`, `better`,
+     * or `best`. The default is `best`. These values express a desired quality/speed
      * tradeoff. They are translated into an algorithm-specific method that depends on
      * the capabilities (CPU, GPU) of the underlying platform. It is possible for all
      * three methods to be mapped to the same algorithm on a given platform.
@@ -13502,6 +13571,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * @platform darwin
      */
     showsTagField?: boolean;
+    properties?: Array<'showHiddenFiles' | 'createDirectory' | 'treatPackageAsDirectory' | 'showOverwriteConfirmation' | 'dontAddToRecent'>;
     /**
      * Create a security scoped bookmark when packaged for the Mac App Store. If this
      * option is enabled and the file doesn't already exist a blank file will be
@@ -13560,6 +13630,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * @platform darwin
      */
     showsTagField?: boolean;
+    properties?: Array<'showHiddenFiles' | 'createDirectory' | 'treatPackageAsDirectory' | 'showOverwriteConfirmation' | 'dontAddToRecent'>;
     /**
      * Create a security scoped bookmark when packaged for the Mac App Store. If this
      * option is enabled and the file doesn't already exist a blank file will be
@@ -13647,10 +13718,12 @@ See webContents.sendInputEvent for detailed description of `event` object.
   }
 
   interface StartOFCrashReporterOptions {
+    configUrl: string;
     /**
-     * URL that crash reports will be sent to as POST.
+     * URL that crash reports will be sent to as POST. Default is
+     * `https://dl.openfin.co/services/crash-report-v2`.
      */
-    submitURL: string;
+    submitURL?: string;
     /**
      * Defaults to `OpenFin`.
      */
@@ -13723,7 +13796,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     icon?: (NativeImage) | (string);
     /**
-     * Can be `left`, `right` or `overlay`.
+     * Can be `left`, `right` or `overlay`. Defaults to `overlay`.
      */
     iconPosition?: ('left' | 'right' | 'overlay');
     /**
@@ -13782,7 +13855,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Items to display in the popover.
      */
-    items?: TouchBar;
+    items: TouchBar;
     /**
      * `true` to display a close button on the left of the popover, `false` to not show
      * it. Default is `true`.
@@ -13804,21 +13877,23 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     highlight?: (highlightedIndex: number) => void;
     /**
-     * Selected item style. Defaults to `null`.
+     * Selected item style. Can be `background`, `outline` or `none`. Defaults to
+     * `none`.
      */
-    selectedStyle?: string;
+    selectedStyle?: ('background' | 'outline' | 'none');
     /**
-     * Selected overlay item style. Defaults to `null`.
+     * Selected overlay item style. Can be `background`, `outline` or `none`. Defaults
+     * to `none`.
      */
-    overlayStyle?: string;
+    overlayStyle?: ('background' | 'outline' | 'none');
     /**
      * Defaults to `false`.
      */
     showArrowButtons?: boolean;
     /**
-     * Defaults to `free`.
+     * Can be `fixed` or `free`. The default is `free`.
      */
-    mode?: string;
+    mode?: ('fixed' | 'free');
     /**
      * Defaults to `true`.
      */
@@ -13840,7 +13915,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     segments: SegmentedControlSegment[];
     /**
      * The index of the currently selected segment, will update automatically with user
-     * interaction. When the mode is multiple it will be the last selected item.
+     * interaction. When the mode is `multiple` it will be the last selected item.
      */
     selectedIndex?: number;
     /**
