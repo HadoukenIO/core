@@ -86,8 +86,6 @@ function five0BaseOptions() {
                 'breadcrumbs': false,
                 'iframe': iframeBaseSettings
             },
-            'disableInitialReload': false,
-            'node': false,
             'v2Api': true
         },
         'frame': true,
@@ -217,9 +215,6 @@ export const convertToElectron = function(options, returnAsString) {
         }
     }
 
-    const useNodeInRenderer = newOptions.experimental.node;
-    const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
-
     // Because we have communicated the experimental option, this allows us to
     // respect that if its set but defaults to the proper passed in `iframe` key
     if (usingIframe) {
@@ -238,11 +233,11 @@ export const convertToElectron = function(options, returnAsString) {
     newOptions.webPreferences = {
         api: newOptions.experimental.api,
         contextMenuSettings: newOptions.contextMenuSettings,
-        disableInitialReload: newOptions.experimental.disableInitialReload,
+        disableInitialReload: false, // Only used by sandboxed renderers
         nodeIntegration: false,
         plugins: newOptions.plugins,
-        preload: (!useNodeInRenderer ? noNodePreload : ''),
-        sandbox: !useNodeInRenderer,
+        preload: path.join(__dirname, '..', 'renderer', 'node-less.js'),
+        sandbox: true,
         spellCheck: newOptions.spellCheck,
         backgroundThrottling: newOptions.backgroundThrottling
     };
