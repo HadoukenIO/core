@@ -60,6 +60,8 @@
         return isNotification || isQueueCounter;
     }
 
+
+
     // used by the notification service to emit the ready event
     function emitNoteProxyReady() {
         raiseEventSync('notification-service-ready', true);
@@ -176,6 +178,13 @@
     }
     ////END.
 
+    function injectGoldenLayout() {
+        const goldenLayoutsScript = document.createElement('script');
+        goldenLayoutsScript.type = 'text/javascript';
+        goldenLayoutsScript.src = 'https://golden-layout.com/files/latest/js/goldenlayout.min.js';
+        document.head.appendChild(goldenLayoutsScript);
+    }
+
     function wireUpMouseWheelZoomEvents() {
         document.addEventListener('mousewheel', event => {
             if (!event.ctrlKey || !initialOptions.accelerator.zoom) {
@@ -281,6 +290,12 @@
 
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
+
+        console.log(`checking to see if goldenLayouts should be injected. convertedOpts: ${initialOptions}`);
+        if (initialOptions.layout) {
+            injectGoldenLayout();
+        }
+
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
         wireUpMenu(glbl);
@@ -449,6 +464,7 @@
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
+
         const { preloadScripts } = 'preloadScripts' in convertedOpts ? convertedOpts : initialOptions;
 
         if (!(preloadScripts && preloadScripts.length) || isNotificationType(options.name)) {
