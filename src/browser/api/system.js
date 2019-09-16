@@ -27,7 +27,7 @@ import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
-import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
+import { authenticateFetch, clearCacheInvoked, lockCache } from '../cached_resource_fetcher';
 import { getNativeWindowInfoLite } from '../utils';
 import { isValidExternalWindow } from './external_window';
 
@@ -165,13 +165,15 @@ export const System = {
         electronApp.vlog(1, `clearCache ${JSON.stringify(storages)}`);
         clearCacheInvoked(true);
 
-        defaultSession.clearCache(() => {
-            defaultSession.clearStorageData(cacheOptions, () => {
-                resolve();
+        lockCache().then(releaseCache => {
+            defaultSession.clearCache().then(() => {
+                defaultSession.clearStorageData(cacheOptions, () => {
+                    log.writeToLog('info', '========= storage cleared =======');
+                    resolve();
+                    releaseCache();
+                });
             });
         });
-
-
     },
     createProxySocket: function(options, callback, errorCallback) {
         createChromiumSocket(Object.assign({}, options, { callback, errorCallback }));

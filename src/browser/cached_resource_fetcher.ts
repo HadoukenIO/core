@@ -22,25 +22,32 @@ app.on('quit', () => { appQuiting = true; });
  * Downloads a file if it doesn't exist in cache yet.
  */
 export async function cachedFetch(identity: Identity, url: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
+    const releaseCache = await lockCache();
+
     if (typeof url !== 'string') {
         callback(new Error(`Bad file url: '${url}'`));
+        releaseCache();
         return;
     }
     if (appQuiting) {
         callback(new Error('Runtime is exiting'));
+        releaseCache();
         return;
     }
 
     if (!isHttpUrl(url)) {
         if (isFileUrl(url)) {
             callback(null, uriToPath(url));
+            releaseCache();
         } else {
             // this is C:\whatever\
             stat(url, (err: null|Error) => {
                 if (err) {
                     app.vlog(1, `cachedFetch invalid file url ${url}`);
+                    releaseCache();
                     callback(new Error(`Invalid file url: '${url}'`));
                 } else {
+                    releaseCache();
                     callback(null, url);
                 }
             });
@@ -69,11 +76,24 @@ export async function cachedFetch(identity: Identity, url: string, callback: (er
                 callback(err, filePath);
                 reject(err);
             } finally {
+                releaseCache();
                 fetchMap.delete(filePath);
             }
         });
         fetchMap.set(filePath, p);
     }
+}
+
+let cacheLock: Promise<void> = Promise.resolve();
+export async function lockCache() {
+    const prevLock = cacheLock;
+    let releaseLock: () => void;
+    cacheLock = new Promise((resolve) => {
+        releaseLock = resolve;
+        resolve();
+    });
+    await prevLock;
+    return releaseLock;
 }
 
 function pathExists (location: string): Promise<boolean> {
