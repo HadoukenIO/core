@@ -45,7 +45,8 @@ async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: Obje
     }
 }
 
-function emitChange(topic: string, { ofWin, rect }: Move, changeType: ChangeType, reason: string) {
+function emitChange(topic: string, ofWin: GroupWindow, changeType: ChangeType, reason: string) {
+    const rect = ofWin.browserWindow.getBounds();
     const eventBounds = getEventBounds(rect);
     const eventArgs = {
         ...eventBounds,
@@ -97,8 +98,8 @@ function handleApiMove(win: GroupWindow, delta: RectangleBase) {
         throw new Error('Attempted move violates group constraints');
     }
     handleBatchedMove(moves);
-    emitChange('bounds-changed', leader, changeType, 'self');
-    otherWindows.map(move => emitChange('bounds-changed', move, changeType, 'group'));
+    emitChange('bounds-changed', win, changeType, 'self');
+    otherWindows.map(({ofWin}) => emitChange('bounds-changed', ofWin, changeType, 'group'));
     return leader.rect;
 }
 
@@ -207,8 +208,7 @@ export function addWindowToGroup(win: GroupWindow) {
             const isLeader = movedWin === win;
             if (!isLeader || win.isExternalWindow) {
                 // bounds-changed is emitted for the leader, but not other windows
-                const endPosition = moveFromOpenFinWindow(movedWin);
-                emitChange('bounds-changed', endPosition, changeType, 'group');
+                emitChange('bounds-changed', movedWin, changeType, 'group');
             }
         });
         // Reset map of moved windows and flags for native windows and mac OS
@@ -235,12 +235,16 @@ export function addWindowToGroup(win: GroupWindow) {
                 const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changed';
                 win.browserWindow.once(endingEvent, handleEndBoundsChanging);
                 WindowGroups.getGroup(win.groupUuid).forEach(win => win.browserWindow.bringToFront());
-            } else if (moves.length) {
+            }
+            if (moves.length) {
                 // bounds-changing is not emitted for the leader, but is for the other windows
                 const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
-                emitChange('bounds-changing', leaderMove, changeType, 'self');
+                if (leaderMove && typeof leaderMove === 'object') {
+                    // Execute the actual move
+                    handleBatchedMove(moves);
+                    emitChange('bounds-changing', win, changeType, 'self');
+                }
             }
-            handleBatchedMove(moves);
         } catch (error) {
             writeToLog('error', error);
         }
