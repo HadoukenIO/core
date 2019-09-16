@@ -233,7 +233,7 @@ export const convertToElectron = function(options, returnAsString) {
     newOptions.webPreferences = {
         api: newOptions.experimental.api,
         contextMenuSettings: newOptions.contextMenuSettings,
-        disableInitialReload: false, // Only used by sandboxed renderers
+        disableInitialReload: false, // Only used by legacy sandboxed node
         nodeIntegration: false,
         plugins: newOptions.plugins,
         preload: path.join(__dirname, '..', 'renderer', 'node-less.js'),
