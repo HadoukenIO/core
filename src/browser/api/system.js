@@ -27,7 +27,7 @@ import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
-import { authenticateFetch, clearCacheInvoked, lockCache } from '../cached_resource_fetcher';
+import { authenticateFetch, lockCache } from '../cached_resource_fetcher';
 import { getNativeWindowInfoLite } from '../utils';
 import { isValidExternalWindow } from './external_window';
 
@@ -163,12 +163,10 @@ export const System = {
         };
 
         electronApp.vlog(1, `clearCache ${JSON.stringify(storages)}`);
-        clearCacheInvoked(true);
 
         lockCache().then(releaseCache => {
             defaultSession.clearCache().then(() => {
                 defaultSession.clearStorageData(cacheOptions, () => {
-                    log.writeToLog('info', '========= storage cleared =======');
                     resolve();
                     releaseCache();
                 });

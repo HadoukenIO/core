@@ -10,7 +10,6 @@ import { AuthCallback, Identity } from '../shapes';
 import { getSession } from './core_state';
 const path = require('path');
 let appQuiting: boolean = false;
-let cacheCleared: boolean = false;
 
 const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 const fetchMap: Map<string, Promise<any>> = new Map();
@@ -88,9 +87,9 @@ let cacheLock: Promise<void> = Promise.resolve();
 export async function lockCache() {
     const prevLock = cacheLock;
     let releaseLock: () => void;
+    //tslint:disable-next-line: A Promise was found that appears to not have resolve or reject invoked on all code paths
     cacheLock = new Promise((resolve) => {
         releaseLock = resolve;
-        resolve();
     });
     await prevLock;
     return releaseLock;
@@ -209,12 +208,6 @@ async function download(identity: Identity, url: string, saveToPath: string, app
     return new Promise(async (resolve, reject) => {
         const session = getSession(identity);
         const request = net.request(url);
-        // need to check download location again in case apps call system.clearCache during the startup
-        if (cacheCleared) {
-            app.vlog(1, 'prepare download location again after clear cache');
-            await prepDownloadLocation(appCacheDir);
-        }
-
         const binaryWriteStream = createWriteStream(saveToPath, {
             encoding: 'binary'
         });
@@ -368,8 +361,4 @@ export function authenticateFetch(uuid: string, username: string, password: stri
     } else {
         log.writeToLog(1, `Missing resource auth uuid ${uuid}`, true);
     }
-}
-
-export function clearCacheInvoked(cleared: boolean): void {
-    cacheCleared = cleared;
 }
