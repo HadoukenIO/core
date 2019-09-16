@@ -166,9 +166,9 @@ export const System = {
 
         lockCache().then(releaseCache => {
             defaultSession.clearCache().then(() => {
+                releaseCache();
                 defaultSession.clearStorageData(cacheOptions, () => {
                     resolve();
-                    releaseCache();
                 });
             });
         });
