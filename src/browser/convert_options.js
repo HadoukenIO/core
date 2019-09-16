@@ -175,6 +175,32 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 export const getStartupAppOptions = function(appJson) {
     return appJson['startup_app'];
 };
+
+export const toCustomFrame = function(options) {
+    const hasValidLayoutConfig = options.layout && atLeastOneLayoutExists(options.layout.content);
+
+    // customFrame necessarily uses layouts, so if no layout config is given, we construct one ourselves. 
+    if (!hasValidLayoutConfig) {
+        options.layout = {
+            content: [{
+                type: 'component',
+                componentName: 'view',
+                componentState: {
+                    identity: {
+                        uuid: options.uuid,
+                        name: `${options.name}-main-view`
+                    },
+                    url: options.url
+                }
+            }]
+        };
+    }
+
+    // for now we use default frame for any customFrame value
+    options.url = `file:///${path.resolve(`${__dirname}/../../assets/default-frame.html`)}`;
+    return options;
+};
+
 export const convertToElectron = function(options, returnAsString) {
 
     const usingIframe = !!(options.api && options.api.iframe);
@@ -281,16 +307,8 @@ export const convertToElectron = function(options, returnAsString) {
         newOptions.backgroundColor = TRANSPARENT_WHITE;
     }
 
-    if (newOptions.customFrame) {
-        if (options.layout && atLeastOneLayoutExists(options.layout.content)) {
-            newOptions.layout = options.layout;
-        } else { // customFrame necessarily uses layouts, so if no layout config is given, we construct one ourselves. 
-            newOptions.layout = {
-                content: [{ uuid: newOptions.uuid, name: `${newOptions.name}-main-view`, url: newOptions.url }]
-            };
-        }
-        // for now we use default frame for any customFrame value
-        newOptions.url = `file:///${path.resolve(`${__dirname}/../../../assets/default-frame.html`)}`;
+    if (options.layout) {
+        newOptions.layout = options.layout;
     }
 
     if (returnAsString) {

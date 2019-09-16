@@ -490,3 +490,43 @@ export type GroupWindow = (ExternalWindow | OpenFinWindow) & {
 export interface GroupWindowIdentity extends Identity {
     isExternalWindow?: boolean;
 }
+
+export interface CustomFrameOptions {
+    uuid: string;
+    name: string;
+    layout: Layout;
+}
+
+export interface Layout {
+    settings: {
+        popoutWholeStack?: boolean;
+        constrainDragToContainer?: boolean;
+        showPopoutIcon?: boolean;
+        showMaximiseIcon?: boolean;
+        showCloseIcon?: boolean;
+    };
+    content: LayoutContent;
+}
+
+export type LayoutContent = (LayoutComponent)[];
+// export type LayoutContent = (LayoutRow|LayoutColumn|LayoutComponent)[];
+
+export interface LayoutRow {
+    type: 'row';
+    content: LayoutContent;
+}
+
+export interface LayoutColumn {
+    type: 'column';
+    content: LayoutContent;
+}
+
+export interface LayoutComponent {
+    type: 'component';
+    componentName: string;
+    componentState: {
+        identity: Identity;
+        url: string;
+    };
+}
+

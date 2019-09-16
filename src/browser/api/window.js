@@ -412,6 +412,11 @@ Window.create = function(id, opts) {
     let groupUuid = null; // windows by default don't belong to any groups
 
     let hideReason = 'hide';
+
+    // if (opts.customFrame) {
+    //     convertOptions.toCustomFrame(opts);
+    // }
+
     let hideOnCloseListener = () => {
         let openfinWindow = Window.wrap(uuid, name);
         openfinWindow.hideReason = 'hide-on-close';

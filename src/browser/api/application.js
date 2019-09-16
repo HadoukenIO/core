@@ -21,7 +21,7 @@ let _ = require('underscore');
 // local modules
 let System = require('./system.js').System;
 import { Window } from './window';
-import * as BrowserView from './browser_view';
+import * as CustomFrame from './custom_frame';
 let convertOpts = require('../convert_options.js');
 import * as coreState from '../core_state';
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
@@ -122,8 +122,14 @@ electronApp.on('ready', function() {
 Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
-    let appUrl = opts.url;
-    const { uuid, name } = opts;
+    let appUrl;
+    const { uuid, name, customFrame } = opts;
+
+    if (customFrame) {
+        convertOpts.toCustomFrame(opts);
+    }
+
+    appUrl = opts.url;
     const initialAppOptions = Object.assign({}, opts);
 
     if (appUrl === undefined && opts.mainWindowOptions) {
@@ -632,15 +638,11 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     //for backwards compatibility main window needs to have name === uuid
     mainWindowOpts = Object.assign({}, mainWindowOpts, { name: uuid }); //avoid mutating original object
 
-    const win = Window.create(app.id, mainWindowOpts);
-    coreState.setWindowObj(app.id, win);
-
     if (mainWindowOpts.layout) {
-        const baseViewConfig = {
-            target: { uuid, name: mainWindowOpts.name },
-            autoResize: { width: true, height: true, horizontal: true, vertical: true }
-        };
-        BrowserView.create(Object.assign({}, baseViewConfig, mainWindowOpts.layout.content[0])); // todo: iterate through all views in layout.content
+        CustomFrame.create(app.id, mainWindowOpts);
+    } else {
+        const win = Window.create(app.id, mainWindowOpts);
+        coreState.setWindowObj(app.id, win);
     }
 
     // fire the connected once the main window's dom is ready
