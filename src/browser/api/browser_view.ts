@@ -41,12 +41,17 @@ export async function create(options: BrowserViewOpts) {
     const view = new BrowserView(convertOptions.convertToElectron(fullOptions, false));
     const ofView = addBrowserView(fullOptions, view);
     await attach(ofView, options.target);
-    view.webContents.loadURL(options.url || 'about:blank');
     setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
     } if (options.bounds) {
         setBounds(ofView, options.bounds);
+    }
+    try {
+        await view.webContents.loadURL(options.url || 'about:blank');
+    } catch (e) {
+        destroy(ofView);
+        throw e;
     }
 }
 export function hide(ofView: OfView) {
