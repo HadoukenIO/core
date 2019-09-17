@@ -17,36 +17,50 @@ const authMap: Map<string, Function> = new Map();  // auth UUID => auth callback
 
 app.on('quit', () => { appQuiting = true; });
 
+export const grantAccess = (() => {
+    let queue = Promise.resolve();
+    return async function grantAccess<T extends (...args: any[]) => any>(cb: T, ...args: Parameters<T>): Promise<ReturnType<T>> {
+        const prev = queue;
+        let next: () => void;
+        //tslint:disable-next-line: A Promise was found that appears to not have resolve or reject invoked on all code paths
+        queue = new Promise(r => {
+            next = r;
+        });
+        await prev;
+        try {
+            const v = await cb();
+            next();
+            return v;
+        } catch (e) {
+            next();
+            throw e;
+        }
+    };
+})();
+
 /**
  * Downloads a file if it doesn't exist in cache yet.
  */
 export async function cachedFetch(identity: Identity, url: string, callback: (error: null|Error, path?: string) => any): Promise<any> {
-    const releaseCache = await lockCache();
-
     if (typeof url !== 'string') {
         callback(new Error(`Bad file url: '${url}'`));
-        releaseCache();
         return;
     }
     if (appQuiting) {
         callback(new Error('Runtime is exiting'));
-        releaseCache();
         return;
     }
 
     if (!isHttpUrl(url)) {
         if (isFileUrl(url)) {
             callback(null, uriToPath(url));
-            releaseCache();
         } else {
             // this is C:\whatever\
             stat(url, (err: null|Error) => {
                 if (err) {
                     app.vlog(1, `cachedFetch invalid file url ${url}`);
-                    releaseCache();
                     callback(new Error(`Invalid file url: '${url}'`));
                 } else {
-                    releaseCache();
                     callback(null, url);
                 }
             });
@@ -63,7 +77,7 @@ export async function cachedFetch(identity: Identity, url: string, callback: (er
     if (fetchMap.has(filePath)) {
         fetchMap.get(filePath).then(() => callback(null, filePath)).catch(callback);
     } else {
-        const p = new Promise( async (resolve, reject) => {
+        const p = grantAccess(() => new Promise( async (resolve, reject) => {
             try {
                 await prepDownloadLocation(appCacheDir);
                 await download(identity, url, filePath, appCacheDir);
@@ -75,24 +89,11 @@ export async function cachedFetch(identity: Identity, url: string, callback: (er
                 callback(err, filePath);
                 reject(err);
             } finally {
-                releaseCache();
                 fetchMap.delete(filePath);
             }
-        });
+        }));
         fetchMap.set(filePath, p);
     }
-}
-
-let cacheLock: Promise<void> = Promise.resolve();
-export async function lockCache() {
-    const prevLock = cacheLock;
-    let releaseLock: () => void;
-    //tslint:disable-next-line: A Promise was found that appears to not have resolve or reject invoked on all code paths
-    cacheLock = new Promise((resolve) => {
-        releaseLock = resolve;
-    });
-    await prevLock;
-    return releaseLock;
 }
 
 function pathExists (location: string): Promise<boolean> {
@@ -362,3 +363,4 @@ export function authenticateFetch(uuid: string, username: string, password: stri
         log.writeToLog(1, `Missing resource auth uuid ${uuid}`, true);
     }
 }
+
