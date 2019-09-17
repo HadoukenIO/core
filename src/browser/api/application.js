@@ -16,7 +16,6 @@ let nativeImage = electron.nativeImage;
 let ProcessInfo = electron.processInfo;
 let Tray = electron.Tray;
 
-
 // npm modules
 let _ = require('underscore');
 
@@ -40,7 +39,6 @@ import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy
 import { releaseUuid } from '../uuid_availability';
 import { launch } from '../../../js-adapter/src/main';
 import { externalWindows } from './external_window';
-// import { Rule } from '../../../test/lint-rules/out/noFsRule';
 
 const subscriptionManager = new SubscriptionManager();
 const TRAY_ICON_KEY = 'tray-icon-events';
@@ -773,7 +771,7 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 /**
  * Run an application via RVM Call
  */
-Application.runWithRVM = function(manifestUrl, appIdentity, opts) {
+Application.runWithRVM = function(manifestUrl, appIdentity, opts = {}) {
     const { uuid } = appIdentity;
     // on mac/linux, launch the app, else hand off to RVM
     if (os.platform() !== 'win32') {
