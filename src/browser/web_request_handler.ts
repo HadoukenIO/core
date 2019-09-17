@@ -6,7 +6,7 @@
     v1: handler for onBeforeSendHeaders
  */
 
-const coreState = require('./core_state');
+import * as coreState from './core_state';
 const electronApp = require('electron').app;
 const { session, webContents } = require('electron');
 
@@ -50,21 +50,17 @@ function applyHeaders(requestHeaders: any, config: Shapes.WebRequestHeaderConfig
 }
 
 function beforeSendHeadersHandler(details: RequestDetails, callback: (response: HeadersResponse) => void): void {
-    let headerAdded: boolean = false;
-
     if (details.renderProcessId && details.renderFrameId) {
         const wc = webContents.fromProcessAndFrameIds(details.renderProcessId, details.renderFrameId);
         if (wc) {
             electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler got webcontents ${wc.id}`);
-            const bw = wc.getOwnerBrowserWindow();
-            if (bw && typeof bw.id === 'number') {
-                const opts: Shapes.WindowOptions = coreState.getWindowOptionsById(bw.id);
+            if (typeof wc.id === 'number') {
+                const opts = coreState.getWindowOptionsById(wc.id);
                 electronApp.vlog(1, `${moduleName}:beforeSendHeadersHandler window opts ${JSON.stringify(opts)}`);
                 if (opts && opts.customRequestHeaders) {
                     for (const rhItem of opts.customRequestHeaders) {
                         if (matchUrlPatterns(details.url, rhItem)) {
                             applyHeaders(details.requestHeaders, rhItem);
-                            headerAdded = true;
                         }
                     }
                 }
@@ -74,11 +70,7 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
         }
     }
 
-    if (headerAdded) {
-        callback({ cancel: false, requestHeaders: details.requestHeaders });
-    } else {
-        callback({ cancel: false });
-    }
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
 }
 
 /**

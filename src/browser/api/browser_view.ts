@@ -91,7 +91,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         updateViewTarget(ofView, toIdentity);
     }
 }
-function destroy (ofView: OfView) {
+export async function destroy (ofView: OfView) {
    removeBrowserView(ofView);
    ofView.view.destroy();
 }
@@ -107,4 +107,7 @@ export async function setBounds(ofView: OfView, bounds: Rectangle) {
 
 export function getInfo (ofView: OfView) {
     return getWebContentsInfo(ofView.view.webContents);
+}
+export function getCurrentWindow(ofView: OfView) {
+    return ofView.target;
 }

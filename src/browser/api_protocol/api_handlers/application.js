@@ -8,7 +8,7 @@ let _ = require('underscore');
 // local modules
 let Application = require('../../api/application.js').Application;
 let apiProtocolBase = require('./api_protocol_base.js');
-let coreState = require('../../core_state.js');
+import * as coreState from '../../core_state';
 import ofEvents from '../../of_events';
 import { addRemoteSubscription } from '../../remote_subscriptions';
 import route from '../../../common/route';
@@ -34,6 +34,7 @@ let successAck = {
 };
 
 export const applicationApiMap = {
+    'application-get-views': getViews,
     'close-application': closeApplication,
     'create-application': createApplication,
     'create-child-window': createChildWindow,
@@ -267,6 +268,12 @@ function getShortcuts(identity, message, ack, nack) {
         dataAck.data = response;
         ack(dataAck);
     }, nack);
+}
+
+function getViews(identity, message) {
+    const { payload } = message;
+    const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
+    return Application.getViews(appIdentity);
 }
 
 function setShortcuts(identity, message, ack, nack) {

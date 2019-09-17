@@ -280,7 +280,7 @@ export function setAppId(uuid: string, id: number): void {
     }];
 }
 
-export function getAppObjByUuid(uuid: string): Shapes.AppObj|boolean {
+export function getAppObjByUuid(uuid: string): Shapes.AppObj|false {
     const app = appByUuid(uuid);
     return app && app.appObj;
 }
@@ -484,8 +484,13 @@ export function deleteApp(uuid: string): void {
     apps = apps.filter(app => app.uuid !== uuid);
 }
 
-export function getWindowOptionsById(id: number): Shapes.WindowOptions|boolean {
+export function getWindowOptionsById(id: number): Shapes.WindowOptions|false {
     const win = getWinById(id);
+    return win && win.openfinWindow && win.openfinWindow._options;
+}
+export function getWindowOptionsByBrowserWindowId(id: number): Shapes.WindowOptions|false {
+    const win =  getWinList().find(win =>
+         win.openfinWindow && win.openfinWindow.browserWindow && win.openfinWindow.browserWindow.id === id);
     return win && win.openfinWindow && win.openfinWindow._options;
 }
 
@@ -863,6 +868,9 @@ export function getBrowserViewByIdentity({uuid, name}: Identity) {
 }
 function getBrowserViewByWebContentsId(webContentsId: number) {
     return views.find(v => v.view.webContents.id === webContentsId);
+}
+export function getAllViews() {
+    return [...views];
 }
 export function getWindowInitialOptionSet(windowId: number): Shapes.WindowInitialOptionSet {
     const ofWin = <Shapes.OpenFinWindow>getWinObjById(windowId);
