@@ -178,11 +178,30 @@
     }
     ////END.
 
-    function injectGoldenLayout() {
+    function injectGoldenLayoutScript() {
         const goldenLayoutsScript = document.createElement('script');
+
         goldenLayoutsScript.type = 'text/javascript';
         goldenLayoutsScript.src = 'https://golden-layout.com/files/latest/js/goldenlayout.min.js';
+
         document.head.appendChild(goldenLayoutsScript);
+    }
+
+    function injectGoldenLayoutStyles() {
+        const goldenLayoutsBaseStyle = document.createElement('link');
+        const goldenLayoutsDarkThemeStyle = document.createElement('link');
+
+        goldenLayoutsBaseStyle.type = 'text/css';
+        goldenLayoutsDarkThemeStyle.type = 'text/css';
+
+        goldenLayoutsBaseStyle.rel = 'stylesheet';
+        goldenLayoutsDarkThemeStyle.rel = 'stylesheet';
+
+        goldenLayoutsBaseStyle.href = 'https://golden-layout.com/files/latest/css/goldenlayout-base.css';
+        goldenLayoutsDarkThemeStyle.href = 'https://golden-layout.com/files/latest/css/goldenlayout-dark-theme.css';
+
+        document.head.appendChild(goldenLayoutsBaseStyle);
+        document.head.appendChild(goldenLayoutsDarkThemeStyle);
     }
 
     function wireUpMouseWheelZoomEvents() {
@@ -293,7 +312,8 @@
 
         console.log(`checking to see if goldenLayouts should be injected. convertedOpts: ${initialOptions}`);
         if (initialOptions.layout) {
-            injectGoldenLayout();
+            injectGoldenLayoutScript();
+            injectGoldenLayoutStyles();
         }
 
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
