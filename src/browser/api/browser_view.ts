@@ -47,26 +47,38 @@ export async function create(options: BrowserViewOpts) {
     } if (options.bounds) {
         setBounds(ofView, options.bounds);
     }
+    of_events.emit(route.view('created', ofView.uuid, ofView.name), {
+        name: ofView.name,
+        uuid: ofView.uuid,
+        target: ofView.target
+    });
 }
 export function hide(ofView: OfView) {
-    const win = getElectronBrowserWindow(ofView.target);
-    win.removeBrowserView(ofView.view);
+    const {name, uuid, target, view} = ofView;
+    const win = getElectronBrowserWindow(target);
+    win.removeBrowserView(view);
+    of_events.emit(route.view('hidden', uuid, name), {name, uuid, target});
 }
+
 export function show(ofView: OfView) {
-    const win = getElectronBrowserWindow(ofView.target);
-    win.addBrowserView(ofView.view);
+    const {name, uuid, target, view} = ofView;
+    const win = getElectronBrowserWindow(target);
+    win.addBrowserView(view);
+    of_events.emit(route.view('shown', uuid, name), {name, uuid, target});
 }
+
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view} = ofView;
     if (view) {
-        if (ofView.target.name !== toIdentity.name) {
-            const oldWin = getWindowByUuidName(ofView.target.uuid, ofView.target.name);
+        const previousTarget = ofView.target;
+        if (previousTarget.name !== toIdentity.name) {
+            const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
             if (oldWin) {
                 const oldwinMap = windowCloseListenerMap.get(oldWin);
                 if (oldwinMap) {
                     const listener = oldwinMap.get(ofView);
                     if (typeof listener === 'function') {
-                        of_events.removeListener(route.window('closed', ofView.target.uuid, ofView.target.name), listener);
+                        of_events.removeListener(route.window('closed', previousTarget.uuid, previousTarget.name), listener);
                     }
                     oldwinMap.delete(ofView);
                 }
@@ -88,12 +100,21 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         }
         windowCloseListenerMap.get(ofWin).set(ofView, listener);
         updateViewTarget(ofView, toIdentity);
+        of_events.emit(route.view('attached', ofView.uuid, ofView.name), {
+            name: ofView.name,
+            uuid: ofView.uuid,
+            target: toIdentity,
+            previousTarget
+        });
     }
 }
 function destroy (ofView: OfView) {
-   removeBrowserView(ofView);
-   ofView.view.destroy();
+    const {uuid, name, target, view} = ofView;
+    removeBrowserView(ofView);
+    view.destroy();
+    of_events.emit(route.view('destroyed', uuid, name), {name, uuid, target});
 }
+
 export async function setAutoResize(ofView: OfView, autoResize: AutoResizeOptions) {
     const { view } = ofView;
     view.setAutoResize(autoResize);
@@ -107,6 +128,13 @@ export async function setBounds(ofView: OfView, bounds: Rectangle) {
 export function getInfo (ofView: OfView) {
     return getWebContentsInfo(ofView.view.webContents);
 }
+
 export function getCurrentWindow(ofView: OfView) {
     return ofView.target;
+}
+
+export function addEventListener({uuid, name}: Identity, type: string, listener: (...args: any) => void) {
+    const eventString = route.view(type, uuid, name);
+    of_events.on(eventString, listener);
+    return () => of_events.removeListener(eventString, listener);
 }
