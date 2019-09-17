@@ -236,7 +236,6 @@ export const convertToElectron = function(options, returnAsString) {
     newOptions.enableLargerThanScreen = true;
     newOptions['enable-plugins'] = true;
     newOptions.webPreferences = {
-        affinity: newOptions.uuid,
         api: newOptions.experimental.api,
         contextMenuSettings: newOptions.contextMenuSettings,
         disableInitialReload: newOptions.experimental.disableInitialReload,
