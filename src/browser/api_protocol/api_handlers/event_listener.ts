@@ -168,7 +168,14 @@ const subChannel = async (identity: Identity, eventName: string, payload: EventP
     const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
     let remoteUnSub = noop;
 
-    if (!islocalUuid && !isExternalClient && (eventName === 'connected' || eventName === 'disconnected')) {
+    const systemWideEvents: {[key: string]: boolean} = {
+        'connected': true,
+        'disconnected': true,
+        'client-disconnected': true
+    };
+
+    // these events act like system events
+    if (!islocalUuid && !isExternalClient && systemWideEvents[eventName]) {
         const subscription: RemoteSubscriptionProps = {
             className: 'channel',
             eventName,

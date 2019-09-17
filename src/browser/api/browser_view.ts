@@ -113,7 +113,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         });
     }
 }
-function destroy (ofView: OfView) {
+export async function destroy (ofView: OfView) {
     const {uuid, name, target, view} = ofView;
     removeBrowserView(ofView);
     view.destroy();
