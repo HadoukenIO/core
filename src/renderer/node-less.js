@@ -103,15 +103,18 @@ const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOrigi
 
         w = undefined;
 
-        try {
-            electron.ipcRenderer.emit('post-api-injection', routingId);
-            electron.ipcRenderer.emit(`post-api-injection-${routingId}`);
-        } catch (error) {
-            console.error(`Error notifying post-api-injection for ${routingId}`);
-            console.error(error.stack);
-        } finally {
-            electron.ipcRenderer.removeAllListeners(`post-api-injection-${routingId}`);
-        }
+        // Execute after all other modules have been evaluated
+        setImmediate(() => {
+            try {
+                electron.ipcRenderer.emit('post-api-injection', routingId);
+                electron.ipcRenderer.emit(`post-api-injection-${routingId}`);
+            } catch (error) {
+                console.error(`Error notifying post-api-injection for ${routingId}`);
+                console.error(error.stack);
+            } finally {
+                electron.ipcRenderer.removeAllListeners(`post-api-injection-${routingId}`);
+            }
+        });
 
         if (inboundMessageTopic.length) {
             teardownHandlers.push(() => {
