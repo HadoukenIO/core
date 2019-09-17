@@ -104,7 +104,7 @@ const registerAPI = (w, routingId, isMainFrame, isSameOriginIframe, isCrossOrigi
         w = undefined;
 
         // Execute after all other modules have been evaluated
-        setImmediate(() => {
+        electron.ipcRenderer.once('api-modules-evaluated', () => {
             try {
                 electron.ipcRenderer.emit('post-api-injection', routingId);
                 electron.ipcRenderer.emit(`post-api-injection-${routingId}`);
