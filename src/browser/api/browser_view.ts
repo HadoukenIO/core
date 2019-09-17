@@ -41,13 +41,18 @@ export async function create(options: BrowserViewOpts) {
     hookWebContentsEvents(view.webContents, options, 'view', route.view);
     await attach(ofView, options.target);
     view.webContents.loadURL(options.url || 'about:blank');
+    of_events.emit(route.view('created', ofView.uuid, ofView.name), {
+        name: ofView.name,
+        uuid: ofView.uuid,
+        target: ofView.target
+    });
     setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
     } if (options.bounds) {
         setBounds(ofView, options.bounds);
     }
-    of_events.emit(route.view('created', ofView.uuid, ofView.name), {
+    of_events.emit(route.view('shown', ofView.uuid, ofView.name), {
         name: ofView.name,
         uuid: ofView.uuid,
         target: ofView.target
@@ -105,11 +110,6 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
             uuid: ofView.uuid,
             target: toIdentity,
             previousTarget
-        });
-        of_events.emit(route.view('shown', ofView.uuid, ofView.name), {
-            name: ofView.name,
-            uuid: ofView.uuid,
-            target: toIdentity
         });
     }
 }
