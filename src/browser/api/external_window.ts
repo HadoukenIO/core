@@ -14,7 +14,6 @@ import WindowGroups, { GroupChangedEvent, GroupEvent } from '../window_groups';
 import ProcessTracker from '../process_tracker';
 import SubscriptionManager from '../subscription_manager';
 import { releaseUuid, lockUuid } from '../uuid_availability';
-import { ExternalApplication } from './external_application';
 
 electronApp.on('ready', () => {
   subToGlobalWinEventHooks();
@@ -453,7 +452,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
 
     // We are subscribing to a process, so we only care about a specific window.
     // idChild === '0' indicates that event is from main window, not a subcomponent.
-    if (nativeWindowInfo.uuid !== nativeId || idChild !== '0') {
+    if (nativeWindowInfo.nativeId !== nativeId || idChild !== '0') {
       return;
     }
     parser(nativeWindowInfo);
