@@ -76,12 +76,12 @@ const subWindow = async (identity: Identity, eventName: string, payload: EventPa
 const subView = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
     const { uuid, name } = payload;
     const viewIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
-    const isLovalView = !!getBrowserViewByIdentity(viewIdentity);
+    const isLocalView = !!getBrowserViewByIdentity(viewIdentity);
     const localUnsub = addViewListener(viewIdentity, eventName, listener);
     const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
     let remoteUnSub = noop;
 
-    if (!isLovalView && !isExternalClient) {
+    if (!isLocalView && !isExternalClient) {
         const subscription: RemoteSubscriptionProps = {
             className: 'view',
             eventName,
