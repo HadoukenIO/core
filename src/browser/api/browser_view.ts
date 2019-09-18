@@ -47,12 +47,7 @@ export async function create(options: BrowserViewOpts) {
     } if (options.bounds) {
         setBounds(ofView, options.bounds);
     }
-    try {
-        await view.webContents.loadURL(options.url || 'about:blank');
-    } catch (e) {
-        destroy(ofView);
-        throw e;
-    }
+    await view.webContents.loadURL(options.url || 'about:blank');
 }
 export function hide(ofView: OfView) {
     const win = getElectronBrowserWindow(ofView.target);
