@@ -765,6 +765,16 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
         } else {
             writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
+    } for (const ofView of app.views) {
+        const { name } = ofView;
+        if (frame === name) {
+            return {
+                name,
+                uuid,
+                parent: getParentIdentity({ uuid, name }),
+                entityType: Shapes.EntityType.VIEW
+            };
+        }
     }
 }
 export interface RoutingInfo {
@@ -850,7 +860,7 @@ export interface OfView extends Identity {
 }
 export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
     const {uuid, name, target} = opts;
-    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target };
+    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target, entityType: Shapes.EntityType.VIEW };
     views.push(ofView);
     return ofView;
 }
