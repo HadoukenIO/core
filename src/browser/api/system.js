@@ -164,8 +164,8 @@ export const System = {
 
         electronApp.vlog(1, `clearCache ${JSON.stringify(storages)}`);
 
-        grantAccess(() => {
-            defaultSession.clearCache().then(() => {
+        grantAccess(async () => {
+            await defaultSession.clearCache().then(() => {
                 defaultSession.clearStorageData(cacheOptions, () => {
                     resolve();
                 });
