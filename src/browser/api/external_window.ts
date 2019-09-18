@@ -108,9 +108,9 @@ export function getExternalWindowGroup(identity: Identity): Shapes.GroupWindowId
   return windowGroup.map(({ name, uuid, isExternalWindow }) => ({ name, uuid, windowName: name, isExternalWindow }));
 }
 
-export function getExternalWindowInfo(identity: Identity): Shapes.NativeWindowInfo {
-  const { uuid } = identity;
-  const rawNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(uuid);
+export function getExternalWindowInfo(identity: Shapes.NativeWindowIdentity): Shapes.NativeWindowInfo {
+  const { nativeId } = identity;
+  const rawNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(nativeId);
   return getNativeWindowInfo(rawNativeWindowInfo);
 }
 
