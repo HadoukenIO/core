@@ -19,22 +19,10 @@ app.on('quit', () => { appQuiting = true; });
 
 export const grantAccess = (() => {
     let queue = Promise.resolve();
-    return async function grantAccess<T extends (...args: any[]) => any>(cb: T, ...args: Parameters<T>): Promise<ReturnType<T>> {
+    return async <T extends (...args: any[]) => any>(cb: T, ...args: Parameters<T>): Promise<ReturnType<T>> => {
         const prev = queue;
-        let next: () => void;
-        //tslint:disable-next-line: A Promise was found that appears to not have resolve or reject invoked on all code paths
-        queue = new Promise(r => {
-            next = r;
-        });
-        await prev;
-        try {
-            const v = await cb();
-            next();
-            return v;
-        } catch (e) {
-            next();
-            throw e;
-        }
+        queue = prev.then(() => cb(...args)).catch(() => cb(...args));
+        return <Promise<ReturnType<T>>>queue;
     };
 })();
 
