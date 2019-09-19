@@ -1853,7 +1853,7 @@ Window.getViews = getViews;
 function getViews({ uuid, name }) {
     return coreState.getAllViews()
         .filter(v => v.target.uuid === uuid && v.target.name === name)
-        .map(({ uuid, name }) => ({ uuid, }));
+        .map(({ uuid, name }) => ({ uuid, name }));
 }
 
 function emitCloseEvents(identity) {

@@ -50,8 +50,6 @@ function applyHeaders(requestHeaders: any, config: Shapes.WebRequestHeaderConfig
 }
 
 function beforeSendHeadersHandler(details: RequestDetails, callback: (response: HeadersResponse) => void): void {
-    let headerAdded: boolean = false;
-
     if (details.renderProcessId && details.renderFrameId) {
         const wc = webContents.fromProcessAndFrameIds(details.renderProcessId, details.renderFrameId);
         if (wc) {
@@ -63,7 +61,6 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
                     for (const rhItem of opts.customRequestHeaders) {
                         if (matchUrlPatterns(details.url, rhItem)) {
                             applyHeaders(details.requestHeaders, rhItem);
-                            headerAdded = true;
                         }
                     }
                 }
@@ -73,11 +70,7 @@ function beforeSendHeadersHandler(details: RequestDetails, callback: (response: 
         }
     }
 
-    if (headerAdded) {
-        callback({ cancel: false, requestHeaders: details.requestHeaders });
-    } else {
-        callback({ cancel: false });
-    }
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
 }
 
 /**
