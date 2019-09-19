@@ -179,7 +179,7 @@
     ////END.
 
     function injectGoldenLayoutScript() {
-        injectJQuery().then(() => {
+        injectJQuery().then(() => { // jQuery is a golden layouts dependency
             const goldenLayoutsScript = document.createElement('script');
 
             goldenLayoutsScript.type = 'text/javascript';
@@ -187,7 +187,7 @@
             goldenLayoutsScript.async = true;
             goldenLayoutsScript.addEventListener('load', () => {
                 // we use customEvent to avoid an unnecessary core call here
-                const readyEvent = new CustomEvent('layouts-ready');
+                const readyEvent = new CustomEvent('golden-layout-ready');
                 document.dispatchEvent(readyEvent);
             }, false);
 
