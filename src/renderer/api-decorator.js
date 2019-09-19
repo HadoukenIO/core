@@ -179,12 +179,33 @@
     ////END.
 
     function injectGoldenLayoutScript() {
-        const goldenLayoutsScript = document.createElement('script');
+        injectJQuery().then(() => {
+            const goldenLayoutsScript = document.createElement('script');
 
-        goldenLayoutsScript.type = 'text/javascript';
-        goldenLayoutsScript.src = 'https://golden-layout.com/files/latest/js/goldenlayout.min.js';
+            goldenLayoutsScript.type = 'text/javascript';
+            goldenLayoutsScript.src = 'https://golden-layout.com/files/latest/js/goldenlayout.min.js';
+            goldenLayoutsScript.async = true;
+            goldenLayoutsScript.addEventListener('load', () => {
+                // we use customEvent to avoid an unnecessary core call here
+                const readyEvent = new CustomEvent('layouts-ready');
+                document.dispatchEvent(readyEvent);
+            }, false);
 
-        document.head.appendChild(goldenLayoutsScript);
+            document.head.appendChild(goldenLayoutsScript);
+        });
+    }
+
+    function injectJQuery() {
+        return new Promise(res => {
+            const JQueryScript = document.createElement('script');
+
+            JQueryScript.type = 'text/javascript';
+            JQueryScript.src = 'https://code.jquery.com/jquery-1.11.1.min.js';
+            JQueryScript.async = true;
+            JQueryScript.addEventListener('load', res, false);
+
+            document.head.appendChild(JQueryScript);
+        });
     }
 
     function injectGoldenLayoutStyles() {
@@ -310,8 +331,8 @@
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
 
-        console.log(`checking to see if goldenLayouts should be injected. convertedOpts: ${initialOptions}`);
         if (initialOptions.layout) {
+            // todo: handle failure
             injectGoldenLayoutScript();
             injectGoldenLayoutStyles();
         }

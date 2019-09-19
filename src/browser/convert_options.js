@@ -182,9 +182,16 @@ export const toCustomFrame = function(options) {
     // customFrame necessarily uses layouts, so if no layout config is given, we construct one ourselves. 
     if (!hasValidLayoutConfig) {
         options.layout = {
+            'settings': {
+                'popoutWholeStack': false,
+                'constrainDragToContainer': true,
+                'showPopoutIcon': false,
+                'showMaximiseIcon': false,
+                'showCloseIcon': false
+            },
             content: [{
                 type: 'component',
-                componentName: 'view',
+                componentName: 'browserView',
                 componentState: {
                     identity: {
                         uuid: options.uuid,

@@ -77,6 +77,10 @@
                 height: 20px;
                 width: 20px;
             }
+            #layout-container {
+                top: 30px;
+                height: calc(100% - 30px);
+            }
 
         </style>
     </head>
@@ -98,6 +102,7 @@
                     </div>
                 </div>
             </div>
+            <div id="layout-container"></div>
         </div>
 
         <script>
@@ -115,6 +120,10 @@
                 closeButton.addEventListener('click', onClose);
                 minimizeButton.addEventListener('click', onMinimize);
                 maximizeButton.addEventListener('click', onMaximize);
+
+                const layoutContainer = document.getElementById('layout-container');
+                fin.Window._initLayout(layoutContainer);
+
             })()
         </script>
 

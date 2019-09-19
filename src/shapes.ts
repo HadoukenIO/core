@@ -494,10 +494,10 @@ export interface GroupWindowIdentity extends Identity {
 export interface CustomFrameOptions {
     uuid: string;
     name: string;
-    layout: Layout;
+    layout: LayoutConfig;
 }
 
-export interface Layout {
+export interface LayoutConfig {
     settings: {
         popoutWholeStack?: boolean;
         constrainDragToContainer?: boolean;
@@ -508,8 +508,7 @@ export interface Layout {
     content: LayoutContent;
 }
 
-export type LayoutContent = (LayoutComponent)[];
-// export type LayoutContent = (LayoutRow|LayoutColumn|LayoutComponent)[];
+export type LayoutContent = (LayoutRow|LayoutColumn|LayoutComponent)[];
 
 export interface LayoutRow {
     type: 'row';
