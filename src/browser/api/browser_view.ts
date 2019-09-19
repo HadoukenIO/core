@@ -140,7 +140,7 @@ export function getCurrentWindow(ofView: OfView) {
 
 export function addEventListener({uuid, name}: Identity, type: string, listener: (...args: any) => void) {
     const eventString = route.view(type, uuid, name);
-    const errRegex = /^AAttempting to call a function in a renderer window that has been closed or released/;
+    const errRegex = /^Attempting to call a function in a renderer window that has been closed or released/;
     let unsubscribe;
     let browserWinIsDead;
 
