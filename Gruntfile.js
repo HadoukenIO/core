@@ -304,10 +304,18 @@ module.exports = (grunt) => {
     grunt.registerTask('rebuild-native-modules', 'Rebuild native modules', function() {
         const done = this.async();
 
-        electronRebuild.rebuild({
+        const rebuildOptions = {
             buildPath: __dirname,
             electronVersion: '7.0.0-beta.3'
-        }).then(() => {
+        };
+
+        // don't rebuild the optionalDependencies since they're only used
+        // on non-Windows systems
+        if (process.platform === 'win32') {
+            rebuildOptions.types = ['prod'];
+        }
+
+        electronRebuild.rebuild(rebuildOptions).then(() => {
             grunt.log.writeln('Rebuild successful!');
             done();
         }).catch(e => {

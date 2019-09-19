@@ -331,6 +331,7 @@ function notifyOnContentLoaded(identity, message, ack) {
 function runApplication(identity, message, ack, nack) {
     const { payload } = message;
     const { manifestUrl } = payload;
+    const { opts } = payload;
     const appIdentity = apiProtocolBase.getTargetApplicationIdentity(payload);
     const { uuid } = appIdentity;
     let remoteSubscriptionUnSubscribe;
@@ -375,7 +376,7 @@ function runApplication(identity, message, ack, nack) {
                 remoteSubscriptionUnSubscribe();
                 unsub();
             });
-            Application.runWithRVM(manifestUrl, appIdentity).catch(e => {
+            Application.runWithRVM(manifestUrl, appIdentity, opts).catch(e => {
                 nack(e);
                 remoteSubscriptionUnSubscribe();
                 unsub();
