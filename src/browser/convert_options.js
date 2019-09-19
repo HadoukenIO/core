@@ -43,8 +43,6 @@ const rendererBatchingBaseSettings = {
 
 // this is the 5.0 base to be sure that we are only extending what is already expected
 function five0BaseOptions() {
-    const enableNode = process.argv.indexOf('--enable-electron-apis') !== -1 &&
-        process.buildFlags.enableElectronAPIs;
     return {
         'accelerator': {
             'devtools': false,
@@ -88,8 +86,6 @@ function five0BaseOptions() {
                 'breadcrumbs': false,
                 'iframe': iframeBaseSettings
             },
-            'disableInitialReload': false,
-            'node': enableNode,
             'v2Api': true
         },
         'frame': true,
@@ -219,9 +215,6 @@ export const convertToElectron = function(options, returnAsString) {
         }
     }
 
-    const useNodeInRenderer = newOptions.experimental.node;
-    const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
-
     // Because we have communicated the experimental option, this allows us to
     // respect that if its set but defaults to the proper passed in `iframe` key
     if (usingIframe) {
@@ -240,11 +233,11 @@ export const convertToElectron = function(options, returnAsString) {
     newOptions.webPreferences = {
         api: newOptions.experimental.api,
         contextMenuSettings: newOptions.contextMenuSettings,
-        disableInitialReload: newOptions.experimental.disableInitialReload,
+        disableInitialReload: false, // Only used by legacy sandboxed node
         nodeIntegration: false,
         plugins: newOptions.plugins,
-        preload: (!useNodeInRenderer ? noNodePreload : ''),
-        sandbox: !useNodeInRenderer,
+        preload: path.join(__dirname, '..', 'renderer', 'node-less.js'),
+        sandbox: true,
         spellCheck: newOptions.spellCheck,
         backgroundThrottling: newOptions.backgroundThrottling
     };
