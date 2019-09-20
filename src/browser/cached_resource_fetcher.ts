@@ -1,5 +1,5 @@
 import {app, net} from 'electron'; // Electron app
-import {stat, mkdir, createWriteStream, readFile as fsReadFile} from 'fs';
+import {stat, mkdir, createWriteStream, readFile as fsReadFile, Stats} from 'fs';
 import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
@@ -60,7 +60,10 @@ export async function cachedFetch(identity: Identity, url: string, callback: (er
         const p = new Promise( async (resolve, reject) => {
             try {
                 await prepDownloadLocation(appCacheDir);
-                await download(identity, url, filePath, appCacheDir);
+                const fileExisted = await fileExists(filePath);
+                if (!fileExisted) {
+                    await download(identity, url, filePath, appCacheDir);
+                }
                 callback(null, filePath);
                 resolve(filePath);
             } catch (e) {
@@ -106,6 +109,17 @@ function makeDirectory(location: string) {
     });
 }
 
+function fileExists (filePath: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        stat(filePath, (err: null | Error, stats: Stats) => {
+            if (err || stats.size === 0) {
+                resolve(false);
+            } else {
+                resolve(true);
+            }
+        });
+    });
+}
 
 async function prepDownloadLocation(appCacheDir: string) {
     const appCacheDirExists = await pathExists(appCacheDir);
