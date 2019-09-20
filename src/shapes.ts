@@ -33,6 +33,7 @@ export enum EntityType {
    WINDOW = 'window',
    IFRAME = 'iframe',
    EXTERNAL = 'external connection',
+   VIEW = 'view',
    UNKNOWN = 'unknown'
 }
 export type AuthCallback = (username: string, password: string) => void;

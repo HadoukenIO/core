@@ -29,6 +29,7 @@ export interface Route {
     'externalApplication': SimpleRoute;
     'externalWindow': WindowRoute;
     'frame': WindowRoute;
+    'view': WindowRoute;
     'global-hotkey': SimpleRoute;
     'globalHotkey': SimpleRoute;
     'native-window': SimpleRoute;
@@ -91,5 +92,6 @@ route.rvmMessageBus = route['rvm-message-bus'] = <SimpleRoute>router.bind(null, 
 route.server = <SimpleRoute>router.bind(null, 'server');
 route.system = <SimpleRoute>router.bind(null, 'system');
 route.window = <WindowRoute>router.bind(HYPHEN, 'window');
+route.view = <WindowRoute>router.bind(HYPHEN, 'view');
 
 export default route;
