@@ -3,9 +3,10 @@ import { addEventListener as addNoteListener } from '../../api/notifications/sub
 import { addRemoteSubscription, subscribeToAllRuntimes, RemoteSubscriptionProps } from '../../remote_subscriptions';
 import { Application } from '../../api/application';
 import { Channel } from '../../api/channel';
+import { addEventListener as addViewListener } from '../../api/browser_view';
 import { ExternalApplication } from '../../api/external_application';
 import { Frame } from '../../api/frame';
-import { getWindowByUuidName, isLocalUuid } from '../../core_state';
+import { getWindowByUuidName, isLocalUuid, getBrowserViewByIdentity } from '../../core_state';
 import { GlobalHotkey } from '../../api/global_hotkey';
 import { Identity as NoteIdentity } from '../../api/notifications/shapes';
 import { noop } from '../../../common/main';
@@ -69,7 +70,34 @@ const subWindow = async (identity: Identity, eventName: string, payload: EventPa
         remoteUnSub();
     };
 };
+/*
+    Subscribe to a view event
+*/
+const subView = async (identity: Identity, eventName: string, payload: EventPayload, listener: Listener): Promise<Func> => {
+    const { uuid, name } = payload;
+    const viewIdentity = apiProtocolBase.getTargetWindowIdentity(payload);
+    const isLocalView = !!getBrowserViewByIdentity(viewIdentity);
+    const localUnsub = addViewListener(viewIdentity, eventName, listener);
+    const isExternalClient = ExternalApplication.isRuntimeClient(identity.uuid);
+    let remoteUnSub = noop;
 
+    if (!isLocalView && !isExternalClient) {
+        const subscription: RemoteSubscriptionProps = {
+            className: 'view',
+            eventName,
+            listenType: 'on',
+            name,
+            uuid
+        };
+
+        remoteUnSub = await addRemoteSubscription(subscription);
+    }
+
+    return () => {
+        localUnsub();
+        remoteUnSub();
+    };
+};
 /*
     Subscribe to a frame event
 */
@@ -233,7 +261,8 @@ const subscriptionMap: SubscriptionMap = {
     'global-hotkey': subGlobalHotkey,
     'notifications': subNotifications,
     'system': subSystem,
-    'window': subWindow
+    'window': subWindow,
+    'view': subView
 };
 
 /*

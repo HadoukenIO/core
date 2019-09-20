@@ -64,6 +64,10 @@ function five0BaseOptions() {
         'aspectRatio': 0,
         'autoShow': false,
         'backgroundThrottling': false,
+        'contentNavigation': {
+            'whitelist': ['<all_urls>'],
+            'blacklist': []
+        },
         'contextMenuSettings': contextMenuSettings,
         'cornerRounding': {
             'height': 0,
@@ -86,8 +90,6 @@ function five0BaseOptions() {
                 'breadcrumbs': false,
                 'iframe': iframeBaseSettings
             },
-            'disableInitialReload': false,
-            'node': false,
             'v2Api': true
         },
         'frame': true,
@@ -152,13 +154,13 @@ function validate(base, user) {
     let options = {};
 
     _.each(base, (value, key) => {
-        const baseType = typeof base[key];
-        const userType = typeof user[key];
+        const baseType = [typeof base[key], Array.isArray(base[key])];
+        const userType = [typeof user[key], Array.isArray(user[key])];
 
-        if (baseType === 'object') {
+        if (baseType[0] === 'object' && !baseType[1]) {
             options[key] = validate(base[key], user[key] || {});
         } else {
-            options[key] = (userType !== baseType) ? base[key] : user[key];
+            options[key] = !_.isEqual(userType, baseType) ? base[key] : user[key];
         }
     });
 
@@ -217,9 +219,6 @@ export const convertToElectron = function(options, returnAsString) {
         }
     }
 
-    const useNodeInRenderer = newOptions.experimental.node;
-    const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
-
     // Because we have communicated the experimental option, this allows us to
     // respect that if its set but defaults to the proper passed in `iframe` key
     if (usingIframe) {
@@ -238,11 +237,11 @@ export const convertToElectron = function(options, returnAsString) {
     newOptions.webPreferences = {
         api: newOptions.experimental.api,
         contextMenuSettings: newOptions.contextMenuSettings,
-        disableInitialReload: newOptions.experimental.disableInitialReload,
+        disableInitialReload: false, // Only used by legacy sandboxed node
         nodeIntegration: false,
         plugins: newOptions.plugins,
-        preload: (!useNodeInRenderer ? noNodePreload : ''),
-        sandbox: !useNodeInRenderer,
+        preload: path.join(__dirname, '..', 'renderer', 'node-less.js'),
+        sandbox: true,
         spellCheck: newOptions.spellCheck,
         backgroundThrottling: newOptions.backgroundThrottling
     };
