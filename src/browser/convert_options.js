@@ -12,7 +12,7 @@ let _ = require('underscore');
 // local modules
 import * as coreState from './core_state';
 let log = require('./log');
-import { fetchReadFile, readFile } from './cached_resource_fetcher';
+import { fetchReadFile, readFile, setOfflineAccess } from './cached_resource_fetcher';
 
 // constants
 import {
@@ -306,6 +306,7 @@ export const fetchOptions = function(argo, onComplete, onError) {
 
             if (localConfig['offlineAccess']) {
                 offlineAccess = true;
+                setOfflineAccess(offlineAccess);
             }
         } catch (err) {
             log.writeToLog(1, err, true);

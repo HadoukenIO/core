@@ -11,6 +11,7 @@ import { getSession } from './core_state';
 const path = require('path');
 let appQuiting: boolean = false;
 let cacheCleared: boolean = false;
+let offlineAccess: boolean = false;
 
 const expectedStatusCode = /^[23]/; // 2xx & 3xx status codes are okay
 const fetchMap: Map<string, Promise<any>> = new Map();
@@ -61,7 +62,8 @@ export async function cachedFetch(identity: Identity, url: string, callback: (er
             try {
                 await prepDownloadLocation(appCacheDir);
                 const fileExisted = await fileExists(filePath);
-                if (!fileExisted) {
+                // Use local cached file if it's existed during offline mode
+                if (!offlineAccess || (offlineAccess && !fileExisted)) {
                     await download(identity, url, filePath, appCacheDir);
                 }
                 callback(null, filePath);
@@ -367,3 +369,8 @@ export function authenticateFetch(uuid: string, username: string, password: stri
 export function clearCacheInvoked(cleared: boolean): void {
     cacheCleared = cleared;
 }
+
+export function setOfflineAccess(offlineAccessed: boolean): void {
+    offlineAccess = offlineAccessed;
+}
+
