@@ -42,7 +42,6 @@ export async function create(options: BrowserViewOpts) {
     const ofView = addBrowserView(fullOptions, view);
     hookWebContentsEvents(view.webContents, options, 'view', route.view);
     await attach(ofView, options.target);
-    view.webContents.loadURL(options.url || 'about:blank');
     of_events.emit(route.view('created', ofView.uuid, ofView.name), {
         name: ofView.name,
         uuid: ofView.uuid,
