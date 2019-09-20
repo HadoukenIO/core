@@ -381,6 +381,9 @@
     const originalOpen = global.open;
 
     function openChildWindow(...args) {
+        if (entityInfo.entityType === 'view') {
+            throw new Error('Can not create a window inside a BrowserView');
+        }
         const [url, requestedName, features = ''] = args; // jshint ignore:line
         const requestId = ++childWindowRequestId;
         const webContentsId = getWebContentsId();
