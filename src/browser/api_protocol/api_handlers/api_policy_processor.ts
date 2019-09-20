@@ -238,19 +238,18 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
 
         writeToLog(1, `apiPolicyPreProcessor ${logSuffix}`, true);
 
-        let originWindow = coreState.getWindowByUuidName(uuid, name);
+        let originWindow = coreState.getRoutingInfoByUuidFrame(uuid, name);
         if (!originWindow && identity.entityType === 'iframe') {
             const info = coreState.getInfoByUuidFrame(identity);
             if (info && info.parent) {
-                originWindow = coreState.getWindowByUuidName(info.parent.uuid, info.parent.name);
+                originWindow = coreState.getRoutingInfoByUuidFrame(info.parent.uuid, info.parent.name);
             }
         }
         if (originWindow) {
             const appObject = coreState.getAppByUuid(uuid);
             // parentUuid for child windows is uuid of the app
             const parentUuid = uuid === name ? appObject.parentUuid : uuid;
-            const windowId = originWindow.id;
-            authorizeActionFromPolicy(coreState.getWindowOptionsById(windowId), action, payload).
+            authorizeActionFromPolicy(originWindow._options, action, payload).
               then((result: POLICY_AUTH_RESULT) => {
                 if (result === POLICY_AUTH_RESULT.Denied) {
                     writeToLog(1, `apiPolicyPreProcessor rejecting from policy ${logSuffix}`, true);
@@ -259,7 +258,7 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
                     if (result === POLICY_AUTH_RESULT.Allowed) {
                         writeToLog(1, `apiPolicyPreProcessor allowed from policy, still need to check window options ${logSuffix}`, true);
                     }
-                    if (authorizeActionFromWindowOptions(coreState.getWindowOptionsById(windowId), parentUuid, action, payload)) {
+                    if (authorizeActionFromWindowOptions(originWindow._options, parentUuid, action, payload)) {
                         next();
                     } else {
                         writeToLog(1, `apiPolicyPreProcessor rejecting from win opts ${logSuffix}`, true);
