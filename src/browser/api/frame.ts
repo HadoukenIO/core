@@ -23,7 +23,7 @@ export class FrameInfo implements Shapes.FrameInfo {
 export module Frame {
     export function addEventListener (targetIdentity: Identity, type: string, listener: (eventPayload: EventPayload) => void) {
         const eventString = route.frame(type, targetIdentity.uuid, targetIdentity.name);
-        const errRegex = /^Attempting to call a function in a renderer frame that has been closed or released/;
+        const errRegex = /^Attempting to call a function in a renderer window that has been closed or released/;
         let unsubscribe;
         let browserWinIsDead;
 
