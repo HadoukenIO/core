@@ -38,7 +38,9 @@ export async function create(options: BrowserViewOpts) {
     }
     const targetOptions = targetWin._options;
     const fullOptions = Object.assign({}, targetOptions, options);
-    const view = new BrowserView(convertOptions.convertToElectron(fullOptions, false));
+    const convertedOptions = convertOptions.convertToElectron(fullOptions, false);
+    convertedOptions.webPreferences.affinity = uuid;
+    const view = new BrowserView(convertedOptions);
     const ofView = addBrowserView(fullOptions, view);
     await attach(ofView, options.target);
     view.webContents.loadURL(options.url || 'about:blank');
