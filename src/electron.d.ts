@@ -1,4 +1,4 @@
-// Type definitions for Electron 8.0.0-nightly.20190826
+// Type definitions for Electron 8.0.0-nightly.20190917
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -1453,6 +1453,9 @@ Here's a very simple example of creating a custom Jump List:
     setMinLogLevel(level: number): void;
     /**
      * Overrides the current application's name.
+     *
+     * **Note:** This function overrides the name used internally by Electron; it does
+     * not affect the name that the OS uses.
 
 **Deprecated**
      */
@@ -1999,6 +2002,10 @@ __Note__: On macOS this event is an alias of `moved`.
     /**
      * Emitted when the web page has been rendered (while not being shown) and window
      * can be displayed without a visual flash.
+     *
+     * Please note that using this event implies that the renderer will be considered
+     * "visible" and paint even though `show` is false.  This event will never fire if
+     * you use `paintWhenInitiallyHidden: false`
      */
     on(event: 'ready-to-show', listener: Function): this;
     once(event: 'ready-to-show', listener: Function): this;
@@ -2385,8 +2392,8 @@ __Note__: On macOS this event is an alias of `moved`.
      */
     getBounds(): Rectangle;
     /**
-     * an BrowserView what is attached. Returns `null` if none is attached. Throw error
-     * if multiple BrowserViews is attached.
+     * The `BrowserView` attached to `win`. Returns `null` if one is not attached.
+     * Throws an error if multiple `BrowserView`s are attached.
      *
      * @experimental
      */
@@ -3212,6 +3219,7 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
      * Unmaximizes the window.
      */
     unmaximize(): void;
+    accessibleTitle: string;
     autoHideMenuBar: boolean;
     closable: boolean;
     excludedFromShownWindowsMenu: boolean;
@@ -4997,11 +5005,11 @@ Retrieves the product descriptions.
     // Docs: http://electronjs.org/docs\api\structures\input-event
 
     /**
-     * An array of modifiers of the event, can be `shift`, `control`, `alt`, `meta`,
-     * `isKeypad`, `isAutoRepeat`, `leftButtonDown`, `middleButtonDown`,
-     * `rightButtonDown`, `capsLock`, `numLock`, `left`, `right`.
+     * An array of modifiers of the event, can be `shift`, `control`, `ctrl`, `alt`,
+     * `meta`, `command`, `cmd`, `isKeypad`, `isAutoRepeat`, `leftButtonDown`,
+     * `middleButtonDown`, `rightButtonDown`, `capsLock`, `numLock`, `left`, `right`.
      */
-    modifiers: Array<'shift' | 'control' | 'alt' | 'meta' | 'isKeypad' | 'isAutoRepeat' | 'leftButtonDown' | 'middleButtonDown' | 'rightButtonDown' | 'capsLock' | 'numLock' | 'left' | 'right'>;
+    modifiers?: Array<'shift' | 'control' | 'ctrl' | 'alt' | 'meta' | 'command' | 'cmd' | 'isKeypad' | 'isAutoRepeat' | 'leftButtonDown' | 'middleButtonDown' | 'rightButtonDown' | 'capsLock' | 'numLock' | 'left' | 'right'>;
   }
 
   interface IOCounters {
@@ -5747,7 +5755,8 @@ Please note that this property only has an effect on macOS.
     removeListener(event: 'updated', listener: Function): this;
     /**
      * A `Boolean` for if the OS / Chromium currently has a dark mode enabled or is
-     * being instructed to show a dark-style UI.
+     * being instructed to show a dark-style UI.  If you want to modify this value you
+     * should use `themeSource` below.
      *
      */
     readonly shouldUseDarkColors: boolean;
@@ -5765,6 +5774,44 @@ Please note that this property only has an effect on macOS.
      * @platform darwin,win32
      */
     readonly shouldUseInvertedColorScheme: boolean;
+    /**
+     * A `String` property that can be `system`, `light` or `dark`.  It is used to
+     * override and supercede the value that Chromium has chosen to use internally.
+     *
+     * Setting this property to `system` will remove the override and everything will
+     * be reset to the OS default.  By default `themeSource` is `system`.
+     *
+     * Settings this property to `dark` will have the following effects:
+     *
+     * * `nativeTheme.shouldUseDarkColors` will be `true` when accessed
+     * * Any UI Electron renders on Linux and Windows including context menus,
+     * devtools, etc. will use the dark UI.
+     * * Any UI the OS renders on macOS including menus, window frames, etc. will use
+     * the dark UI.
+     * * The `prefers-color-scheme` CSS query will match `dark` mode.
+     * * The `updated` event will be emitted
+     *
+     * Settings this property to `light` will have the following effects:
+     *
+     * * `nativeTheme.shouldUseDarkColors` will be `false` when accessed
+     * * Any UI Electron renders on Linux and Windows including context menus,
+     * devtools, etc. will use the light UI.
+     * * Any UI the OS renders on macOS including menus, window frames, etc. will use
+     * the light UI.
+     * * The `prefers-color-scheme` CSS query will match `light` mode.
+     * * The `updated` event will be emitted
+     *
+     * The usage of this property should align with a classic "dark mode" state machine
+     * in your application where the user has three options.
+     *
+     * * `Follow OS` --> `themeSource = 'system'`
+     * * `Dark Mode` --> `themeSource = 'dark'`
+     * * `Light Mode` --> `themeSource = 'light'`
+     *
+     * Your application should then always use `shouldUseDarkColors` to determine what
+     * CSS to apply.
+     */
+    themeSource: ('system' | 'light' | 'dark');
   }
 
   class NativeTimer extends NodeJS.EventEmitter {
@@ -6983,6 +7030,50 @@ e.g.
      */
     static defaultSession: Session;
     /**
+     * Emitted when a render process requests preconnection to a URL, generally due to
+     * a resource hint.
+     */
+    on(event: 'preconnect', listener: (event: Event,
+                                       /**
+                                        * The URL being requested for preconnection by the renderer.
+                                        */
+                                       preconnectUrl: string,
+                                       /**
+                                        * True if the renderer is requesting that the connection include credentials (see
+                                        * the spec for more details.)
+                                        */
+                                       allowCredentials: boolean) => void): this;
+    once(event: 'preconnect', listener: (event: Event,
+                                       /**
+                                        * The URL being requested for preconnection by the renderer.
+                                        */
+                                       preconnectUrl: string,
+                                       /**
+                                        * True if the renderer is requesting that the connection include credentials (see
+                                        * the spec for more details.)
+                                        */
+                                       allowCredentials: boolean) => void): this;
+    addListener(event: 'preconnect', listener: (event: Event,
+                                       /**
+                                        * The URL being requested for preconnection by the renderer.
+                                        */
+                                       preconnectUrl: string,
+                                       /**
+                                        * True if the renderer is requesting that the connection include credentials (see
+                                        * the spec for more details.)
+                                        */
+                                       allowCredentials: boolean) => void): this;
+    removeListener(event: 'preconnect', listener: (event: Event,
+                                       /**
+                                        * The URL being requested for preconnection by the renderer.
+                                        */
+                                       preconnectUrl: string,
+                                       /**
+                                        * True if the renderer is requesting that the connection include credentials (see
+                                        * the spec for more details.)
+                                        */
+                                       allowCredentials: boolean) => void): this;
+    /**
      * Emitted when Electron is about to download `item` in `webContents`.
      *
      * Calling `event.preventDefault()` will cancel the download and `item` will not be
@@ -7039,6 +7130,14 @@ Clears the host resolver cache.
      */
     disableNetworkEmulation(): void;
     /**
+     * Initiates a download of the resource at `url`. The API will generate a
+     * DownloadItem that can be accessed with the will-download event.
+     *
+     * **Note:** This does not perform any security checks that relate to a page's
+     * origin, unlike `webContents.downloadURL`.
+     */
+    downloadURL(url: string): void;
+    /**
      * Emulates network with the given configuration for the `session`.
      */
     enableNetworkEmulation(options: EnableNetworkEmulationOptions): void;
@@ -7074,6 +7173,10 @@ Returns the system's proxy configuration.
      */
     getUserAgent(): string;
     /**
+     * Preconnects the given number of sockets to an origin.
+     */
+    preconnect(options: PreconnectOptions): void;
+    /**
      * Resolves with the proxy information for `url`.
      */
     resolveProxy(url: string): Promise<string>;
@@ -7086,7 +7189,7 @@ Returns the system's proxy configuration.
      * Calling `setCertificateVerifyProc(null)` will revert back to default certificate
      * verify proc.
      */
-    setCertificateVerifyProc(proc: (request: ProcRequest, callback: (verificationResult: number) => void) => void): void;
+    setCertificateVerifyProc(proc: ((request: CertificateVerifyProcProcRequest, callback: (verificationResult: number) => void) => void) | (null)): void;
     /**
      * Sets download saving directory. By default, the download directory will be the
      * `Downloads` under the respective app folder.
@@ -10560,17 +10663,17 @@ Some examples of valid `urls`:
      * an HTTP request, once the request headers are available. This may occur after a
      * TCP connection is made to the server, but before any http data is sent.
      * 
-The `callback` has to be called with an `response` object.
+The `callback` has to be called with a `response` object.
      */
-    onBeforeSendHeaders(filter: OnBeforeSendHeadersFilter, listener: ((details: OnBeforeSendHeadersListenerDetails, callback: (response: CallbackResponse) => void) => void) | (null)): void;
+    onBeforeSendHeaders(filter: OnBeforeSendHeadersFilter, listener: ((details: OnBeforeSendHeadersListenerDetails, callback: (beforeSendResponse: BeforeSendResponse) => void) => void) | (null)): void;
     /**
      * The `listener` will be called with `listener(details, callback)` before sending
      * an HTTP request, once the request headers are available. This may occur after a
      * TCP connection is made to the server, but before any http data is sent.
      * 
-The `callback` has to be called with an `response` object.
+The `callback` has to be called with a `response` object.
      */
-    onBeforeSendHeaders(listener: ((details: OnBeforeSendHeadersListenerDetails, callback: (response: CallbackResponse) => void) => void) | (null)): void;
+    onBeforeSendHeaders(listener: ((details: OnBeforeSendHeadersListenerDetails, callback: (beforeSendResponse: BeforeSendResponse) => void) => void) | (null)): void;
     /**
      * The `listener` will be called with `listener(details)` when a request is
      * completed.
@@ -10593,16 +10696,16 @@ The `callback` has to be called with an `response` object.
      * The `listener` will be called with `listener(details, callback)` when HTTP
      * response headers of a request have been received.
      * 
-The `callback` has to be called with an `response` object.
+The `callback` has to be called with a `response` object.
      */
-    onHeadersReceived(filter: OnHeadersReceivedFilter, listener: ((details: OnHeadersReceivedListenerDetails, callback: (response: CallbackResponse) => void) => void) | (null)): void;
+    onHeadersReceived(filter: OnHeadersReceivedFilter, listener: ((details: OnHeadersReceivedListenerDetails, callback: (headersReceivedResponse: HeadersReceivedResponse) => void) => void) | (null)): void;
     /**
      * The `listener` will be called with `listener(details, callback)` when HTTP
      * response headers of a request have been received.
      * 
-The `callback` has to be called with an `response` object.
+The `callback` has to be called with a `response` object.
      */
-    onHeadersReceived(listener: ((details: OnHeadersReceivedListenerDetails, callback: (response: CallbackResponse) => void) => void) | (null)): void;
+    onHeadersReceived(listener: ((details: OnHeadersReceivedListenerDetails, callback: (headersReceivedResponse: HeadersReceivedResponse) => void) => void) | (null)): void;
     /**
      * The `listener` will be called with `listener(details)` when first byte of the
      * response body is received. For HTTP requests, this means that the status line
@@ -11543,6 +11646,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
     vertical?: boolean;
   }
 
+  interface BeforeSendResponse {
+    cancel?: boolean;
+    /**
+     * When provided, request will be made with these headers.
+     */
+    requestHeaders?: Record<string, (string) | (string[])>;
+  }
+
   interface BitmapOptions {
     /**
      * Defaults to 1.0.
@@ -11697,6 +11808,13 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     show?: boolean;
     /**
+     * Whether the renderer should be active when `show` is `false` and it has just
+     * been created.  In order for `document.visibilityState` to work correctly on
+     * first load with `show: false` you should set this to `false`.  Setting this to
+     * `false` will cause the `ready-to-show` event to not fire.  Default is `true`.
+     */
+    paintWhenInitiallyHidden?: boolean;
+    /**
      * Specify `false` to create a Frameless Window. Default is `true`.
      */
     frame?: boolean;
@@ -11734,8 +11852,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     backgroundColor?: string;
     /**
-     * Whether window should have a shadow. This is only implemented on macOS. Default
-     * is `true`.
+     * Whether window should have a shadow. Default is `true`.
      */
     hasShadow?: boolean;
     /**
@@ -11823,14 +11940,6 @@ See webContents.sendInputEvent for detailed description of `event` object.
     uploadData?: ProtocolResponseUploadData;
   }
 
-  interface CallbackResponse {
-    cancel?: boolean;
-    /**
-     * When provided, request will be made with these headers.
-     */
-    requestHeaders?: Record<string, string>;
-  }
-
   interface CertificateTrustDialogOptions {
     /**
      * The certificate to trust/import.
@@ -11840,6 +11949,19 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * The message to display to the user.
      */
     message: string;
+  }
+
+  interface CertificateVerifyProcProcRequest {
+    hostname: string;
+    certificate: Certificate;
+    /**
+     * Verification result from chromium.
+     */
+    verificationResult: string;
+    /**
+     * Error code.
+     */
+    errorCode: number;
   }
 
   interface ClearStorageDataOptions {
@@ -11916,15 +12038,15 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * The URL associated with the PAC file.
      */
-    pacScript: string;
+    pacScript?: string;
     /**
      * Rules indicating which proxies to use.
      */
-    proxyRules: string;
+    proxyRules?: string;
     /**
      * Rules indicating which URLs should bypass the proxy settings.
      */
-    proxyBypassRules: string;
+    proxyBypassRules?: string;
   }
 
   interface ConsoleMessageEvent extends Event {
@@ -12091,11 +12213,11 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * Last-Modified header value.
      */
-    lastModified: string;
+    lastModified?: string;
     /**
      * ETag header value.
      */
-    eTag: string;
+    eTag?: string;
     /**
      * Time when download was started in number of seconds since UNIX epoch.
      */
@@ -12350,6 +12472,19 @@ See webContents.sendInputEvent for detailed description of `event` object.
   interface HasFrame {
   }
 
+  interface HeadersReceivedResponse {
+    cancel?: boolean;
+    /**
+     * When provided, the server is assumed to have responded with these headers.
+     */
+    responseHeaders?: Record<string, (string) | (string[])>;
+    /**
+     * Should be provided when overriding `responseHeaders` to change header status
+     * otherwise original response header's status will be used.
+     */
+    statusLine?: string;
+  }
+
   interface HeapStatistics {
     totalHeapSize: number;
     totalHeapSizeExecutable: number;
@@ -12455,7 +12590,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     /**
      * The image must be non-empty on macOS.
      */
-    icon: NativeImage;
+    icon: (NativeImage) | (string);
   }
 
   interface JumpListSettings {
@@ -12903,6 +13038,7 @@ See webContents.sendInputEvent for detailed description of `event` object.
     timestamp: number;
     redirectURL: string;
     statusCode: number;
+    statusLine: string;
     /**
      * The server IP address that the request was actually sent to.
      */
@@ -13293,6 +13429,17 @@ See webContents.sendInputEvent for detailed description of `event` object.
     callback?: () => void;
   }
 
+  interface PreconnectOptions {
+    /**
+     * URL for preconnect. Only the origin is relevant for opening the socket.
+     */
+    url: string;
+    /**
+     * number of sockets to preconnect. Must be between 1 and 6. Defaults to 1.
+     */
+    numSockets?: number;
+  }
+
   interface PrintOptions {
     /**
      * Don't ask user for print settings. Default is `false`.
@@ -13418,19 +13565,6 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * The identifier of the process.
      */
     pid: number;
-  }
-
-  interface ProcRequest {
-    hostname: string;
-    certificate: Certificate;
-    /**
-     * Verification result from chromium.
-     */
-    verificationResult: string;
-    /**
-     * Error code.
-     */
-    errorCode: number;
   }
 
   interface ProgressBarOptions {
@@ -14385,6 +14519,11 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Default is `false`.
      */
     disableHtmlFullscreenWindowResize?: boolean;
+    /**
+     * An alternative title string provided only to accessibility tools such as screen
+     * readers. This string is not directly visible to users.
+     */
+    accessibleTitle?: string;
   }
 
   interface DefaultFontFamily {
