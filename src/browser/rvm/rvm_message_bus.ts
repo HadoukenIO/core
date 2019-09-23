@@ -2,9 +2,10 @@ import { WMCopyData } from '../transport';
 import { EventEmitter } from 'events';
 import * as log from '../log';
 import route from '../../common/route';
-import { argo } from '../core_state';
+import { argo, getConfigUrlByUuid } from '../core_state';
 
 import { app } from 'electron';
+import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
 const _ = require('underscore');
 
 const processVersions = <any> process.versions;
@@ -430,14 +431,21 @@ export class RVMMessageBus extends EventEmitter  {
         this.publish(rvmPayload, callback);
     }
 
-    public sendCoreAnalyticsEvent(event: string, payload: any): Promise<boolean> {
+    public sendCoreAnalyticsEvent(event: string, payload: any, identity?: Identity): Promise<boolean> {
+        let sourceUrl = '';
+        let uuid: string;
+        if (typeof identity === 'object' && identity.uuid) {
+            sourceUrl = getConfigUrlByUuid(identity.uuid);
+            uuid = identity.uuid;
+        }
+
         return new Promise((resolve, reject) => {
             try {
                 const rvmMsg: CoreAnalytics = {
                     topic: 'system',
                     action: 'send-core-analytics-event',
-                    sourceUrl: '',
-
+                    sourceUrl,
+                    ...uuid ? { uuid } : {},
                     diagnosticsEvent: {
                         event,
                         topic: 'analytics.core.event',
