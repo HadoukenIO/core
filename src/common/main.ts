@@ -85,6 +85,11 @@ export function isURLAllowed(url: string): boolean {
     }
 }
 
+const base64regex = /^(?:[A-Z0-9+\/]{4})*(?:[A-Z0-9+\/]{2}==|[A-Z0-9+\/]{3}=|[A-Z0-9+\/]{4})$/i;
+export function isBase64(str: string) {
+    return base64regex.test(str);
+}
+
 export function uriToPath(uri: string): string {
     return uri
         .replace(/^file:\/\/\/?/, '')
