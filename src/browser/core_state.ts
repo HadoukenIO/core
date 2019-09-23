@@ -853,7 +853,7 @@ function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
     return win && win.openfinWindow;
 }
-export interface OfView extends Identity {
+export interface OfView extends Shapes.InjectableContext {
     name: string;
     view: BrowserView;
     frames: Map<string, Shapes.ChildFrameInfo>;
@@ -862,9 +862,27 @@ export interface OfView extends Identity {
 }
 export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
     const {uuid, name, target} = opts;
-    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target, entityType: Shapes.EntityType.VIEW };
+    const ofView = {
+        frames: new Map(),
+        uuid,
+        _options: opts,
+        name,
+        view,
+        target,
+        entityType: Shapes.EntityType.VIEW,
+        preloadScripts: (opts.preloadScripts || []),
+        framePreloadScripts: {} // frame ID => [{url, state}]
+    };
     views.push(ofView);
     return ofView;
+}
+export function getEntityByUuidFrame(uuid: string, name: string): Shapes.InjectableContext | false {
+   const win = getWindowByUuidName(uuid, name);
+   if (win) {
+       return win;
+    } else {
+        return getBrowserViewByIdentity({uuid, name});
+    }
 }
 export function updateViewTarget(id: Identity, newTarget: Identity) {
     const view = getBrowserViewByIdentity(id);

@@ -10,15 +10,13 @@ import { getInfo as getWebContentsInfo, setIframeHandlers, hookWebContentsEvents
 import of_events from '../of_events';
 import route from '../../common/route';
 import { getElectronBrowserWindow } from './window';
-import { OpenFinWindow } from '../../shapes';
+import { OpenFinWindow, WebOptions } from '../../shapes';
+import { downloadScripts } from '../preload_scripts';
 
 
 const windowCloseListenerMap: WeakMap<OpenFinWindow, WeakMap<OfView, () => void>> = new WeakMap();
 
-export interface BrowserViewOpts extends BrowserViewCreationOptions {
-    uuid: string;
-}
-
+export type BrowserViewOpts = WebOptions & BrowserViewCreationOptions;
 export async function create(options: BrowserViewOpts) {
     // checking if the name-uuid combination is already in use
     const { uuid, name } = options;
@@ -58,6 +56,9 @@ export async function create(options: BrowserViewOpts) {
         uuid: ofView.uuid,
         target: ofView.target
     });
+    if (fullOptions.preloadScripts && fullOptions.preloadScripts.length) {
+        await downloadScripts(ofView, fullOptions.preloadScripts);
+    }
     await view.webContents.loadURL(options.url || 'about:blank');
 }
 export function hide(ofView: OfView) {

@@ -108,8 +108,11 @@ export interface InjectableContext {
     name: string;
     _options: WebOptions;
     frames: Map<string, ChildFrameInfo>;
+    preloadScripts: PreloadScript[];
+    framePreloadScripts: { [frame: string]: PreloadScript[] };
 }
 export interface WebOptions {
+    preloadScripts?: PreloadScript[];
     uuid: string;
     name: string;
 }
@@ -124,7 +127,6 @@ export interface OpenFinWindow extends InjectableContext {
     groupUuid: string|null;
     hideReason: string;
     id: number;
-    preloadScripts: PreloadScriptState[];
     mainFrameRoutingId: number;
     isProxy?: boolean;
 }
@@ -323,11 +325,8 @@ export interface Manifest {
 
 export interface PreloadScript {
     mandatory?: boolean;
+    state?: 'load-started' | 'load-failed' | 'load-succeeded' | 'failed' | 'succeeded';
     url: string;
-}
-
-export interface PreloadScriptState extends PreloadScript {
-    state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
 }
 
 export interface EventPayload {
