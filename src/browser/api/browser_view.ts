@@ -41,12 +41,12 @@ export async function create(options: BrowserViewOpts) {
     const view = new BrowserView(convertedOptions);
     const ofView = addBrowserView(fullOptions, view);
     hookWebContentsEvents(view.webContents, options, 'view', route.view);
-    await attach(ofView, options.target);
     of_events.emit(route.view('created', ofView.uuid, ofView.name), {
         name: ofView.name,
         uuid: ofView.uuid,
         target: ofView.target
     });
+    await attach(ofView, options.target);
     setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
