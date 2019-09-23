@@ -65,6 +65,4 @@ declare namespace Electron {
             'visibility-changed': (() => void)[];
         };
     }
-
-    export class ExternalWindow extends BrowserWindow { }
 }

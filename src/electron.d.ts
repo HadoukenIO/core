@@ -31,6 +31,7 @@ declare namespace Electron {
     Dock: typeof Dock;
     DownloadItem: typeof DownloadItem;
     ExternalProcess: typeof ExternalProcess;
+    ExternalWindow: typeof ExternalWindow;
     fileLock: FileLock;
     globalShortcut: GlobalShortcut;
     IdleState: typeof IdleState;
@@ -4713,6 +4714,148 @@ Terminates the process.
     static terminate(): void;
   }
 
+  class ExternalWindow extends NodeJS.EventEmitter {
+
+    // Docs: http://electronjs.org/docs\api\external-window
+
+    /**
+     * ExternalWindow
+     */
+    constructor(options?: ExternalWindowConstructorOptions);
+    /**
+     * The `bounds` of the window as `Object`. In cases where the window has a shadow,
+     * such as windows 10 with a frame, the rectangle returned will represent the
+     * bounds sent (representing its visual location) with the shadow added effectively
+     * enlarging the window such that when SetWindowPos is called on the resulting
+     * bounds the window will appear to be exactly where the initial bounds stated.
+     * Without this, the window would shrink because windows includes the shadow in the
+     * window bounds
+     *
+     * @platform win32
+     */
+    static addShadow(nativeId: string, bounds: Rectangle): Rectangle;
+    /**
+     * The `bounds` of the window as `Object`.
+     *
+     * @platform win32
+     */
+    static getBounds(nativeId: string, scale?: boolean): Rectangle;
+    /**
+     * Returns the visual bounds of the window factoring out any shadow that may be
+     * present unlike a BrowserWindow getBoudns call which includes the shadow.
+     *
+     * @platform win32
+     */
+    static getBoundsWithoutShadow(nativeId: string): Rectangle;
+    /**
+     * The className of the window.
+     *
+     * @platform win32
+     */
+    static getClassname(nativeId: string): string;
+    /**
+     * The DPI scaling applied for the window.
+     *
+     * @platform win32
+     */
+    static getDpi(nativeId: string): number;
+    /**
+     * The DPI awareness of the window.
+     *
+     * @platform win32
+     */
+    static getDpiAwareness(nativeId: string): number;
+    /**
+     * A `NativeWindowInfo` object for the window represented by `nativeId`.
+     *
+     * @platform win32
+     */
+    static getNativeWindowInfo(nativeId: string): NativeWindowInfo;
+    /**
+     * The identifier of the process.
+     *
+     * @platform win32
+     */
+    static getProcessId(nativeId: string): number;
+    /**
+     * The full path to the process' binary.
+     *
+     * @platform win32
+     */
+    static getProcessImageName(nativeId: string): string;
+    /**
+     * The title of the window.
+     *
+     * @platform win32
+     */
+    static getTitle(nativeId: string): string;
+    /**
+     * Whether the window will always stay on top of other windows that aren't also
+     * considered `alwaysOnTop`.
+     *
+     * @platform win32
+     */
+    static isAlwaysOnTop(nativeId: string): boolean;
+    /**
+     * Whether the window is focused.
+     *
+     * @platform win32
+     */
+    static isFocused(nativeId: string): boolean;
+    /**
+     * Whether the window is maximized.
+     *
+     * @platform win32
+     */
+    static isMaximized(nativeId: string): boolean;
+    /**
+     * Whether the window is minimized.
+     *
+     * @platform win32
+     */
+    static isMinimized(nativeId: string): boolean;
+    /**
+     * Whether the process for the window has been injected with OpenFin's Window
+     * Manager.
+     *
+     * @platform win32
+     */
+    static isProcessOpenFinWindowManagerInjected(nativeId: string, pid?: number): boolean;
+    /**
+     * Whether the window is visible to the user.
+     *
+     * @platform win32
+     */
+    static isVisible(nativeId: string): boolean;
+    /**
+     * The `bounds` of the window as `Object`. In cases where the window has a shadow,
+     * such as windows 10 with a frame, the rectangle returned will represent the
+     * visual boundries of the window without the shadow present. For instance, the x
+     * and y of the window will be where the upper left corner appears to be on the
+     * screen, not the extent of the shadow as it would be otherwise. This is a bad
+     * name as it does not actually remove the shadow from the underlying hwnd.
+     *
+     * @platform win32
+     */
+    static removeShadow(nativeId: string, bounds: Rectangle): Rectangle;
+    /**
+     * Resizes and moves the window to the supplied bounds. Any properties that are not
+     * supplied will default to their current values.
+     *
+     * @platform win32
+     */
+    static setBounds(nativeId: string, bounds: Rectangle, scale?: boolean): void;
+    /**
+     * Sets the bounds of the window factoring out any shadow that may be present and
+     * making the boundries provided represent where the window will be positioned.
+     * This makes it possibe to set a window's position without having to accout to the
+     * shadow offset.
+     *
+     * @platform win32
+     */
+    static setBoundsWithoutShadow(nativeId: string, bounds: Rectangle): void;
+  }
+
   interface FileFilter {
 
     // Docs: http://electronjs.org/docs\api\structures\file-filter
@@ -6339,6 +6482,10 @@ Calculate system idle time in seconds.
     // Docs: http://electronjs.org/docs\api\process-monitor
 
     /**
+     * ProcessMonitor
+     */
+    constructor();
+    /**
      * Emitted when a monitored process is terminated.
      */
     on(event: 'process-terminated', listener: (
@@ -6408,10 +6555,6 @@ Calculate system idle time in seconds.
      * add() method.
      */
     static stop(): void;
-    /**
-     * ProcessMonitor
-     */
-    constructor();
   }
 
   interface Product {
@@ -12372,6 +12515,14 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Upload rate in Bps. Defaults to 0 which will disable upload throttling.
      */
     uploadThroughput?: number;
+  }
+
+  interface ExternalWindowConstructorOptions {
+    /**
+     * A hex representation of the window's handle. OpenFin additional param. Defaults
+     * to `'0x00000000'`
+     */
+    hwnd?: string;
   }
 
   interface FeedURLOptions {
