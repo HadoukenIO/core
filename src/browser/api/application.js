@@ -33,7 +33,7 @@ import { validateApplicationNavigation } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
+import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject, isBase64 } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 import { releaseUuid } from '../uuid_availability';
@@ -867,12 +867,20 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     const mainWindowIdentity = app.identity;
 
-    iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
+    if (!isBase64(iconUrl)) {
+        iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
+    }
 
     cachedFetch(mainWindowIdentity, iconUrl, (error, iconFilepath) => {
         if (!error) {
             if (app) {
-                const iconImage = nativeImage.createFromPath(iconFilepath);
+                let iconImage;
+                if (isBase64(iconUrl)) {
+                    const imageBuf = Buffer.from(iconUrl, 'base64');
+                    iconImage = nativeImage.createFromBuffer(imageBuf);
+                } else {
+                    iconImage = nativeImage.createFromPath(iconFilepath);
+                }
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = route.application('tray-icon-clicked', app.uuid);
