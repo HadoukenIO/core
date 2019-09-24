@@ -1,12 +1,12 @@
 
 import { cachedFetch } from './cached_resource_fetcher';
 import { normalizePreloadScripts } from './convert_options';
-import { Identity, PreloadScript, OpenFinWindow, InjectableContext } from '../shapes';
+import { Identity, PreloadScript, InjectableContext } from '../shapes';
 import { readFile } from 'fs';
 import { writeToLog } from './log';
 import ofEvents from './of_events';
 import route from '../common/route';
-import { getInfoByUuidFrame, getRoutingInfoByUuidFrame, getWindowByUuidName, getEntityByUuidFrame } from './core_state';
+import { getInfoByUuidFrame, getRoutingInfoByUuidFrame, getEntityByUuidFrame } from './core_state';
 
 interface PreloadScriptWithContent extends PreloadScript {
     _content: string;
@@ -134,15 +134,15 @@ export function setWindowPreloadState (identity: Identity, payload: { state: any
             if (!frameState) {
                 frameState = ofEntity.framePreloadScripts[name] = [];
             }
-            const preloadScript = frameState.find(e => e.url === url);
-            if (!preloadScript) {
-                frameState.push({ url, state });
-                preloadScripts = [{url, state}];
+            let preloadScript = frameState.find(e => e.url === url);
+            if (!preloadScripts) {
+                frameState.push(preloadScript = { url });
             }
+            preloadScripts = [preloadScript];
         } else {
             preloadScripts = ofEntity.preloadScripts.filter(e => e.url === url);
         }
-        if (preloadScripts && preloadScripts.length) {
+        if (preloadScripts) {
             preloadScripts[0].state = state;
         } else {
             writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${url} `);
@@ -151,12 +151,6 @@ export function setWindowPreloadState (identity: Identity, payload: { state: any
 
     if (frameInfo.entityType === 'window') {
         ofEvents.emit(route.window(updateTopic, uuid, name), {
-            name,
-            uuid,
-            preloadScripts
-        });
-    } else if (frameInfo.entityType === 'view') {
-        ofEvents.emit(route.view(updateTopic, uuid, name), {
             name,
             uuid,
             preloadScripts

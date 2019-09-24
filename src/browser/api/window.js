@@ -20,7 +20,6 @@ import * as Rx from 'rxjs';
 
 // local modules
 import animations from '../animations';
-import { setWindowPreloadState } from '../preload_scripts';
 import { deletePendingAuthRequest, getPendingAuthRequest } from '../authentication_delegate';
 import BoundsChangedStateTracker from '../bounds_changed_state_tracker';
 let convertOptions = require('../convert_options.js');
@@ -1312,11 +1311,6 @@ Window.getOptions = function(identity) {
 };
 
 Window.getParentWindow = function() {};
-
-/**
- * Sets/updates window's preload script state and emits relevant events
- */
-Window.setWindowPreloadState = setWindowPreloadState;
 
 Window.getSnapshot = (opts) => {
     return new Promise((resolve, reject) => {
