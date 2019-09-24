@@ -1,4 +1,4 @@
-// Type definitions for Electron 6.0.2
+// Type definitions for Electron 6.0.10
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -48,6 +48,7 @@ declare namespace Electron {
     Debugger: typeof Debugger;
     dialog: Dialog;
     DownloadItem: typeof DownloadItem;
+    ExternalWindow: typeof ExternalWindow;
     fileLock: FileLock;
     globalShortcut: GlobalShortcut;
     IdleState: typeof IdleState;
@@ -3321,7 +3322,7 @@ declare namespace Electron {
      * set properties to ['openFile', 'openDirectory'] on these platforms, a directory
      * selector will be shown.
      */
-    showOpenDialogSync(browserWindow: BrowserWindow, options: OpenDialogSyncOptions): void;
+    showOpenDialogSync(browserWindow: BrowserWindow, options: OpenDialogSyncOptions): (string[]) | (undefined);
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
@@ -3333,7 +3334,7 @@ declare namespace Electron {
      * set properties to ['openFile', 'openDirectory'] on these platforms, a directory
      * selector will be shown.
      */
-    showOpenDialogSync(options: OpenDialogSyncOptions): void;
+    showOpenDialogSync(options: OpenDialogSyncOptions): (string[]) | (undefined);
     /**
      * The browserWindow argument allows the dialog to attach itself to a parent
      * window, making it modal. The filters specifies an array of file types that can
@@ -3530,6 +3531,36 @@ declare namespace Electron {
     // Docs: http://electronjs.org/docs/api/structures/event
 
     preventDefault: (() => void);
+  }
+
+  class ExternalWindow extends EventEmitter {
+
+    // Docs: http://electronjs.org/docs/api/external-window
+
+    constructor(options?: ExternalWindowConstructorOptions);
+    static addShadow(nativeId: string, bounds: Rectangle): Rectangle;
+    static getBounds(nativeId: string, scale?: boolean): Rectangle;
+    static getBoundsWithoutShadow(nativeId: string): Rectangle;
+    static getClassname(nativeId: string): string;
+    static getDpi(nativeId: string): number;
+    static getDpiAwareness(nativeId: string): number;
+    static getNativeWindowInfo(nativeId: string): NativeWindowInfo;
+    static getProcessId(nativeId: string): number;
+    static getProcessImageName(nativeId: string): string;
+    static getTitle(nativeId: string): string;
+    static isAlwaysOnTop(nativeId: string): boolean;
+    static isFocused(nativeId: string): boolean;
+    static isMaximized(nativeId: string): boolean;
+    static isMinimized(nativeId: string): boolean;
+    static isProcessOpenFinWindowManagerInjected(nativeId: string, pid?: number): boolean;
+    static isVisible(nativeId: string): boolean;
+    static removeShadow(nativeId: string, bounds: Rectangle): Rectangle;
+    /**
+     * Resizes and moves the window to the supplied bounds. Any properties that are not
+     * supplied will default to their current values.
+     */
+    static setBounds(nativeId: string, bounds: Rectangle, scale?: boolean): void;
+    static setBoundsWithoutShadow(nativeId: string, bounds: Rectangle): void;
   }
 
   interface FileFilter {
@@ -16760,6 +16791,14 @@ declare namespace Electron {
   interface Extensions {
   }
 
+  interface ExternalWindowConstructorOptions {
+    /**
+     * A hex representation of the window's handle. OpenFin additional param. Defaults
+     * to '0x00000000'
+     */
+    hwnd?: string;
+  }
+
   interface FeedURLOptions {
     url: string;
     /**
@@ -17299,7 +17338,7 @@ declare namespace Electron {
      * Initial checked state of the checkbox. false by default.
      */
     checkboxChecked?: boolean;
-    icon?: NativeImage;
+    icon?: (NativeImage) | (string);
     /**
      * The index of the button to be used to cancel the dialog, via the Esc key. By
      * default this is assigned to the first button with "cancel" or "no" as the label.
@@ -17621,6 +17660,10 @@ declare namespace Electron {
   }
 
   interface OpenDialogReturnValue {
+    /**
+     * whether or not the dialog was canceled.
+     */
+    canceled: boolean;
     /**
      * An array of file paths chosen by the user. If the dialog is cancelled this will
      * be an empty array.
