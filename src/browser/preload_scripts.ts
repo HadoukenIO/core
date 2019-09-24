@@ -135,7 +135,7 @@ export function setWindowPreloadState (identity: Identity, payload: { state: any
                 frameState = ofEntity.framePreloadScripts[name] = [];
             }
             let preloadScript = frameState.find(e => e.url === url);
-            if (!preloadScripts) {
+            if (!preloadScript) {
                 frameState.push(preloadScript = { url });
             }
             preloadScripts = [preloadScript];
