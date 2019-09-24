@@ -30,23 +30,44 @@ export async function create(options: BrowserViewOpts) {
     if (!options.target) {
         throw new Error('Must supply target identity');
     }
-    const targetWin = getWindowByUuidName(options.target.uuid, options.target.name);
+    const targetIdentity = options.target;
+    const targetWin = getWindowByUuidName(targetIdentity.uuid, targetIdentity.name);
     if (!targetWin) {
         throw new Error('Target Window could not be found');
     }
+
     const targetOptions = targetWin._options;
     const fullOptions = Object.assign({}, targetOptions, options);
     const convertedOptions = convertOptions.convertToElectron(fullOptions, false);
     convertedOptions.webPreferences.affinity = uuid;
     const view = new BrowserView(convertedOptions);
     const ofView = addBrowserView(fullOptions, view);
+
     hookWebContentsEvents(view.webContents, options, 'view', route.view);
-    await attach(ofView, options.target);
+    view.webContents.on('crashed', (event, killed, terminationStatus) => {
+        of_events.emit(
+            route.view('crashed', uuid, name),
+            Object.assign({topic: 'view', type: 'crashed', uuid, name}, {reason: terminationStatus})
+        );
+    });
+    view.webContents.on('responsive', () => {
+        of_events.emit(
+            route.view('responding', uuid, name), {topic: 'view', type: 'responding', uuid, name}
+        );
+    });
+    view.webContents.on('unresponsive', () => {
+        of_events.emit(
+            route.view('not-responding', uuid, name), {topic: 'view', type: 'not-responding', uuid, name}
+        );
+    });
+
+    await attach(ofView, targetIdentity);
     of_events.emit(route.view('created', ofView.uuid, ofView.name), {
         name: ofView.name,
         uuid: ofView.uuid,
         target: ofView.target
     });
+
     setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
@@ -58,6 +79,7 @@ export async function create(options: BrowserViewOpts) {
         uuid: ofView.uuid,
         target: ofView.target
     });
+
     await view.webContents.loadURL(options.url || 'about:blank');
 }
 export function hide(ofView: OfView) {

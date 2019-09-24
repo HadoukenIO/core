@@ -34,6 +34,7 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
         };
         ofEvents.emit(routeFunc(type, uuid, name), payload);
     });
+
     webContents.on('did-fail-load', (e,
         errorCode,
         errorDescription,
@@ -53,6 +54,51 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
         };
         ofEvents.emit(routeFunc(type, uuid, name), payload);
     });
+
+    webContents.on('page-title-updated', (e,
+        title,
+        explicitSet
+    ) => {
+        const type = 'page-title-updated';
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            title,
+            explicitSet
+        };
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+
+    webContents.on('did-change-theme-color', (e,
+        color
+    ) => {
+        const type = 'did-change-theme-color';
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            color
+        };
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+
+    webContents.on('page-favicon-updated', (e,
+        favicons
+    ) => {
+        const type = 'page-favicon-updated';
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            favicons
+        };
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+
     webContents.once('destroyed', () => {
         webContents.removeAllListeners();
     });
