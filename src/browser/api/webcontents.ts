@@ -4,6 +4,7 @@ import { Identity } from '../../shapes';
 import ofEvents from '../of_events';
 import route, { WindowRoute } from '../../common/route';
 import { InjectableContext, EntityType } from '../../shapes';
+import { prepareConsoleMessageForRVM } from '../rvm/utils';
 
 export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid, name }: Identity, topic: string, routeFunc: WindowRoute) {
     webContents.on('did-get-response-details', (e,
@@ -56,6 +57,7 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
     webContents.once('destroyed', () => {
         webContents.removeAllListeners();
     });
+    webContents.on('console-message', (...args) => prepareConsoleMessageForRVM({ uuid, name }, ...args));
 }
 
 export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {

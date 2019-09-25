@@ -30,7 +30,6 @@ let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
 import WindowGroups from '../window_groups';
-import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
@@ -878,75 +877,6 @@ Window.create = function(id, opts) {
         //      more descriptive browserWindow key
         _window: browserWindow,
     };
-
-    const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
-        /*
-            DEBUG:     -1
-            INFO:      0
-            WARNING:   1
-            ERROR:     2
-            FATAL:     3
-        */
-        const printDebugLogs = (coreState.argo['v'] >= 1);
-        if ((level === /* DEBUG */ -1 && !printDebugLogs) ||
-            level === /* INFO */ 0 ||
-            level === /* WARNING */ 1) {
-            // Prevent INFO and WARNING messages from writing to debug.log
-            // DEBUG messages are also prevented if --v=1 or higher isn't specified
-            event.preventDefault();
-        }
-
-        const app = coreState.getAppByUuid(identity.uuid);
-        if (!app) {
-            electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);
-            return;
-        }
-
-        // If enableAppLogging is false, skip sending to RVM
-        if (app._options.enableAppLogging === false) {
-            return;
-        }
-
-        // Hack: since this function is getting called from the native side with
-        // "webContents.on", there is weirdness where the "setTimeout(flushConsoleMessageQueue...)"
-        // in addConsoleMessageToRVMMessageQueue would only get called the first time, and not subsequent times,
-        // if you just called "addConsoleMessageToRVMMessageQueue" directly from here. So to get around that, we
-        // wrap this entire function in a "setTimeout" to put it in a different context. Eventually we should figure
-        // out if there is a way around this by using event.preventDefault or something similar
-        setTimeout(() => {
-            const appConfigUrl = coreState.getConfigUrlByUuid(identity.uuid);
-            if (!appConfigUrl) {
-                electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
-                return;
-            }
-
-            function checkPrependLeadingZero(num, length) {
-                let str = String(num);
-                while (str.length < length) {
-                    str = '0' + str;
-                }
-
-                return str;
-            }
-
-            const date = new Date();
-            const year = String(date.getFullYear());
-            const month = checkPrependLeadingZero(date.getMonth() + 1, 2);
-            const day = checkPrependLeadingZero(date.getDate(), 2);
-            const hour = checkPrependLeadingZero(date.getHours(), 2);
-            const minute = checkPrependLeadingZero(date.getMinutes(), 2);
-            const second = checkPrependLeadingZero(date.getSeconds(), 2);
-            const millisecond = checkPrependLeadingZero(date.getMilliseconds(), 3);
-
-            // Format timestamp to match debug.log
-            const timeStamp = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
-
-            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
-
-        }, 1);
-    };
-
-    winWebContents.on('console-message', prepareConsoleMessageForRVM);
 
     // Set preload scripts' final loading states
     winObj.preloadScripts = (_options.preloadScripts || []);
