@@ -60,8 +60,6 @@
         return isNotification || isQueueCounter;
     }
 
-
-
     // used by the notification service to emit the ready event
     function emitNoteProxyReady() {
         raiseEventSync('notification-service-ready', true);
@@ -283,7 +281,6 @@
 
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
-
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 
         wireUpMenu(glbl);
@@ -452,7 +449,6 @@
         });
 
         const convertedOpts = convertOptionsToElectronSync(options);
-
         const { preloadScripts } = 'preloadScripts' in convertedOpts ? convertedOpts : initialOptions;
 
         if (!(preloadScripts && preloadScripts.length) || isNotificationType(options.name)) {
