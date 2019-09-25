@@ -30,6 +30,9 @@ class Layout {
     }
 
     setupListeners() {
+        fin.Window.getCurrentSync().on('bounds-changed', e => {
+            this.layout.updateSize();
+        });
         this.layout.on('tabCreated', this.onTabCreated.bind(this));
         this.layout.on('itemDestroyed', this.onItemDestroyed.bind(this));
         this.layout.on('initialised', this.initializeViews.bind(this));

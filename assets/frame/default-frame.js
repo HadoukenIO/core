@@ -14,7 +14,7 @@ const setupFrameButtons = () => {
     closeButton.addEventListener('click', onClose);
     minimizeButton.addEventListener('click', onMinimize);
     maximizeButton.addEventListener('click', onMaximize);
-}
+};
 
 const setupLayout = () => {
     fin.Window.getCurrentSync().getOptions().then(({layout: layoutConfig}) => {
@@ -22,7 +22,7 @@ const setupLayout = () => {
         var layout = new Layout(layoutConfig, layoutContainer);
         console.log(layout);
     });
-}
+};
 
 setupFrameButtons();
 setupLayout();
