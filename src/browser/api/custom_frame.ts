@@ -10,6 +10,6 @@ export async function create(id: number, options?: CustomFrameOptions, frameUrl?
         uuid,
         name,
         autoShow: true,
-        url: frameUrl ? frameUrl : `file:///${path.resolve(`${__dirname}/../../../assets/default-frame.html`)}`
+        url: frameUrl ? frameUrl : `file:///${path.resolve(`${__dirname}/../../../assets/frame/default-frame.html`)}`
     });
 }

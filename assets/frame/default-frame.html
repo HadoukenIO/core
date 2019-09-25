@@ -82,7 +82,28 @@
                 height: calc(100% - 30px);
             }
 
+            .popout-button {
+                position: relative;
+                right: 0px;
+                color: #fff;
+                font-weight: bold;
+                z-index: 9999;
+                padding: 0px 0px 0px 15px;
+                width: 15px;
+                margin: 0px auto;
+                display: inline-block;
+            }
+
+            .popout-icon {
+                height: 15px;
+            }
         </style>
+        <script src='./layout/jquery-1.11.1.min.js'></script>
+        <script src='./layout/goldenlayout.min.js'></script>
+        <script src='./layout/openfin-layout.js'></script>
+        <script src='./layout/resizable-view.js'></script>
+        <link rel="stylesheet" type="text/css" href="./layout/goldenlayout-base.css">
+        <link rel="stylesheet" type="text/css" href="./layout/goldenlayout-dark-theme.css">
     </head>
 
     <body>
@@ -92,39 +113,18 @@
                 <div id="title"></div>
                 <div id="buttons-wrapper">
                     <div class="button" id="maximize-button">
-                        <img class="button-image" src="https://img.icons8.com/ios-glyphs/50/000000/full-screen.png">
+                        <img class="button-image" src="./icons8-full-screen.svg">
                     </div>
                     <div class="button" id="minimize-button">
-                        <img class="button-image" src="https://img.icons8.com/material-outlined/24/000000/horizontal-line.png">
+                        <img class="button-image" src="./icons8-horizontal-line.svg">
                     </div>
                     <div class="button" id="close-button">
-                        <img class="button-image" src="https://img.icons8.com/windows/32/000000/multiply.png">
+                        <img class="button-image" src="./icons8-multiply.svg">
                     </div>
                 </div>
             </div>
             <div id="layout-container"></div>
+            <script src="./default-frame.js"></script>
         </div>
-
-        <script>
-            (async () => {
-                const win = fin.Window.getCurrentSync();
-
-                const onClose = () => win.close();
-                const onMinimize = () => win.minimize();
-                const onMaximize = async () => win.getState().then(state => state === 'maximized'? win.restore() : win.maximize());
-                
-                const closeButton = document.getElementById('close-button');
-                const minimizeButton = document.getElementById('minimize-button');
-                const maximizeButton = document.getElementById('maximize-button');
-                
-                closeButton.addEventListener('click', onClose);
-                minimizeButton.addEventListener('click', onMinimize);
-                maximizeButton.addEventListener('click', onMaximize);
-
-                const layoutContainer = document.getElementById('layout-container');
-                fin.Window._initLayout(layoutContainer);
-            })()
-        </script>
-
     </body>
 </html>

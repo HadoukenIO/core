@@ -178,53 +178,6 @@
     }
     ////END.
 
-    function injectGoldenLayoutScript() {
-        injectJQuery().then(() => { // jQuery is a golden layouts dependency
-            const goldenLayoutsScript = document.createElement('script');
-
-            goldenLayoutsScript.type = 'text/javascript';
-            goldenLayoutsScript.src = 'https://golden-layout.com/files/latest/js/goldenlayout.min.js';
-            goldenLayoutsScript.async = true;
-            goldenLayoutsScript.addEventListener('load', () => {
-                // we use customEvent to avoid an unnecessary core call here
-                const readyEvent = new CustomEvent('golden-layout-ready');
-                document.dispatchEvent(readyEvent);
-            }, false);
-
-            document.head.appendChild(goldenLayoutsScript);
-        });
-    }
-
-    function injectJQuery() {
-        return new Promise(res => {
-            const JQueryScript = document.createElement('script');
-
-            JQueryScript.type = 'text/javascript';
-            JQueryScript.src = 'https://code.jquery.com/jquery-1.11.1.min.js';
-            JQueryScript.async = true;
-            JQueryScript.addEventListener('load', res, false);
-
-            document.head.appendChild(JQueryScript);
-        });
-    }
-
-    function injectGoldenLayoutStyles() {
-        const goldenLayoutsBaseStyle = document.createElement('link');
-        const goldenLayoutsDarkThemeStyle = document.createElement('link');
-
-        goldenLayoutsBaseStyle.type = 'text/css';
-        goldenLayoutsDarkThemeStyle.type = 'text/css';
-
-        goldenLayoutsBaseStyle.rel = 'stylesheet';
-        goldenLayoutsDarkThemeStyle.rel = 'stylesheet';
-
-        goldenLayoutsBaseStyle.href = 'https://golden-layout.com/files/latest/css/goldenlayout-base.css';
-        goldenLayoutsDarkThemeStyle.href = 'https://golden-layout.com/files/latest/css/goldenlayout-dark-theme.css';
-
-        document.head.appendChild(goldenLayoutsBaseStyle);
-        document.head.appendChild(goldenLayoutsDarkThemeStyle);
-    }
-
     function wireUpMouseWheelZoomEvents() {
         document.addEventListener('mousewheel', event => {
             if (!event.ctrlKey || !initialOptions.accelerator.zoom) {
@@ -330,12 +283,6 @@
 
         // The api-ready event allows the webContents to assign api priority. This must happen after
         // any spin up windowing action or you risk stealing api priority from an already connected frame
-
-        if (initialOptions.layout) {
-            // todo: handle failure
-            injectGoldenLayoutScript();
-            injectGoldenLayoutStyles();
-        }
 
         electron.remote.getCurrentWebContents(renderFrameId).emit('openfin-api-ready', renderFrameId);
 

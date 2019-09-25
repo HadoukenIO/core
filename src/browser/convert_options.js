@@ -202,7 +202,7 @@ export const toCustomFrame = function(options) {
     }
 
     // for now we use default frame for any customFrame value
-    options.url = `file:///${path.resolve(`${__dirname}/../../assets/default-frame.html`)}`;
+    options.url = `file:///${path.resolve(`${__dirname}/../../assets/frame/default-frame.html`)}`;
     return options;
 };
 
