@@ -16,15 +16,16 @@ const setupFrameButtons = () => {
     maximizeButton.addEventListener('click', onMaximize);
 }
 
+const setupLayout = () => {
+    fin.Window.getCurrentSync().getOptions().then(({layout: layoutConfig}) => {
+        let layoutContainer = document.getElementById('layout-container');
+        var layout = new Layout(layoutConfig, layoutContainer);
+        console.log(layout);
+    });
+}
 
-fin.Window.getCurrentSync().getOptions().then(({layout: layoutConfig}) => {
-    let layoutContainer = document.getElementById('layout-container');
-    var layout = new Layout(layoutConfig, layoutContainer);
-    console.log(layout);
-    // setupLayoutState();
-    // setupLayoutListeners();
-    // layout.init();    
-});
+setupFrameButtons();
+setupLayout();
 // const setupLayoutListeners = () => {
 //     layout.on('tabCreated', tab => onTabCreated(tab, layout));
 //     layout.on('itemDestroyed', e => onItemDestroyed(e, layout));
