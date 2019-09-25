@@ -163,6 +163,7 @@ class Layout {
 
     async initializeViews() {
         this.attachViews();
+        this.updateViewTitles();
         //setInterval(this.updateViewTitles.bind(this), 500);
     }
 
@@ -171,8 +172,10 @@ class Layout {
         const allViewIdentities = allViewWrappers.map(item => item.container.getState().identity);
         const allViews = allViewIdentities.map(fin.BrowserView.wrapSync.bind(fin));
         allViews.forEach(async view => {
-            const {title} = await view.getInfo();
+            let {title} = await view.getInfo();
             const [item] = this.findViewWrapper(view.identity)
+            title = title || item.componentState.componentName || item.componentState.url;
+
             if(!title || !item) console.error(`couldn't update view's title. view: ${JSON.stringify(view)}. title: ${title}. dom elem: ${item}`)
             else {
                 item.container.setTitle(title);

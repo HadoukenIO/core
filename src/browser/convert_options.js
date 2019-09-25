@@ -175,7 +175,7 @@ export const getStartupAppOptions = function(appJson) {
 };
 
 export const toCustomFrame = function(options) {
-    const hasValidLayoutConfig = options.layout && atLeastOneLayoutExists(options.layout.content);
+    const hasValidLayoutConfig = options.layout && validateLayoutConfig(options.layout.content);
 
     // customFrame necessarily uses layouts, so if no layout config is given, we construct one ourselves. 
     if (!hasValidLayoutConfig) {
@@ -320,8 +320,8 @@ export const convertToElectron = function(options, returnAsString) {
     }
 };
 
-const atLeastOneLayoutExists = function(layouts) {
-    return Array.isArray(layouts) && layouts.length;
+const validateLayoutConfig = function(layoutContents) {
+    return layoutContents && Array.isArray(layoutContents);
 };
 
 export const fetchOptions = function(argo, onComplete, onError) {
