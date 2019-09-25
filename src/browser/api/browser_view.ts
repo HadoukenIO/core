@@ -11,12 +11,14 @@ import of_events from '../of_events';
 import route from '../../common/route';
 import { getElectronBrowserWindow } from './window';
 import { OpenFinWindow } from '../../shapes';
+import { navigationValidator, validateNavigation } from '../navigation_validation';
 
 
 const windowCloseListenerMap: WeakMap<OpenFinWindow, WeakMap<OfView, () => void>> = new WeakMap();
 
 export interface BrowserViewOpts extends BrowserViewCreationOptions {
     uuid: string;
+    parent: Identity;
 }
 
 export async function create(options: BrowserViewOpts) {
@@ -59,6 +61,9 @@ export async function create(options: BrowserViewOpts) {
         uuid: ofView.uuid,
         target: ofView.target
     });
+
+    const navValidator = navigationValidator(uuid, name, targetWin.id);
+    validateNavigation(view.webContents, {uuid, name}, navValidator);
 }
 export function hide(ofView: OfView) {
     const {name, uuid, target, view} = ofView;
