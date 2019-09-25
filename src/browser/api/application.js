@@ -22,7 +22,6 @@ let _ = require('underscore');
 // local modules
 let System = require('./system.js').System;
 import { Window } from './window';
-import * as CustomFrame from './custom_frame';
 let convertOpts = require('../convert_options.js');
 import * as coreState from '../core_state';
 let externalApiBase = require('../api_protocol/api_handlers/api_protocol_base');
@@ -639,12 +638,8 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
     //for backwards compatibility main window needs to have name === uuid
     mainWindowOpts = Object.assign({}, mainWindowOpts, { name: uuid }); //avoid mutating original object
 
-    if (mainWindowOpts.layout) {
-        CustomFrame.create(app.id, mainWindowOpts);
-    } else {
-        const win = Window.create(app.id, mainWindowOpts);
-        coreState.setWindowObj(app.id, win);
-    }
+    const win = Window.create(app.id, mainWindowOpts);
+    coreState.setWindowObj(app.id, win);
 
     // fire the connected once the main window's dom is ready
     app.mainWindow.webContents.once('dom-ready', () => {

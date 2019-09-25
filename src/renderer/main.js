@@ -59,6 +59,6 @@ module.exports.apiWithOptions = (webContentsId) => {
     // break the remote link
     return JSON.stringify({
         apiString: api(webContentsId, initialOptions),
-        initialOptions: initialOptions,
+        initialOptions: initialOptions
     });
 };
