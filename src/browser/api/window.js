@@ -113,22 +113,17 @@ let browserWindowEventMap = {
     },
     'unmaximize': {
         topic: 'restored'
+    },
+    'will-move': {
+        topic: 'will-move',
+        decorator: willMoveOrResizeDecorator
+    },
+    'will-resize': {
+        topic: 'will-resize',
+        decorator: willMoveOrResizeDecorator
     }
-    // 'move': {
-    //     topic: 'bounds-changing'
-    // }
 };
 
-let webContentsEventMap = {
-    'did-get-response-details': {
-        topic: 'resource-response-received',
-        decorator: responseReceivedDecorator
-    },
-    'did-fail-load': {
-        topic: 'resource-load-failed',
-        decorator: loadFailedDecorator
-    }
-};
 
 function genWindowKey(identity) {
     return `${identity.uuid}-${identity.name}`;
@@ -444,38 +439,6 @@ Window.create = function(id, opts) {
     if (!opts._noregister) {
 
         browserWindow = BrowserWindow.fromId(id);
-
-        // called in the WebContents class in the runtime
-        browserWindow.webContents.registerIframe = (frameName, frameRoutingId) => {
-            // called for all iframes, but not for main frame of windows
-            electronApp.vlog(1, `registerIframe ${frameName} ${frameRoutingId}`);
-            const parentFrameId = id;
-            const frameInfo = {
-                name: frameName,
-                uuid,
-                parentFrameId,
-                parent: { uuid, name },
-                frameRoutingId,
-                entityType: 'iframe'
-            };
-
-            winObj.frames.set(frameName, frameInfo);
-        };
-
-        // called in the WebContents class in the runtime
-        browserWindow.webContents.unregisterIframe = (closedFrameName, frameRoutingId) => {
-            // called for all iframes AND for main frames
-            electronApp.vlog(1, `unregisterIframe ${frameRoutingId} ${closedFrameName}`);
-            const frameName = closedFrameName || name; // the parent name is considered a frame as well
-            const frameInfo = winObj.frames.get(closedFrameName);
-            const entityType = frameInfo ? 'iframe' : 'window';
-            const payload = { uuid, name, frameName, entityType };
-
-            winObj.frames.delete(closedFrameName);
-            ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
-            ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
-        };
-
         webContents = browserWindow.webContents;
 
         //Legacy 5.0 feature, if customWindowAlert flag is found all alerts will be suppresed,
@@ -570,10 +533,6 @@ Window.create = function(id, opts) {
                     log.writeToLog('info', err);
                 });
             ofEvents.emit(route.window(type, uuid, name), { topic: 'window', type: type, uuid, name });
-        });
-
-        webContents.once('close', () => {
-            webContents.removeAllListeners();
         });
 
         const isMainWindow = (uuid === name);
@@ -676,8 +635,7 @@ Window.create = function(id, opts) {
         };
 
         mapEvents(browserWindowEventMap, browserWindow);
-        mapEvents(webContentsEventMap, webContents);
-
+        WebContents.hookWebContentsEvents(webContents, { uuid, name }, 'window', route.window);
         // hideOnClose is deprecated; treat it as if it's just another
         // listener on the 'close-requested' event
         if (getOptFromBrowserWin('hideOnClose', browserWindow, false)) {
@@ -1005,6 +963,7 @@ Window.create = function(id, opts) {
             name
         });
     }
+    WebContents.setIframeHandlers(browserWindow.webContents, winObj, uuid, name);
 
     return winObj;
 };
@@ -1127,6 +1086,14 @@ Window.bringToFront = function(identity) {
         return;
     }
     NativeWindow.bringToFront(browserWindow);
+};
+
+Window.center = function(identity) {
+    const browserWindow = getElectronBrowserWindow(identity);
+    if (!browserWindow) {
+        return;
+    }
+    NativeWindow.center(browserWindow);
 };
 
 
@@ -1308,8 +1275,11 @@ Window.getGroup = function(identity) {
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
     const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
+    const windowKey = genWindowKey(identity);
+    const isUserMovementEnabled = !disabledFrameRef.has(windowKey) || disabledFrameRef.get(windowKey) === 0;
     const windowInfo = Object.assign({
         preloadScripts,
+        isUserMovementEnabled
     }, WebContents.getInfo(browserWindow.webContents));
     return windowInfo;
 };
@@ -1339,13 +1309,6 @@ Window.getOptions = function(identity) {
         return System.getEntityInfo(identity);
     }
 };
-
-Window.getParentApplication = function() {
-    let app = coreState.getAppByWin(this.id);
-
-    return app && app.appObj;
-};
-
 
 Window.getParentWindow = function() {};
 
@@ -2226,6 +2189,20 @@ function disabledFrameBoundsChangeDecorator(payload, args) {
     return propogate;
 }
 
+function willMoveOrResizeDecorator(payload, args) {
+    const { x, y, height, width } = args[1];
+    const monitorInfo = System.getMonitorInfo();
+    const monitorScaleFactor = monitorInfo.deviceScaleFactor;
+    Object.assign(payload, {
+        monitorScaleFactor,
+        left: x,
+        top: y,
+        height,
+        width
+    });
+    return true;
+}
+
 function opacityChangedDecorator(payload, args) {
     let _win = Window.wrap(payload.uuid, payload.name);
     let _browserWin = _win && _win.browserWindow;
@@ -2267,53 +2244,7 @@ function visibilityChangedDecorator(payload, args) {
     return propogate;
 }
 
-function responseReceivedDecorator(payload, args) {
-    var [
-        /*event*/
-        ,
-        status,
-        newUrl,
-        originalUrl,
-        httpResponseCode,
-        requestMethod,
-        referrer,
-        headers,
-        resourceType
-    ] = args;
 
-    Object.assign(payload, {
-        status,
-        newUrl,
-        originalUrl,
-        httpResponseCode,
-        requestMethod,
-        referrer,
-        headers,
-        resourceType
-    });
-
-    return true;
-}
-
-function loadFailedDecorator(payload, args) {
-    var [
-        /*event*/
-        ,
-        errorCode,
-        errorDescription,
-        validatedURL,
-        isMainFrame
-    ] = args;
-
-    Object.assign(payload, {
-        errorCode,
-        errorDescription,
-        validatedURL,
-        isMainFrame
-    });
-
-    return true;
-}
 
 function noOpDecorator( /*payload*/ ) {
 
@@ -2456,7 +2387,7 @@ function handleCustomAlerts(id, opts) {
 }
 
 //If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
-function getElectronBrowserWindow(identity, errDesc) {
+export function getElectronBrowserWindow(identity, errDesc) {
     let openfinWindow = Window.wrap(identity.uuid, identity.name);
     let browserWindow = openfinWindow && openfinWindow.browserWindow;
 

@@ -1,21 +1,34 @@
-import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions, webContents } from 'electron';
+import { BrowserView, BrowserViewConstructorOptions, Rectangle, AutoResizeOptions, webContents, BrowserWindow } from 'electron';
 import { Identity } from '../api_protocol/transport_strategy/api_transport_base';
-import { addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView } from '../core_state';
+import {
+    addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView,
+    updateViewTarget, getInfoByUuidFrame
+} from '../core_state';
 import { getRuntimeProxyWindow } from '../window_groups_runtime_proxy';
 import { BrowserViewOptions, BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
-import {getInfo as getWebContentsInfo} from './webcontents';
+import {getInfo as getWebContentsInfo, setIframeHandlers} from './webcontents';
 import of_events from '../of_events';
 import route from '../../common/route';
+import { browserViewActionMap } from '../api_protocol/api_handlers/browser_view';
+import { getElectronBrowserWindow } from './window';
+import { OpenFinWindow } from '../../shapes';
 
 
-const windowCloseListenerMap = new WeakMap();
+const windowCloseListenerMap: WeakMap<OpenFinWindow, WeakMap<OfView, () => void>> = new WeakMap();
 
 export interface BrowserViewOpts extends BrowserViewCreationOptions {
     uuid: string;
 }
 
 export async function create(options: BrowserViewOpts) {
+    // checking if the name-uuid combination is already in use
+    const { uuid, name } = options;
+    if (getWindowByUuidName(uuid, name) || getBrowserViewByIdentity({ uuid, name }) || getInfoByUuidFrame({ uuid, name })) {
+        throw new Error('Trying to create a BrowserView with name-uuid combination already in use - '
+            + JSON.stringify({ name, uuid }));
+    }
+
     if (!options.target) {
         throw new Error('Must supply target identity');
     }
@@ -29,37 +42,53 @@ export async function create(options: BrowserViewOpts) {
     const ofView = addBrowserView(fullOptions, view);
     await attach(ofView, options.target);
     view.webContents.loadURL(options.url || 'about:blank');
+    setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
     } if (options.bounds) {
         setBounds(ofView, options.bounds);
     }
 }
-
+export function hide(ofView: OfView) {
+    const win = getElectronBrowserWindow(ofView.target);
+    win.removeBrowserView(ofView.view);
+}
+export function show(ofView: OfView) {
+    const win = getElectronBrowserWindow(ofView.target);
+    win.addBrowserView(ofView.view);
+}
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view} = ofView;
     if (view) {
-        const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
-        let bWin;
-        if (!ofWin) {
-            throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
-        } else {
-            bWin = ofWin.browserWindow;
-            if (ofWin.view) {
-                destroy(ofWin.view);
-                const oldListener = windowCloseListenerMap.get(ofWin);
-                of_events.removeListener(route.window('closed', toIdentity.uuid, toIdentity.name), oldListener);
+        if (ofView.target.name !== toIdentity.name) {
+            const oldWin = getWindowByUuidName(ofView.target.uuid, ofView.target.name);
+            if (oldWin) {
+                const oldwinMap = windowCloseListenerMap.get(oldWin);
+                if (oldwinMap) {
+                    const listener = oldwinMap.get(ofView);
+                    if (typeof listener === 'function') {
+                        of_events.removeListener(route.window('closed', ofView.target.uuid, ofView.target.name), listener);
+                    }
+                    oldwinMap.delete(ofView);
+                }
             }
         }
-        ofWin.view = ofView;
-        bWin.setBrowserView(view);
+        const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
+        if (!ofWin) {
+            throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
+        }
+        const bWin = ofWin.browserWindow;
+        bWin.addBrowserView(view);
         const listener = () => {
             destroy(ofView);
-            ofWin.view = undefined;
             windowCloseListenerMap.delete(ofWin);
         };
         of_events.once(route.window('closed', toIdentity.uuid, toIdentity.name), listener);
-        windowCloseListenerMap.set(ofWin, listener);
+        if (!windowCloseListenerMap.has(ofWin)) {
+            windowCloseListenerMap.set(ofWin, new WeakMap());
+        }
+        windowCloseListenerMap.get(ofWin).set(ofView, listener);
+        updateViewTarget(ofView, toIdentity);
     }
 }
 function destroy (ofView: OfView) {

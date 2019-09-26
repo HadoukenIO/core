@@ -18,6 +18,7 @@ import {
 import { ActionSpecMap } from '../shapes';
 import {hijackMovesForGroupedWindows} from './grouped_window_moves';
 import { argo } from '../../core_state';
+import { System } from '../../api/system';
 
 const successAck: APIPayloadAck = { success: true };
 
@@ -25,6 +26,7 @@ export const windowApiMap = {
     'animate-window': animateWindow,
     'blur-window': blurWindow,
     'bring-window-to-front': bringWindowToFront,
+    'center-window': centerWindow,
     'close-window': closeWindow,
     'disable-window-frame': disableUserMovement,
     'dock-window': dockWindow,
@@ -244,11 +246,15 @@ function leaveWindowGroup(identity: Identity, message: APIMessage, ack: Acker): 
     return Window.leaveGroup(windowIdentity).then(() => ack(successAck));
 }
 
-function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker): Promise<void> {
+function joinWindowGroup(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): Promise<void> {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     const groupingIdentity = getGroupingWindowIdentity(payload);
-
+    if (System.getAllExternalWindows().some(w => w.uuid === groupingIdentity.uuid)) {
+        // nack if joining an ExternalWindow since certain methods don't work without injection
+        nack(new Error('Joining a group with an ExternalWindow is not supported'));
+        return;
+    }
     return Window.joinGroup(windowIdentity, groupingIdentity).then(() => ack(successAck));
 }
 
@@ -459,5 +465,13 @@ function registerWindowName(identity: Identity, message: APIMessage, ack: Acker)
     const windowIdentity = getTargetWindowIdentity(payload);
 
     Window.registerWindowName(windowIdentity);
+    ack(successAck);
+}
+
+function centerWindow(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { payload } = message;
+    const windowIdentity = getTargetWindowIdentity(payload);
+
+    Window.center(windowIdentity);
     ack(successAck);
 }

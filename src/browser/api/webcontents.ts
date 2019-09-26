@@ -1,4 +1,62 @@
 import * as url from 'url';
+import { app } from 'electron';
+import { Identity } from '../../shapes';
+import ofEvents from '../of_events';
+import route, { WindowRoute } from '../../common/route';
+import { InjectableContext, EntityType } from '../../shapes';
+
+export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid, name }: Identity, topic: string, routeFunc: WindowRoute) {
+    webContents.on('did-get-response-details', (e,
+        status,
+        newUrl,
+        originalUrl,
+        httpResponseCode,
+        requestMethod,
+        referrer,
+        headers,
+        resourceType
+    ) => {
+        const type = 'resource-response-received';
+
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            status,
+            newUrl,
+            originalUrl,
+            httpResponseCode,
+            requestMethod,
+            referrer,
+            headers,
+            resourceType
+        };
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+    webContents.on('did-fail-load', (e,
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame
+    ) => {
+        const type = 'resource-load-failed';
+        const payload = {
+            name,
+            uuid,
+            topic,
+            type,
+            errorCode,
+            errorDescription,
+            validatedURL,
+            isMainFrame
+        };
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+    webContents.once('destroyed', () => {
+        webContents.removeAllListeners();
+    });
+}
 
 export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {
     webContents.executeJavaScript(code, true, (result) => {
@@ -17,10 +75,10 @@ export function getInfo(webContents: Electron.WebContents) {
 
 export function getAbsolutePath(webContents: Electron.WebContents, path: string) {
     const windowURL = webContents.getURL();
-    return  url.resolve(windowURL, path);
+    return url.resolve(windowURL, path);
 }
 
-export function navigate (webContents: Electron.WebContents, url: string) {
+export function navigate(webContents: Electron.WebContents, url: string) {
     // todo: replace everything here with "return webContents.loadURL(url)" once we get to electron 5.*
     // reason: starting electron v5, loadUrl returns a promise that resolves according to the same logic we apply here
     const navigationEnd = createNavigationEndPromise(webContents);
@@ -28,13 +86,13 @@ export function navigate (webContents: Electron.WebContents, url: string) {
     return navigationEnd;
 }
 
-export async function navigateBack (webContents: Electron.WebContents) {
+export async function navigateBack(webContents: Electron.WebContents) {
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goBack();
     return navigationEnd;
 }
 
-export async function navigateForward (webContents: Electron.WebContents) {
+export async function navigateForward(webContents: Electron.WebContents) {
     const navigationEnd = createNavigationEndPromise(webContents);
     webContents.goForward();
     return navigationEnd;
@@ -77,4 +135,34 @@ function createNavigationEndPromise(webContents: Electron.WebContents): Promise<
         webContents.once('did-fail-load', didFail);
         webContents.once('did-finish-load', didSucceed);
     });
+}
+
+
+export function setIframeHandlers (webContents: Electron.WebContents, contextObj: InjectableContext, uuid: string, name: string) {
+    webContents.registerIframe = (frameName: string, frameRoutingId: number) => {
+        // called for all iframes, but not for main frame of windows
+        app.vlog(1, `registerIframe ${frameName} ${frameRoutingId}`);
+        const frameInfo = {
+            name: frameName,
+            uuid,
+            parent: { uuid, name },
+            frameRoutingId,
+            entityType: EntityType.IFRAME
+        };
+
+        contextObj.frames.set(frameName, frameInfo);
+    };
+
+    // called in the WebContents class in the runtime
+    webContents.unregisterIframe = (closedFrameName: string, frameRoutingId: number) => {
+        // called for all iframes AND for main frames
+        app.vlog(1, `unregisterIframe ${frameRoutingId} ${closedFrameName}`);
+        const frameName = closedFrameName || name; // the parent name is considered a frame as well
+        const frameInfo = contextObj.frames.get(closedFrameName);
+        const entityType = frameInfo ? 'iframe' : 'window';
+        const payload = { uuid, name, frameName, entityType };
+        contextObj.frames.delete(closedFrameName);
+        ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
+        ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
+    };
 }

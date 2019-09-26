@@ -1,114 +1,82 @@
-import { OpenFinWindow, GroupWindow } from '../shapes';
+import { getRuntimeProxyWindow } from './window_groups_runtime_proxy';
+import { GroupWindow } from '../shapes';
+import { ExternalWindow } from 'electron';
+import { moveFromOpenFinWindow, getEventBounds, getTransactionBounds } from './normalized_rectangle';
 import of_events from './of_events';
 import route from '../common/route';
-import { BrowserWindow } from 'electron';
+import { RectangleBase, Rectangle } from './rectangle';
+import { restore } from './api/native_window';
 import WindowGroups from './window_groups';
 const WindowTransaction = require('electron').windowTransaction;
-import { getRuntimeProxyWindow } from './window_groups_runtime_proxy';
-import { RectangleBase, Rectangle } from './rectangle';
-import {
-    moveFromOpenFinWindow,
-    zeroDelta,
-    getEventBounds,
-    normalizeExternalBounds,
-    getTransactionBounds,
-    applyOffset
-} from './normalized_rectangle';
 import { writeToLog } from './log';
+import {release} from 'os';
 
 const isWin32 = process.platform === 'win32';
-const getState = (browserWindow: BrowserWindow) => {
-    if (browserWindow && browserWindow.isMinimized()) {
-        return 'minimized';
-    } else if (browserWindow && browserWindow.isMaximized()) {
-        return 'maximized';
-    } else {
-        return 'normal';
-    }
-};
-const moveToRect = ({ rect }: Move) => rect;
+const isWin10 = isWin32 && release().split('.')[0] === '10';
+    // Use disabled frame bounds changing events for mac os and for external native windows
+const usesDisabledFrameEvents = (win: GroupWindow) => win.isExternalWindow || !isWin32;
 enum ChangeType {
     POSITION = 0,
     SIZE = 1,
     POSITION_AND_SIZE = 2
 }
-/*
-Edge cases
-respect max
-whether to restore frame on leave
-disabled window moving
-event propagation
-*/
+type MoveAccumulator = { otherWindows: Move[], leader?: Move };
 type WinId = string;
-interface GroupInfo {
-    boundsChanging: boolean;
-    payloadCache: [GroupWindow, any, RectangleBase, number][];
-    interval?: any;
+const listenerCache: Map<WinId, Array<(...args: any[]) => void>> = new Map();
+export interface Move { ofWin: GroupWindow; rect: Rectangle; }
+
+async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: Object) {
+    const { uuid, name, isProxy, isExternalWindow } = groupWindow;
+    const identity = { uuid, name };
+    const eventName = isExternalWindow ? route.externalWindow(topic, uuid, name) : route.window(topic, uuid, name);
+
+    const eventArgs = {
+        ...payload,
+        ...identity,
+        topic,
+        type: 'window'
+    };
+    if (isProxy) {
+        const rt = await getRuntimeProxyWindow(identity);
+        const fin = rt.hostRuntime.fin;
+        await fin.System.executeOnRemote(identity, { action: 'raise-event', payload: { eventName, eventArgs } });
+    } else {
+        of_events.emit(eventName, eventArgs);
+    }
 }
-const listenerCache: Map<WinId, (...args: any[]) => void> = new Map();
-const groupInfoCache: Map<string, GroupInfo> = new Map();
-export interface Move {
-    ofWin: GroupWindow;
-    rect: Rectangle;
-    offset: RectangleBase;
-}
-async function emitChange(
-    { ofWin, rect, offset }: Move,
-    changeType: ChangeType,
-    reason: string
-) {
-    const eventBounds = getEventBounds(rect, offset);
+
+function emitChange(topic: string, ofWin: GroupWindow, changeType: ChangeType, reason: string) {
+    const rect = ofWin.browserWindow.getBounds();
+    const eventBounds = getEventBounds(rect);
     const eventArgs = {
         ...eventBounds,
         changeType,
         reason,
         deferred: true
     };
-    raiseEvent(ofWin, 'bounds-changed', eventArgs);
-
-}
-async function raiseEvent(groupWindow: GroupWindow, topic: string, payload: any) {
-    const { uuid, name } = groupWindow;
-    const id = { uuid, name };
-    let eventName;
-
-    if (groupWindow.isExternalWindow) {
-        eventName = route.nativeWindow(topic, uuid, name);
-    } else {
-        eventName = route.window(topic, uuid, name);
-    }
-
-    const eventArgs = {
-        ...payload,
-        uuid,
-        name,
-        topic,
-        type: 'window'
-    };
-
-    if (groupWindow.isProxy) {
-        const rt = await getRuntimeProxyWindow(id);
-        const fin = rt.hostRuntime.fin;
-        await fin.System.executeOnRemote(id, { action: 'raise-event', payload: { eventName, eventArgs } });
-    } else {
-        of_events.emit(eventName, eventArgs);
-    }
+    raiseEvent(ofWin, topic, eventArgs);
 }
 
 export function updateGroupedWindowBounds(win: GroupWindow, delta: Partial<RectangleBase>) {
+    const zeroDelta: RectangleBase = { x: 0, y: 0, height: 0, width: 0 };
     const shift = { ...zeroDelta, ...delta };
     return handleApiMove(win, shift);
 }
+
+function getLeaderDelta(win: GroupWindow, bounds: Partial<RectangleBase>): RectangleBase {
+    const { rect } = moveFromOpenFinWindow(win);
+    // Could be partial bounds from an API call
+    const end = { ...rect, ...bounds };
+    return rect.delta(end);
+}
+
 export function setNewGroupedWindowBounds(win: GroupWindow, partialBounds: Partial<RectangleBase>) {
-    const { rect, offset } = moveFromOpenFinWindow(win);
-    const bounds = { ...applyOffset(rect, offset), ...partialBounds };
-    const newBounds = normalizeExternalBounds(bounds, offset);
-    const delta = rect.delta(newBounds);
+    const delta = getLeaderDelta(win, partialBounds);
     return handleApiMove(win, delta);
 }
-type MoveAccumulator = { otherWindows: Move[], leader?: Move };
-async function handleApiMove(win: GroupWindow, delta: RectangleBase) {
-    const { rect, offset } = moveFromOpenFinWindow(win);
+
+function handleApiMove(win: GroupWindow, delta: RectangleBase) {
+    const { rect } = moveFromOpenFinWindow(win);
     const newBounds = rect.shift(delta);
     if (!rect.moved(newBounds)) {
         return;
@@ -120,7 +88,7 @@ async function handleApiMove(win: GroupWindow, delta: RectangleBase) {
             ? ChangeType.POSITION_AND_SIZE
             : ChangeType.SIZE
         : ChangeType.POSITION;
-    const moves = handleBoundsChanging(win, {}, applyOffset(newBounds, offset), changeType);
+    const moves = generateWindowMoves(win, newBounds, changeType);
     const { leader, otherWindows } = moves.reduce((accum: MoveAccumulator, move) => {
         move.ofWin === win ? accum.leader = move : accum.otherWindows.push(move);
         return accum;
@@ -130,76 +98,65 @@ async function handleApiMove(win: GroupWindow, delta: RectangleBase) {
         throw new Error('Attempted move violates group constraints');
     }
     handleBatchedMove(moves);
-    await Promise.all([
-        emitChange(leader, changeType, 'self'),
-        ...otherWindows.map(move => emitChange(move, changeType, 'group'))
-    ]);
+    emitChange('bounds-changed', win, changeType, 'self');
+    otherWindows.map(({ofWin}) => emitChange('bounds-changed', ofWin, changeType, 'group'));
     return leader.rect;
 }
 
-function handleBatchedMove(moves: Move[], bringWinsToFront: boolean = false) {
+function handleBatchedMove(moves: Move[]) {
     if (isWin32) {
-        const { flag: { noZorder, noSize, noActivate } } = WindowTransaction;
+        const { flag: { noZorder, noActivate } } = WindowTransaction;
         const flags = noZorder + noActivate;
         const wt = new WindowTransaction.Transaction(0);
-        moves.forEach(({ ofWin, rect, offset }) => {
+        moves.forEach(({ ofWin, rect }) => {
             const hwnd = parseInt(ofWin.browserWindow.nativeId, 16);
-            wt.setWindowPos(hwnd, { ...getTransactionBounds(rect, offset), flags });
-            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
+            let bounds: RectangleBase;
+            if (isWin10 && ofWin._options.frame) {
+                bounds = (<any>ExternalWindow).addShadow(ofWin.browserWindow.nativeId, rect);
+            } else {
+                bounds = rect;
+            }
+
+            (<any>wt.setWindowPos)(hwnd, { ...getTransactionBounds(bounds), flags, scale: false });
         });
         wt.commit();
     } else {
-        moves.forEach(({ ofWin, rect, offset }) => {
-            ofWin.browserWindow.setBounds(applyOffset(rect, offset));
-            if (bringWinsToFront) { ofWin.browserWindow.bringToFront(); }
+        moves.forEach(({ ofWin, rect }) => {
+            ofWin.browserWindow.setBounds(rect);
         });
     }
 }
-const makeTranslate = (delta: RectangleBase) => ({ ofWin, rect, offset }: Move): Move => {
-    return { ofWin, rect: rect.shift(delta), offset };
+
+const getInitialPositions = (win: GroupWindow) => WindowGroups.getGroup(win.groupUuid).map(moveFromOpenFinWindow);
+
+const handleMoveOnly = (delta: RectangleBase, initialPositions: Move[]) => {
+    return initialPositions.map(({ ofWin, rect }) => ({ ofWin, rect: rect.shift(delta)}));
 };
-function getInitialPositions(win: GroupWindow) {
-    return WindowGroups.getGroup(win.groupUuid).map(moveFromOpenFinWindow);
-}
-function handleBoundsChanging(
-    win: GroupWindow,
-    e: any,
-    rawPayloadBounds: RectangleBase,
-    changeType: ChangeType,
-    treatBothChangedAsJustAResize: boolean = false
-): Move[] {
+
+function generateWindowMoves(win: GroupWindow, rawBounds: RectangleBase, changeType: ChangeType): Move[] {
     const initialPositions: Move[] = getInitialPositions(win);
-    const leaderRectIndex = initialPositions.map(x => x.ofWin).indexOf(win);
     let moves: Move[];
-    const startMove = moveFromOpenFinWindow(win); //Corrected
-    const start = startMove.rect;
-    const { offset } = startMove;
-    const end = normalizeExternalBounds(rawPayloadBounds, offset); //Corrected
+    const delta = getLeaderDelta(win, rawBounds);
     switch (changeType) {
         case ChangeType.POSITION:
-            moves = handleMoveOnly(start, end, initialPositions);
+            moves = handleMoveOnly(delta, initialPositions);
             break;
         case ChangeType.SIZE:
-            moves = handleResizeOnly(leaderRectIndex, startMove, end, initialPositions);
+            moves = handleResizeOnly(win, delta);
             break;
         case ChangeType.POSITION_AND_SIZE:
-            const delta = start.delta(end);
+            const resized = (delta.width || delta.height);
             const xShift = delta.x ? delta.x + delta.width : 0;
             const yShift = delta.y ? delta.y + delta.height : 0;
-            const shift = { x: xShift, y: yShift, width: 0, height: 0 };
-            const resizeDelta = {x: delta.x - xShift, y: delta.y - yShift, width: delta.width, height: delta.height};
-            const resized = (delta.width || delta.height);
-            moves = resized
-                ? handleResizeOnly(leaderRectIndex, startMove, start.shift(resizeDelta), initialPositions)
-                : initialPositions;
             const moved = (xShift || yShift);
-            //This flag is here because sometimes the runtime lies and says we moved on a resize
-            //This flag should always be set to true when relying on runtime events. It should be false on api moves.
-            //Setting it to false on runtime events can cause a growing window bug.
-            moves = moved && !treatBothChangedAsJustAResize
-                ? handleMoveOnly(start, start.shift(shift), moves)
-                : moves;
-
+            if (resized) {
+                const resizeDelta = {x: delta.x - xShift, y: delta.y - yShift, width: delta.width, height: delta.height};
+                moves = handleResizeOnly(win, resizeDelta);
+            }
+            if (moved) {
+                const shift = { x: xShift, y: yShift, width: 0, height: 0 };
+                moves = handleMoveOnly(shift, moves);
+            }
             break;
         default: {
             moves = [];
@@ -208,17 +165,16 @@ function handleBoundsChanging(
     return moves;
 }
 
-function handleResizeOnly(leaderRectIndex: number, startMove: Move, end: RectangleBase, initialPositions: Move[]) {
-    const start = startMove.rect;
-    const win = startMove.ofWin;
-    const delta = start.delta(end);
+function handleResizeOnly(win: GroupWindow, delta: RectangleBase) {
+    const initialPositions = getInitialPositions(win);
     const rects = initialPositions.map(x => x.rect);
+    const leaderRectIndex = initialPositions.map(x => x.ofWin).indexOf(win);
+    const start = rects[leaderRectIndex];
     const iterMoves = Rectangle.PROPAGATE_MOVE(leaderRectIndex, start, delta, rects);
 
-    const allMoves = iterMoves.map((x, i) => ({
+    const allMoves = iterMoves.map((rect, i) => ({
         ofWin: initialPositions[i].ofWin,
-        rect: x,
-        offset: initialPositions[i].offset}));
+        rect}));
 
     const moves = allMoves.filter((move, i) => initialPositions[i].rect.moved(move.rect));
     const endMove = moves.find(({ ofWin }) => ofWin === win);
@@ -237,111 +193,111 @@ function handleResizeOnly(leaderRectIndex: number, startMove: Move, end: Rectang
     return moves;
 }
 
-function handleMoveOnly(start: Rectangle, end: RectangleBase, initialPositions: Move[]) {
-    const delta = start.delta(end);
-    return initialPositions
-        .map(makeTranslate(delta));
-}
-
-export function getGroupInfoCacheForWindow(win: GroupWindow): GroupInfo {
-    let groupInfo: GroupInfo = groupInfoCache.get(win.groupUuid);
-    if (!groupInfo) {
-        groupInfo = {
-            boundsChanging: false,
-            payloadCache: []
-        };
-        //merging of groups of windows that are not in a group will be late in producing a window group.
-        if (win.groupUuid) {
-            groupInfoCache.set(win.groupUuid, groupInfo);
-        }
+export function addWindowToGroup(win: GroupWindow) {
+    let moved = new Set<GroupWindow>();
+    let boundsChanging = false;
+    let interval: any;
+    let payloadCache: RectangleBase[] = [];
+    if (usesDisabledFrameEvents(win)) {
+        win.browserWindow.setUserMovementEnabled(false);
     }
 
-    return groupInfo;
-}
+    const handleEndBoundsChanging = (changeType: ChangeType) => {
+        // Emit expected events that aren't automatically emitted
+        moved.forEach((movedWin) => {
+            const isLeader = movedWin === win;
+            if (!isLeader || win.isExternalWindow) {
+                // bounds-changed is emitted for the leader, but not other windows
+                emitChange('bounds-changed', movedWin, changeType, 'group');
+            }
+        });
+        // Reset map of moved windows and flags for native windows and mac OS
+        boundsChanging = false;
+        payloadCache = [];
+        clearInterval(interval);
+        interval = null;
+        moved = new Set<GroupWindow>();
+    };
 
-export function addWindowToGroup(win: GroupWindow) {
-    win.browserWindow.setUserMovementEnabled(false);
-    const listener = async (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
+    const handleBoundsChanging = (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
         try {
-            const groupInfo = getGroupInfoCacheForWindow(win);
-            if (groupInfo.boundsChanging) {
-                groupInfo.payloadCache.push([win, e, rawPayloadBounds, changeType]);
-            } else {
-                const uuid = win.uuid;
-                const name = win.name;
-                const eventBounds = getEventBounds(win.browserWindow.getBounds());
-                const moved = new Set<GroupWindow>();
-                groupInfo.boundsChanging = true;
-                await raiseEvent(win, 'begin-user-bounds-changing', { ...eventBounds, windowState: getState(win.browserWindow) });
-                const initialMoves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
-                handleBatchedMove(initialMoves, true);
-                groupInfo.interval = setInterval(() => {
-                    try {
-                        if (groupInfo.payloadCache.length) {
-                            const [a, b, c, d] = groupInfo.payloadCache.pop();
-                            const moves = handleBoundsChanging(a, b, c, d, true);
-                            groupInfo.payloadCache = [];
-                            handleBatchedMove(moves);
-                            moves.forEach((move) => {
-                                moved.add(move.ofWin);
-                            });
-                        }
-                    } catch (error) {
-                        writeToLog('error', error);
-                    }
-                }, 30);
-                win.browserWindow
-                .once('disabled-frame-bounds-changed', async (e: any, rawPayloadBounds: RectangleBase, changeType: ChangeType) => {
-                    try {
-                        groupInfo.boundsChanging = false;
-                        clearInterval(groupInfo.interval);
-                        groupInfo.payloadCache = [];
-                        const moves = handleBoundsChanging(win, e, rawPayloadBounds, changeType, true);
-                        handleBatchedMove(moves);
-                        const promises: Promise<void>[] = [];
-                        moved.forEach((movedWin) => {
-                            const endPosition = moveFromOpenFinWindow(movedWin);
-                            const isLeader = movedWin === win;
-                            promises.push(emitChange(endPosition, changeType, isLeader ? 'self' : 'group'));
-                            if (isLeader) {
-                                promises.push(raiseEvent(movedWin, 'end-user-bounds-changing', {
-                                    ...getEventBounds(endPosition.rect, endPosition.offset),
-                                    windowState: getState(win.browserWindow)
-                                }));
-                            }
-                        });
-                        await promises;
-                    } catch (error) {
-                        writeToLog('error', error);
-                    }
-                });
+            e.preventDefault();
+            if (isWin32) {
+                // Use externalWindow static methods to remove the framed offset for Win10 windows
+                const adjustedBounds: any = (<any>ExternalWindow).removeShadow(win.browserWindow.nativeId, rawPayloadBounds);
+                rawPayloadBounds = Rectangle.CREATE_FROM_BOUNDS(adjustedBounds);
+            }
+            const moves = generateWindowMoves(win, rawPayloadBounds, changeType);
+            // Keep track of which windows have moved in order to emit events
+            moves.forEach(({ofWin}) => moved.add(ofWin));
+            if (!boundsChanging) {
+                boundsChanging = true;
+                const endingEvent = isWin32 ? 'end-user-bounds-change' : 'disabled-frame-bounds-changed';
+                win.browserWindow.once(endingEvent, handleEndBoundsChanging);
+                WindowGroups.getGroup(win.groupUuid).forEach(win => win.browserWindow.bringToFront());
+            }
+            if (moves.length) {
+                // bounds-changing is not emitted for the leader, but is for the other windows
+                const leaderMove = moves.find(({ofWin}) => ofWin.uuid === win.uuid && ofWin.name === win.name);
+                if (leaderMove && typeof leaderMove === 'object') {
+                    // Execute the actual move
+                    handleBatchedMove(moves);
+                    emitChange('bounds-changing', win, changeType, 'self');
+                }
             }
         } catch (error) {
             writeToLog('error', error);
         }
     };
 
-    listenerCache.set(win.browserWindow.nativeId, listener);
-    win.browserWindow.on('disabled-frame-bounds-changing', listener);
-}
-
-export function removeWindowFromGroup(win: GroupWindow) {
-    if (!win.browserWindow.isDestroyed()) {
-        win.browserWindow.setUserMovementEnabled(true);
-        const winId = win.browserWindow.nativeId;
-        const listener = listenerCache.get(winId);
-        if (listener) {
-            win.browserWindow.removeListener('disabled-frame-bounds-changing', listener);
+    const setupInterval = (changeType: ChangeType, raiseBeginEventBounds?: RectangleBase) => {
+        interval = setInterval(() => {
+            if (payloadCache.length) {
+                const bounds = payloadCache.pop();
+                // tslint:disable-next-line:no-empty - need to mock prevent default
+                handleBoundsChanging({preventDefault: () => {}}, bounds, changeType);
+                payloadCache = [];
+            }
+        }, 30);
+        if (raiseBeginEventBounds) {
+            raiseEvent(win, 'begin-user-bounds-changing', { ...raiseBeginEventBounds, windowState: 'normal' });
         }
-        listenerCache.delete(winId);
+    };
+    const moveListener = (e: any, rawBounds: RectangleBase) => handleBoundsChanging(e, rawBounds, ChangeType.POSITION);
+    const resizeListener = (e: any, rawBounds: RectangleBase) => handleBoundsChanging(e, rawBounds, ChangeType.SIZE);
+    const restoreListener = () => WindowGroups.getGroup(win.groupUuid).forEach(({browserWindow}) => restore(browserWindow));
+    const disabledFrameListener = (e: any, rawBounds: RectangleBase, changeType: ChangeType) => {
+        payloadCache.push(rawBounds);
+        // Setup an interval to get around aero-shake issues in native external windows
+        if (!interval) {
+            changeType = changeType !== ChangeType.POSITION_AND_SIZE ? changeType : ChangeType.SIZE;
+            setupInterval(changeType, rawBounds);
+        }
+    };
+
+    if (usesDisabledFrameEvents(win)) {
+        win.browserWindow.on('disabled-frame-bounds-changing', disabledFrameListener);
+        listenerCache.set(win.browserWindow.nativeId, [disabledFrameListener]);
+    } else {
+        win.browserWindow.on('will-move', moveListener);
+        win.browserWindow.on('will-resize', resizeListener);
+        win.browserWindow.on('begin-user-bounds-change', restoreListener);
+        listenerCache.set(win.browserWindow.nativeId, [moveListener, resizeListener, restoreListener]);
     }
 }
 
-export function deleteGroupInfoCache(groupUuid: string) {
-    groupInfoCache.delete(groupUuid);
-}
-
-interface Clamped {
-    value: number;
-    clampedOffset: number;
+export function removeWindowFromGroup(win: GroupWindow) {
+    const winId = win.browserWindow.nativeId;
+    if (!win.browserWindow.isDestroyed()) {
+        const listeners = listenerCache.get(winId);
+        if (usesDisabledFrameEvents(win)) {
+            win.browserWindow.removeListener('disabled-frame-bounds-changing', listeners[0]);
+            win.browserWindow.setUserMovementEnabled(true);
+        } else {
+            win.browserWindow.removeListener('will-move', listeners[0]);
+            win.browserWindow.removeListener('will-resize', listeners[1]);
+            win.browserWindow.removeListener('begin-user-bounds-change', listeners[2]);
+        }
+    }
+    listenerCache.delete(winId);
 }
