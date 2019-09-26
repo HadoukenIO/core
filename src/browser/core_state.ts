@@ -799,16 +799,6 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
             const { uuid, name } = openfinWindow;
             let browserWindow: Shapes.BrowserWindow;
             browserWindow = openfinWindow.browserWindow;
-            if (!openfinWindow.mainFrameRoutingId) {
-                // save bit time here by not calling webContents.mainFrameRoutingId every time
-                // mainFrameRoutingId is wrong during setWindowObj
-                if (!browserWindow.isDestroyed()) {
-                    openfinWindow.mainFrameRoutingId = browserWindow.webContents.mainFrameRoutingId;
-                    writeToLog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId}`, true);
-                } else {
-                    writeToLog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`, true);
-                }
-            }
 
             if (name === frame) {
                 return {
@@ -816,8 +806,8 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
                     browserWindow,
                     _options: openfinWindow._options,
                     webContents: browserWindow.webContents,
-                    frameRoutingId: openfinWindow.mainFrameRoutingId,
-                    mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
+                    frameRoutingId: browserWindow.webContents.mainFrameRoutingId,
+                    mainFrameRoutingId: browserWindow.webContents.mainFrameRoutingId,
                     frameName: name
                 };
             } else if (openfinWindow.frames.get(frame)) {
@@ -828,7 +818,7 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
                     _options: openfinWindow._options,
                     webContents: browserWindow.webContents,
                     frameRoutingId,
-                    mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
+                    mainFrameRoutingId: browserWindow.webContents.mainFrameRoutingId,
                     frameName: name
                 };
             }

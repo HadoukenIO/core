@@ -127,7 +127,6 @@ export interface OpenFinWindow extends InjectableContext {
     groupUuid: string|null;
     hideReason: string;
     id: number;
-    mainFrameRoutingId: number;
     isProxy?: boolean;
 }
 

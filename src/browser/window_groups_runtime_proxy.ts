@@ -72,7 +72,6 @@ export class RuntimeProxyWindow {
             preloadScripts: new Array<PreloadScript>(),
             framePreloadScripts: {},
             uuid,
-            mainFrameRoutingId: 0,
             isProxy: true
         };
         externalWindowsProxyList.set(windowKey, this);
