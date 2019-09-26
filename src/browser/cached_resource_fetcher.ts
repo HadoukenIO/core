@@ -4,7 +4,7 @@ import {join, parse} from 'path';
 import {parse as parseUrl} from 'url';
 import {createHash} from 'crypto';
 import * as log from './log';
-import { isFileUrl, isHttpUrl, uriToPath } from '../common/main';
+import { isFileUrl, isHttpUrl, uriToPath, isBase64 } from '../common/main';
 import { addPendingAuthRequests, createAuthUI } from './authentication_delegate';
 import { AuthCallback, Identity } from '../shapes';
 import { getSession } from './core_state';
@@ -42,6 +42,8 @@ export async function cachedFetch(identity: Identity, url: string, callback: (er
     if (!isHttpUrl(url)) {
         if (isFileUrl(url)) {
             callback(null, uriToPath(url));
+        } else if ( isBase64(url)) {
+            callback(null, url);
         } else {
             // this is C:\whatever\
             stat(url, (err: null|Error) => {
