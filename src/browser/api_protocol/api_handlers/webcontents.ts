@@ -3,6 +3,7 @@ import { Identity, APIMessage, Acker, APIPayloadAck } from '../../../shapes';
 import { getTargetWindowIdentity, registerActionMap } from './api_protocol_base';
 
 import * as WebContents from '../../api/webcontents';
+import * as Preload from '../../preload_scripts';
 import { getWindowByUuidName, getBrowserViewByIdentity } from '../../core_state';
 const { Application } = require('../../api/application');
 const successAck: APIPayloadAck = { success: true };
@@ -15,7 +16,8 @@ export const webContentsApiMap = {
     'navigate-window-forward': navigateWindowForward,
     'stop-window-navigation': stopWindowNavigation,
     'reload-window': reloadWindow,
-    'set-zoom-level': setZoomLevel
+    'set-zoom-level': setZoomLevel,
+    'set-window-preload-state': setWindowPreloadState
 };
 export function init () {
     registerActionMap(webContentsApiMap, 'Window');
@@ -114,6 +116,13 @@ function setZoomLevel(identity: Identity, message: APIMessage, ack: Acker): void
     const webContents = getElectronWebContents(windowIdentity);
 
     WebContents.setZoomLevel(webContents, level);
+    ack(successAck);
+}
+function setWindowPreloadState(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { payload } = message;
+    const windowIdentity = getTargetWindowIdentity(identity);
+
+    Preload.setWindowPreloadState(windowIdentity, payload);
     ack(successAck);
 }
 
