@@ -19,11 +19,7 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
     ) => {
         const type = 'resource-response-received';
 
-        const payload = {
-            uuid,
-            name,
-            topic,
-            type,
+        const payload = { uuid, name, topic, type,
             status,
             newUrl,
             originalUrl,
@@ -43,11 +39,7 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
         isMainFrame
     ) => {
         const type = 'resource-load-failed';
-        const payload = {
-            uuid,
-            name,
-            topic,
-            type,
+        const payload = { uuid, name, topic, type,
             errorCode,
             errorDescription,
             validatedURL,
