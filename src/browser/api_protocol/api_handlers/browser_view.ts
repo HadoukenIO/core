@@ -2,7 +2,7 @@ import * as apiProtocolBase from './api_protocol_base';
 import { ActionSpecMap } from '../shapes';
 import { Identity, APIMessage } from '../../../shapes';
 import * as browser_view from '../../api/browser_view';
-import { getBrowserViewByIdentity, getEntityIdentity } from '../../core_state';
+import { getBrowserViewByIdentity, getInfoByUuidFrame } from '../../core_state';
 
 const successAck = {
     success: true
@@ -10,7 +10,8 @@ const successAck = {
 
 async function create (identity: Identity, message: APIMessage) {
     const { payload } = message;
-    Object.assign(payload, { parent: getEntityIdentity(identity) });
+    // TODO remove once we stop using falsy getEntityType in elipc_strategy.ts
+    Object.assign(payload, { parent: getInfoByUuidFrame(identity) });
     await browser_view.create(payload);
     return successAck;
 }

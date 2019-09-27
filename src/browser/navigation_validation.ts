@@ -1,4 +1,4 @@
-import coreState = require('./core_state');
+import * as coreState from './core_state';
 import { BrowserWindow, app as electronApp } from 'electron';
 import SubscriptionManager from './subscription_manager';
 import ofEvents from './of_events';
