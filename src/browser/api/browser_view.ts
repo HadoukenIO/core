@@ -28,22 +28,27 @@ export async function create(options: BrowserViewOpts) {
     if (!options.target) {
         throw new Error('Must supply target identity');
     }
-    const targetWin = getWindowByUuidName(options.target.uuid, options.target.name);
+    const targetIdentity = options.target;
+    const targetWin = getWindowByUuidName(targetIdentity.uuid, targetIdentity.name);
     if (!targetWin) {
         throw new Error('Target Window could not be found');
     }
+
     const targetOptions = targetWin._options;
     const fullOptions = Object.assign({}, targetOptions, options);
     const convertedOptions = convertOptions.convertToElectron(fullOptions, false);
     convertedOptions.webPreferences.affinity = uuid;
     const view = new BrowserView(convertedOptions);
     const ofView = addBrowserView(fullOptions, view);
+
     hookWebContentsEvents(view.webContents, options, 'view', route.view);
+
     of_events.emit(route.view('created', ofView.uuid, ofView.name), {
         name: ofView.name,
         uuid: ofView.uuid,
         target: ofView.target
     });
+
     await attach(ofView, options.target);
     setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
@@ -51,6 +56,7 @@ export async function create(options: BrowserViewOpts) {
     } if (options.bounds) {
         setBounds(ofView, options.bounds);
     }
+
     of_events.emit(route.view('shown', ofView.uuid, ofView.name), {
         name: ofView.name,
         uuid: ofView.uuid,
