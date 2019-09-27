@@ -66,7 +66,7 @@ export async function create(options: BrowserViewOpts) {
         uuid: ofView.uuid,
         target: ofView.target
     });
-  
+
     await attach(ofView, options.target);
     setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
@@ -74,7 +74,7 @@ export async function create(options: BrowserViewOpts) {
     } if (options.bounds) {
         setBounds(ofView, options.bounds);
     }
-  
+
     of_events.emit(route.view('shown', ofView.uuid, ofView.name), {
         name: ofView.name,
         uuid: ofView.uuid,
