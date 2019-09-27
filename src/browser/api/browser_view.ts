@@ -35,7 +35,11 @@ export async function create(options: BrowserViewOpts) {
         throw new Error('Target Window could not be found');
     }
     const targetOptions = targetWin._options;
-    const fullOptions = Object.assign({}, targetOptions, options);
+    const fullOptions = Object.assign(
+        {},
+        targetOptions,
+        options,
+        { targetWebContentsId: targetWin.browserWindow.webContents.id });
     const view = new BrowserView(convertOptions.convertToElectron(fullOptions, false));
     const ofView = addBrowserView(fullOptions, view);
     hookWebContentsEvents(view.webContents, options, 'view', route.view);

@@ -316,7 +316,7 @@
 
 
         currPageHasLoaded = true;
-        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen || isCrossOrigin()) {
+        if (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen || isCrossOrigin() || initialOptions.targetWebContentsId !== undefined) {
             deferByTick(() => {
                 pendingMainCallbacks.forEach((callback) => {
                     const userAppConfigArgs = initialOptions.userAppConfigArgs;
@@ -355,7 +355,7 @@
     }
 
     function onContentReady(bindObject, callback) {
-        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen || isCrossOrigin())) {
+        if (currPageHasLoaded && (getOpenerSuccessCallbackCalled() || window.opener === null || initialOptions.isRawWindowOpen || isCrossOrigin() || initialOptions.targetWebContentsId !== undefined)) {
             deferByTick(() => {
                 callback();
             });

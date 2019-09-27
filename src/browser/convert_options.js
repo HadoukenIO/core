@@ -147,6 +147,10 @@ function validateOptions(options) {
         baseOptions.rawWindowOpen = options.rawWindowOpen;
     }
 
+    if (options.targetWebContentsId) {
+        baseOptions.targetWebContentsId = options.targetWebContentsId;
+    }
+
     return validate(baseOptions, options);
 }
 
