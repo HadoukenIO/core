@@ -1242,57 +1242,6 @@ Window.getOptions = function(identity) {
 
 Window.getParentWindow = function() {};
 
-/**
- * Sets/updates window's preload script state and emits relevant events
- */
-Window.setWindowPreloadState = function(identity, payload) {
-    const { uuid, name } = identity;
-    const { url, state, allDone } = payload;
-    const updateTopic = allDone ? 'preload-scripts-state-changed' : 'preload-scripts-state-changing';
-    const frameInfo = coreState.getInfoByUuidFrame(identity);
-    let openfinWindow;
-    if (frameInfo.entityType === 'iframe') {
-        openfinWindow = Window.wrap(frameInfo.parent.uuid, frameInfo.parent.name);
-    } else {
-        openfinWindow = Window.wrap(uuid, name);
-    }
-
-    if (!openfinWindow) {
-        return log.writeToLog('info', `setWindowPreloadState missing openfinWindow ${uuid} ${name}`);
-    }
-    let { preloadScripts } = openfinWindow;
-
-    // Single preload script state change
-    if (!allDone) {
-        if (frameInfo.entityType === 'iframe') {
-            let frameState = openfinWindow.framePreloadScripts[name];
-            if (!frameState) {
-                frameState = openfinWindow.framePreloadScripts[name] = [];
-            }
-            preloadScripts = frameState.find(e => e.url === url);
-            if (!preloadScripts) {
-                frameState.push(preloadScripts = { url });
-            }
-            preloadScripts = [preloadScripts];
-        } else {
-            preloadScripts = openfinWindow.preloadScripts.filter(e => e.url === url);
-        }
-        if (preloadScripts) {
-            preloadScripts[0].state = state;
-        } else {
-            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${url} `);
-        }
-    }
-
-    if (frameInfo.entityType === 'window') {
-        ofEvents.emit(route.window(updateTopic, uuid, name), {
-            name,
-            uuid,
-            preloadScripts
-        });
-    } // @TODO ofEvents.emit(route.frame for iframes
-};
-
 Window.getSnapshot = (opts) => {
     return new Promise((resolve, reject) => {
         const { identity, payload: { area } } = opts;
