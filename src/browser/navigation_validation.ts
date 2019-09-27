@@ -86,7 +86,7 @@ export function navigationValidator(uuid: string, name: string, winId: number) {
                 name,
                 uuid,
                 url,
-                sourceName: name
+                sourceName: null
             });
 
             event.preventDefault();
