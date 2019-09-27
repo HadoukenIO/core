@@ -73,6 +73,7 @@ function five0BaseOptions() {
             'height': 0,
             'width': 0
         },
+        'customFrame': '',
         'defaultCentered': false,
         'defaultHeight': 500,
         'defaultLeft': 10,
@@ -176,6 +177,39 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 export const getStartupAppOptions = function(appJson) {
     return appJson['startup_app'];
 };
+
+export const toCustomFrame = function(options) {
+    const hasValidLayoutConfig = options.layout && validateLayoutConfig(options.layout.content);
+
+    // customFrame necessarily uses layouts, so if no layout config is given, we construct one ourselves. 
+    if (!hasValidLayoutConfig) {
+        options.layout = {
+            'settings': {
+                'popoutWholeStack': false,
+                'constrainDragToContainer': true,
+                'showPopoutIcon': false,
+                'showMaximiseIcon': false,
+                'showCloseIcon': false
+            },
+            content: [{
+                type: 'component',
+                componentName: 'browserView',
+                componentState: {
+                    identity: {
+                        uuid: options.uuid,
+                        name: `${options.name}-main-view`
+                    },
+                    url: options.url
+                }
+            }]
+        };
+    }
+
+    // for now we use default frame for any customFrame value
+    options.url = `file:///${path.resolve(`${__dirname}/../../assets/frame/default-frame.html`)}`;
+    return options;
+};
+
 export const convertToElectron = function(options, returnAsString) {
 
     const usingIframe = !!(options.api && options.api.iframe);
@@ -279,11 +313,19 @@ export const convertToElectron = function(options, returnAsString) {
         newOptions.backgroundColor = TRANSPARENT_WHITE;
     }
 
+    if (options.layout) {
+        newOptions.layout = options.layout;
+    }
+
     if (returnAsString) {
         return JSON.stringify(newOptions);
     } else {
         return JSON.parse(JSON.stringify(newOptions));
     }
+};
+
+const validateLayoutConfig = function(layoutContents) {
+    return layoutContents && Array.isArray(layoutContents);
 };
 
 export const fetchOptions = function(argo, onComplete, onError) {

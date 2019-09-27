@@ -71,7 +71,7 @@ module.exports = (grunt) => {
         copy: {
             assets: { // assets: images, htmls, icons
                 files: [{
-                    src: ['assets/*'],
+                    src: ['assets/**/*'],
                     dest: 'staging/core/'
                 }]
             },
