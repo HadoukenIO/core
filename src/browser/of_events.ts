@@ -47,7 +47,7 @@ class OFEvents extends EventEmitter {
                 // Wildcard on any channel/topic of a specified source (ex: 'window/*/myUUID-myWindow')
                 super.emit(route(channel, '*', source), envelope);
             }
-            const shouldPropagate = (channel === 'window' || channel === 'application') && !isMultiRuntimeEvent;
+            const shouldPropagate = (channel === 'window' || channel === 'view' || channel === 'application') && !isMultiRuntimeEvent;
             if (shouldPropagate) {
                 const checkedPayload = typeof payload === 'object' ? payload : { payload };
                 if (channel === 'window') {
@@ -65,6 +65,16 @@ class OFEvents extends EventEmitter {
                             eventPropagations.set(route.system(propTopic), { ...checkedPayload, type: propTopic, topic: 'system' });
                         }
                     }
+                } else if (channel === 'view') {
+                    const propTopic = `view-${topic}`;
+                    eventPropagations.set(route.application(propTopic, uuid), {
+                        ...checkedPayload,
+                        type: propTopic,
+                        topic: 'application'
+                    });
+                    if (propagateToSystem) {
+                        eventPropagations.set(route.system(propTopic), { ...checkedPayload, type: propTopic, topic: 'system' });
+                    }
                     //Don't propagate -requested events to System
                 } else if (channel === 'application' && propagateToSystem) {
                     const propTopic = `application-${topic}`;
@@ -75,7 +85,7 @@ class OFEvents extends EventEmitter {
                         'window-responding',
                         'window-start-load'
                     ];
-                    if (!topic.match(/^window-/)) {
+                    if (!topic.match(/^window-/) && !topic.match(/^view-/)) {
                         eventPropagations.set(route.system(propTopic), { ...checkedPayload, type: propTopic, topic: 'system' });
                     } else if (appWindowEventsNotOnWindow.some(t => t === topic)) {
                         eventPropagations.set(route.system(topic), { ...checkedPayload, type: topic, topic: 'system' });
