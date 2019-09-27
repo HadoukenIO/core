@@ -81,6 +81,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         if (previousTarget.name !== toIdentity.name) {
             const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
             if (oldWin) {
+                oldWin.browserWindow.removeBrowserView(view);
                 const oldwinMap = windowCloseListenerMap.get(oldWin);
                 if (oldwinMap) {
                     const listener = oldwinMap.get(ofView);
