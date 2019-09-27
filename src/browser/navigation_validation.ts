@@ -81,12 +81,27 @@ export function navigationValidator(uuid: string, name: string, winId: number) {
         if (!allowed) {
             electronApp.vlog(1, 'Navigation is blocked ' + url);
 
-            const routeFunc = coreState.getInfoByUuidFrame({ uuid, name }).entityType === 'view' ? route.view : route.window;
+            // sourceName is deprecated and will soon be removed
+            const self = coreState.getWinById(winId);
+            let sourceName = name;
+            if (self.parentId) {
+                const parent = coreState.getWinById(self.parentId);
+                if (parent) {
+                    const parentOpts = coreState.getWindowOptionsById(parent.id);
+                    if (parentOpts) {
+                        sourceName = parentOpts.name;
+                    }
+                }
+            }
+
+            const isView = coreState.getInfoByUuidFrame({ uuid, name }).entityType === 'view';
+            const routeFunc = isView ? route.view : route.window;
+            const payload = isView ? {} : { sourceName };
             ofEvents.emit(routeFunc('navigation-rejected', uuid, name), {
                 name,
                 uuid,
                 url,
-                sourceName: null
+                ...payload
             });
 
             event.preventDefault();
