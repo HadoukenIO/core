@@ -41,12 +41,12 @@ export async function create(options: BrowserViewOpts) {
     const view = new BrowserView(convertedOptions);
     const ofView = addBrowserView(fullOptions, view);
     hookWebContentsEvents(view.webContents, options, 'view', route.view);
-    await attach(ofView, options.target);
     of_events.emit(route.view('created', ofView.uuid, ofView.name), {
         name: ofView.name,
         uuid: ofView.uuid,
         target: ofView.target
     });
+    await attach(ofView, options.target);
     setIframeHandlers(view.webContents, ofView, options.uuid, options.name);
     if (options.autoResize) {
         view.setAutoResize(options.autoResize);
@@ -86,6 +86,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         if (previousTarget.name !== toIdentity.name) {
             const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
             if (oldWin) {
+                oldWin.browserWindow.removeBrowserView(view);
                 of_events.emit(route.window('view-detached', previousTarget.uuid, previousTarget.name), {
                     viewIdentity: {uuid: ofView.uuid, name: ofView.name},
                     target: toIdentity,

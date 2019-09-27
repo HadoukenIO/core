@@ -122,8 +122,14 @@ electronApp.on('ready', function() {
 Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
-    let appUrl = opts.url;
-    const { uuid, name } = opts;
+    let appUrl;
+    const { uuid, name, customFrame } = opts;
+
+    if (customFrame) {
+        convertOpts.toCustomFrame(opts);
+    }
+
+    appUrl = opts.url;
     const initialAppOptions = Object.assign({}, opts);
 
     if (appUrl === undefined && opts.mainWindowOptions) {
