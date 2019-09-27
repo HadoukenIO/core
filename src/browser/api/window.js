@@ -535,21 +535,8 @@ Window.create = function(id, opts) {
         });
 
         const isMainWindow = (uuid === name);
-        const emitToAppIfMainWin = (type, payload) => {
-            // Window crashed: inform Window "namespace"
-            ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
-
-            if (isMainWindow) {
-                // Application crashed: inform Application "namespace"
-                ofEvents.emit(route.application(type, uuid), Object.assign({ topic: 'application', type, uuid }, payload));
-            }
-        };
 
         winWebContents.on('crashed', (event, killed, terminationStatus) => {
-            emitToAppIfMainWin('crashed', {
-                reason: terminationStatus
-            });
-
             // When the renderer crashes, remove blocking event listeners.
             // Removing 'close-requested' listeners will allow the crashed window to be closed manually easily.
             const closeRequested = route.window('close-requested', uuid, name);
@@ -571,14 +558,6 @@ Window.create = function(id, opts) {
                 const args = { message, title, type };
                 showErrorBox(args);
             }
-        });
-
-        browserWindow.on('responsive', () => {
-            emitToAppIfMainWin('responding');
-        });
-
-        browserWindow.on('unresponsive', () => {
-            emitToAppIfMainWin('not-responding');
         });
 
         let mapEvents = function(eventMap, eventEmitter) {

@@ -20,8 +20,8 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
         const type = 'resource-response-received';
 
         const payload = {
-            name,
             uuid,
+            name,
             topic,
             type,
             status,
@@ -44,8 +44,8 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
     ) => {
         const type = 'resource-load-failed';
         const payload = {
-            name,
             uuid,
+            name,
             topic,
             type,
             errorCode,
@@ -56,48 +56,51 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
         ofEvents.emit(routeFunc(type, uuid, name), payload);
     });
 
-    webContents.on('page-title-updated', (e,
-        title,
-        explicitSet
-    ) => {
+    webContents.on('page-title-updated', (e, title, explicitSet) => {
         const type = 'page-title-updated';
-        const payload = {
-            name,
-            uuid,
-            topic,
-            type,
-            title,
-            explicitSet
-        };
+        const payload = {uuid, name, topic, type, title, explicitSet};
         ofEvents.emit(routeFunc(type, uuid, name), payload);
     });
 
-    webContents.on('did-change-theme-color', (e,
-        color
-    ) => {
+    webContents.on('did-change-theme-color', (e, color) => {
         const type = 'did-change-theme-color';
-        const payload = {
-            name,
-            uuid,
-            topic,
-            type,
-            color
-        };
+        const payload = {uuid, name, topic, type, color};
         ofEvents.emit(routeFunc(type, uuid, name), payload);
     });
 
-    webContents.on('page-favicon-updated', (e,
-        favicons
-    ) => {
+    webContents.on('page-favicon-updated', (e, favicons) => {
         const type = 'page-favicon-updated';
-        const payload = {
-            name,
-            uuid,
-            topic,
-            type,
-            favicons
-        };
+        const payload = {uuid, name, topic, type, favicons};
         ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+
+    const isMainWindow = (uuid === name);
+    const emitToAppIfMainWin = (type: string, payload: any) => {
+        if (isMainWindow) {
+            // Application crashed: inform Application "namespace"
+            ofEvents.emit(route.application(type, uuid), Object.assign({ topic: 'application', type, uuid }, payload));
+        }
+    };
+
+    webContents.on('crashed', (e, killed, terminationStatus) => {
+        const type = 'crashed';
+        const payload = {uuid, name, topic, type, reason: terminationStatus};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+        emitToAppIfMainWin(type, payload);
+    });
+
+    webContents.on('responsive', () => {
+        const type = 'responding';
+        const payload = {uuid, name, topic, type};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+        emitToAppIfMainWin(type, payload);
+    });
+
+    webContents.on('unresponsive', () => {
+        const type = 'not-responding';
+        const payload = {uuid, name, topic, type};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+        emitToAppIfMainWin(type, payload);
     });
 
     webContents.once('destroyed', () => {

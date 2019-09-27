@@ -44,22 +44,6 @@ export async function create(options: BrowserViewOpts) {
     const ofView = addBrowserView(fullOptions, view);
 
     hookWebContentsEvents(view.webContents, options, 'view', route.view);
-    view.webContents.on('crashed', (event, killed, terminationStatus) => {
-        of_events.emit(
-            route.view('crashed', uuid, name),
-            Object.assign({topic: 'view', type: 'crashed', uuid, name}, {reason: terminationStatus})
-        );
-    });
-    view.webContents.on('responsive', () => {
-        of_events.emit(
-            route.view('responding', uuid, name), {topic: 'view', type: 'responding', uuid, name}
-        );
-    });
-    view.webContents.on('unresponsive', () => {
-        of_events.emit(
-            route.view('not-responding', uuid, name), {topic: 'view', type: 'not-responding', uuid, name}
-        );
-    });
 
     of_events.emit(route.view('created', ofView.uuid, ofView.name), {
         name: ofView.name,
