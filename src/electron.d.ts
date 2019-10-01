@@ -1,4 +1,4 @@
-// Type definitions for Electron 8.0.0-nightly.20190917
+// Type definitions for Electron 8.0.0-nightly.20190924
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -3605,9 +3605,12 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
      */
     readBuffer(format: string): Buffer;
     /**
-     * The text on the find pasteboard. This method uses synchronous IPC when called
-     * from the renderer process. The cached value is reread from the find pasteboard
-     * whenever the application is activated.
+     * The text on the find pasteboard, which is the pasteboard that holds information
+     * about the current state of the active application’s find panel.
+     *
+     * This method uses synchronous IPC when called from the renderer process. The
+     * cached value is reread from the find pasteboard whenever the application is
+     * activated.
      *
      * @platform darwin
      */
@@ -3649,8 +3652,10 @@ This cannot be called when `titleBarStyle` is set to `customButtonsOnHover`.
      */
     writeBuffer(format: string, buffer: Buffer, type?: 'selection' | 'clipboard'): void;
     /**
-     * Writes the `text` into the find pasteboard as plain text. This method uses
-     * synchronous IPC when called from the renderer process.
+     * Writes the `text` into the find pasteboard (the pasteboard that holds
+     * information about the current state of the active application’s find panel) as
+     * plain text. This method uses synchronous IPC when called from the renderer
+     * process.
      *
      * @platform darwin
      */
@@ -6184,6 +6189,7 @@ Starts recording network events to `path`.
     sound: string;
     subtitle: string;
     title: string;
+    urgency: ('normal' | 'critical' | 'low');
   }
 
   interface NotificationAction {
@@ -13155,6 +13161,12 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * @platform darwin
      */
     sound?: string;
+    /**
+     * The urgency level of the notification. Can be 'normal', 'critical', or 'low'.
+     *
+     * @platform linux
+     */
+    urgency?: ('normal' | 'critical' | 'low');
     /**
      * Actions to add to the notification. Please read the available actions and
      * limitations in the `NotificationAction` documentation.
