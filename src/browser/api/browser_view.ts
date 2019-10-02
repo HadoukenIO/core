@@ -95,6 +95,8 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
             if (oldWin) {
                 oldWin.browserWindow.removeBrowserView(view);
                 of_events.emit(route.window('view-detached', previousTarget.uuid, previousTarget.name), {
+                    uuid: ofView.uuid,
+                    name: ofView.name,
                     viewIdentity: {uuid: ofView.uuid, name: ofView.name},
                     target: toIdentity,
                     previousTarget
@@ -126,10 +128,14 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
 
         updateViewTarget(ofView, toIdentity);
         of_events.emit(route.view('attached', ofView.uuid, ofView.name), {
+            name: ofView.name,
+            uuid: ofView.uuid,
             target: toIdentity,
             previousTarget
         });
         of_events.emit(route.window('view-attached', toIdentity.uuid, toIdentity.name), {
+            name: ofView.name,
+            uuid: ofView.uuid,
             viewIdentity: {uuid: ofView.uuid, name: ofView.name},
             target: toIdentity,
             previousTarget
@@ -140,7 +146,7 @@ export async function destroy (ofView: OfView) {
     const {uuid, name, target, view} = ofView;
     removeBrowserView(ofView);
     view.destroy();
-    of_events.emit(route.view('destroyed', uuid, name), {target});
+    of_events.emit(route.view('destroyed', uuid, name), {name, uuid, target});
 }
 
 export async function setAutoResize(ofView: OfView, autoResize: AutoResizeOptions) {
