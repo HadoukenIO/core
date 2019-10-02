@@ -60,7 +60,6 @@ export const windowApiMap = {
     'show-window': showWindow,
     'set-foreground-window': setForegroundWindow,
     'set-window-bounds': setWindowBounds,
-    'set-window-preload-state': setWindowPreloadState,
     'show-at-window': showAtWindow,
     'stop-flash-window': stopFlashWindow,
     'undock-window': undockWindow,
@@ -124,14 +123,6 @@ function setWindowBounds(identity: Identity, message: APIMessage, ack: Acker, na
     const { top, left, width, height } = payload;
     const {uuid, name} = getTargetWindowIdentity(payload);
     Window.setBounds({ uuid, name }, left, top, width, height, () => ack(successAck), nack);
-}
-
-function setWindowPreloadState(identity: Identity, message: APIMessage, ack: Acker): void {
-    const { payload } = message;
-    const windowIdentity = getTargetWindowIdentity(identity);
-
-    Window.setWindowPreloadState(windowIdentity, payload);
-    ack(successAck);
 }
 
 function setForegroundWindow(identity: Identity, message: APIMessage, ack: Acker): void {
