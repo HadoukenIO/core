@@ -3,7 +3,6 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as coreState from '../../core_state';
 import { getDefaultRequestHandler, actionMap } from './api_protocol_base';
 import {ApiPath, ApiPolicyDelegate, Endpoint} from '../shapes';
-import {OpenFinWindow} from '../../../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
 import { GetDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
 import { writeToLog } from '../../log';
