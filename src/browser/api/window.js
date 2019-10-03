@@ -742,6 +742,8 @@ Window.create = function(id, opts) {
         };
 
         //Legacy logic where we wait for the API to 'connect' before we invoke the callback method.
+        const observableCleanUp = new Map();
+        const connected = route.window('connected', uuid, name);
         const apiInjectionObserver = Rx.Observable.create((observer) => {
             if (opts.url === 'about:blank') {
                 winWebContents.once('did-finish-load', () => {
@@ -751,19 +753,21 @@ Window.create = function(id, opts) {
                     };
                     observer.next(constructorCallbackMessage);
                 });
-
             } else {
                 ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
                 ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
-                ofEvents.once(route.window('connected', uuid, name), () => {
+                const connectedListener = () => {
                     winWebContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
                     constructorCallbackMessage.data = {
                         httpResponseCode,
                         apiInjected: true
                     };
                     observer.next(constructorCallbackMessage);
-                });
-                ofEvents.once(route.window('api-injection-failed', uuid, name), () => {
+                };
+                observableCleanUp.set(connected, connectedListener);
+                ofEvents.once(connected, connectedListener);
+                const apiInjectionFailed = route.window('api-injection-failed', uuid, name);
+                const apiInjectionFailedListener = () => {
                     electronApp.vlog(1, `api-injection-failed ${uuid}-${name}`);
                     // can happen if child window has a different domain.   @TODO allow injection for different domains
                     if (_options.autoShow) {
@@ -774,8 +778,11 @@ Window.create = function(id, opts) {
                         apiInjected: false
                     };
                     observer.next(constructorCallbackMessage);
-                });
-                ofEvents.once(route.window('api-injection-disabled', uuid, name), () => {
+                };
+                observableCleanUp.set(apiInjectionFailed, apiInjectionFailedListener);
+                ofEvents.once(apiInjectionFailed, apiInjectionFailedListener);
+                const apiInjectionDisabled = route.window('api-injection-disabled', uuid, name);
+                const apiInjectionDisabledListener = () => {
                     electronApp.vlog(1, `api-injection-disabled ${uuid}-${name}`);
                     // can happen for chrome pages
                     browserWindow.show();
@@ -784,9 +791,10 @@ Window.create = function(id, opts) {
                         apiInjected: false
                     };
                     observer.next(constructorCallbackMessage);
-                });
+                };
+                observableCleanUp.set(apiInjectionDisabled, apiInjectionDisabledListener);
+                ofEvents.once(apiInjectionDisabled, apiInjectionDisabledListener);
             }
-
         });
 
         //Restoring window positioning from disk cache.
@@ -825,7 +833,9 @@ Window.create = function(id, opts) {
                     Window.show(identity);
                 }
             }
-
+            for (const [event, listener] of observableCleanUp.entries()) {
+                ofEvents.removeListener(event, listener);
+            }
             ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
             subscription.unsubscribe();
         });
