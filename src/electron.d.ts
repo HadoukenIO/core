@@ -1,4 +1,4 @@
-// Type definitions for Electron 8.0.0-nightly.20190924
+// Type definitions for Electron 8.0.0-nightly.20191002
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -2273,9 +2273,10 @@ __Note__: On macOS this event is an alias of `moved`.
      */
     static fromId(id: number): BrowserWindow;
     /**
-     * The window that owns the given `webContents`.
+     * The window that owns the given `webContents` or `null` if the contents are not
+     * owned by a window.
      */
-    static fromWebContents(webContents: WebContents): BrowserWindow;
+    static fromWebContents(webContents: WebContents): (BrowserWindow) | (null);
     /**
      * An array of all opened browser windows.
      */
@@ -6341,6 +6342,10 @@ Calculate system idle time in seconds.
     // Docs: http://electronjs.org/docs\api\process-info
 
     /**
+     * ProcessInfo
+     */
+    constructor(pid: number);
+    /**
      * Return the CPU usage as it differs from the last call.
      */
     static getCpuUsage(): void;
@@ -6414,10 +6419,6 @@ Calculate system idle time in seconds.
      * An `Integer` representing process id, same as `processId`.
      */
     static uuid: number;
-    /**
-     * ProcessInfo
-     */
-    constructor(pid: number);
   }
 
   interface ProcessMemoryInfo {
@@ -6488,10 +6489,6 @@ Calculate system idle time in seconds.
     // Docs: http://electronjs.org/docs\api\process-monitor
 
     /**
-     * ProcessMonitor
-     */
-    constructor();
-    /**
      * Emitted when a monitored process is terminated.
      */
     on(event: 'process-terminated', listener: (
@@ -6561,6 +6558,10 @@ Calculate system idle time in seconds.
      * add() method.
      */
     static stop(): void;
+    /**
+     * ProcessMonitor
+     */
+    constructor();
   }
 
   interface Product {
@@ -7431,6 +7432,20 @@ Returns the system's proxy configuration.
     readonly netLog: NetLog;
     readonly protocol: Protocol;
     readonly webRequest: WebRequest;
+  }
+
+  interface SharedWorkerInfo {
+
+    // Docs: http://electronjs.org/docs\api\structures\shared-worker-info
+
+    /**
+     * The unique id of the shared worker.
+     */
+    id: string;
+    /**
+     * The url of the shared worker.
+     */
+    url: string;
   }
 
   interface Shell {
@@ -8860,8 +8875,7 @@ The usage is the same with the `certificate-error` event of `app`.
                                               certificate: Certificate,
                                               callback: (isTrusted: boolean) => void) => void): this;
     /**
-     * Emitted when the associated window logs a console message. Will not be emitted
-     * for windows with *offscreen rendering* enabled.
+     * Emitted when the associated window logs a console message.
      */
     on(event: 'console-message', listener: (event: Event,
                                             level: number,
@@ -10155,6 +10169,10 @@ Code execution will be suspended until web page stop loading.
      */
     focus(): void;
     /**
+     * Information about all Shared Workers.
+     */
+    getAllSharedWorkers(): SharedWorkerInfo[];
+    /**
      * Called in the Hadouken Core. A GUID string that represents the name frame id.
      */
     getFrameName(frameRoutingId: number): string;
@@ -10262,6 +10280,10 @@ Returns `PrinterInfo[]`.
      * Opens the developer tools for the shared worker context.
      */
     inspectSharedWorker(): void;
+    /**
+     * Inspects the shared worker based on its ID.
+     */
+    inspectSharedWorkerById(workerId: string): void;
     /**
      * Schedules a full repaint of the window this web contents is in.
      *
