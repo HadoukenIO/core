@@ -18,6 +18,7 @@ import ofEvents from '../../of_events';
 const {writeToLog} = require('../../log');
 const _ = require('underscore');
 import route from '../../../common/route';
+import { getWindowByUuidName } from '../../core_state';
 
 
 const NOTE_APP_UUID = 'service:notifications';
@@ -622,7 +623,7 @@ function windowIsValid(identity: any): boolean {
     let isValid: boolean;
 
     try {
-        const openfinWindow = Window.wrap(identity.uuid, identity.name);
+        const openfinWindow = getWindowByUuidName(identity.uuid, identity.name);
         const browserWindow = openfinWindow && openfinWindow.browserWindow;
 
         if (!browserWindow) {
