@@ -69,21 +69,25 @@ export async function create(options: BrowserViewOpts) {
 }
 export function hide(ofView: OfView) {
     const {name, uuid, target, view} = ofView;
-    const win = getElectronBrowserWindow(target);
-    win.removeBrowserView(view);
-    of_events.emit(route.view('hidden', uuid, name), {name, uuid, target});
+    if (!view.isDestroyed()) {
+        const win = getElectronBrowserWindow(target);
+        win.removeBrowserView(view);
+        of_events.emit(route.view('hidden', uuid, name), {name, uuid, target});
+    }
 }
 
 export function show(ofView: OfView) {
     const {name, uuid, target, view} = ofView;
-    const win = getElectronBrowserWindow(target);
-    win.addBrowserView(view);
-    of_events.emit(route.view('shown', uuid, name), {name, uuid, target});
+    if (!view.isDestroyed()) {
+        const win = getElectronBrowserWindow(target);
+        win.addBrowserView(view);
+        of_events.emit(route.view('shown', uuid, name), {name, uuid, target});
+    }
 }
 
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view} = ofView;
-    if (view) {
+    if (view && ! view.isDestroyed()) {
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
         if (!ofWin) {
             throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
@@ -139,18 +143,24 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
 export async function destroy (ofView: OfView) {
     const {uuid, name, target, view} = ofView;
     removeBrowserView(ofView);
-    view.destroy();
-    of_events.emit(route.view('destroyed', uuid, name), {target});
+    if (!view.isDestroyed()) {
+        view.destroy();
+        of_events.emit(route.view('destroyed', uuid, name), {target});
+    }
 }
 
 export async function setAutoResize(ofView: OfView, autoResize: AutoResizeOptions) {
     const { view } = ofView;
-    view.setAutoResize(autoResize);
+    if (!view.isDestroyed()) {
+        view.setAutoResize(autoResize);
+    }
 }
 
 export async function setBounds(ofView: OfView, bounds: Rectangle) {
     const {view} = ofView;
-    view.setBounds(bounds);
+    if (!view.isDestroyed()) {
+        view.setBounds(bounds);
+    }
 }
 
 export function getInfo (ofView: OfView) {
