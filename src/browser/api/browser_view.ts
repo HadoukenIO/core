@@ -4,7 +4,7 @@ import {
     addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView,
     updateViewTarget, getInfoByUuidFrame
 } from '../core_state';
-import { BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
+import { ViewCreationOptions } from '../../../js-adapter/src/api/view/view';
 import convertOptions = require('../convert_options');
 import { getInfo as getWebContentsInfo, setIframeHandlers, hookWebContentsEvents} from './webcontents';
 import of_events from '../of_events';
@@ -16,7 +16,7 @@ import { downloadScripts } from '../preload_scripts';
 
 const windowCloseListenerMap: WeakMap<OpenFinWindow, WeakMap<OfView, () => void>> = new WeakMap();
 
-export type BrowserViewOpts = WebOptions & BrowserViewCreationOptions;
+export type BrowserViewOpts = WebOptions & ViewCreationOptions;
 export async function create(options: BrowserViewOpts) {
     // checking if the name-uuid combination is already in use
     const { uuid, name } = options;
