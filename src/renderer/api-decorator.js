@@ -128,6 +128,13 @@
         });
     }
 
+    function entityExistsSync(uuid, name) {
+        return syncApiCall('entity-exists', {
+            uuid,
+            name
+        });
+    }
+
     function registerWindowNameSync(uuid, name) {
         syncApiCall('register-window-name', {
             uuid,
@@ -607,6 +614,7 @@
             getWindowIdentity: getWindowIdentitySync,
             getCurrentWindowId: getWindowId,
             windowExists: windowExistsSync,
+            entityExists: entityExistsSync,
             registerWindowName: registerWindowNameSync,
             ipcconfig: getIpcConfigSync(),
             createChildWindow: createChildWindow,
