@@ -103,6 +103,11 @@ export interface Window {
     openfinWindow: OpenFinWindow|null;
     parentId?: number;
 }
+
+export interface BrowserView {
+    parent: Identity;
+}
+
 export interface InjectableContext {
     uuid: string;
     name: string;

@@ -10,13 +10,13 @@ import { getInfo as getWebContentsInfo, setIframeHandlers, hookWebContentsEvents
 import of_events from '../of_events';
 import route from '../../common/route';
 import { getElectronBrowserWindow } from './window';
-import { OpenFinWindow, WebOptions } from '../../shapes';
+import * as Shapes from '../../shapes';
 import { navigationValidator, validateNavigation } from '../navigation_validation';
 import { downloadScripts } from '../preload_scripts';
 
-const windowCloseListenerMap: WeakMap<OpenFinWindow, WeakMap<OfView, () => void>> = new WeakMap();
+const windowCloseListenerMap: WeakMap<Shapes.OpenFinWindow, WeakMap<OfView, () => void>> = new WeakMap();
 
-export type BrowserViewOpts = WebOptions & BrowserViewCreationOptions;
+export type BrowserViewOpts = Shapes.WebOptions & BrowserViewCreationOptions & Shapes.BrowserView;
 export async function create(options: BrowserViewOpts) {
     // checking if the name-uuid combination is already in use
     const { uuid, name } = options;
