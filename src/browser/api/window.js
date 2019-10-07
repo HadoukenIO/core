@@ -874,6 +874,7 @@ export function create(id, opts) {
     WebContents.setIframeHandlers(browserWindow.webContents, winObj, uuid, name);
 
     return winObj;
+
 }
 
 export function connected() {}
