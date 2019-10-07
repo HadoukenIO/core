@@ -11,7 +11,7 @@ import { GlobalHotkey } from '../../api/global_hotkey';
 import { Identity as NoteIdentity } from '../../api/notifications/shapes';
 import { noop } from '../../../common/main';
 import { System } from '../../api/system';
-import { Window } from '../../api/window';
+import * as Window from '../../api/window';
 import * as _ from 'underscore';
 import * as apiProtocolBase from './api_protocol_base';
 import ofEvents from '../../of_events';

@@ -21,7 +21,7 @@ let minimist = require('minimist');
 // local modules
 let Application = require('./src/browser/api/application.js').Application;
 let System = require('./src/browser/api/system.js').System;
-import { Window } from './src/browser/api/window';
+import { create } from './src/browser/api/window';
 
 let apiProtocol = require('./src/browser/api_protocol');
 import socketServer from './src/browser/transports/socket_server';
@@ -79,7 +79,7 @@ app.on('child-window-created', function(parentBwId, childBwId, childOptions) {
         console.warn('failed to add');
     }
 
-    Window.create(childId, childOptions);
+    create(childId, childOptions);
 });
 
 app.on('select-client-certificate', function(event, webContents, url, list, callback) {

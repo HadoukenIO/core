@@ -7,11 +7,8 @@ import {
     PendingNote
 } from './shapes';
 
-// required tor the ts compiler, theses should be made imports eventually
-declare var require: any;
-
 const {System} = require('../system');
-const {Window} = require('../window');
+import * as Window from '../window';
 const {Application} = require('../application');
 const {sendToIdentity} = require('../../api_protocol/api_handlers/api_protocol_base');
 import ofEvents from '../../of_events';
@@ -128,7 +125,7 @@ ofEvents.on(route.application('window-end-load', '*'), (e: any) => {
             try {
                 Window.close({
                     uuid,
-                    name: Window.QUEUE_COUNTER_NAME
+                    name: undefined
                 });
             } catch (e) {
                 writeToLog('info', e);
