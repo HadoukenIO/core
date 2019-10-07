@@ -1110,6 +1110,11 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
     WebContents.executeJavascript(browserWindow.webContents, code, callback);
 };
 
+Window.findInPage = function(identity, searchTerm, options) {
+    let browserWindow = getElectronBrowserWindow(identity);
+    WebContents.findInPage(browserWindow.webContents, searchTerm, options);
+};
+
 Window.flash = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
