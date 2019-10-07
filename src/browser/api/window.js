@@ -1131,6 +1131,11 @@ Window.stopFlashing = function(identity) {
     NativeWindow.stopFlashing(browserWindow);
 };
 
+Window.stopFindInPage = function(identity, action) {
+    let browserWindow = getElectronBrowserWindow(identity);
+    WebContents.findInPage(browserWindow.webContents, action);
+};
+
 Window.focus = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {

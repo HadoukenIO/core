@@ -16,6 +16,7 @@ export const webContentsApiMap = {
     'navigate-window-back': navigateWindowBack,
     'navigate-window-forward': navigateWindowForward,
     'stop-window-navigation': stopWindowNavigation,
+    'stop-find-in-page': stopFindInPage,
     'reload-window': reloadWindow,
     'set-zoom-level': setZoomLevel,
     'set-window-preload-state': setWindowPreloadState
@@ -58,6 +59,16 @@ function findInPage(identity: Identity, message: APIMessage, ack: Acker): void {
     const webContents = getElectronWebContents(windowIdentity);
 
     WebContents.findInPage(webContents, searchTerm, options);
+    ack(successAck);
+}
+
+function stopFindInPage(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { payload } = message;
+    const { action } = payload;
+    const windowIdentity = getTargetWindowIdentity(payload);
+    const webContents = getElectronWebContents(windowIdentity);
+
+    WebContents.stopFindInPage(webContents, action);
     ack(successAck);
 }
 
