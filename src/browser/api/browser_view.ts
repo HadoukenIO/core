@@ -83,7 +83,7 @@ export function show(ofView: OfView) {
 
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view, target: previousTarget} = ofView;
-    
+
     if (view && ! view.isDestroyed()) {
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
         const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
@@ -91,6 +91,11 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         if (!ofWin) {
             throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
         }
+        if (!oldWin) {
+            throw new Error(`Could not locate origin window ${previousTarget.uuid}/${previousTarget.name}`);
+        }
+
+        const oldwinMap = windowCloseListenerMap.get(oldWin);
 
         if (oldWin) {
             const oldWinMap = windowCloseListenerMap.get(oldWin);

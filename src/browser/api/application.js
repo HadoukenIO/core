@@ -398,7 +398,7 @@ Application.getInfo = function(identity, callback) {
 Application.getWindow = function(identity) {
     let uuid = identity.uuid;
 
-    return Window.wrap(uuid, uuid);
+    return coreState.getWindowByUuidName(uuid, uuid);
 };
 
 Application.grantAccess = function() {
