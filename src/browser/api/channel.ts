@@ -181,6 +181,12 @@ export module Channel {
         const { uuid, name, payload: messagePayload, action: channelAction, providerIdentity } = payload;
         const intendedTargetIdentity = { uuid, name };
 
+        const messagingWindow = getEntityIdentity(identity);
+
+        if (messagingWindow && messagingWindow.isExternal && messagePayload && messagePayload.nameAlias) {
+            identity.name = messagePayload.nameAlias;
+        }
+
         const ackToSender = createAckToSender(identity, messageId, providerIdentity);
 
         sendToIdentity(intendedTargetIdentity, {
