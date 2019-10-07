@@ -231,7 +231,7 @@ let optionSetters = {
 
         let uuid = browserWin._options.uuid;
         let name = browserWin._options.name;
-        let openfinWindow = Window.wrap(uuid, name);
+        let openfinWindow = coreState.getWindowByUuidName(uuid, name);
         let hideOnCloseListener = openfinWindow.hideOnCloseListener;
         let closeEventString = route.window('close-requested', uuid, name);
 
@@ -412,7 +412,7 @@ Window.create = function(id, opts) {
 
     let hideReason = 'hide';
     let hideOnCloseListener = () => {
-        let openfinWindow = Window.wrap(uuid, name);
+        let openfinWindow = coreState.getWindowByUuidName(uuid, name);
         openfinWindow.hideReason = 'hide-on-close';
         browserWindow.hide();
     };
@@ -496,7 +496,7 @@ Window.create = function(id, opts) {
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
         browserWindow.on('close', (event) => {
-            let ofWindow = Window.wrap(uuid, name);
+            let ofWindow = coreState.getWindowByUuidName(uuid, name);
             let closeEventString = route.window('close-requested', uuid, name);
             let listenerCount = ofEvents.listenerCount(closeEventString);
 
@@ -570,7 +570,7 @@ Window.create = function(id, opts) {
 
                     // if the window has already been removed from core_state,
                     // don't propagate anymore events
-                    if (!Window.wrap(uuid, name)) {
+                    if (!coreState.getWindowByUuidName(uuid, name)) {
                         return;
                     }
 
@@ -877,11 +877,6 @@ Window.create = function(id, opts) {
     return winObj;
 };
 
-
-Window.wrap = function(uuid, name) {
-    return coreState.getWindowByUuidName(uuid, name);
-};
-
 Window.connected = function() {};
 
 Window.isEmbedded = function() {};
@@ -1022,7 +1017,7 @@ Window.close = function(identity, force, callback = () => {}) {
 
     let defaultAction = () => {
         if (!browserWindow.isDestroyed()) {
-            let openfinWindow = Window.wrap(identity.uuid, identity.name);
+            let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
             browserWindow.close();
         }
@@ -1176,14 +1171,14 @@ Window.getGroup = function(identity) {
         return [];
     }
 
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
     return WindowGroups.getGroup(openfinWindow.groupUuid);
 };
 
 
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
+    const { preloadScripts } = coreState.getWindowByUuidName(identity.uuid, identity.name);
     const windowKey = genWindowKey(identity);
     const isUserMovementEnabled = !disabledFrameRef.has(windowKey) || disabledFrameRef.get(windowKey) === 0;
     const windowInfo = Object.assign({
@@ -1298,7 +1293,7 @@ Window.leaveGroup = function(identity) {
         return;
     }
 
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
     return WindowGroups.leaveGroup(openfinWindow);
 };
 
@@ -1798,7 +1793,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     //    Close all child windows
     //    Wait for the close event.
     return function() {
-        let ofWindow = Window.wrap(identity.uuid, identity.name);
+        let ofWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
         let childWindows = coreState.getChildrenByWinId(id) || [];
         // remove from core state earlier rather than later
         coreState.removeChildById(id);
@@ -2022,7 +2017,7 @@ function boundsChangeDecorator(payload, args) {
             payload[key] = boundsChangePayload[key];
         });
 
-        let _win = Window.wrap(payload.uuid, payload.name);
+        let _win = coreState.getWindowByUuidName(payload.uuid, payload.name);
         let _browserWin = _win && _win.browserWindow;
         setOptOnBrowserWin('x', payload.left, _browserWin);
         setOptOnBrowserWin('y', payload.top, _browserWin);
@@ -2070,7 +2065,7 @@ function willMoveOrResizeDecorator(payload, args) {
 }
 
 function opacityChangedDecorator(payload, args) {
-    let _win = Window.wrap(payload.uuid, payload.name);
+    let _win = coreState.getWindowByUuidName(payload.uuid, payload.name);
     let _browserWin = _win && _win.browserWindow;
     setOptOnBrowserWin('opacity', args[1], _browserWin);
     return false;
@@ -2095,7 +2090,7 @@ function visibilityChangedDecorator(payload, args) {
                 coreState.setSentFirstHideSplashScreen(uuid, true);
             }
         } else {
-            let openfinWindow = Window.wrap(payload.uuid, payload.name);
+            let openfinWindow = coreState.getWindowByUuidName(payload.uuid, payload.name);
             const { hideReason } = openfinWindow;
             payload.type = 'hidden';
             payload.reason = hideReason === 'hide' && closing ? 'closing' : hideReason;
@@ -2255,7 +2250,7 @@ function handleCustomAlerts(id, opts) {
 
 //If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
 export function getElectronBrowserWindow(identity, errDesc) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
     let browserWindow = openfinWindow && openfinWindow.browserWindow;
 
     if (errDesc && !browserWindow) {

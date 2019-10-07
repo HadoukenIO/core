@@ -86,32 +86,37 @@ export function show(ofView: OfView) {
 }
 
 export async function attach(ofView: OfView, toIdentity: Identity) {
-    const {view} = ofView;
+    const {view, target: previousTarget} = ofView;
+
     if (view && ! view.isDestroyed()) {
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
+        const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
+
         if (!ofWin) {
             throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
         }
+        if (!oldWin) {
+            throw new Error(`Could not locate origin window ${previousTarget.uuid}/${previousTarget.name}`);
+        }
 
-        const previousTarget = ofView.target;
+        const oldwinMap = windowCloseListenerMap.get(oldWin);
+
         if (previousTarget.name !== toIdentity.name) {
-            const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
-            if (oldWin) {
-                oldWin.browserWindow.removeBrowserView(view);
-                of_events.emit(route.window('view-detached', previousTarget.uuid, previousTarget.name), {
-                    viewIdentity: {uuid: ofView.uuid, name: ofView.name},
-                    target: toIdentity,
-                    previousTarget
-                });
-                const oldwinMap = windowCloseListenerMap.get(oldWin);
-                if (oldwinMap) {
-                    const listener = oldwinMap.get(ofView);
-                    if (typeof listener === 'function') {
-                        of_events.removeListener(route.window('closed', previousTarget.uuid, previousTarget.name), listener);
-                    }
-                    oldwinMap.delete(ofView);
+            oldWin.browserWindow.removeBrowserView(view);
+            of_events.emit(route.window('view-detached', previousTarget.uuid, previousTarget.name), {
+                viewIdentity: {uuid: ofView.uuid, name: ofView.name},
+                target: toIdentity,
+                previousTarget
+            });
+            if (oldwinMap) {
+                const listener = oldwinMap.get(ofView);
+                if (typeof listener === 'function') {
+                    of_events.removeListener(route.window('closed', previousTarget.uuid, previousTarget.name), listener);
                 }
+                oldwinMap.delete(ofView);
             }
+        } else if (oldwinMap && oldwinMap.has(ofView)) {
+           return;
         }
 
         const bWin = ofWin.browserWindow;
