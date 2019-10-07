@@ -83,37 +83,34 @@ export function show(ofView: OfView) {
 
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view, target: previousTarget} = ofView;
-    if (view) {
+    
+    if (view && ! view.isDestroyed()) {
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
         const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
 
         if (!ofWin) {
             throw new Error(`Could not locate target window ${toIdentity.uuid}/${toIdentity.name}`);
         }
-        if (!oldWin) {
-            throw new Error(`Could not locate origin window ${previousTarget.uuid}/${previousTarget.name}`);
-        }
 
-        const oldwinMap = windowCloseListenerMap.get(oldWin);
-
-        if (previousTarget.name !== toIdentity.name) {
-            if (oldWin) {
+        if (oldWin) {
+            const oldWinMap = windowCloseListenerMap.get(oldWin);
+            if (previousTarget.name !== toIdentity.name) {
                 oldWin.browserWindow.removeBrowserView(view);
                 of_events.emit(route.window('view-detached', previousTarget.uuid, previousTarget.name), {
                     viewIdentity: {uuid: ofView.uuid, name: ofView.name},
                     target: toIdentity,
                     previousTarget
                 });
-                if (oldwinMap) {
-                    const listener = oldwinMap.get(ofView);
+                if (oldWinMap) {
+                    const listener = oldWinMap.get(ofView);
                     if (typeof listener === 'function') {
                         of_events.removeListener(route.window('closed', previousTarget.uuid, previousTarget.name), listener);
                     }
-                    oldwinMap.delete(ofView);
+                    oldWinMap.delete(ofView);
                 }
-            }
-        } else if (oldwinMap && oldwinMap.has(ofView)) {
-           return;
+            } else if (oldWinMap && oldWinMap.has(ofView)) {
+                return;
+             }
         }
 
         const bWin = ofWin.browserWindow;
@@ -142,6 +139,7 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         });
     }
 }
+
 export async function destroy (ofView: OfView) {
     const {uuid, name, target, view} = ofView;
     removeBrowserView(ofView);
