@@ -73,9 +73,9 @@ export class ChannelApiHandler {
     }
 
     private disconnectFromChannel(identity: Identity, message: APIMessage, ack: AckFunc): void {
-        const { payload: { channelName } } = message;
+        const { payload: { channelName, nameAlias } } = message;
 
-        Channel.disconnectFromChannel(identity, channelName);
+        Channel.disconnectFromChannel(identity, channelName, nameAlias);
         ack(successAck);
     }
 

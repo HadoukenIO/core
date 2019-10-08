@@ -125,8 +125,14 @@ export module Channel {
         subscriptionManager.removeSubscription(identity, channelId);
     }
 
-    export function disconnectFromChannel(identity: Identity, channelName: string): void {
+    export function disconnectFromChannel(identity: Identity, channelName: string, nameAlias: string): void {
         const disconnectedEvent = 'client-disconnected';
+        const connectingWindow = getEntityIdentity(identity);
+
+        if (connectingWindow && connectingWindow.isExternal && nameAlias) {
+            identity.name = nameAlias;
+        }
+
         subscriptionManager.removeSubscription(identity, `${disconnectedEvent}-${channelName}`);
     }
 
