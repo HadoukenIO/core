@@ -681,20 +681,25 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
   externalWindow.emit('closing');
   disabledUserMovementRequestorCount.delete(key);
 
-  winEventHooks.removeAllListeners();
-  winEventHooksEmitters.delete(key);
+  try {
+    winEventHooks.removeAllListeners();
+    winEventHooksEmitters.delete(key);
 
-  injectionBus.removeAllListeners();
-  injectionBuses.delete(key);
+    injectionBus.removeAllListeners();
+    injectionBuses.delete(key);
 
-  windowGroupUnSubscription();
-  windowGroupUnSubscriptions.delete(key);
+    windowGroupUnSubscription();
+    windowGroupUnSubscriptions.delete(key);
 
-  externalWindowEventAdapter.removeAllListeners();
-  externalWindowEventAdapters.delete(key);
+    externalWindowEventAdapter.removeAllListeners();
+    externalWindowEventAdapters.delete(key);
 
-  externalWindow.emit('closed');
-  externalWindow.removeAllListeners();
+    externalWindow.emit('closed');
+    externalWindow.removeAllListeners();
+  } catch (err) {
+    electronApp.vlog(2, `Error cleaning up ExternalWindow: ${err}`);
+  }
+
   externalWindows.delete(uuid);
   nativeIdToUuid.delete(nativeId);
   releaseUuid(uuid);
