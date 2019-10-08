@@ -212,7 +212,7 @@ export function setIframeHandlers (webContents: Electron.WebContents, contextObj
     };
 }
 
-export function findInPage(webContents: Electron.WebContents, searchTerm: string, options: any) {
+export function findInPage(webContents: Electron.WebContents, searchTerm: string, options?: Electron.FindInPageOptions) {
     return webContents.findInPage(searchTerm, options);
 }
 
