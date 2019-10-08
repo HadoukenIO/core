@@ -221,9 +221,19 @@ function handleDeferredLaunches() {
     deferredLaunches.length = 0;
 }
 
-app.on('chrome-browser-process-created', function() {
-    otherInstanceRunning = app.makeSingleInstance((commandLine) => {
-        log.writeToLog(1, `chrome-browser-process-created callback ${commandLine}`, true);
+otherInstanceRunning = !app.requestSingleInstanceLock();
+
+if (otherInstanceRunning) {
+    if (appIsReady) {
+        deleteProcessLogfile(true);
+    }
+
+    app.commandLine.appendArgument('noerrdialogs');
+    process.argv.push('--noerrdialogs');
+    app.exit(0);
+} else {
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        log.writeToLog(1, `second-instance callback ${commandLine}`, true);
         const socketServerState = coreState.getSocketServerState();
         if (appIsReady && socketServerState && socketServerState.port) {
             return handleDelegatedLaunch(commandLine);
@@ -233,182 +243,171 @@ app.on('chrome-browser-process-created', function() {
         }
     });
 
-    if (otherInstanceRunning) {
-        if (appIsReady) {
+    // This method will be called when Electron has finished
+    // initialization and is ready to create browser windows.
+    app.on('ready', function() {
+        appIsReady = true;
+
+        if (otherInstanceRunning) {
             deleteProcessLogfile(true);
+
+            app.quit();
+
+            return;
         }
 
-        app.commandLine.appendArgument('noerrdialogs');
-        process.argv.push('--noerrdialogs');
-        app.exit(0);
+        app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
+        // Runtime will use BrowserWindow id
+        app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsByBrowserWindowId);
 
-        return;
-    }
-});
+        if (process.platform === 'win32') {
+            log.writeToLog('info', `group-policy build: ${process.buildFlags.groupPolicy}`);
+            log.writeToLog('info', `enable-chromium build: ${process.buildFlags.enableChromium}`);
+        }
+        log.writeToLog('info', `build architecture: ${process.arch}`);
+        app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-app.on('ready', function() {
-    appIsReady = true;
-
-    if (otherInstanceRunning) {
-        deleteProcessLogfile(true);
-
-        app.quit();
-
-        return;
-    }
-
-    app.registerNamedCallback('convertToElectron', convertOptions.convertToElectron);
-    // Runtime will use BrowserWindow id
-    app.registerNamedCallback('getWindowOptionsById', coreState.getWindowOptionsByBrowserWindowId);
-
-    if (process.platform === 'win32') {
-        log.writeToLog('info', `group-policy build: ${process.buildFlags.groupPolicy}`);
-        log.writeToLog('info', `enable-chromium build: ${process.buildFlags.enableChromium}`);
-    }
-    log.writeToLog('info', `build architecture: ${process.arch}`);
-    app.vlog(1, 'process.versions: ' + JSON.stringify(process.versions, null, 2));
-
-    rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
+        rvmBus = require('./src/browser/rvm/rvm_message_bus').rvmMessageBus;
 
 
-    electron.session.defaultSession.allowNTLMCredentialsForDomains('*');
+        electron.session.defaultSession.allowNTLMCredentialsForDomains('*');
 
-    if (process.platform === 'win32') {
-        let integrityLevel = app.getIntegrityLevel();
-        System.log('info', `Runtime integrity level of the app: ${integrityLevel}`);
-    }
+        if (process.platform === 'win32') {
+            let integrityLevel = app.getIntegrityLevel();
+            System.log('info', `Runtime integrity level of the app: ${integrityLevel}`);
+        }
 
-    rotateLogs(coreState.argo);
+        rotateLogs(coreState.argo);
 
-    migrateCookies();
+        migrateCookies();
 
-    migrateLocalStorage(coreState.argo);
+        migrateLocalStorage(coreState.argo);
 
-    //Once we determine we are the first instance running we setup the API's
-    //Create the new Application.
-    initServer();
-    duplicateUuidTransport.init(handleDelegatedLaunch);
-    webRequestHandlers.initHandlers();
+        //Once we determine we are the first instance running we setup the API's
+        //Create the new Application.
+        initServer();
+        duplicateUuidTransport.init(handleDelegatedLaunch);
+        webRequestHandlers.initHandlers();
 
-    launchApp(coreState.argo, true);
-
-    registerShortcuts();
-    registerMacMenu();
-
-    app.on('activate', function() {
-        // On OS X it's common to re-create a window in the app when the
-        // dock icon is clicked and there are no other windows open.
         launchApp(coreState.argo, true);
-    });
 
-    //subscribe to auth requests:
-    app.on('login', (event, webContents, request, authInfo, callback) => {
-        let browserWindow = webContents.getOwnerBrowserWindow();
-        let ofWindow = coreState.getWinById(browserWindow.webContents.id).openfinWindow;
+        registerShortcuts();
+        registerMacMenu();
 
-        let identity = {
-            name: ofWindow._options.name,
-            uuid: ofWindow._options.uuid
-        };
-        const windowEvtName = route.window('auth-requested', identity.uuid, identity.name);
-        const appEvtName = route.application('window-auth-requested', identity.uuid);
+        app.on('activate', function() {
+            // On OS X it's common to re-create a window in the app when the
+            // dock icon is clicked and there are no other windows open.
+            launchApp(coreState.argo, true);
+        });
 
-        addPendingAuthRequests(identity, authInfo, callback);
-        if (ofEvents.listeners(windowEvtName).length < 1 && ofEvents.listeners(appEvtName).length < 1) {
-            createAuthUI(identity);
-        } else {
-            ofEvents.emit(windowEvtName, {
-                topic: 'window',
-                type: 'auth-requested',
-                uuid: identity.uuid,
-                name: identity.name,
-                authInfo: authInfo
-            });
-        }
+        //subscribe to auth requests:
+        app.on('login', (event, webContents, request, authInfo, callback) => {
+            let browserWindow = webContents.getOwnerBrowserWindow();
+            let ofWindow = coreState.getWinById(browserWindow.webContents.id).openfinWindow;
 
-        event.preventDefault();
+            let identity = {
+                name: ofWindow._options.name,
+                uuid: ofWindow._options.uuid
+            };
+            const windowEvtName = route.window('auth-requested', identity.uuid, identity.name);
+            const appEvtName = route.application('window-auth-requested', identity.uuid);
 
-    });
+            addPendingAuthRequests(identity, authInfo, callback);
+            if (ofEvents.listeners(windowEvtName).length < 1 && ofEvents.listeners(appEvtName).length < 1) {
+                createAuthUI(identity);
+            } else {
+                ofEvents.emit(windowEvtName, {
+                    topic: 'window',
+                    type: 'auth-requested',
+                    uuid: identity.uuid,
+                    name: identity.name,
+                    authInfo: authInfo
+                });
+            }
 
-    // native code in AtomRendererClient::ShouldFork
-    app.on('enable-chromium-renderer-fork', event => {
-        // @TODO it should be an option for app, not runtime->arguments
-        if (coreState.argo['enable-chromium-renderer-fork']) {
-            app.vlog(1, 'applying Chromium renderer fork');
             event.preventDefault();
-        }
-    });
 
-    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'progress'), payload => {
-        if (payload) {
-            ofEvents.emit(route.system(`asset-download-progress-${payload.downloadId}`), {
-                totalBytes: payload.totalBytes,
-                downloadedBytes: payload.downloadedBytes
-            });
-        }
-    });
+        });
 
-    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'error'), payload => {
-        if (payload) {
-            ofEvents.emit(route.system(`asset-download-error-${payload.downloadId}`), {
-                reason: payload.error,
-                err: errors.errorToPOJO(new Error(payload.error))
-            });
-        }
-    });
-
-    rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'complete'), payload => {
-        if (payload) {
-            ofEvents.emit(route.system(`asset-download-complete-${payload.downloadId}`), {
-                path: payload.path
-            });
-        }
-    });
-
-    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-progress'), payload => {
-        if (payload) {
-            ofEvents.emit(route.system(`runtime-download-progress-${ payload.downloadId }`), payload);
-        }
-    });
-
-    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-error'), payload => {
-        if (payload) {
-            ofEvents.emit(route.system(`runtime-download-error-${ payload.downloadId }`), {
-                reason: payload.error,
-                err: errors.errorToPOJO(new Error(payload.error))
-            });
-        }
-    });
-
-    rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-complete'), payload => {
-        if (payload) {
-            ofEvents.emit(route.system(`runtime-download-complete-${ payload.downloadId }`), {
-                path: payload.path
-            });
-        }
-    });
-
-    try {
-        electron.session.defaultSession.on('will-download', (event, item, webContents) => {
-            try {
-                const { uuid, name } = webContents.browserWindowOptions;
-
-                const downloadListener = createWillDownloadEventListener({ uuid, name });
-                downloadListener(event, item, webContents);
-            } catch (err) {
-                log.writeToLog('info', 'Error while processing will-download event.');
-                log.writeToLog('info', err);
+        // native code in AtomRendererClient::ShouldFork
+        app.on('enable-chromium-renderer-fork', event => {
+            // @TODO it should be an option for app, not runtime->arguments
+            if (coreState.argo['enable-chromium-renderer-fork']) {
+                app.vlog(1, 'applying Chromium renderer fork');
+                event.preventDefault();
             }
         });
-    } catch (err) {
-        log.writeToLog('info', 'Could not wire up File Download API');
-        log.writeToLog('info', err);
-    }
-    handleDeferredLaunches();
-    logSystemMemoryInfo();
-}); // end app.ready
+
+        rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'progress'), payload => {
+            if (payload) {
+                ofEvents.emit(route.system(`asset-download-progress-${payload.downloadId}`), {
+                    totalBytes: payload.totalBytes,
+                    downloadedBytes: payload.downloadedBytes
+                });
+            }
+        });
+
+        rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'error'), payload => {
+            if (payload) {
+                ofEvents.emit(route.system(`asset-download-error-${payload.downloadId}`), {
+                    reason: payload.error,
+                    err: errors.errorToPOJO(new Error(payload.error))
+                });
+            }
+        });
+
+        rvmBus.on(route.rvmMessageBus('broadcast', 'download-asset', 'complete'), payload => {
+            if (payload) {
+                ofEvents.emit(route.system(`asset-download-complete-${payload.downloadId}`), {
+                    path: payload.path
+                });
+            }
+        });
+
+        rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-progress'), payload => {
+            if (payload) {
+                ofEvents.emit(route.system(`runtime-download-progress-${ payload.downloadId }`), payload);
+            }
+        });
+
+        rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-error'), payload => {
+            if (payload) {
+                ofEvents.emit(route.system(`runtime-download-error-${ payload.downloadId }`), {
+                    reason: payload.error,
+                    err: errors.errorToPOJO(new Error(payload.error))
+                });
+            }
+        });
+
+        rvmBus.on(route.rvmMessageBus('broadcast', 'application', 'runtime-download-complete'), payload => {
+            if (payload) {
+                ofEvents.emit(route.system(`runtime-download-complete-${ payload.downloadId }`), {
+                    path: payload.path
+                });
+            }
+        });
+
+        try {
+            electron.session.defaultSession.on('will-download', (event, item, webContents) => {
+                try {
+                    const { uuid, name } = webContents.browserWindowOptions;
+
+                    const downloadListener = createWillDownloadEventListener({ uuid, name });
+                    downloadListener(event, item, webContents);
+                } catch (err) {
+                    log.writeToLog('info', 'Error while processing will-download event.');
+                    log.writeToLog('info', err);
+                }
+            });
+        } catch (err) {
+            log.writeToLog('info', 'Could not wire up File Download API');
+            log.writeToLog('info', err);
+        }
+        handleDeferredLaunches();
+        logSystemMemoryInfo();
+    }); // end app.ready
+
+} // else !otherInstanceRunning
 
 function staggerPortBroadcast(myPortInfo) {
     setTimeout(() => {
