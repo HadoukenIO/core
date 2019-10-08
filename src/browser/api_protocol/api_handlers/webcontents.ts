@@ -55,11 +55,12 @@ function executeJavascript(identity: Identity, message: APIMessage, ack: Acker, 
 function findInPage(identity: Identity, message: APIMessage, ack: Acker): void {
     const { payload } = message;
     const { searchTerm, options } = payload;
+    const dataAck = Object.assign({}, successAck);
     const windowIdentity = getTargetWindowIdentity(payload);
     const webContents = getElectronWebContents(windowIdentity);
 
-    WebContents.findInPage(webContents, searchTerm, options);
-    ack(successAck);
+    dataAck.data = WebContents.findInPage(webContents, searchTerm, options);
+    ack(dataAck);
 }
 
 function stopFindInPage(identity: Identity, message: APIMessage, ack: Acker): void {
