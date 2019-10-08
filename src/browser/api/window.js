@@ -1110,11 +1110,6 @@ Window.executeJavascript = function(identity, code, callback = () => {}) {
     WebContents.executeJavascript(browserWindow.webContents, code, callback);
 };
 
-Window.findInPage = function(identity, searchTerm, options) {
-    let browserWindow = getElectronBrowserWindow(identity);
-    WebContents.findInPage(browserWindow.webContents, searchTerm, options);
-};
-
 Window.flash = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity);
     if (!browserWindow) {
@@ -1129,11 +1124,6 @@ Window.stopFlashing = function(identity) {
         return;
     }
     NativeWindow.stopFlashing(browserWindow);
-};
-
-Window.stopFindInPage = function(identity, action) {
-    let browserWindow = getElectronBrowserWindow(identity);
-    WebContents.findInPage(browserWindow.webContents, action);
 };
 
 Window.focus = function(identity) {
