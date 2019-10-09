@@ -128,9 +128,8 @@ export module Channel {
     export function disconnectFromChannel(identity: Identity, payload: any): void {
         const { channelName, payload: disconnectionPayload } = payload;
         const disconnectedEvent = 'client-disconnected';
-        const connectingWindow = getEntityIdentity(identity);
 
-        if (connectingWindow && connectingWindow.isExternal && disconnectionPayload.nameAlias) {
+        if (disconnectionPayload && disconnectionPayload.nameAlias) {
             identity.name = disconnectionPayload.nameAlias;
         }
 
