@@ -7,6 +7,8 @@ mockery.enable({
     warnOnReplace: false,
     warnOnUnregistered: false
 });
+
+mockery.registerMock('./api/external_application', {});
 import * as errors from '../src/common/errors';
 
 describe('Errors', () => {

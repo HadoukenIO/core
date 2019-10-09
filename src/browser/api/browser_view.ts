@@ -94,9 +94,15 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
             const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
             if (oldWin) {
                 oldWin.browserWindow.removeBrowserView(view);
-                of_events.emit(route.window('view-detached', previousTarget.uuid, previousTarget.name), {
-                    uuid: ofView.uuid,
+                of_events.emit(route.view('detached', ofView.uuid, ofView.name), {
                     name: ofView.name,
+                    uuid: ofView.uuid,
+                    target: toIdentity,
+                    previousTarget
+                });
+                of_events.emit(route.window('view-detached', previousTarget.uuid, previousTarget.name), {
+                    name: ofView.name,
+                    uuid: ofView.uuid,
                     viewIdentity: {uuid: ofView.uuid, name: ofView.name},
                     target: toIdentity,
                     previousTarget

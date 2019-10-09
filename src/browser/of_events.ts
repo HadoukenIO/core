@@ -2,6 +2,7 @@ import { app } from 'electron';
 import { EventEmitter } from 'events';
 import { isFloat } from '../common/main';
 import route from '../common/route';
+import {getBrowserViewByIdentity} from './core_state';
 
 interface PastEvent {
     payload: any;
@@ -33,6 +34,7 @@ class OFEvents extends EventEmitter {
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
             const uuid: string = (payload && payload.uuid) || tokenizedRoute[2] || '*';
+            const name: string|false = (payload && payload.name);
             const source = tokenizedRoute.slice(2).join('/');
             const envelope = { channel, topic, source, data };
             const propagateToSystem = !topic.match(/-requested$/);
@@ -67,11 +69,14 @@ class OFEvents extends EventEmitter {
                     }
                 } else if (channel === 'view') {
                     const propTopic = `view-${topic}`;
+                    this.propagateEventsToWindow(topic, propTopic, checkedPayload, uuid, name, eventPropagations);
+
                     eventPropagations.set(route.application(propTopic, uuid), {
                         ...checkedPayload,
                         type: propTopic,
                         topic: 'application'
                     });
+
                     if (propagateToSystem) {
                         eventPropagations.set(route.system(propTopic), { ...checkedPayload, type: propTopic, topic: 'system' });
                     }
@@ -145,6 +150,30 @@ class OFEvents extends EventEmitter {
             this.history.length = 0;
             this.isSavingEvents = false;
         }, STARTUP_SAVE_EVENTS_DURATION);
+    }
+
+    private propagateEventsToWindow(
+            topic: string, propTopic: string, checkedPayload: any, uuid: string, name: string|false, eventPropagations: Map<string, any>) {
+
+        const windowDontPropagate = [
+            'detached',
+            'attached'
+        ];
+
+        if (!windowDontPropagate.some(t => t === topic)) {
+            let target = checkedPayload.target;
+            if (!target && name) {
+                const view = getBrowserViewByIdentity({ uuid, name });
+                target = view && view.target;
+            }
+            if (target) {
+                eventPropagations.set(route.window(propTopic, target.uuid, target.name), {
+                    ...checkedPayload,
+                    type: propTopic,
+                    topic: 'window'
+                });
+            }
+        }
     }
 }
 
