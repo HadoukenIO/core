@@ -30,6 +30,7 @@ import { createChromiumSocket, authenticateChromiumSocket } from '../transports/
 import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
 import { getNativeWindowInfoLite } from '../utils';
 import { isValidExternalWindow } from './external_window';
+import { macGetServiceConfiguration } from '../rvm/macGetServiceConfiguration.js';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -481,6 +482,10 @@ export const System = {
         RvmInfoFetcher.fetch(sourceUrl, callback, errorCallback);
     },
     getServiceConfiguration: function() {
+        if (os.platform() === 'darwin') {
+            return macGetServiceConfiguration(name);
+        }
+
         const rvmMessage = {
             topic: 'application',
             action: 'get-service-settings',

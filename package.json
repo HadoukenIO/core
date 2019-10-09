@@ -31,6 +31,7 @@
     "@types/mocha": "^5.2.5",
     "@types/mockery": "^1.4.29",
     "@types/node": "^10.5.2",
+    "@types/plist": "^3.0.2",
     "@types/underscore": "^1.8.8",
     "@types/ws": "0.0.36",
     "asar": "^0.14.3",
@@ -63,6 +64,7 @@
   "dependencies": {
     "minimist": "^1.2.0",
     "options": "0.0.6",
+    "plist": "^3.0.1",
     "rxjs": "^5.5.12",
     "ultron": "^1.0.2",
     "underscore": "^1.8.3",
