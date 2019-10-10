@@ -433,6 +433,17 @@ Window.create = function(id, opts) {
 
     let _externalWindowEventAdapter;
 
+    let constructorCallbackMessage = {
+        success: true
+    };
+
+    let httpResponseCode = null;
+
+    let resourceResponseReceivedEventString = route.window('resource-response-received', uuid, name);
+    let resourceLoadFailedEventString = route.window('resource-load-failed', uuid, name);
+
+    let resourceResponseReceivedHandler, resourceLoadFailedHandler;
+
     // we need to be able to handle the wrapped case, ie. don't try to
     // grab the browser window instance because it may not exist, or
     // perhaps just try ...
@@ -469,8 +480,6 @@ Window.create = function(id, opts) {
 
         uuid = _options.uuid;
         name = _options.name;
-
-        const OF_WINDOW_UNLOADED = 'of-window-navigation';
 
         browserWindow._options = _options;
 
@@ -703,10 +712,6 @@ Window.create = function(id, opts) {
             uuid
         });
 
-        let constructorCallbackMessage = {
-            success: true
-        };
-
         let emitErrMessage = (errCode) => {
             let chromeErrLink = 'https://cs.chromium.org/chromium/src/net/base/net_error_list.h';
 
@@ -718,13 +723,6 @@ Window.create = function(id, opts) {
 
             ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
         };
-
-        let resourceResponseReceivedHandler, resourceLoadFailedHandler;
-
-        let resourceResponseReceivedEventString = route.window('resource-response-received', uuid, name);
-        let resourceLoadFailedEventString = route.window('resource-load-failed', uuid, name);
-
-        let httpResponseCode = null;
 
         resourceResponseReceivedHandler = (details) => {
             httpResponseCode = details.httpResponseCode;
@@ -740,95 +738,6 @@ Window.create = function(id, opts) {
                 ofEvents.removeListener(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
             }
         };
-
-        //Legacy logic where we wait for the API to 'connect' before we invoke the callback method.
-        const apiInjectionObserver = Rx.Observable.create((observer) => {
-            if (opts.url === 'about:blank') {
-                winWebContents.once('did-finish-load', () => {
-                    winWebContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
-                    constructorCallbackMessage.data = {
-                        httpResponseCode
-                    };
-                    observer.next(constructorCallbackMessage);
-                });
-
-            } else {
-                ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
-                ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
-                ofEvents.once(route.window('connected', uuid, name), () => {
-                    winWebContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
-                    constructorCallbackMessage.data = {
-                        httpResponseCode,
-                        apiInjected: true
-                    };
-                    observer.next(constructorCallbackMessage);
-                });
-                ofEvents.once(route.window('api-injection-failed', uuid, name), () => {
-                    electronApp.vlog(1, `api-injection-failed ${uuid}-${name}`);
-                    // can happen if child window has a different domain.   @TODO allow injection for different domains
-                    if (_options.autoShow) {
-                        browserWindow.show();
-                    }
-                    constructorCallbackMessage.data = {
-                        httpResponseCode,
-                        apiInjected: false
-                    };
-                    observer.next(constructorCallbackMessage);
-                });
-                ofEvents.once(route.window('api-injection-disabled', uuid, name), () => {
-                    electronApp.vlog(1, `api-injection-disabled ${uuid}-${name}`);
-                    // can happen for chrome pages
-                    browserWindow.show();
-                    constructorCallbackMessage.data = {
-                        httpResponseCode,
-                        apiInjected: false
-                    };
-                    observer.next(constructorCallbackMessage);
-                });
-            }
-
-        });
-
-        //Restoring window positioning from disk cache.
-        //We treat this as a check point event, either success or failure will raise the event.
-        const windowPositioningObserver = Rx.Observable.create(observer => {
-            if (!_options.saveWindowState) {
-                observer.next();
-                //if saveWindowState:false and autoShow:true and waitForPageLoad:false are present
-                //we show as soon as we restore the window position instead of waiting for the connected event
-                if (_options.autoShow && (!_options.waitForPageLoad)) {
-                    // Need to go through Window.show here so that the show-requested logic comes into play
-                    Window.show(identity);
-                }
-            } else if (_options.waitForPageLoad) {
-                browserWindow.once('ready-to-show', () => {
-                    restoreWindowPosition(identity, () => observer.next());
-                });
-            } else {
-                restoreWindowPosition(identity, () => {
-                    //if autoShow:true and waitForPageLoad:false are present we show as soon as we restore the window position
-                    //instead of waiting for the connected event
-                    if (_options.autoShow) {
-                        // Need to go through Window.show here so that the show-requested logic comes into play
-                        Window.show(identity);
-                    }
-                    observer.next();
-                });
-            }
-        });
-
-        //We want to zip both event sources so that we get a single event only after both windowPositioning and apiInjection occur.
-        const subscription = Rx.Observable.zip(apiInjectionObserver, windowPositioningObserver).subscribe((event) => {
-            const constructorCallbackMessage = event[0];
-            if (_options.autoShow || _options.toShowOnRun) {
-                if (!browserWindow.isVisible()) {
-                    Window.show(identity);
-                }
-            }
-
-            ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
-            subscription.unsubscribe();
-        });
     } // end noregister
 
     var winObj = {
@@ -873,6 +782,97 @@ Window.create = function(id, opts) {
         });
     }
     WebContents.setIframeHandlers(browserWindow.webContents, winObj, uuid, name);
+
+    const OF_WINDOW_UNLOADED = 'of-window-navigation';
+
+    //Legacy logic where we wait for the API to 'connect' before we invoke the callback method.
+    const apiInjectionObserver = Rx.Observable.create((observer) => {
+        if (opts.url === 'about:blank') {
+            winWebContents.once('did-finish-load', () => {
+                winWebContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
+                constructorCallbackMessage.data = {
+                    httpResponseCode
+                };
+                observer.next(constructorCallbackMessage);
+            });
+
+        } else {
+            ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
+            ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
+            ofEvents.once(route.window('connected', uuid, name), () => {
+                winWebContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
+                constructorCallbackMessage.data = {
+                    httpResponseCode,
+                    apiInjected: true
+                };
+                observer.next(constructorCallbackMessage);
+            });
+            ofEvents.once(route.window('api-injection-failed', uuid, name), () => {
+                electronApp.vlog(1, `api-injection-failed ${uuid}-${name}`);
+                // can happen if child window has a different domain.   @TODO allow injection for different domains
+                if (_options.autoShow) {
+                    browserWindow.show();
+                }
+                constructorCallbackMessage.data = {
+                    httpResponseCode,
+                    apiInjected: false
+                };
+                observer.next(constructorCallbackMessage);
+            });
+            ofEvents.once(route.window('api-injection-disabled', uuid, name), () => {
+                electronApp.vlog(1, `api-injection-disabled ${uuid}-${name}`);
+                // can happen for chrome pages
+                browserWindow.show();
+                constructorCallbackMessage.data = {
+                    httpResponseCode,
+                    apiInjected: false
+                };
+                observer.next(constructorCallbackMessage);
+            });
+        }
+
+    });
+
+    //Restoring window positioning from disk cache.
+    //We treat this as a check point event, either success or failure will raise the event.
+    const windowPositioningObserver = Rx.Observable.create(observer => {
+        if (!_options.saveWindowState) {
+            observer.next();
+            //if saveWindowState:false and autoShow:true and waitForPageLoad:false are present
+            //we show as soon as we restore the window position instead of waiting for the connected event
+            if (_options.autoShow && (!_options.waitForPageLoad)) {
+                // Need to go through Window.show here so that the show-requested logic comes into play
+                Window.show(identity);
+            }
+        } else if (_options.waitForPageLoad) {
+            browserWindow.once('ready-to-show', () => {
+                restoreWindowPosition(identity, () => observer.next());
+            });
+        } else {
+            restoreWindowPosition(identity, () => {
+                //if autoShow:true and waitForPageLoad:false are present we show as soon as we restore the window position
+                //instead of waiting for the connected event
+                if (_options.autoShow) {
+                    // Need to go through Window.show here so that the show-requested logic comes into play
+                    Window.show(identity);
+                }
+                observer.next();
+            });
+        }
+    });
+
+    //We want to zip both event sources so that we get a single event only after both windowPositioning and apiInjection occur.
+    const subscription = Rx.Observable.zip(apiInjectionObserver, windowPositioningObserver).subscribe((event) => {
+        const constructorCallbackMessage = event[0];
+        if (_options.autoShow || _options.toShowOnRun) {
+            if (!browserWindow.isVisible()) {
+                Window.show(identity);
+            }
+        }
+
+        ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
+        subscription.unsubscribe();
+    });
 
     return winObj;
 };
