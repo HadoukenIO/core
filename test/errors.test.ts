@@ -7,7 +7,7 @@ mockery.enable({
     warnOnReplace: false,
     warnOnUnregistered: false
 });
-
+// Do not move this external_application mock - Core PR #976
 mockery.registerMock('./api/external_application', {});
 import * as errors from '../src/common/errors';
 

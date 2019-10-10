@@ -55,6 +55,7 @@ mockery.enable({
 });
 
 import { createWillDownloadEventListener, downloadLocationMap } from '../src/browser/api/file_download';
+// Do not move this ofEvents import - Core PR #976
 import ofEvents from '../src/browser/of_events';
 
 describe('FileDownload', () => {
