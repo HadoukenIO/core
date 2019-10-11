@@ -30,6 +30,7 @@ import { createChromiumSocket, authenticateChromiumSocket } from '../transports/
 import { authenticateFetch, grantAccess } from '../cached_resource_fetcher';
 import { getNativeWindowInfoLite } from '../utils';
 import { isValidExternalWindow } from './external_window';
+import { getWindowByUuidName, getBrowserViewByIdentity, getInfoByUuidFrame } from '../core_state';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -201,6 +202,9 @@ export function deleteCacheOnExit(callback, errorCallback) {
     } else {
         errorCallback('Failed to send a message to the RVM.');
     }
+}
+export function entityExists({ uuid, name }) {
+    return getWindowByUuidName(uuid, name) || getBrowserViewByIdentity({ uuid, name }) || getInfoByUuidFrame({ uuid, name });
 }
 export function exit() {
     electronApp.quit();
@@ -768,6 +772,7 @@ export const System = {
     createProxySocket,
     authenticateProxySocket,
     deleteCacheOnExit,
+    entityExists,
     exit,
     getAllWindows,
     getAllApplications,
