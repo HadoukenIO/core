@@ -534,10 +534,13 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
 
 // Window grouping stub (makes external windows work with our original disabled frame group tracker)
 // Also some of the _options' values are needed in OpenFin Layouts
-function setAdditionalProperties(externalWindow: Shapes.ExternalWindow, requestedId: Shapes.NativeWindowIdentity): Shapes.GroupWindow {
+function setAdditionalProperties(
+  externalWindow: Shapes.ExternalWindow,
+  requestedIdentity: Shapes.NativeWindowIdentity
+): Shapes.GroupWindow {
   const { nativeId } = externalWindow;
-  const uuid = externalWindow.uuid || requestedId.uuid || nativeId;
-  const name = requestedId.name || nativeId;
+  const uuid = externalWindow.uuid || requestedIdentity.uuid || nativeId;
+  const name = requestedIdentity.name || nativeId;
   const identity = { uuid, name, nativeId };
 
   externalWindow._userMovement = true;
