@@ -30,6 +30,7 @@ import { createChromiumSocket, authenticateChromiumSocket } from '../transports/
 import { authenticateFetch, grantAccess } from '../cached_resource_fetcher';
 import { getNativeWindowInfoLite } from '../utils';
 import { isValidExternalWindow } from './external_window';
+import { getWindowByUuidName, getBrowserViewByIdentity, getInfoByUuidFrame } from '../core_state';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -202,6 +203,9 @@ export const System = {
         } else {
             errorCallback('Failed to send a message to the RVM.');
         }
+    },
+    entityExists: function({ uuid, name }) {
+        return getWindowByUuidName(uuid, name) || getBrowserViewByIdentity({ uuid, name }) || getInfoByUuidFrame({ uuid, name });
     },
     exit: function() {
         electronApp.quit();
