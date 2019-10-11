@@ -125,11 +125,11 @@ export function getEntityInfo(identity: Shapes.Identity) {
     }
 }
 
-export function getEntityIdentity(identity: Shapes.Identity): Shapes.ProviderIdentity|undefined {
+export function getEntityIdentity(identity: Shapes.Identity): Shapes.EntityIdentity | undefined {
     const { uuid, name, entityType, parentFrame } = identity;
     const externalConn = getExternalAppObjByUuid(uuid);
     if (externalConn) {
-        return {...externalConn, isExternal: true };
+        return { ...externalConn, isExternal: true };
     }
 
     const ofWindow = getWindowByUuidName(uuid, name);
