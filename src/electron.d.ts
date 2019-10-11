@@ -1,4 +1,4 @@
-// Type definitions for Electron 8.0.0-nightly.20191002
+// Type definitions for Electron 8.0.0-nightly.20191009
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -6189,6 +6189,7 @@ Starts recording network events to `path`.
     silent: boolean;
     sound: string;
     subtitle: string;
+    timeoutType: ('default' | 'never');
     title: string;
     urgency: ('normal' | 'critical' | 'low');
   }
@@ -8105,6 +8106,7 @@ This property is only available on macOS 10.14 Mojave or newer.
      * TouchBarButton
      */
     constructor(options: TouchBarButtonConstructorOptions);
+    accessibilityLabel: string;
     backgroundColor: string;
     icon: NativeImage;
     label: string;
@@ -8140,6 +8142,7 @@ This property is only available on macOS 10.14 Mojave or newer.
      * TouchBarLabel
      */
     constructor(options: TouchBarLabelConstructorOptions);
+    accessibilityLabel: string;
     label: string;
     textColor: string;
   }
@@ -13172,6 +13175,12 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     hasReply?: boolean;
     /**
+     * The timeout duration of the notification. Can be 'default' or 'never'.
+     *
+     * @platform linux,win32
+     */
+    timeoutType?: ('default' | 'never');
+    /**
      * The placeholder to write in the inline reply input field.
      *
      * @platform darwin
@@ -14107,6 +14116,10 @@ See webContents.sendInputEvent for detailed description of `event` object.
      */
     label?: string;
     /**
+     * A short description of the button for use by screenreaders like VoiceOver.
+     */
+    accessibilityLabel?: string;
+    /**
      * Button background color in hex format, i.e `#ABCDEF`.
      */
     backgroundColor?: string;
@@ -14156,6 +14169,10 @@ See webContents.sendInputEvent for detailed description of `event` object.
      * Text to display.
      */
     label?: string;
+    /**
+     * A short description of the button for use by screenreaders like VoiceOver.
+     */
+    accessibilityLabel?: string;
     /**
      * Hex color of text, i.e `#ABCDEF`.
      */
