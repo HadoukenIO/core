@@ -30,7 +30,6 @@ let log = require('../log');
 import ofEvents from '../of_events';
 import SubscriptionManager from '../subscription_manager';
 import WindowGroups from '../window_groups';
-import { addConsoleMessageToRVMMessageQueue } from '../rvm/utils';
 import { validateNavigation, navigationValidator } from '../navigation_validation';
 import { toSafeInt } from '../../common/safe_int';
 import route from '../../common/route';
@@ -232,7 +231,7 @@ let optionSetters = {
 
         let uuid = browserWin._options.uuid;
         let name = browserWin._options.name;
-        let openfinWindow = Window.wrap(uuid, name);
+        let openfinWindow = coreState.getWindowByUuidName(uuid, name);
         let hideOnCloseListener = openfinWindow.hideOnCloseListener;
         let closeEventString = route.window('close-requested', uuid, name);
 
@@ -413,7 +412,7 @@ Window.create = function(id, opts) {
 
     let hideReason = 'hide';
     let hideOnCloseListener = () => {
-        let openfinWindow = Window.wrap(uuid, name);
+        let openfinWindow = coreState.getWindowByUuidName(uuid, name);
         openfinWindow.hideReason = 'hide-on-close';
         browserWindow.hide();
     };
@@ -497,7 +496,7 @@ Window.create = function(id, opts) {
         // once the window is closed, be sure to close all the children
         // it may have and remove it from the
         browserWindow.on('close', (event) => {
-            let ofWindow = Window.wrap(uuid, name);
+            let ofWindow = coreState.getWindowByUuidName(uuid, name);
             let closeEventString = route.window('close-requested', uuid, name);
             let listenerCount = ofEvents.listenerCount(closeEventString);
 
@@ -536,21 +535,8 @@ Window.create = function(id, opts) {
         });
 
         const isMainWindow = (uuid === name);
-        const emitToAppIfMainWin = (type, payload) => {
-            // Window crashed: inform Window "namespace"
-            ofEvents.emit(route.window(type, uuid, name), Object.assign({ topic: 'window', type, uuid, name }, payload));
-
-            if (isMainWindow) {
-                // Application crashed: inform Application "namespace"
-                ofEvents.emit(route.application(type, uuid), Object.assign({ topic: 'application', type, uuid }, payload));
-            }
-        };
 
         winWebContents.on('crashed', (event, killed, terminationStatus) => {
-            emitToAppIfMainWin('crashed', {
-                reason: terminationStatus
-            });
-
             // When the renderer crashes, remove blocking event listeners.
             // Removing 'close-requested' listeners will allow the crashed window to be closed manually easily.
             const closeRequested = route.window('close-requested', uuid, name);
@@ -574,14 +560,6 @@ Window.create = function(id, opts) {
             }
         });
 
-        browserWindow.on('responsive', () => {
-            emitToAppIfMainWin('responding');
-        });
-
-        browserWindow.on('unresponsive', () => {
-            emitToAppIfMainWin('not-responding');
-        });
-
         let mapEvents = function(eventMap, eventEmitter) {
             // todo this should be on demand, for now just blast them all
             Object.keys(eventMap).forEach(evnt => {
@@ -592,7 +570,7 @@ Window.create = function(id, opts) {
 
                     // if the window has already been removed from core_state,
                     // don't propagate anymore events
-                    if (!Window.wrap(uuid, name)) {
+                    if (!coreState.getWindowByUuidName(uuid, name)) {
                         return;
                     }
 
@@ -764,6 +742,8 @@ Window.create = function(id, opts) {
         };
 
         //Legacy logic where we wait for the API to 'connect' before we invoke the callback method.
+        const observableCleanUp = new Map();
+        const connected = route.window('connected', uuid, name);
         const apiInjectionObserver = Rx.Observable.create((observer) => {
             if (opts.url === 'about:blank') {
                 winWebContents.once('did-finish-load', () => {
@@ -773,19 +753,21 @@ Window.create = function(id, opts) {
                     };
                     observer.next(constructorCallbackMessage);
                 });
-
             } else {
                 ofEvents.once(resourceResponseReceivedEventString, resourceResponseReceivedHandler);
                 ofEvents.once(resourceLoadFailedEventString, resourceLoadFailedHandler);
-                ofEvents.once(route.window('connected', uuid, name), () => {
+                const connectedListener = () => {
                     winWebContents.on(OF_WINDOW_UNLOADED, ofUnloadedHandler);
                     constructorCallbackMessage.data = {
                         httpResponseCode,
                         apiInjected: true
                     };
                     observer.next(constructorCallbackMessage);
-                });
-                ofEvents.once(route.window('api-injection-failed', uuid, name), () => {
+                };
+                observableCleanUp.set(connected, connectedListener);
+                ofEvents.once(connected, connectedListener);
+                const apiInjectionFailed = route.window('api-injection-failed', uuid, name);
+                const apiInjectionFailedListener = () => {
                     electronApp.vlog(1, `api-injection-failed ${uuid}-${name}`);
                     // can happen if child window has a different domain.   @TODO allow injection for different domains
                     if (_options.autoShow) {
@@ -796,8 +778,11 @@ Window.create = function(id, opts) {
                         apiInjected: false
                     };
                     observer.next(constructorCallbackMessage);
-                });
-                ofEvents.once(route.window('api-injection-disabled', uuid, name), () => {
+                };
+                observableCleanUp.set(apiInjectionFailed, apiInjectionFailedListener);
+                ofEvents.once(apiInjectionFailed, apiInjectionFailedListener);
+                const apiInjectionDisabled = route.window('api-injection-disabled', uuid, name);
+                const apiInjectionDisabledListener = () => {
                     electronApp.vlog(1, `api-injection-disabled ${uuid}-${name}`);
                     // can happen for chrome pages
                     browserWindow.show();
@@ -806,9 +791,10 @@ Window.create = function(id, opts) {
                         apiInjected: false
                     };
                     observer.next(constructorCallbackMessage);
-                });
+                };
+                observableCleanUp.set(apiInjectionDisabled, apiInjectionDisabledListener);
+                ofEvents.once(apiInjectionDisabled, apiInjectionDisabledListener);
             }
-
         });
 
         //Restoring window positioning from disk cache.
@@ -847,7 +833,9 @@ Window.create = function(id, opts) {
                     Window.show(identity);
                 }
             }
-
+            for (const [event, listener] of observableCleanUp.entries()) {
+                ofEvents.removeListener(event, listener);
+            }
             ofEvents.emit(route.window('fire-constructor-callback', uuid, name), constructorCallbackMessage);
             subscription.unsubscribe();
         });
@@ -879,75 +867,6 @@ Window.create = function(id, opts) {
         _window: browserWindow,
     };
 
-    const prepareConsoleMessageForRVM = (event, level, message, lineNo, sourceId) => {
-        /*
-            DEBUG:     -1
-            INFO:      0
-            WARNING:   1
-            ERROR:     2
-            FATAL:     3
-        */
-        const printDebugLogs = (coreState.argo['v'] >= 1);
-        if ((level === /* DEBUG */ -1 && !printDebugLogs) ||
-            level === /* INFO */ 0 ||
-            level === /* WARNING */ 1) {
-            // Prevent INFO and WARNING messages from writing to debug.log
-            // DEBUG messages are also prevented if --v=1 or higher isn't specified
-            event.preventDefault();
-        }
-
-        const app = coreState.getAppByUuid(identity.uuid);
-        if (!app) {
-            electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);
-            return;
-        }
-
-        // If enableAppLogging is false, skip sending to RVM
-        if (app._options.enableAppLogging === false) {
-            return;
-        }
-
-        // Hack: since this function is getting called from the native side with
-        // "webContents.on", there is weirdness where the "setTimeout(flushConsoleMessageQueue...)"
-        // in addConsoleMessageToRVMMessageQueue would only get called the first time, and not subsequent times,
-        // if you just called "addConsoleMessageToRVMMessageQueue" directly from here. So to get around that, we
-        // wrap this entire function in a "setTimeout" to put it in a different context. Eventually we should figure
-        // out if there is a way around this by using event.preventDefault or something similar
-        setTimeout(() => {
-            const appConfigUrl = coreState.getConfigUrlByUuid(identity.uuid);
-            if (!appConfigUrl) {
-                electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
-                return;
-            }
-
-            function checkPrependLeadingZero(num, length) {
-                let str = String(num);
-                while (str.length < length) {
-                    str = '0' + str;
-                }
-
-                return str;
-            }
-
-            const date = new Date();
-            const year = String(date.getFullYear());
-            const month = checkPrependLeadingZero(date.getMonth() + 1, 2);
-            const day = checkPrependLeadingZero(date.getDate(), 2);
-            const hour = checkPrependLeadingZero(date.getHours(), 2);
-            const minute = checkPrependLeadingZero(date.getMinutes(), 2);
-            const second = checkPrependLeadingZero(date.getSeconds(), 2);
-            const millisecond = checkPrependLeadingZero(date.getMilliseconds(), 3);
-
-            // Format timestamp to match debug.log
-            const timeStamp = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
-
-            addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
-
-        }, 1);
-    };
-
-    winWebContents.on('console-message', prepareConsoleMessageForRVM);
-
     // Set preload scripts' final loading states
     winObj.preloadScripts = (_options.preloadScripts || []);
     winObj.framePreloadScripts = {}; // frame ID => [{url, state}]
@@ -966,11 +885,6 @@ Window.create = function(id, opts) {
     WebContents.setIframeHandlers(browserWindow.webContents, winObj, uuid, name);
 
     return winObj;
-};
-
-
-Window.wrap = function(uuid, name) {
-    return coreState.getWindowByUuidName(uuid, name);
 };
 
 Window.connected = function() {};
@@ -1113,7 +1027,7 @@ Window.close = function(identity, force, callback = () => {}) {
 
     let defaultAction = () => {
         if (!browserWindow.isDestroyed()) {
-            let openfinWindow = Window.wrap(identity.uuid, identity.name);
+            let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
             openfinWindow.forceClose = true;
             browserWindow.close();
         }
@@ -1267,14 +1181,14 @@ Window.getGroup = function(identity) {
         return [];
     }
 
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
     return WindowGroups.getGroup(openfinWindow.groupUuid);
 };
 
 
 Window.getWindowInfo = function(identity) {
     const browserWindow = getElectronBrowserWindow(identity, 'get info for');
-    const { preloadScripts } = Window.wrap(identity.uuid, identity.name);
+    const { preloadScripts } = coreState.getWindowByUuidName(identity.uuid, identity.name);
     const windowKey = genWindowKey(identity);
     const isUserMovementEnabled = !disabledFrameRef.has(windowKey) || disabledFrameRef.get(windowKey) === 0;
     const windowInfo = Object.assign({
@@ -1311,57 +1225,6 @@ Window.getOptions = function(identity) {
 };
 
 Window.getParentWindow = function() {};
-
-/**
- * Sets/updates window's preload script state and emits relevant events
- */
-Window.setWindowPreloadState = function(identity, payload) {
-    const { uuid, name } = identity;
-    const { url, state, allDone } = payload;
-    const updateTopic = allDone ? 'preload-scripts-state-changed' : 'preload-scripts-state-changing';
-    const frameInfo = coreState.getInfoByUuidFrame(identity);
-    let openfinWindow;
-    if (frameInfo.entityType === 'iframe') {
-        openfinWindow = Window.wrap(frameInfo.parent.uuid, frameInfo.parent.name);
-    } else {
-        openfinWindow = Window.wrap(uuid, name);
-    }
-
-    if (!openfinWindow) {
-        return log.writeToLog('info', `setWindowPreloadState missing openfinWindow ${uuid} ${name}`);
-    }
-    let { preloadScripts } = openfinWindow;
-
-    // Single preload script state change
-    if (!allDone) {
-        if (frameInfo.entityType === 'iframe') {
-            let frameState = openfinWindow.framePreloadScripts[name];
-            if (!frameState) {
-                frameState = openfinWindow.framePreloadScripts[name] = [];
-            }
-            preloadScripts = frameState.find(e => e.url === url);
-            if (!preloadScripts) {
-                frameState.push(preloadScripts = { url });
-            }
-            preloadScripts = [preloadScripts];
-        } else {
-            preloadScripts = openfinWindow.preloadScripts.filter(e => e.url === url);
-        }
-        if (preloadScripts) {
-            preloadScripts[0].state = state;
-        } else {
-            log.writeToLog('info', `setWindowPreloadState missing preloadState ${uuid} ${name} ${url} `);
-        }
-    }
-
-    if (frameInfo.entityType === 'window') {
-        ofEvents.emit(route.window(updateTopic, uuid, name), {
-            name,
-            uuid,
-            preloadScripts
-        });
-    } // @TODO ofEvents.emit(route.frame for iframes
-};
 
 Window.getSnapshot = (opts) => {
     return new Promise((resolve, reject) => {
@@ -1440,7 +1303,7 @@ Window.leaveGroup = function(identity) {
         return;
     }
 
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
     return WindowGroups.leaveGroup(openfinWindow);
 };
 
@@ -1940,7 +1803,7 @@ function createWindowTearDown(identity, id, browserWindow, _boundsChangedHandler
     //    Close all child windows
     //    Wait for the close event.
     return function() {
-        let ofWindow = Window.wrap(identity.uuid, identity.name);
+        let ofWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
         let childWindows = coreState.getChildrenByWinId(id) || [];
         // remove from core state earlier rather than later
         coreState.removeChildById(id);
@@ -2164,7 +2027,7 @@ function boundsChangeDecorator(payload, args) {
             payload[key] = boundsChangePayload[key];
         });
 
-        let _win = Window.wrap(payload.uuid, payload.name);
+        let _win = coreState.getWindowByUuidName(payload.uuid, payload.name);
         let _browserWin = _win && _win.browserWindow;
         setOptOnBrowserWin('x', payload.left, _browserWin);
         setOptOnBrowserWin('y', payload.top, _browserWin);
@@ -2212,7 +2075,7 @@ function willMoveOrResizeDecorator(payload, args) {
 }
 
 function opacityChangedDecorator(payload, args) {
-    let _win = Window.wrap(payload.uuid, payload.name);
+    let _win = coreState.getWindowByUuidName(payload.uuid, payload.name);
     let _browserWin = _win && _win.browserWindow;
     setOptOnBrowserWin('opacity', args[1], _browserWin);
     return false;
@@ -2237,7 +2100,7 @@ function visibilityChangedDecorator(payload, args) {
                 coreState.setSentFirstHideSplashScreen(uuid, true);
             }
         } else {
-            let openfinWindow = Window.wrap(payload.uuid, payload.name);
+            let openfinWindow = coreState.getWindowByUuidName(payload.uuid, payload.name);
             const { hideReason } = openfinWindow;
             payload.type = 'hidden';
             payload.reason = hideReason === 'hide' && closing ? 'closing' : hideReason;
@@ -2397,7 +2260,7 @@ function handleCustomAlerts(id, opts) {
 
 //If unknown window AND `errDesc` provided, throw error; otherwise return (possibly undefined) browser window ref.
 export function getElectronBrowserWindow(identity, errDesc) {
-    let openfinWindow = Window.wrap(identity.uuid, identity.name);
+    let openfinWindow = coreState.getWindowByUuidName(identity.uuid, identity.name);
     let browserWindow = openfinWindow && openfinWindow.browserWindow;
 
     if (errDesc && !browserWindow) {

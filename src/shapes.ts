@@ -108,8 +108,11 @@ export interface InjectableContext {
     name: string;
     _options: WebOptions;
     frames: Map<string, ChildFrameInfo>;
+    preloadScripts: PreloadScript[];
+    framePreloadScripts: { [frame: string]: PreloadScript[] };
 }
 export interface WebOptions {
+    preloadScripts?: PreloadScript[];
     uuid: string;
     name: string;
 }
@@ -124,8 +127,6 @@ export interface OpenFinWindow extends InjectableContext {
     groupUuid: string|null;
     hideReason: string;
     id: number;
-    preloadScripts: PreloadScriptState[];
-    mainFrameRoutingId: number;
     isProxy?: boolean;
 }
 
@@ -323,11 +324,8 @@ export interface Manifest {
 
 export interface PreloadScript {
     mandatory?: boolean;
+    state?: 'load-started' | 'load-failed' | 'load-succeeded' | 'failed' | 'succeeded';
     url: string;
-}
-
-export interface PreloadScriptState extends PreloadScript {
-    state: 'load-started'|'load-failed'|'load-succeeded'|'failed'|'succeeded';
 }
 
 export interface EventPayload {
@@ -491,3 +489,42 @@ export type GroupWindow = (ExternalWindow | OpenFinWindow) & {
 export interface GroupWindowIdentity extends Identity {
     isExternalWindow?: boolean;
 }
+
+export interface CustomFrameOptions {
+    uuid: string;
+    name: string;
+    layout: LayoutConfig;
+}
+
+export interface LayoutConfig {
+    settings: {
+        popoutWholeStack?: boolean;
+        constrainDragToContainer?: boolean;
+        showPopoutIcon?: boolean;
+        showMaximiseIcon?: boolean;
+        showCloseIcon?: boolean;
+    };
+    content: LayoutContent;
+}
+
+export type LayoutContent = (LayoutRow|LayoutColumn|LayoutComponent)[];
+
+export interface LayoutRow {
+    type: 'row';
+    content: LayoutContent;
+}
+
+export interface LayoutColumn {
+    type: 'column';
+    content: LayoutContent;
+}
+
+export interface LayoutComponent {
+    type: 'component';
+    componentName: string;
+    componentState: {
+        identity: Identity;
+        url: string;
+    };
+}
+
