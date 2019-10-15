@@ -239,18 +239,19 @@ async function download(identity: Identity, url: string, saveToPath: string, app
         });
 
         if (session) {
-            session.cookies.get({}, (error: any, cookies: any) => {
-                if (error) {
-                    log.writeToLog(1, 'Error getting session cookies for identity '
-                        + `${identity.uuid}-${identity.name} while trying to fetch a `
-                        + `resource from URL ${url}. Will attempt to fetch the resource `
-                        + `without cookies. Error received: ${error}`, true);
-                } else {
-                    const cookiesNameValue = cookies.map((e: any) => `${e.name}=${e.value}`);
-                    request.setHeader('cookie', cookiesNameValue);
-                }
+            session.cookies.get({}).then((cookies: any) => {
+                const cookiesNameValue = cookies.map((e: any) => `${e.name}=${e.value}`);
+                request.setHeader('cookie', cookiesNameValue);
+                // TODO: Somehow compiler uses Promise defnition that does not have finally.
                 request.end();
-            });
+            }).catch((error: any) => {
+                log.writeToLog(1, 'Error getting session cookies for identity '
+                    + `${identity.uuid}-${identity.name} while trying to fetch a `
+                    + `resource from URL ${url}. Will attempt to fetch the resource `
+                    + `without cookies. Error received: ${error}`, true);
+                // TODO: Somehow compiler uses Promise defnition that does not have finally.
+                request.end();
+            }); // .finally(() => { request.end(); });
         } else {
             request.end();
         }

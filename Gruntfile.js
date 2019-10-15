@@ -306,7 +306,7 @@ module.exports = (grunt) => {
 
         const rebuildOptions = {
             buildPath: __dirname,
-            electronVersion: '6.0.2'
+            electronVersion: '7.0.0-beta.3'
         };
 
         // don't rebuild the optionalDependencies since they're only used
