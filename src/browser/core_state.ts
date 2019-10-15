@@ -766,6 +766,17 @@ export function getInfoByUuidFrame(targetIdentity: Shapes.Identity): Shapes.Fram
             writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
     }
+    for (const ofView of app.views) {
+        const { name } = ofView;
+        if (frame === name) {
+            return {
+                name,
+                uuid,
+                parent: getParentIdentity({ uuid, name }),
+                entityType: Shapes.EntityType.VIEW
+            };
+        }
+    }
 }
 export interface RoutingInfo {
     name: string;
@@ -788,16 +799,6 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
             const { uuid, name } = openfinWindow;
             let browserWindow: Shapes.BrowserWindow;
             browserWindow = openfinWindow.browserWindow;
-            if (!openfinWindow.mainFrameRoutingId) {
-                // save bit time here by not calling webContents.mainFrameRoutingId every time
-                // mainFrameRoutingId is wrong during setWindowObj
-                if (!browserWindow.isDestroyed()) {
-                    openfinWindow.mainFrameRoutingId = browserWindow.webContents.mainFrameRoutingId;
-                    writeToLog(1, `set mainFrameRoutingId ${uuid} ${name} ${openfinWindow.mainFrameRoutingId}`, true);
-                } else {
-                    writeToLog(1, `unable to set mainFrameRoutingId ${uuid} ${name}`, true);
-                }
-            }
 
             if (name === frame) {
                 return {
@@ -805,8 +806,8 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
                     browserWindow,
                     _options: openfinWindow._options,
                     webContents: browserWindow.webContents,
-                    frameRoutingId: openfinWindow.mainFrameRoutingId,
-                    mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
+                    frameRoutingId: browserWindow.webContents.mainFrameRoutingId,
+                    mainFrameRoutingId: browserWindow.webContents.mainFrameRoutingId,
                     frameName: name
                 };
             } else if (openfinWindow.frames.get(frame)) {
@@ -817,14 +818,15 @@ export function getRoutingInfoByUuidFrame(uuid: string, frame: string): RoutingI
                     _options: openfinWindow._options,
                     webContents: browserWindow.webContents,
                     frameRoutingId,
-                    mainFrameRoutingId: openfinWindow.mainFrameRoutingId,
+                    mainFrameRoutingId: browserWindow.webContents.mainFrameRoutingId,
                     frameName: name
                 };
             }
         } else {
             writeToLog(1, `unable to find openfinWindow of child of ${app.uuid}`, true);
         }
-    } for (const ofView of app.views) {
+    }
+    for (const ofView of app.views) {
         if (frame === ofView.name) {
             return {
                 name: frame,
@@ -841,7 +843,7 @@ function getWinObjByWebcontentsId(webContentsId: number) {
     const win = getWinList().find(w => w.openfinWindow && w.openfinWindow.browserWindow.webContents.id === webContentsId);
     return win && win.openfinWindow;
 }
-export interface OfView extends Identity {
+export interface OfView extends Shapes.InjectableContext {
     name: string;
     view: BrowserView;
     frames: Map<string, Shapes.ChildFrameInfo>;
@@ -850,9 +852,27 @@ export interface OfView extends Identity {
 }
 export function addBrowserView (opts: BrowserViewOpts, view: BrowserView) {
     const {uuid, name, target} = opts;
-    const ofView = { frames: new Map(), uuid, _options: opts, name, view, target };
+    const ofView = {
+        frames: new Map(),
+        uuid,
+        _options: opts,
+        name,
+        view,
+        target,
+        entityType: Shapes.EntityType.VIEW,
+        preloadScripts: (opts.preloadScripts || []),
+        framePreloadScripts: {} // frame ID => [{url, state}]
+    };
     views.push(ofView);
     return ofView;
+}
+export function getEntityByUuidFrame(uuid: string, name: string): Shapes.InjectableContext | false {
+   const win = getWindowByUuidName(uuid, name);
+   if (win) {
+       return win;
+    } else {
+        return getBrowserViewByIdentity({uuid, name});
+    }
 }
 export function updateViewTarget(id: Identity, newTarget: Identity) {
     const view = getBrowserViewByIdentity(id);

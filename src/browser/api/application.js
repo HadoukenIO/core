@@ -7,6 +7,7 @@ let os = require('os');
 let path = require('path');
 let electron = require('electron');
 let queryString = require('querystring');
+let url = require('url');
 let BrowserWindow = electron.BrowserWindow;
 let electronApp = electron.app;
 let dialog = electron.dialog;
@@ -28,11 +29,11 @@ import { cachedFetch, fetchReadFile } from '../cached_resource_fetcher';
 import ofEvents from '../of_events';
 import WindowGroups from '../window_groups';
 import { sendToRVM } from '../rvm/utils';
-import { validateNavigationRules } from '../navigation_validation';
+import { validateApplicationNavigation } from '../navigation_validation';
 import * as log from '../log';
 import SubscriptionManager from '../subscription_manager';
 import route from '../../common/route';
-import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject } from '../../common/main';
+import { isAboutPageUrl, isValidChromePageUrl, isFileUrl, isHttpUrl, isURLAllowed, getIdentityFromObject, isBase64 } from '../../common/main';
 import { ERROR_BOX_TYPES } from '../../common/errors';
 import { deregisterAllRuntimeProxyWindows } from '../window_groups_runtime_proxy';
 import { releaseUuid } from '../uuid_availability';
@@ -121,8 +122,14 @@ electronApp.on('ready', function() {
 Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     //Hide Window until run is called
 
-    let appUrl = opts.url;
-    const { uuid, name } = opts;
+    let appUrl;
+    const { uuid, name, customFrame } = opts;
+
+    if (customFrame) {
+        convertOpts.toCustomFrame(opts);
+    }
+
+    appUrl = opts.url;
     const initialAppOptions = Object.assign({}, opts);
 
     if (appUrl === undefined && opts.mainWindowOptions) {
@@ -151,7 +158,7 @@ Application.create = function(opts, configUrl = '', parentIdentity = {}) {
     }
 
     const parentUuid = parentIdentity && parentIdentity.uuid;
-    if (!validateNavigationRules(uuid, appUrl, parentUuid, opts)) {
+    if (!validateApplicationNavigation(appUrl, uuid, opts, parentUuid)) {
         throw new Error(`Application with specified URL is not allowed: ${opts.appUrl}`);
     }
 
@@ -391,7 +398,7 @@ Application.getInfo = function(identity, callback) {
 Application.getWindow = function(identity) {
     let uuid = identity.uuid;
 
-    return Window.wrap(uuid, uuid);
+    return coreState.getWindowByUuidName(uuid, uuid);
 };
 
 Application.grantAccess = function() {
@@ -770,18 +777,23 @@ function run(identity, mainWindowOpts, userAppConfigArgs) {
 /**
  * Run an application via RVM Call
  */
-Application.runWithRVM = function(manifestUrl, appIdentity) {
+Application.runWithRVM = function(manifestUrl, appIdentity, opts = {}) {
     const { uuid } = appIdentity;
     // on mac/linux, launch the app, else hand off to RVM
     if (os.platform() !== 'win32') {
         return launch({ manifestUrl: manifestUrl });
     } else {
+        if (opts.userAppConfigArgs) {
+            opts.userAppConfigArgsStr = new url.URLSearchParams(opts.userAppConfigArgs).toString();
+            delete opts.userAppConfigArgs;
+        }
         return sendToRVM({
             topic: 'application',
             action: 'launch-app',
             sourceUrl: coreState.getConfigUrlByUuid(uuid),
             data: {
-                configUrl: manifestUrl
+                configUrl: manifestUrl,
+                rvmLaunchOptions: opts
             }
         });
     }
@@ -861,12 +873,20 @@ Application.setTrayIcon = function(identity, iconUrl, callback, errorCallback) {
 
     const mainWindowIdentity = app.identity;
 
-    iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
+    if (!isBase64(iconUrl)) {
+        iconUrl = Window.getAbsolutePath(mainWindowIdentity, iconUrl);
+    }
 
     cachedFetch(mainWindowIdentity, iconUrl, (error, iconFilepath) => {
         if (!error) {
             if (app) {
-                const iconImage = nativeImage.createFromPath(iconFilepath);
+                let iconImage;
+                if (isBase64(iconUrl)) {
+                    const imageBuf = Buffer.from(iconUrl, 'base64');
+                    iconImage = nativeImage.createFromBuffer(imageBuf);
+                } else {
+                    iconImage = nativeImage.createFromPath(iconFilepath);
+                }
                 const icon = app.tray = new Tray(iconImage);
                 const monitorInfo = MonitorInfo.getInfo('system-query');
                 const clickedRoute = route.application('tray-icon-clicked', app.uuid);

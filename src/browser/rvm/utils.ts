@@ -1,6 +1,9 @@
 import { rvmMessageBus, ConsoleMessage } from '../rvm/rvm_message_bus';
 import { System } from '../api/system';
 import { setTimeout } from 'timers';
+import { Identity } from '../../shapes';
+import * as coreState from '../core_state';
+import { app as electronApp, Event } from 'electron';
 /**
  * Interface for [sendToRVM] method
  */
@@ -58,11 +61,80 @@ export function addConsoleMessageToRVMMessageQueue(consoleMessage: ConsoleMessag
 
         flushConsoleMessageQueue();
 
-    // Otherwise if no timer already set, set one to flush the queue in 10s
+        // Otherwise if no timer already set, set one to flush the queue in 10s
     } else if (!isFlushScheduled) {
         isFlushScheduled = true;
         timer = setTimeout(flushConsoleMessageQueue, flushInterval ? flushInterval : defaultFlushInterval);
     }
+}
+
+export function prepareConsoleMessageForRVM(identity: Identity, event: Event, level: number,
+    message: string, lineNo: number, sourceId: string) {
+    /*
+        DEBUG:     -1
+        INFO:      0
+        WARNING:   1
+        ERROR:     2
+        FATAL:     3
+    */
+    // tslint:disable-next-line
+    const printDebugLogs = (coreState.argo['v'] >= 1);
+    if ((level === /* DEBUG */ -1 && !printDebugLogs) ||
+        level === /* INFO */ 0 ||
+        level === /* WARNING */ 1) {
+        // Prevent INFO and WARNING messages from writing to debug.log
+        // DEBUG messages are also prevented if --v=1 or higher isn't specified
+        event.preventDefault();
+    }
+
+    const app = coreState.getAppByUuid(identity.uuid);
+    if (!app) {
+        electronApp.vlog(2, `Error: could not get app object for app with uuid: ${identity.uuid}`);
+        return;
+    }
+
+    // If enableAppLogging is false, skip sending to RVM
+    if (app._options.enableAppLogging === false) {
+        return;
+    }
+
+    // Hack: since this function is getting called from the native side with
+    // "webContents.on", there is weirdness where the "setTimeout(flushConsoleMessageQueue...)"
+    // in addConsoleMessageToRVMMessageQueue would only get called the first time, and not subsequent times,
+    // if you just called "addConsoleMessageToRVMMessageQueue" directly from here. So to get around that, we
+    // wrap this entire function in a "setTimeout" to put it in a different context. Eventually we should figure
+    // out if there is a way around this by using event.preventDefault or something similar
+    setTimeout(() => {
+        const appConfigUrl = coreState.getConfigUrlByUuid(identity.uuid);
+        if (!appConfigUrl) {
+            electronApp.vlog(2, `Error: could not get manifest url for app with uuid: ${identity.uuid}`);
+            return;
+        }
+
+        function checkPrependLeadingZero(num: number, length: number) {
+            let str = String(num);
+            while (str.length < length) {
+                str = '0' + str;
+            }
+
+            return str;
+        }
+
+        const date = new Date();
+        const year = String(date.getFullYear());
+        const month = checkPrependLeadingZero(date.getMonth() + 1, 2);
+        const day = checkPrependLeadingZero(date.getDate(), 2);
+        const hour = checkPrependLeadingZero(date.getHours(), 2);
+        const minute = checkPrependLeadingZero(date.getMinutes(), 2);
+        const second = checkPrependLeadingZero(date.getSeconds(), 2);
+        const millisecond = checkPrependLeadingZero(date.getMilliseconds(), 3);
+
+        // Format timestamp to match debug.log
+        const timeStamp = `${year}-${month}-${day} ${hour}:${minute}:${second}.${millisecond}`;
+
+        addConsoleMessageToRVMMessageQueue({ level, message, appConfigUrl, timeStamp }, app._options.appLogFlushInterval);
+
+    }, 1);
 }
 
 /**
@@ -76,7 +148,7 @@ export function sendToRVM(opts: SendToRVMOpts, maskPayload?: boolean): Promise<a
             return reject(new Error('Connection with RVM is not established'));
         }
 
-        const messageSent = rvmMessageBus.publish(Object.assign({timeToLive: 1000}, opts), (rvmResponse: any) => {
+        const messageSent = rvmMessageBus.publish(Object.assign({ timeToLive: 1000 }, opts), (rvmResponse: any) => {
 
             // Don't do anything here because the message wasn't sent successfully to RVM
             // and we already sent error callback to the client

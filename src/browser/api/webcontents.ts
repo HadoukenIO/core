@@ -4,6 +4,7 @@ import { Identity } from '../../shapes';
 import ofEvents from '../of_events';
 import route, { WindowRoute } from '../../common/route';
 import { InjectableContext, EntityType } from '../../shapes';
+import { prepareConsoleMessageForRVM } from '../rvm/utils';
 
 export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid, name }: Identity, topic: string, routeFunc: WindowRoute) {
     webContents.on('did-get-response-details', (e,
@@ -18,11 +19,7 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
     ) => {
         const type = 'resource-response-received';
 
-        const payload = {
-            name,
-            uuid,
-            topic,
-            type,
+        const payload = { uuid, name, topic, type,
             status,
             newUrl,
             originalUrl,
@@ -34,6 +31,7 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
         };
         ofEvents.emit(routeFunc(type, uuid, name), payload);
     });
+
     webContents.on('did-fail-load', (e,
         errorCode,
         errorDescription,
@@ -41,11 +39,7 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
         isMainFrame
     ) => {
         const type = 'resource-load-failed';
-        const payload = {
-            name,
-            uuid,
-            topic,
-            type,
+        const payload = { uuid, name, topic, type,
             errorCode,
             errorDescription,
             validatedURL,
@@ -53,9 +47,58 @@ export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid,
         };
         ofEvents.emit(routeFunc(type, uuid, name), payload);
     });
+
+    webContents.on('page-title-updated', (e, title, explicitSet) => {
+        const type = 'page-title-updated';
+        const payload = {uuid, name, topic, type, title, explicitSet};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+
+    webContents.on('did-change-theme-color', (e, color) => {
+        const type = 'did-change-theme-color';
+        const payload = {uuid, name, topic, type, color};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+
+    webContents.on('page-favicon-updated', (e, favicons) => {
+        const type = 'page-favicon-updated';
+        const payload = {uuid, name, topic, type, favicons};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+
+    const isMainWindow = (uuid === name);
+    const emitToAppIfMainWin = (type: string, payload: any) => {
+        if (isMainWindow) {
+            // Application crashed: inform Application "namespace"
+            ofEvents.emit(route.application(type, uuid), Object.assign({ topic: 'application', type, uuid }, payload));
+        }
+    };
+
+    webContents.on('crashed', (e, killed, terminationStatus) => {
+        const type = 'crashed';
+        const payload = {uuid, name, topic, type, reason: terminationStatus};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+        emitToAppIfMainWin(type, payload);
+    });
+
+    webContents.on('responsive', () => {
+        const type = 'responding';
+        const payload = {uuid, name, topic, type};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+        emitToAppIfMainWin(type, payload);
+    });
+
+    webContents.on('unresponsive', () => {
+        const type = 'not-responding';
+        const payload = {uuid, name, topic, type};
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+        emitToAppIfMainWin(type, payload);
+    });
+
     webContents.once('destroyed', () => {
         webContents.removeAllListeners();
     });
+    webContents.on('console-message', (...args) => prepareConsoleMessageForRVM({ uuid, name }, ...args));
 }
 
 export function executeJavascript(webContents: Electron.WebContents, code: string, callback: (e: any, result: any) => void): void {
@@ -78,12 +121,8 @@ export function getAbsolutePath(webContents: Electron.WebContents, path: string)
     return url.resolve(windowURL, path);
 }
 
-export function navigate(webContents: Electron.WebContents, url: string) {
-    // todo: replace everything here with "return webContents.loadURL(url)" once we get to electron 5.*
-    // reason: starting electron v5, loadUrl returns a promise that resolves according to the same logic we apply here
-    const navigationEnd = createNavigationEndPromise(webContents);
-    webContents.loadURL(url);
-    return navigationEnd;
+export function navigate (webContents: Electron.WebContents, url: string) {
+    return webContents.loadURL(url);
 }
 
 export async function navigateBack(webContents: Electron.WebContents) {
