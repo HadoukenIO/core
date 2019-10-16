@@ -29,6 +29,9 @@ export async function create(options: BrowserViewOpts) {
         throw new Error('Must supply target identity');
     }
     const targetIdentity = options.target;
+    if (targetIdentity.uuid !== uuid) {
+        throw new Error('A view may only be attached to a window in the same application');
+    }
     const targetWin = getWindowByUuidName(targetIdentity.uuid, targetIdentity.name);
     if (!targetWin) {
         throw new Error('Target Window could not be found');
