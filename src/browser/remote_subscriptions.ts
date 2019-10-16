@@ -31,7 +31,7 @@ const pendingRemoteSubscriptions: Map<number, RemoteSubscription> = new Map();
  * Shape of remote subscription props
  */
 export interface RemoteSubscriptionProps {
-    className: 'application'|'window'|'system'|'channel'|'frame'; // names of the class event emitters, used for subscriptions
+    className: 'application'|'window'|'system'|'channel'|'frame'|'view'; // names of the class event emitters, used for subscriptions
     eventName: string; // name of the type of the event to subscribe to
     listenType: 'on'|'once'; // used to set up subscription type
     name?: string;
@@ -342,6 +342,8 @@ async function getClassEventEmitter(subscription: RemoteSubscription, runtime: P
         case 'window':
             classEventEmitter = await runtime.fin.Window.wrap({uuid, name});
             break;
+        case 'view':
+            classEventEmitter = runtime.fin.BrowserView.wrapSync({uuid, name});
     }
 
     return classEventEmitter;

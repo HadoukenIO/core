@@ -53,6 +53,7 @@ export const SystemApiMap: APIHandlerMap = {
     'download-asset': { apiFunc: downloadAsset, apiPath: '.downloadAsset', defaultPermission: false },
     'download-preload-scripts': { apiFunc: downloadPreloadScripts, apiPath: '.downloadPreloadScripts'},
     'download-runtime': { apiFunc: downloadRuntime, apiPath: '.downloadRuntime' },
+    'entity-exists': entityExists,
     'exit-desktop': { apiFunc: exitDesktop, apiPath: '.exit' },
     'flush-cookie-store': { apiFunc: flushCookieStore, apiPath: '.flushCookieStore' },
     'generate-guid': generateGuid,
@@ -631,5 +632,13 @@ function authenticateResourceFetch(identity: Identity, message: APIMessage, ack:
     const { payload } = message;
     const dataAck = Object.assign({}, successAck);
     dataAck.data = System.authenticateResourceFetch(identity, payload);
+    ack(dataAck);
+}
+
+function entityExists(identity: Identity, message: APIMessage, ack: Acker, nack: Nacker): void {
+    const { payload } = message;
+    const dataAck = Object.assign({}, successAck);
+
+    dataAck.data = System.entityExists(payload);
     ack(dataAck);
 }

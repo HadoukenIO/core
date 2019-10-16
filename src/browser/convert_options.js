@@ -64,11 +64,16 @@ function five0BaseOptions() {
         'aspectRatio': 0,
         'autoShow': false,
         'backgroundThrottling': false,
+        'contentNavigation': {
+            'whitelist': ['<all_urls>'],
+            'blacklist': []
+        },
         'contextMenuSettings': contextMenuSettings,
         'cornerRounding': {
             'height': 0,
             'width': 0
         },
+        'customFrame': '',
         'defaultCentered': false,
         'defaultHeight': 500,
         'defaultLeft': 10,
@@ -86,8 +91,6 @@ function five0BaseOptions() {
                 'breadcrumbs': false,
                 'iframe': iframeBaseSettings
             },
-            'disableInitialReload': false,
-            'node': false,
             'v2Api': true
         },
         'frame': true,
@@ -152,13 +155,13 @@ function validate(base, user) {
     let options = {};
 
     _.each(base, (value, key) => {
-        const baseType = typeof base[key];
-        const userType = typeof user[key];
+        const baseType = [typeof base[key], Array.isArray(base[key])];
+        const userType = [typeof user[key], Array.isArray(user[key])];
 
-        if (baseType === 'object') {
+        if (baseType[0] === 'object' && !baseType[1]) {
             options[key] = validate(base[key], user[key] || {});
         } else {
-            options[key] = (userType !== baseType) ? base[key] : user[key];
+            options[key] = !_.isEqual(userType, baseType) ? base[key] : user[key];
         }
     });
 
@@ -174,6 +177,39 @@ function fetchLocalConfig(configUrl, successCallback, errorCallback) {
 export const getStartupAppOptions = function(appJson) {
     return appJson['startup_app'];
 };
+
+export const toCustomFrame = function(options) {
+    const hasValidLayoutConfig = options.layout && validateLayoutConfig(options.layout.content);
+
+    // customFrame necessarily uses layouts, so if no layout config is given, we construct one ourselves. 
+    if (!hasValidLayoutConfig) {
+        options.layout = {
+            'settings': {
+                'popoutWholeStack': false,
+                'constrainDragToContainer': true,
+                'showPopoutIcon': false,
+                'showMaximiseIcon': false,
+                'showCloseIcon': false
+            },
+            content: [{
+                type: 'component',
+                componentName: 'browserView',
+                componentState: {
+                    identity: {
+                        uuid: options.uuid,
+                        name: `${options.name}-main-view`
+                    },
+                    url: options.url
+                }
+            }]
+        };
+    }
+
+    // for now we use default frame for any customFrame value
+    options.url = `file:///${path.resolve(`${__dirname}/../../assets/frame/default-frame.html`)}`;
+    return options;
+};
+
 export const convertToElectron = function(options, returnAsString) {
 
     const usingIframe = !!(options.api && options.api.iframe);
@@ -217,9 +253,6 @@ export const convertToElectron = function(options, returnAsString) {
         }
     }
 
-    const useNodeInRenderer = newOptions.experimental.node;
-    const noNodePreload = path.join(__dirname, '..', 'renderer', 'node-less.js');
-
     // Because we have communicated the experimental option, this allows us to
     // respect that if its set but defaults to the proper passed in `iframe` key
     if (usingIframe) {
@@ -238,11 +271,11 @@ export const convertToElectron = function(options, returnAsString) {
     newOptions.webPreferences = {
         api: newOptions.experimental.api,
         contextMenuSettings: newOptions.contextMenuSettings,
-        disableInitialReload: newOptions.experimental.disableInitialReload,
+        disableInitialReload: false, // Only used by legacy sandboxed node
         nodeIntegration: false,
         plugins: newOptions.plugins,
-        preload: (!useNodeInRenderer ? noNodePreload : ''),
-        sandbox: !useNodeInRenderer,
+        preload: path.join(__dirname, '..', 'renderer', 'node-less.js'),
+        sandbox: true,
         spellCheck: newOptions.spellCheck,
         backgroundThrottling: newOptions.backgroundThrottling
     };
@@ -280,11 +313,19 @@ export const convertToElectron = function(options, returnAsString) {
         newOptions.backgroundColor = TRANSPARENT_WHITE;
     }
 
+    if (options.layout) {
+        newOptions.layout = options.layout;
+    }
+
     if (returnAsString) {
         return JSON.stringify(newOptions);
     } else {
         return JSON.parse(JSON.stringify(newOptions));
     }
+};
+
+const validateLayoutConfig = function(layoutContents) {
+    return layoutContents && Array.isArray(layoutContents);
 };
 
 export const fetchOptions = function(argo, onComplete, onError) {

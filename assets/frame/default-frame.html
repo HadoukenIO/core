@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {
+                background: #E6E8E6;
+                min-height: 100%;
+                width: 100%;
+                margin: 0;
+                padding: 0px;
+                overflow: hidden;
+            }
+
+            html {
+                height: 100%;
+                width: 100%;
+                padding: 0px;
+                margin: 0;
+                overflow: hidden;
+            }
+
+            #of-frame-main {
+                height: 100%;
+                width: 100%;
+                padding: 0px;
+                margin: 0;
+                position: absolute;
+                overflow: hidden;
+            }
+
+            #draggable-zone {
+                position: absolute;
+                height: 28px;
+                width: calc(100% - 4px);
+                top: 2px;
+                left: 2px;
+                user-select: none;
+                -webkit-app-region: drag;
+                -webkit-user-select: none;
+            }
+
+            #title-bar {
+                background: #4E4DFF;
+                width: 100%;
+                height: 30px;
+            }
+
+            #buttons-wrapper {
+                position: relative;
+                float: right;
+                -webkit-app-region: none;
+            }
+
+            .button {
+                height: 20px;
+                width: 20px;
+                display: inline-block; 
+                padding: 5px 10px;
+                -webkit-app-region: no-drag;
+            }
+
+            .button:hover {
+                background: rgb(56, 56, 189)
+            }
+
+            #close-button:hover {
+                background: #B33A3A
+            }
+
+            .button-image {
+                height: 20px;
+                height: 20px;
+                width: 20px;
+            }
+            #layout-container {
+                top: 30px;
+                height: calc(100% - 30px);
+            }
+
+            .popout-button {
+                position: relative;
+                right: 0px;
+                color: #fff;
+                font-weight: bold;
+                z-index: 9999;
+                padding: 0px 0px 0px 15px;
+                width: 15px;
+                margin: 0px auto;
+                display: inline-block;
+            }
+
+            .popout-icon {
+                height: 15px;
+            }
+        </style>
+        <script src='./layout/jquery-1.11.1.min.js'></script>
+        <script src='./layout/goldenlayout.min.js'></script>
+        <script src='./layout/openfin-layout.js'></script>
+        <script src='./layout/resizable-view.js'></script>
+        <link rel="stylesheet" type="text/css" href="./layout/goldenlayout-base.css">
+        <link rel="stylesheet" type="text/css" href="./layout/goldenlayout-dark-theme.css">
+    </head>
+
+    <body>
+        <div id="of-frame-main">
+            <div id="draggable-zone"></div>
+            <div id="title-bar">
+                <div id="title"></div>
+                <div id="buttons-wrapper">
+                    <div class="button" id="maximize-button">
+                        <img class="button-image" src="./icons8-full-screen.svg">
+                    </div>
+                    <div class="button" id="minimize-button">
+                        <img class="button-image" src="./icons8-horizontal-line.svg">
+                    </div>
+                    <div class="button" id="close-button">
+                        <img class="button-image" src="./icons8-multiply.svg">
+                    </div>
+                </div>
+            </div>
+            <div id="layout-container"></div>
+            <script src="./default-frame.js"></script>
+        </div>
+    </body>
+</html>

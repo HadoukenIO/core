@@ -27,9 +27,10 @@ import route from '../../common/route';
 import { downloadScripts, loadScripts } from '../preload_scripts';
 import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
-import { authenticateFetch, clearCacheInvoked } from '../cached_resource_fetcher';
+import { authenticateFetch, grantAccess } from '../cached_resource_fetcher';
 import { getNativeWindowInfoLite } from '../utils';
 import { isValidExternalWindow, nativeIdToUuid } from './external_window';
+import { getWindowByUuidName, getBrowserViewByIdentity, getInfoByUuidFrame } from '../core_state';
 
 const defaultProc = {
     getCpuUsage: function() {
@@ -163,15 +164,18 @@ export const System = {
         };
 
         electronApp.vlog(1, `clearCache ${JSON.stringify(storages)}`);
-        clearCacheInvoked(true);
 
-        defaultSession.clearCache(() => {
-            defaultSession.clearStorageData(cacheOptions, () => {
-                resolve();
-            });
+        grantAccess(async () => {
+            try {
+                await defaultSession.clearCache().then(() => {
+                    defaultSession.clearStorageData(cacheOptions, () => {
+                        resolve();
+                    });
+                });
+            } catch (e) {
+                resolve(e);
+            }
         });
-
-
     },
     createProxySocket: function(options, callback, errorCallback) {
         createChromiumSocket(Object.assign({}, options, { callback, errorCallback }));
@@ -199,6 +203,9 @@ export const System = {
         } else {
             errorCallback('Failed to send a message to the RVM.');
         }
+    },
+    entityExists: function({ uuid, name }) {
+        return getWindowByUuidName(uuid, name) || getBrowserViewByIdentity({ uuid, name }) || getInfoByUuidFrame({ uuid, name });
     },
     exit: function() {
         electronApp.quit();
