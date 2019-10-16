@@ -128,11 +128,9 @@ export module Channel {
 
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { channelName, payload: connectionPayload } = payload;
-
-        const connectingWindow = getEntityIdentity(identity);
         const providerIdentity = Channel.getChannelByChannelName(channelName);
 
-        if (connectingWindow && connectingWindow.isExternal && connectionPayload && connectionPayload.nameAlias) {
+        if (connectionPayload && connectionPayload.nameAlias) {
             identity.name = connectionPayload.nameAlias;
         }
 
@@ -177,9 +175,7 @@ export module Channel {
         const { uuid, name, payload: messagePayload, action: channelAction, providerIdentity } = payload;
         const intendedTargetIdentity = { uuid, name };
 
-        const messagingWindow = getEntityIdentity(identity);
-
-        if (messagingWindow && messagingWindow.isExternal && messagePayload && messagePayload.nameAlias) {
+        if (messagePayload && messagePayload.nameAlias) {
             identity.name = messagePayload.nameAlias;
         }
 
