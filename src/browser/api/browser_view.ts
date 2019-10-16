@@ -87,7 +87,9 @@ export function show(ofView: OfView) {
 
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view, target: previousTarget} = ofView;
-
+    if (toIdentity.uuid !== ofView.uuid) {
+        throw new Error('A view may only be attached to a window in the same application');
+    }
     if (view && ! view.isDestroyed()) {
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
         const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
