@@ -25,10 +25,6 @@ export interface ProviderIdentity extends Identity {
     runtimeUuid?: string;
 }
 
-export interface EntityIdentity extends Identity {
-    isExternal: boolean;
-}
-
 export interface ResourceFetchIdentity extends Identity {
     resourceFetch?: boolean;
 }

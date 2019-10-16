@@ -125,7 +125,7 @@ export function getEntityInfo(identity: Shapes.Identity) {
     }
 }
 
-export function getEntityIdentity(identity: Shapes.Identity): Shapes.EntityIdentity | undefined {
+export function getEntityIdentity(identity: Shapes.Identity): Shapes.Identity & { isExternal: boolean } | undefined {
     const { uuid, name, entityType, parentFrame } = identity;
     const externalConn = getExternalAppObjByUuid(uuid);
     if (externalConn) {
