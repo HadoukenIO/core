@@ -213,7 +213,14 @@ export function setIframeHandlers (webContents: Electron.WebContents, contextObj
 }
 
 export function findInPage(webContents: Electron.WebContents, searchTerm: string, options?: Electron.FindInPageOptions) {
-    return webContents.findInPage(searchTerm, options);
+    return new Promise((resolve) => {
+        const getResults = (event: Electron.Event, result: any) => {
+            resolve(result);
+        };
+
+        webContents.once('found-in-page', getResults);
+        webContents.findInPage(searchTerm, options);
+    });
 }
 
 export function stopFindInPage(webContents: Electron.WebContents, action: 'clearSelection' | 'keepSelection' | 'activateSelection') {

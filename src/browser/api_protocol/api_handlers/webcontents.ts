@@ -59,8 +59,10 @@ function findInPage(identity: Identity, message: APIMessage, ack: Acker): void {
     const windowIdentity = getTargetWindowIdentity(payload);
     const webContents = getElectronWebContents(windowIdentity);
 
-    dataAck.data = WebContents.findInPage(webContents, searchTerm, options);
-    ack(dataAck);
+    WebContents.findInPage(webContents, searchTerm, options).then((data) => {
+        dataAck.data = data;
+        ack(dataAck);
+    });
 }
 
 function stopFindInPage(identity: Identity, message: APIMessage, ack: Acker): void {
