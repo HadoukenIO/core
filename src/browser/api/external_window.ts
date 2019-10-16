@@ -539,7 +539,7 @@ function setAdditionalProperties(
   requestedIdentity: Shapes.NativeWindowIdentity
 ): Shapes.GroupWindow {
   const { nativeId } = externalWindow;
-  const uuid = externalWindow.uuid || requestedIdentity.uuid || nativeId;
+  const uuid = requestedIdentity.uuid;
   const name = requestedIdentity.name || nativeId;
   const identity = { uuid, name, nativeId };
 
