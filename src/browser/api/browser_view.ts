@@ -149,13 +149,6 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
             target: toIdentity,
             previousTarget
         });
-        of_events.emit(route.window('view-attached', toIdentity.uuid, toIdentity.name), {
-            name: ofView.name,
-            uuid: ofView.uuid,
-            viewIdentity: {uuid: ofView.uuid, name: ofView.name},
-            target: toIdentity,
-            previousTarget
-        });
     }
 }
 export async function destroy (ofView: OfView) {

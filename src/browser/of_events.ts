@@ -157,8 +157,7 @@ class OFEvents extends EventEmitter {
             topic: string, propTopic: string, checkedPayload: any, uuid: string, name: string|false, eventPropagations: Map<string, any>) {
 
         const windowDontPropagate = [
-            'detached',
-            'attached'
+            'detached'
         ];
 
         if (!windowDontPropagate.some(t => t === topic)) {
