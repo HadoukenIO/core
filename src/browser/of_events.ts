@@ -1,3 +1,4 @@
+
 import { app } from 'electron';
 import { EventEmitter } from 'events';
 import { isFloat } from '../common/main';
@@ -34,7 +35,7 @@ class OFEvents extends EventEmitter {
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
             const uuid: string = (payload && payload.uuid) || tokenizedRoute[2] || '*';
-            const name: string|false = (payload && payload.name);
+            const name: string|undefined = (payload && payload.name);
             const source = tokenizedRoute.slice(2).join('/');
             const envelope = { channel, topic, source, data };
             const propagateToSystem = !topic.match(/-requested$/);
