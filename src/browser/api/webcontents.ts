@@ -8,6 +8,12 @@ import { prepareConsoleMessageForRVM } from '../rvm/utils';
 
 
 export function hookWebContentsEvents(webContents: Electron.WebContents, { uuid, name }: Identity, topic: string, routeFunc: WindowRoute) {
+    webContents.on('found-in-page', (e, result) => {
+        const type = 'found-in-page';
+        const payload = { uuid, name, topic, type, result };
+        ofEvents.emit(routeFunc(type, uuid, name), payload);
+    });
+
     webContents.on('did-get-response-details', (e,
         status,
         newUrl,
@@ -203,4 +209,19 @@ export function setIframeHandlers (webContents: Electron.WebContents, contextObj
         ofEvents.emit(route.frame('disconnected', uuid, closedFrameName), payload);
         ofEvents.emit(route.window('frame-disconnected', uuid, name), payload);
     };
+}
+
+export function findInPage(webContents: Electron.WebContents, searchTerm: string, options?: Electron.FindInPageOptions) {
+    return new Promise((resolve) => {
+        const getResults = (event: Electron.Event, result: any) => {
+            resolve(result);
+        };
+
+        webContents.once('found-in-page', getResults);
+        webContents.findInPage(searchTerm, options);
+    });
+}
+
+export function stopFindInPage(webContents: Electron.WebContents, action: 'clearSelection' | 'keepSelection' | 'activateSelection') {
+    webContents.stopFindInPage(action);
 }

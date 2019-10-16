@@ -10,11 +10,13 @@ const successAck: APIPayloadAck = { success: true };
 
 export const webContentsApiMap = {
     'execute-javascript-in-window': { apiFunc: executeJavascript, apiPath: '.executeJavaScript' },
+    'find-in-page': findInPage,
     'get-zoom-level': getZoomLevel,
     'navigate-window': navigateWindow,
     'navigate-window-back': navigateWindowBack,
     'navigate-window-forward': navigateWindowForward,
     'stop-window-navigation': stopWindowNavigation,
+    'stop-find-in-page': stopFindInPage,
     'reload-window': reloadWindow,
     'set-zoom-level': setZoomLevel,
     'set-window-preload-state': setWindowPreloadState
@@ -43,6 +45,30 @@ async function executeJavascript(identity: Identity, message: APIMessage, ack: A
 
     return nack(new Error('Rejected, target window is not owned by requesting identity'));
 }
+
+function findInPage(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { payload } = message;
+    const { searchTerm, options } = payload;
+    const dataAck = Object.assign({}, successAck);
+    const windowIdentity = getTargetWindowIdentity(payload);
+    const webContents = getElectronWebContents(windowIdentity);
+
+    WebContents.findInPage(webContents, searchTerm, options).then((data) => {
+        dataAck.data = data;
+        ack(dataAck);
+    });
+}
+
+function stopFindInPage(identity: Identity, message: APIMessage, ack: Acker): void {
+    const { payload } = message;
+    const { action } = payload;
+    const windowIdentity = getTargetWindowIdentity(payload);
+    const webContents = getElectronWebContents(windowIdentity);
+
+    WebContents.stopFindInPage(webContents, action);
+    ack(successAck);
+}
+
 function navigateWindow(identity: Identity, message: APIMessage, ack: Acker, nack: (error: Error) => void): void {
     const { payload } = message;
     const { url } = payload;
