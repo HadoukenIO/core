@@ -99,8 +99,6 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
             throw new Error(`Could not locate origin window ${previousTarget.uuid}/${previousTarget.name}`);
         }
 
-        const oldwinMap = windowCloseListenerMap.get(oldWin);
-
         if (oldWin) {
             const oldWinMap = windowCloseListenerMap.get(oldWin);
             if (previousTarget.name !== toIdentity.name) {
