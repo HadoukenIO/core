@@ -102,20 +102,13 @@ export async function attach(ofView: OfView, toIdentity: Identity) {
         const oldwinMap = windowCloseListenerMap.get(oldWin);
 
         if (previousTarget.name !== toIdentity.name) {
-            oldWin.browserWindow.removeBrowserView(view);
             of_events.emit(route.view('detached', ofView.uuid, ofView.name), {
                 name: ofView.name,
                 uuid: ofView.uuid,
                 target: toIdentity,
                 previousTarget
             });
-            of_events.emit(route.window('view-detached', previousTarget.uuid, previousTarget.name), {
-                name: ofView.name,
-                uuid: ofView.uuid,
-                viewIdentity: {uuid: ofView.uuid, name: ofView.name},
-                target: toIdentity,
-                previousTarget
-            });
+            oldWin.browserWindow.removeBrowserView(view);
             const oldwinMap = windowCloseListenerMap.get(oldWin);
             if (oldwinMap) {
                 const listener = oldwinMap.get(ofView);

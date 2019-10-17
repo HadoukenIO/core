@@ -70,7 +70,7 @@ class OFEvents extends EventEmitter {
                     }
                 } else if (channel === 'view') {
                     const propTopic = `view-${topic}`;
-                    this.propagateEventsToWindow(topic, propTopic, checkedPayload, uuid, name, eventPropagations);
+                    this.propagateEventsToWindow(propTopic, checkedPayload, uuid, name, eventPropagations);
 
                     eventPropagations.set(route.application(propTopic, uuid), {
                         ...checkedPayload,
@@ -154,25 +154,22 @@ class OFEvents extends EventEmitter {
     }
 
     private propagateEventsToWindow(
-            topic: string, propTopic: string, checkedPayload: any, uuid: string, name: string|false, eventPropagations: Map<string, any>) {
+            propTopic: string, checkedPayload: any, uuid: string, name: string|undefined, eventPropagations: Map<string, any>) {
 
-        const windowDontPropagate = [
-            'detached'
-        ];
+        let target;
+        if (name) {
+            const view = getBrowserViewByIdentity({ uuid, name });
+            target = view && view.target;
+        }
 
-        if (!windowDontPropagate.some(t => t === topic)) {
-            let target = checkedPayload.target;
-            if (!target && name) {
-                const view = getBrowserViewByIdentity({ uuid, name });
-                target = view && view.target;
-            }
-            if (target) {
-                eventPropagations.set(route.window(propTopic, target.uuid, target.name), {
-                    ...checkedPayload,
-                    type: propTopic,
-                    topic: 'window'
-                });
-            }
+        // Set the target in the checkedPayload, so that webcontents events have a target param in the payload.
+        target ? checkedPayload.target = target : target = checkedPayload.target;
+        if (target) {
+            eventPropagations.set(route.window(propTopic, target.uuid, target.name), {
+                ...checkedPayload,
+                type: propTopic,
+                topic: 'window'
+            });
         }
     }
 }
