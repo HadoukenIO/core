@@ -58,7 +58,7 @@ class OFEvents extends EventEmitter {
                     const dontPropagate = [
                         'close-requested'
                     ];
-                    if (!dontPropagate.some(t => t === topic)) {
+                    if (!dontPropagate.some(t => t === topic) && !topic.startsWith('view')) {
                         eventPropagations.set(route.application(propTopic, uuid), {
                             ...checkedPayload,
                             type: propTopic,
@@ -156,20 +156,26 @@ class OFEvents extends EventEmitter {
     private propagateEventsToWindow(
             propTopic: string, checkedPayload: any, uuid: string, name: string|undefined, eventPropagations: Map<string, any>) {
 
-        let target;
-        if (name) {
-            const view = getBrowserViewByIdentity({ uuid, name });
-            target = view && view.target;
-        }
+        const dontPropagate = [
+            'view-target-changed'
+        ];
 
-        // Set the target in the checkedPayload, so that webcontents events have a target param in the payload.
-        target ? checkedPayload.target = target : target = checkedPayload.target;
-        if (target) {
-            eventPropagations.set(route.window(propTopic, target.uuid, target.name), {
-                ...checkedPayload,
-                type: propTopic,
-                topic: 'window'
-            });
+        if (!dontPropagate.some(t => t === propTopic)) {
+            let target;
+            if (name) {
+                const view = getBrowserViewByIdentity({ uuid, name });
+                target = view && view.target;
+            }
+
+            // Set the target in the checkedPayload, so that webcontents events have a target param in the payload.
+            target ? checkedPayload.target = target : target = checkedPayload.target;
+            if (target) {
+                eventPropagations.set(route.window(propTopic, target.uuid, target.name), {
+                    ...checkedPayload,
+                    type: propTopic,
+                    topic: 'window'
+                });
+            }
         }
     }
 }
