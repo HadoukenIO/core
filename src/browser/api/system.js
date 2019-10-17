@@ -468,8 +468,9 @@ export const System = {
         const architecture = process.arch;
         const cachePath = electronApp.getPath('userData');
         const args = Object.assign({}, coreState.argo);
+        const chromeVersion = process.versions.chrome;
         args._ = undefined;
-        return { manifestUrl, port, securityRealm, version, architecture, cachePath, args };
+        return { manifestUrl, port, securityRealm, version, architecture, cachePath, args, chromeVersion };
     },
     getRvmInfo: function(identity, callback, errorCallback) {
         let appObject = coreState.getAppObjByUuid(identity.uuid);
