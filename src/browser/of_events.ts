@@ -156,26 +156,20 @@ class OFEvents extends EventEmitter {
     private propagateEventsToWindow(
             propTopic: string, checkedPayload: any, uuid: string, name: string|undefined, eventPropagations: Map<string, any>) {
 
-        const dontPropagate = [
-            'view-target-changed'
-        ];
+        let target;
+        if (name) {
+            const view = getBrowserViewByIdentity({ uuid, name });
+            target = view && view.target;
+        }
 
-        if (!dontPropagate.some(t => t === propTopic)) {
-            let target;
-            if (name) {
-                const view = getBrowserViewByIdentity({ uuid, name });
-                target = view && view.target;
-            }
-
-            // Set the target in the checkedPayload, so that webcontents events have a target param in the payload.
-            target ? checkedPayload.target = target : target = checkedPayload.target;
-            if (target) {
-                eventPropagations.set(route.window(propTopic, target.uuid, target.name), {
-                    ...checkedPayload,
-                    type: propTopic,
-                    topic: 'window'
-                });
-            }
+        // Set the target in the checkedPayload, so that webcontents events have a target param in the payload.
+        target ? checkedPayload.target = target : target = checkedPayload.target;
+        if (target) {
+            eventPropagations.set(route.window(propTopic, target.uuid, target.name), {
+                ...checkedPayload,
+                type: propTopic,
+                topic: 'window'
+            });
         }
     }
 }
