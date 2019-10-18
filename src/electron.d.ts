@@ -1,4 +1,4 @@
-// Type definitions for Electron 8.0.0-nightly.20191009
+// Type definitions for Electron 8.0.0-nightly.20191015
 // Project: http://electronjs.org/
 // Definitions by: The Electron Team <https://github.com/electron/electron>
 // Definitions: https://github.com/electron/electron-typescript-definitions
@@ -3892,6 +3892,10 @@ Sets a cookie with `details`.
      */
     addExtraParameter(key: string, value: string): void;
     /**
+     * The directory where crashes are temporarily stored before being uploaded.
+     */
+    getCrashesDirectory(): string;
+    /**
      * Returns the date and ID of the last crash report. Only crash reports that have
      * been uploaded will be returned; even if a crash report is present on disk it
      * will not be returned until it is uploaded. In the case that there are no
@@ -4013,7 +4017,7 @@ Sets a cookie with `details`.
                                      * Event parameters defined by the 'parameters' attribute in the remote debugging
                                      * protocol.
                                      */
-                                    params: unknown) => void): this;
+                                    params: any) => void): this;
     once(event: 'message', listener: (event: Event,
                                     /**
                                      * Method name.
@@ -4023,7 +4027,7 @@ Sets a cookie with `details`.
                                      * Event parameters defined by the 'parameters' attribute in the remote debugging
                                      * protocol.
                                      */
-                                    params: unknown) => void): this;
+                                    params: any) => void): this;
     addListener(event: 'message', listener: (event: Event,
                                     /**
                                      * Method name.
@@ -4033,7 +4037,7 @@ Sets a cookie with `details`.
                                      * Event parameters defined by the 'parameters' attribute in the remote debugging
                                      * protocol.
                                      */
-                                    params: unknown) => void): this;
+                                    params: any) => void): this;
     removeListener(event: 'message', listener: (event: Event,
                                     /**
                                      * Method name.
@@ -4043,7 +4047,7 @@ Sets a cookie with `details`.
                                      * Event parameters defined by the 'parameters' attribute in the remote debugging
                                      * protocol.
                                      */
-                                    params: unknown) => void): this;
+                                    params: any) => void): this;
     /**
      * Attaches the debugger to the `webContents`.
      */
@@ -5285,9 +5289,15 @@ Retrieves the product descriptions.
     /**
      * Resolves with the response from the main process.
      *
-     * Send a message to the main process asynchronously via `channel` and expect an
-     * asynchronous result. Arguments will be serialized as JSON internally and hence
-     * no functions or prototype chain will be included.
+     * Send a message to the main process via `channel` and expect a result
+     * asynchronously. Arguments will be serialized with the Structured Clone
+     * Algorithm, just like `postMessage`, so prototype chains will not be included.
+     * Sending Functions, Promises, Symbols, WeakMaps, or WeakSets will throw an
+     * exception.
+     *
+     * > **NOTE**: Sending non-standard JavaScript types such as DOM objects or special
+     * Electron objects is deprecated, and will begin throwing an exception starting
+     * with Electron 9.
      *
      * The main process should listen for `channel` with `ipcMain.handle()`.
      * 
@@ -5314,9 +5324,14 @@ For example:
      */
     removeListener(channel: string, listener: (...args: any[]) => void): this;
     /**
-     * Send a message to the main process asynchronously via `channel`, you can also
-     * send arbitrary arguments. Arguments will be serialized as JSON internally and
-     * hence no functions or prototype chain will be included.
+     * Send an asynchronous message to the main process via `channel`, along with
+     * arguments. Arguments will be serialized with the Structured Clone Algorithm,
+     * just like `postMessage`, so prototype chains will not be included. Sending
+     * Functions, Promises, Symbols, WeakMaps, or WeakSets will throw an exception.
+     *
+     * > **NOTE**: Sending non-standard JavaScript types such as DOM objects or special
+     * Electron objects is deprecated, and will begin throwing an exception starting
+     * with Electron 9.
      *
      * The main process handles it by listening for `channel` with the `ipcMain`
      * module.
@@ -5325,15 +5340,21 @@ For example:
     /**
      * The value sent back by the `ipcMain` handler.
      *
-     * Send a message to the main process synchronously via `channel`, you can also
-     * send arbitrary arguments. Arguments will be serialized in JSON internally and
-     * hence no functions or prototype chain will be included.
+     * Send a message to the main process via `channel` and expect a result
+     * synchronously. Arguments will be serialized with the Structured Clone Algorithm,
+     * just like `postMessage`, so prototype chains will not be included. Sending
+     * Functions, Promises, Symbols, WeakMaps, or WeakSets will throw an exception.
+     *
+     * > **NOTE**: Sending non-standard JavaScript types such as DOM objects or special
+     * Electron objects is deprecated, and will begin throwing an exception starting
+     * with Electron 9.
      *
      * The main process handles it by listening for `channel` with `ipcMain` module,
      * and replies by setting `event.returnValue`.
      *
-     * **Note:** Sending a synchronous message will block the whole renderer process,
-     * unless you know what you are doing you should never use it.
+     * > :warning: **WARNING**: Sending a synchronous message will block the whole
+     * renderer process until the reply is received, so use this method only as a last
+     * resort. It's much better to use the asynchronous version, `invoke()`.
      */
     sendSync(...args: any[]): any;
     /**
@@ -10453,9 +10474,14 @@ An example of `webContents.printToPDF`:
      */
     selectAll(): void;
     /**
-     * Send an asynchronous message to renderer process via `channel`, you can also
-     * send arbitrary arguments. Arguments will be serialized in JSON internally and
-     * hence no functions or prototype chain will be included.
+     * Send an asynchronous message to the renderer process via `channel`, along with
+     * arguments. Arguments will be serialized with the Structured Clone Algorithm,
+     * just like `postMessage`, so prototype chains will not be included. Sending
+     * Functions, Promises, Symbols, WeakMaps, or WeakSets will throw an exception.
+     *
+     * > **NOTE**: Sending non-standard JavaScript types such as DOM objects or special
+     * Electron objects is deprecated, and will begin throwing an exception starting
+     * with Electron 9.
      *
      * The renderer process can handle the message by listening to `channel` with the
      * `ipcRenderer` module.
@@ -10470,8 +10496,14 @@ An example of sending messages from the main process to the renderer process:
     sendInputEvent(inputEvent: (MouseInputEvent) | (MouseWheelInputEvent) | (KeyboardInputEvent)): void;
     /**
      * Send an asynchronous message to a specific frame in a renderer process via
-     * `channel`. Arguments will be serialized as JSON internally and as such no
-     * functions or prototype chains will be included.
+     * `channel`, along with arguments. Arguments will be serialized with the
+     * Structured Clone Algorithm, just like `postMessage`, so prototype chains will
+     * not be included. Sending Functions, Promises, Symbols, WeakMaps, or WeakSets
+     * will throw an exception.
+     *
+     * > **NOTE**: Sending non-standard JavaScript types such as DOM objects or special
+     * Electron objects is deprecated, and will begin throwing an exception starting
+     * with Electron 9.
      *
      * The renderer process can handle the message by listening to `channel` with the
      * `ipcRenderer` module.
@@ -11308,7 +11340,7 @@ Calling `event.preventDefault()` does __NOT__ have any effect.
      * 
 Prints `webview`'s web page as PDF, Same as `webContents.printToPDF(options)`.
      */
-    printToPDF(options: PrintToPDFOptions): Promise<Buffer>;
+    printToPDF(options: PrintToPDFOptions): Promise<Uint8Array>;
     /**
      * Executes editing command `redo` in page.
      */
