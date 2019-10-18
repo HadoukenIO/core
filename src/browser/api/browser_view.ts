@@ -4,7 +4,6 @@ import {
     addBrowserView, getBrowserViewByIdentity, getWindowByUuidName, OfView, removeBrowserView,
     updateViewTarget, getInfoByUuidFrame
 } from '../core_state';
-import { BrowserViewCreationOptions } from '../../../js-adapter/src/api/browserview/browserview';
 import convertOptions = require('../convert_options');
 import { getInfo as getWebContentsInfo, setIframeHandlers, hookWebContentsEvents} from './webcontents';
 import of_events from '../of_events';
@@ -16,8 +15,7 @@ import { downloadScripts } from '../preload_scripts';
 
 const windowCloseListenerMap: WeakMap<Shapes.OpenFinWindow, WeakMap<OfView, () => void>> = new WeakMap();
 
-export type BrowserViewOpts = Shapes.WebOptions & BrowserViewCreationOptions & Shapes.BrowserView;
-export async function create(options: BrowserViewOpts) {
+export async function create(options: Shapes.BrowserViewOpts) {
     // checking if the name-uuid combination is already in use
     const { uuid, name } = options;
     if (getWindowByUuidName(uuid, name) || getBrowserViewByIdentity({ uuid, name }) || getInfoByUuidFrame({ uuid, name })) {

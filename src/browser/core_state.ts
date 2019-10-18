@@ -18,7 +18,6 @@ import { writeToLog } from './log';
 import { FrameInfo } from './api/frame';
 import * as electronIPC from './transports/electron_ipc';
 import { getIdentityFromObject, isEnableChromiumBuild } from '../common/main';
-import { BrowserViewOpts } from './api/browser_view';
 import { Identity } from './api_protocol/transport_strategy/api_transport_base';
 
 interface ProxySettingsArgs {
@@ -849,9 +848,9 @@ export interface OfView extends Shapes.InjectableContext {
     frames: Map<string, Shapes.ChildFrameInfo>;
     target: Identity;
     parent: Identity;
-    _options: BrowserViewOpts;
+    _options: Shapes.BrowserViewOpts;
 }
-export function addBrowserView(opts: BrowserViewOpts, view: BrowserView) {
+export function addBrowserView(opts: Shapes.BrowserViewOpts, view: BrowserView) {
     const { uuid, name, target, parent } = opts;
     const ofView = {
         frames: new Map(),

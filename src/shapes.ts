@@ -9,6 +9,7 @@ import { ERROR_BOX_TYPES } from './common/errors';
 import { AnchorType } from '../js-adapter/src/shapes';
 import { WritableOptions } from 'stream';
 import { OfView } from './browser/core_state';
+import { BrowserViewCreationOptions } from '../js-adapter/src/api/browserview/browserview';
 
 export interface Identity {
     uuid: string;
@@ -104,10 +105,6 @@ export interface Window {
     parentId?: number;
 }
 
-export interface BrowserView {
-    parent: Identity;
-}
-
 export interface InjectableContext {
     uuid: string;
     name: string;
@@ -121,6 +118,11 @@ export interface WebOptions {
     uuid: string;
     name: string;
 }
+
+export interface BrowserViewOpts extends WebOptions, BrowserViewCreationOptions {
+    parent: Identity;
+}
+
 export interface OpenFinWindow extends InjectableContext {
     isIframe?: boolean;
     _options: WindowOptions;
