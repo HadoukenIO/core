@@ -128,6 +128,13 @@
         });
     }
 
+    function entityExistsSync(uuid, name) {
+        return syncApiCall('entity-exists', {
+            uuid,
+            name
+        });
+    }
+
     function registerWindowNameSync(uuid, name) {
         syncApiCall('register-window-name', {
             uuid,
@@ -387,7 +394,7 @@
         const [url, requestedName, features = ''] = args; // jshint ignore:line
         const requestId = ++childWindowRequestId;
         const webContentsId = getWebContentsId();
-        const name = requestedName && !windowExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
+        const name = requestedName && !entityExistsSync(initialOptions.uuid, requestedName) ? requestedName : fin.desktop.getUuid();
         const responseChannel = `${name}-created`;
 
         const options = Object.assign(featuresToOptionsObj(features), {
@@ -607,6 +614,7 @@
             getWindowIdentity: getWindowIdentitySync,
             getCurrentWindowId: getWindowId,
             windowExists: windowExistsSync,
+            entityExists: entityExistsSync,
             registerWindowName: registerWindowNameSync,
             ipcconfig: getIpcConfigSync(),
             createChildWindow: createChildWindow,
