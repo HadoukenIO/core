@@ -13,6 +13,7 @@ import route from '../../common/route';
 import WindowGroups, { GroupChangedEvent, GroupEvent } from '../window_groups';
 import ProcessTracker from '../process_tracker';
 import SubscriptionManager from '../subscription_manager';
+import { releaseUuid, lockUuid } from '../uuid_availability';
 
 electronApp.on('ready', () => {
   subToGlobalWinEventHooks();
@@ -22,6 +23,7 @@ const subscriptionManager = new SubscriptionManager();
 
 // Maps
 export const externalWindows = new Map<string, Shapes.ExternalWindow>();
+export const nativeIdToUuid = new Map<string, string>();
 const disabledUserMovementRequestorCount = new Map<string, number>();
 const externalWindowEventAdapters = new Map<string, ExternalWindowEventAdapter>();
 const injectionBuses = new Map<string, InjectionBus>();
@@ -106,9 +108,9 @@ export function getExternalWindowGroup(identity: Identity): Shapes.GroupWindowId
   return windowGroup.map(({ name, uuid, isExternalWindow }) => ({ name, uuid, windowName: name, isExternalWindow }));
 }
 
-export function getExternalWindowInfo(identity: Identity): Shapes.NativeWindowInfo {
-  const { uuid } = identity;
-  const rawNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(uuid);
+export function getExternalWindowInfo(identity: Shapes.NativeWindowIdentity): Shapes.NativeWindowInfo {
+  const { nativeId } = identity;
+  const rawNativeWindowInfo = electronApp.getNativeWindowInfoForNativeId(nativeId);
   return getNativeWindowInfo(rawNativeWindowInfo);
 }
 
@@ -257,29 +259,28 @@ function findExistingNativeWindow(identity: Shapes.NativeWindowIdentity): Shapes
     ? allNativeWindows.find(win => win.process.pid === prelaunchedProcess.process.id)
     : allNativeWindows.find(win => {
       const liteInfo = getNativeWindowInfoLite(win);
-      return liteInfo.uuid === uuid || liteInfo.nativeId === nativeId;
+      return liteInfo.nativeId === nativeId;
     });
 
-  if (!win) {
-    return;
-  }
-
-  const liteInfo = getNativeWindowInfoLite(win);
-  if (prelaunchedProcess) {
-    // Respect original uuid if present
-    liteInfo.uuid = prelaunchedProcess.uuid;
-  }
-  return liteInfo;
+  return win && getNativeWindowInfoLite(win);
 }
 
 /*
   Returns a registered native window or creates a new one if not found.
 */
 export function getExternalWindow(identity: Shapes.NativeWindowIdentity): Shapes.ExternalWindow {
-  const { uuid } = identity;
+  const nativeId = identity.nativeId;
+  const uuid = identity.uuid || electronApp.generateGUID();
   let externalWindow = externalWindows.get(uuid);
 
+  if (externalWindow && nativeId && externalWindow.nativeId !== nativeId) {
+    throw new Error(`Requested uuid "${uuid}" is already in use for a different window.`);
+  }
+
   if (!externalWindow) {
+    if (!lockUuid(uuid)) {
+      throw new Error(`Failed to wrap, uuid "${uuid}" is already in use.`);
+    }
     const nativeWinObj = findExistingNativeWindow(identity);
 
     if (!nativeWinObj) {
@@ -287,12 +288,13 @@ export function getExternalWindow(identity: Shapes.NativeWindowIdentity): Shapes
     }
     externalWindow = <Shapes.ExternalWindow>(new ExternalWindow({ hwnd: nativeWinObj.nativeId }));
 
-    setAdditionalProperties(externalWindow, identity);
+    setAdditionalProperties(externalWindow, { uuid, name: identity.name || nativeWinObj.name });
     subscribeToInjectionEvents(externalWindow);
     subscribeToWinEventHooks(externalWindow);
     subscribeToWindowGroupEvents(externalWindow);
 
-    externalWindows.set(uuid, externalWindow);
+    externalWindows.set(externalWindow.uuid, externalWindow);
+    nativeIdToUuid.set(externalWindow.nativeId, externalWindow.uuid);
   }
 
   return externalWindow;
@@ -450,7 +452,7 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
 
     // We are subscribing to a process, so we only care about a specific window.
     // idChild === '0' indicates that event is from main window, not a subcomponent.
-    if (nativeWindowInfo.uuid !== nativeId || idChild !== '0') {
+    if (nativeWindowInfo.nativeId !== nativeId || idChild !== '0') {
       return;
     }
     parser(nativeWindowInfo);
@@ -532,10 +534,13 @@ function subscribeToWinEventHooks(externalWindow: Shapes.ExternalWindow): void {
 
 // Window grouping stub (makes external windows work with our original disabled frame group tracker)
 // Also some of the _options' values are needed in OpenFin Layouts
-function setAdditionalProperties(externalWindow: Shapes.ExternalWindow, properIdentity: Shapes.NativeWindowIdentity): Shapes.GroupWindow {
+function setAdditionalProperties(
+  externalWindow: Shapes.ExternalWindow,
+  requestedIdentity: Shapes.NativeWindowIdentity
+): Shapes.GroupWindow {
   const { nativeId } = externalWindow;
-  const uuid = properIdentity.uuid || nativeId;
-  const name = properIdentity.name || nativeId;
+  const uuid = requestedIdentity.uuid;
+  const name = requestedIdentity.name || nativeId;
   const identity = { uuid, name, nativeId };
 
   externalWindow._userMovement = true;
@@ -670,7 +675,7 @@ export function isValidExternalWindow(rawNativeWindowInfo: NativeWindowInfo, ign
 */
 function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void {
   const key = getKey(externalWindow);
-  const { nativeId } = externalWindow;
+  const { uuid, nativeId } = externalWindow;
   const winEventHooks = winEventHooksEmitters.get(key);
   const injectionBus = injectionBuses.get(key);
   const externalWindowEventAdapter = externalWindowEventAdapters.get(key);
@@ -679,21 +684,28 @@ function externalWindowCloseCleanup(externalWindow: Shapes.ExternalWindow): void
   externalWindow.emit('closing');
   disabledUserMovementRequestorCount.delete(key);
 
-  winEventHooks.removeAllListeners();
-  winEventHooksEmitters.delete(key);
+  try {
+    winEventHooks.removeAllListeners();
+    winEventHooksEmitters.delete(key);
 
-  injectionBus.removeAllListeners();
-  injectionBuses.delete(key);
+    injectionBus.removeAllListeners();
+    injectionBuses.delete(key);
 
-  windowGroupUnSubscription();
-  windowGroupUnSubscriptions.delete(key);
+    windowGroupUnSubscription();
+    windowGroupUnSubscriptions.delete(key);
 
-  externalWindowEventAdapter.removeAllListeners();
-  externalWindowEventAdapters.delete(key);
+    externalWindowEventAdapter.removeAllListeners();
+    externalWindowEventAdapters.delete(key);
 
-  externalWindow.emit('closed');
-  externalWindow.removeAllListeners();
-  externalWindows.delete(nativeId);
+    externalWindow.emit('closed');
+    externalWindow.removeAllListeners();
+  } catch (err) {
+    electronApp.vlog(2, `Error cleaning up ExternalWindow: ${err}`);
+  }
+
+  externalWindows.delete(uuid);
+  nativeIdToUuid.delete(nativeId);
+  releaseUuid(uuid);
 }
 
 /*

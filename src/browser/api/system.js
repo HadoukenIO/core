@@ -29,7 +29,7 @@ import { fetchReadFile } from '../cached_resource_fetcher';
 import { createChromiumSocket, authenticateChromiumSocket } from '../transports/chromium_socket';
 import { authenticateFetch, grantAccess } from '../cached_resource_fetcher';
 import { getNativeWindowInfoLite } from '../utils';
-import { isValidExternalWindow } from './external_window';
+import { isValidExternalWindow, nativeIdToUuid } from './external_window';
 import { getWindowByUuidName, getBrowserViewByIdentity, getInfoByUuidFrame } from '../core_state';
 
 const defaultProc = {
@@ -723,6 +723,10 @@ export const System = {
 
         allNativeWindows.forEach(e => {
             const externalWindow = getNativeWindowInfoLite(e);
+            const uuid = nativeIdToUuid.get(externalWindow.nativeId);
+            if (uuid) {
+                externalWindow.uuid = uuid;
+            }
             const isValid = isValidExternalWindow(e);
 
             if (isValid) {
