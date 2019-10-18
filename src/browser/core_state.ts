@@ -144,6 +144,12 @@ export function getEntityIdentity(identity: Shapes.Identity): Shapes.Identity & 
             return { uuid, name, isExternal: false };
         }
     }
+
+    const ofView = getBrowserViewByIdentity({ uuid, name });
+    const view = ofView && ofView.view;
+    if (view && !view.isDestroyed()) {
+        return { uuid, name, isExternal: false };
+    }
 }
 
 export function isLocalUuid(uuid: string): boolean {
