@@ -1,7 +1,9 @@
+
 import { app } from 'electron';
 import { EventEmitter } from 'events';
 import { isFloat } from '../common/main';
 import route from '../common/route';
+import {getBrowserViewByIdentity} from './core_state';
 
 interface PastEvent {
     payload: any;
@@ -33,6 +35,7 @@ class OFEvents extends EventEmitter {
         if (tokenizedRoute.length >= 2) {
             const [channel, topic] = tokenizedRoute;
             const uuid: string = (payload && payload.uuid) || tokenizedRoute[2] || '*';
+            const name: string|undefined = (payload && payload.name);
             const source = tokenizedRoute.slice(2).join('/');
             const envelope = { channel, topic, source, data };
             const propagateToSystem = !topic.match(/-requested$/);
@@ -55,7 +58,7 @@ class OFEvents extends EventEmitter {
                     const dontPropagate = [
                         'close-requested'
                     ];
-                    if (!dontPropagate.some(t => t === topic)) {
+                    if (!dontPropagate.some(t => t === topic) && !topic.startsWith('view')) {
                         eventPropagations.set(route.application(propTopic, uuid), {
                             ...checkedPayload,
                             type: propTopic,
@@ -67,11 +70,14 @@ class OFEvents extends EventEmitter {
                     }
                 } else if (channel === 'view') {
                     const propTopic = `view-${topic}`;
+                    this.propagateEventsToWindow(propTopic, checkedPayload, uuid, name, eventPropagations);
+
                     eventPropagations.set(route.application(propTopic, uuid), {
                         ...checkedPayload,
                         type: propTopic,
                         topic: 'application'
                     });
+
                     if (propagateToSystem) {
                         eventPropagations.set(route.system(propTopic), { ...checkedPayload, type: propTopic, topic: 'system' });
                     }
@@ -145,6 +151,26 @@ class OFEvents extends EventEmitter {
             this.history.length = 0;
             this.isSavingEvents = false;
         }, STARTUP_SAVE_EVENTS_DURATION);
+    }
+
+    private propagateEventsToWindow(
+            propTopic: string, checkedPayload: any, uuid: string, name: string|undefined, eventPropagations: Map<string, any>) {
+
+        let target;
+        if (name) {
+            const view = getBrowserViewByIdentity({ uuid, name });
+            target = view && view.target;
+        }
+
+        // Set the target in the checkedPayload, so that webcontents events have a target param in the payload.
+        target ? checkedPayload.target = target : target = checkedPayload.target;
+        if (target) {
+            eventPropagations.set(route.window(propTopic, target.uuid, target.name), {
+                ...checkedPayload,
+                type: propTopic,
+                topic: 'window'
+            });
+        }
     }
 }
 

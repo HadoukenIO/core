@@ -1,7 +1,6 @@
 import * as mockery from 'mockery';
 import { mockElectron } from './electron';
 import * as assert from 'assert';
-import ofEvents from '../src/browser/of_events';
 import route from '../src/common/route';
 import { EventEmitter } from 'events';
 
@@ -56,6 +55,8 @@ mockery.enable({
 });
 
 import { createWillDownloadEventListener, downloadLocationMap } from '../src/browser/api/file_download';
+// Do not move this ofEvents import - Core PR #976
+import ofEvents from '../src/browser/of_events';
 
 describe('FileDownload', () => {
 

@@ -17,17 +17,20 @@ limitations under the License.
 import { mockElectron } from './electron';
 import * as assert from 'assert';
 import * as mockery from 'mockery';
-import ofEvents from '../src/browser/of_events';
 import route from '../src/common/route';
 
 const uuid = 'uuid4';
 const name = 'name3';
 
 mockery.registerMock('electron', mockElectron);
+// Do not move this external_application mock - Core PR #976
+mockery.registerMock('./api/external_application', {});
 mockery.enable({
     warnOnReplace: false,
     warnOnUnregistered: false
 });
+// Do not move this ofEvents import - Core PR #976
+import ofEvents from '../src/browser/of_events';
 
 describe('Event Propagation', function () {
     it('propagates window events to system', function (done) {
