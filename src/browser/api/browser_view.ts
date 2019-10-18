@@ -29,6 +29,9 @@ export async function create(options: BrowserViewOpts) {
         throw new Error('Must supply target identity');
     }
     const targetIdentity = options.target;
+    if (targetIdentity.uuid !== uuid) {
+        throw new Error('A view may only be attached to a window in the same application');
+    }
     const targetWin = getWindowByUuidName(targetIdentity.uuid, targetIdentity.name);
     if (!targetWin) {
         throw new Error('Target Window could not be found');
@@ -87,7 +90,9 @@ export function show(ofView: OfView) {
 
 export async function attach(ofView: OfView, toIdentity: Identity) {
     const {view, target: previousTarget} = ofView;
-
+    if (toIdentity.uuid !== ofView.uuid) {
+        throw new Error('A view may only be attached to a window in the same application');
+    }
     if (view && ! view.isDestroyed()) {
         const ofWin = getWindowByUuidName(toIdentity.uuid, toIdentity.name);
         const oldWin = getWindowByUuidName(previousTarget.uuid, previousTarget.name);
