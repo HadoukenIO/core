@@ -3,7 +3,6 @@ import { MessagePackage } from '../transport_strategy/api_transport_base';
 import * as coreState from '../../core_state';
 import { getDefaultRequestHandler, actionMap } from './api_protocol_base';
 import {ApiPath, ApiPolicyDelegate, Endpoint} from '../shapes';
-import {OpenFinWindow} from '../../../shapes';
 const rvmBus = require('../../rvm/rvm_message_bus').rvmMessageBus;  // retrieve permission setting from registry
 import { GetDesktopOwnerSettings } from '../../rvm/rvm_message_bus';
 import { writeToLog } from '../../log';
@@ -231,6 +230,7 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
     const { identity, data, nack } = msg;
     const {action, payload} = data;
     const apiPath: ApiPath = getApiPath(action);
+    const errorMessage = 'Rejected, action is not authorized. See: https://developers.openfin.co/docs/api-security';
 
     if (typeof identity === 'object' && apiPath) {  // only check if included in the map
         const { uuid, name } = identity;
@@ -253,7 +253,7 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
               then((result: POLICY_AUTH_RESULT) => {
                 if (result === POLICY_AUTH_RESULT.Denied) {
                     writeToLog(1, `apiPolicyPreProcessor rejecting from policy ${logSuffix}`, true);
-                    nack('Rejected, action is not authorized');
+                    nack(errorMessage);
                 } else {
                     if (result === POLICY_AUTH_RESULT.Allowed) {
                         writeToLog(1, `apiPolicyPreProcessor allowed from policy, still need to check window options ${logSuffix}`, true);
@@ -262,12 +262,12 @@ function apiPolicyPreProcessor(msg: MessagePackage, next: () => void): void {
                         next();
                     } else {
                         writeToLog(1, `apiPolicyPreProcessor rejecting from win opts ${logSuffix}`, true);
-                        nack('Rejected, action is not authorized');
+                        nack(errorMessage);
                     }
                 }
             }).catch(() => {
                 writeToLog(1, `apiPolicyPreProcessor rejecting from error ${logSuffix}`, true);
-                nack('Rejected, action is not authorized');
+                nack(errorMessage);
             });
         } else {
             writeToLog(1, `apiPolicyPreProcessor missing origin window ${logSuffix}`, true);

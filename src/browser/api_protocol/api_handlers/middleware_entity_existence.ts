@@ -17,6 +17,7 @@ const apisToIgnore = new Set([
     'run-application',
     // Window
     'window-exists',
+    'entity-exists',
     'window-is-notification-type',
     //BrowserView
     'create-browser-view'

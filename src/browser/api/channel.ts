@@ -6,6 +6,7 @@ import { AckFunc, NackFunc, AckMessage, AckPayload, NackPayload } from '../api_p
 import { sendToIdentity } from '../api_protocol/api_handlers/api_protocol_base';
 import { getEntityIdentity } from '../core_state';
 import SubscriptionManager from '../subscription_manager';
+import {app as electronApp} from 'electron';
 
 const subscriptionManager = new SubscriptionManager();
 const channelMap: Map<string, ProviderIdentity> = new Map();
@@ -23,11 +24,6 @@ interface AckToSender {
         success: boolean
     };
 }
-
-const getChannelId = (identity: Identity, channelName: string): string => {
-    const { uuid, name } = identity;
-    return `${uuid}/${name}/${channelName}`;
-};
 
 const createAckToSender = (identity: Identity, messageId: number, providerIdentity: ProviderIdentity): AckToSender => {
     return {
@@ -79,7 +75,7 @@ export module Channel {
         }
 
         const providerApp = getEntityIdentity(identity);
-        const channelId = getChannelId(identity, channelName);
+        const channelId = electronApp.generateGUID();
         const providerIdentity = { ...providerApp, channelName, channelId };
         channelMap.set(channelId, providerIdentity);
 
@@ -132,11 +128,9 @@ export module Channel {
 
     export function connectToChannel(identity: Identity, payload: any, messageId: number, ack: AckFunc, nack: NackFunc): void {
         const { channelName, payload: connectionPayload } = payload;
-
-        const connectingWindow = getEntityIdentity(identity);
         const providerIdentity = Channel.getChannelByChannelName(channelName);
 
-        if (connectingWindow && connectingWindow.isExternal && connectionPayload && connectionPayload.nameAlias) {
+        if (connectionPayload && connectionPayload.nameAlias) {
             identity.name = connectionPayload.nameAlias;
         }
 
@@ -181,9 +175,7 @@ export module Channel {
         const { uuid, name, payload: messagePayload, action: channelAction, providerIdentity } = payload;
         const intendedTargetIdentity = { uuid, name };
 
-        const messagingWindow = getEntityIdentity(identity);
-
-        if (messagingWindow && messagingWindow.isExternal && messagePayload && messagePayload.nameAlias) {
+        if (messagePayload && messagePayload.nameAlias) {
             identity.name = messagePayload.nameAlias;
         }
 

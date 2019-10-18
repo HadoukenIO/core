@@ -6,6 +6,7 @@
 /// <reference path="electron.d.ts"/>
 
 declare namespace Electron {
+    
     namespace windowTransaction {
         export class Transaction extends WindowTransaction { }
         export namespace flag {
@@ -32,7 +33,6 @@ declare namespace Electron {
         fromProcessAndFrameIds: (processId: number, frameId: number) => WebContents;
         getOwnerBrowserWindow: () => BrowserWindow | void;
         mainFrameRoutingId: number;
-        session: Session;
         registerIframe: (frameName: string, frameRoutingId: number) => void;
         unregisterIframe: (frameName: string, frameRoutingId: number) => void;
     }
@@ -65,6 +65,4 @@ declare namespace Electron {
             'visibility-changed': (() => void)[];
         };
     }
-
-    export class ExternalWindow extends BrowserWindow { }
 }
