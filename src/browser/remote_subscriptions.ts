@@ -343,7 +343,7 @@ async function getClassEventEmitter(subscription: RemoteSubscription, runtime: P
             classEventEmitter = await runtime.fin.Window.wrap({uuid, name});
             break;
         case 'view':
-            classEventEmitter = runtime.fin.BrowserView.wrapSync({uuid, name});
+            classEventEmitter = runtime.fin.View.wrapSync({uuid, name});
     }
 
     return classEventEmitter;
