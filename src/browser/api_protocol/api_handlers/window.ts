@@ -1,5 +1,5 @@
 
-const { Window } = require('../../api/window');
+import * as Window from '../../api/window';
 import {
     getGroupingWindowIdentity,
     getTargetWindowIdentity,
@@ -468,7 +468,7 @@ function centerWindow(identity: Identity, message: APIMessage, ack: Acker): void
     ack(successAck);
 }
 
-function getViews(identity: Identity, message: APIMessage, ack: Acker): void {
+function getViews(identity: Identity, message: APIMessage, ack: Acker) {
     const { payload } = message;
     const windowIdentity = getTargetWindowIdentity(payload);
     return Window.getViews(windowIdentity);

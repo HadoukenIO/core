@@ -20,6 +20,7 @@ import * as electronIPC from './transports/electron_ipc';
 import { getIdentityFromObject, isEnableChromiumBuild } from '../common/main';
 import { BrowserViewOpts } from './api/browser_view';
 import { Identity } from './api_protocol/transport_strategy/api_transport_base';
+import { getWindowMeta } from './api/window';
 
 interface ProxySettingsArgs {
     proxyAddress?: string;
@@ -581,8 +582,7 @@ export function getAllAppObjects(): Shapes.AppObj[] {
         .map(app => app.appObj); //and return same
 }
 
-export function getAllWindows(): WindowMeta[] {
-    const windowApi = require('./api/window.js').Window; // do not move this line!
+export function getAllWindows() {
 
     // Filter out apps where main window has already been destroyed
     const aliveApps = apps.filter(({ children }) => {
@@ -595,14 +595,7 @@ export function getAllWindows(): WindowMeta[] {
 
     return aliveApps.map(({ uuid, children }) => {
         const childWindows = children
-            .map(({ openfinWindow }) => {
-                const identity = getIdentityFromObject(openfinWindow);
-                const bounds = windowApi.getBounds(identity);
-                bounds.name = openfinWindow.name;
-                bounds.state = windowApi.getState(identity);
-                bounds.isShowing = windowApi.isShowing(identity);
-                return bounds;
-            });
+            .map(getWindowMeta);
 
         const mainWindow = childWindows.shift() || {};
 

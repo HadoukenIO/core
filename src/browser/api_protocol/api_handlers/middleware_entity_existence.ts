@@ -3,7 +3,7 @@ import RequestHandler from '../transport_strategy/base_handler';
 import { appByUuid, windowExists, getBrowserViewByIdentity, viewExists } from '../../core_state';
 import { applicationApiMap } from './application.js';
 import { MessagePackage } from '../transport_strategy/api_transport_base';
-import { windowApiMap } from './window.js';
+import { windowApiMap } from './window';
 import { browserViewActionMap } from './browser_view';
 import { webContentsApiMap } from './webcontents';
 
